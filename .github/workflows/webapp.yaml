@@ -24,6 +24,8 @@ jobs:
           patterns: |
             .github/workflows/webapp.yaml
             webapp/**
+            !webapp/docs/**
+            !webapp/README.md
 
   lint:
     needs: [changes]
