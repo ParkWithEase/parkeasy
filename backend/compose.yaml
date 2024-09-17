@@ -1,0 +1,7 @@
+services:
+  parkserver:
+    build:
+      context: .
+      dockerfile: ./Containerfile
+    ports:
+      - 8080:8080 # API

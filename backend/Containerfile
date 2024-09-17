@@ -1,0 +1,14 @@
+FROM docker.io/library/golang:1.23.1 as build
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+COPY . .
+RUN go build -v -o /app/parkserver ./cmd/parkserver
+
+FROM gcr.io/distroless/base-nossl-debian12
+
+COPY --from=build /app/parkserver /
+ENTRYPOINT ["/parkserver"]

@@ -1,0 +1,10 @@
+FROM docker.io/library/golang:1.23.1
+
+WORKDIR /src
+
+RUN go install github.com/air-verse/air@latest
+
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+CMD ["air", "-c", ".air.toml"]
