@@ -41,7 +41,8 @@ func ListenAndServe(ctx context.Context, addr string) error {
 
 	go func() {
 		<-ctx.Done()
-		srv.Shutdown(context.Background())
+		// Ignore shutdown errors, not that we can do anything about them
+		_ = srv.Shutdown(context.Background())
 	}()
 
 	err := srv.ListenAndServe()
