@@ -48,10 +48,10 @@ jobs:
       - run: npm run lint
         working-directory: webapp
 
-  unittest:
+  tests:
     needs: [changes]
     if: needs.changes.outputs.exists != 'false'
-    name: Webapp unit tests
+    name: Webapp tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,31 +66,37 @@ jobs:
 
       - run: npm ci
         working-directory: webapp
-      - run: npm run test:unit
+
+      - name: Run unit tests
+        run: npm run coverage:unit
         working-directory: webapp
 
-  integration:
-    needs: [changes]
-    if: needs.changes.outputs.exists != 'false'
-    name: Webapp integration tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          sparse-checkout: webapp
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-          cache: npm
-          cache-dependency-path: webapp/package-lock.json
-
-      - run: npm ci
-        working-directory: webapp
       - run: npx playwright install --with-deps
         working-directory: webapp
-      - run: npm run test:integration
+
+      - name: Run integration tests
+        run: npm run coverage:integration
         working-directory: webapp
+
+      - name: Upload unit test coverage data
+        uses: codecov/codecov-action@v4
+        if: success() || failure()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: webapp/coverage/clover.xml
+          flags: webapp-unit
+          disable_file_fixes: true
+          disable_search: true
+
+      - name: Upload integration test coverage data
+        uses: codecov/codecov-action@v4
+        if: success() || failure()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: webapp/coverage-playwright/clover.xml
+          flags: webapp-integration
+          disable_file_fixes: true
+          disable_search: true
 
   build:
     needs: [changes]
