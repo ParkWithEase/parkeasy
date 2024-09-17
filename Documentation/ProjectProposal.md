@@ -1,0 +1,62 @@
+## Project Vision
+**ParkEasy** is a multi-platform application that connects people needing a parking spot with people who own a parking spot. It allows the bookers to book a spot in just a tap of finger at competitive rates and provides owners a way to harness their vacant parking spots to generate passive income. **ParkEasy** is envisioned to be used as a mobile application and a web application. This application is designed for 2 categories of users, booker and seller. 
+
+## Project Summary
+**ParkEasy** let seller make a listing for a parking spot they want to lease. Seller will take a photo of their parking spot, fill in some information such as location, pricing, utilities (such as charging station) and upload them to a public marketplace. Seller would get a notification if a booker decides to make bookings. This will help sellers make passive income from the small piece of real estate that they own but have no use for. 
+
+**ParkEasy** allows bookers to browse through various options for parking spots and . Information of all parking spots that are being offered is easily accessed in a list format. bookers can filter, sort by price and distance or search by location to quickly decide which parking spot is the best for them and make bookings. **ParkEasy** can also make recommendation based on booker's destination and information about parking spots near it. Once the bookings has been finalized, booker will receive a unique code that certified their payment and this code can be given to the seller to verify the identity.  
+
+A seller might have multiple parking spots to lease and for that, we dedicate an entire feature to help manage them. **ParkEasy** keeps track of the performance of your parking places by recording various metric, such as revenue, customer rating, traffic around your parking spot or parking spot's condition. These statistics will help seller decide how to upgrade their parking spot to gain more traction.  
+
+**ParkEasy** also has routing and mapping feature. booker can view the parking spot on an interactive map. Using GPS and google map, **ParkEasy** will make the most optimal route to travel from the current location to the parking spot. This feature is crucial as it enhances the experience of looking for parking spots, especially when the booker is not familiar with the area.
+
+One of the most important features we are offering is bidding. Some parking spots are more popular or convenient and booker might want to offer a higher price to gain access to it. Seller might want to see how much of a revenue they can achieve if they know their parking spot is famous. Seller can list their parking spot as an auction. Different booker can continue to bid until no one want to offer a higher price. After a period of time, the highest bidder win the parking spot and can make the booking. This feature will help seller optimize revenue and booker get what they want with more money.  
+
+Our goal is to get 200 users in total for the first deployment phase of this project, both bookers and sellers.
+
+## Features
+### Core Feature 1: Parking spot listing
+**Sellers should be able to add, adjust, and delete their parking spot listings with ease.**
+- **User Story 1:** As a seller, I want to list my parking spots with all the relevant information on a marketplace so bookers can consider booking it.
+- **User Story 2:** As a seller, I want to receive a notification when a booker successfully books my parking spot so I am kept updated.
+- **User Story 3:** As a seller, I want to be able to edit my existing parking spot listings easily because I need to update the information or availability.
+- **User Story 4:** As a seller, I want to remove my parking spot listing from the marketplace if the parking spot is no longer available.
+### Core Feature 2: Parking spot booking
+**Bookers should be able to book parking spot listings and review their reservations with ease.**
+- **User Story 1:** As a booker, I want to book a parking spot I like so I can fulfill my parking needs.
+- **User Story 2:** As a booker, I want to see my active bookings so I can review my parking spot reservations.
+### Core Feature 3: Parking spot exploring
+**Bookers should be able to quickly browse through a list of parking spots by harnessing filter, sort, and search aids to find the most convenient spot.**
+- **User Story 1:** As a booker, I want to see all available parking spots in an organized way so I can easily decide which one to book.
+- **User Story 2:** As a booker, I want to search for parking spots near my destination so I can quickly narrow down the options.
+- **User Story 3:** As a booker, I want to see the available parking spots arranged by criteria such as price and distance from my destination so I can choose the best option.
+- **User Story 4:** As a booker, I want to filter out available parking spots by criteria such as having shelter or having charging stations because I need to protect my car from the weather or require electricity.
+- **User Story 5:** As a booker, I want to save my destination and preferences to get recommendations so I can save time searching for a parking spot.
+### Core Feature 4: Parking Spot Management
+**Sellers should be able to add and remove parking spots from their user profile, track how their parking spots are performing and view a list of booking for each parking spot.**
+- **User Story 1:** As a seller, I want to see all the parking spots I am offering in an organized way so I can easily find the listing I am looking for.
+- **User Story 2:** As a seller, I want to see a summary of how my parking spots are performing so I can make more educated decisions.
+- **User Story 3:** As a seller, I want to see a summary of all the bookings I have for a given parking spot so I can verify if a parked car is authorized.
+- **User Story 4:** As a seller, I want to add my vacant parking spots with all the relevant information to my user profile so I can later create a listing on a marketplace for bookers can consider booking it.
+- **User Story 5:** As a seller, I want to quickly remove my parking spots from my user profile that are no longer available.
+### Core Feature 5: Map and Routing
+**Bookers should be able to find parking spots through the aid of an interactive map in the app and physically arrive at the parking spot through routing.**
+- **User Story 1:** As a booker, I want to see the locations of all available parking spots on a map so I can easily compare their distances from my destination.
+- **User Story 2:** As a booker, I want to get directions to the parking spot I booked so I can easily navigate there.
+### Core Feature 6: Bidding
+- **User Story 1:** As a seller, I want to offer my high demand parking spots in the form of an auction instead of fixed pricing to maximize my profits.
+- **User Story 2:** As a booker, I want to place a bid on parking spots offered as an auction because I am willing to compete with others for a convenient location.
+- **User Story 3:** As a booker, I want to be able to automatically bid up on certain parking spot auctions so I don’t have to keep coming back and checking the auction.
+### Non-functional Feature:
+1. Web application must be responsive.
+2. Server can handle 20 concurrent users at 200 request per minute. 
+## Acceptance Criteria
+See our [Acceptance Criteria](/Documentation/AcceptanceCriteria.md) for each user story.
+## Architecture
+## Work Distribution
+We distribute our workload for this project as followed:
+- Frontend: 1 developer
+- Backend/Server: 2 developers
+- Database: 1 developer
+- Full-stack: 2 developers  
+We believe this is a good distribution because developer get to work in an area that they are more experienced with, which would reduce the amount of learning we have to do at the beginning of the project. We also have a Full-stack team with 2 developers that can work on any layer at any given time. This will give us the flexibility as we can freely relocate our human resource using the Full-stack team should any team need assistance. In term of coordination, we will first discuss about the API for all layers so that we have a good understanding of the interface to be expected. We then create issues on github with priority and tag to categorize them base on the API interface. Developers can choose a task for the layer they are working on. We also assign one dedicated code reviewer on rotation every week to make sure all code is reviewed before merge (that being said, everyone can and should review code) and one person to keep meeting minute. We have setup a discord channel and can quickly discuss or have a meeting should anything come up.
