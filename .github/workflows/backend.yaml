@@ -24,6 +24,8 @@ jobs:
           patterns: |
             .github/workflows/backend.yaml
             backend/**
+            !backend/docs/**
+            !backend/README.md
 
   lint:
     needs: [changes]
