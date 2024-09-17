@@ -68,8 +68,13 @@ jobs:
           cache-dependency-path: |
             backend/go.sum
 
-      - run: go test ./...
+      - run: go test -race -coverprofile=coverage.txt ./...
         working-directory: backend
+
+      - uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: backend/coverage.txt
 
   build:
     needs: [changes]
