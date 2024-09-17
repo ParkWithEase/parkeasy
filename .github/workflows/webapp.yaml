@@ -1,0 +1,112 @@
+name: Webapp CI
+
+on:
+  - pull_request
+  - merge_group
+
+concurrency:
+  # Makes sure only one is run per PR
+  group: webapp-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    continue-on-error: true # Errors here should not crash the job
+    name: Check webapp for changes
+    outputs:
+      exists: ${{ steps.changed.outputs.exists }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - id: changed
+        uses: yumemi-inc/changed-files@v3
+        with:
+          patterns: |
+            .github/workflows/webapp.yaml
+            webapp/**
+
+  lint:
+    needs: [changes]
+    if: needs.changes.outputs.exists != 'false'
+    name: Webapp lint checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: webapp
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+
+      - run: npm ci
+        working-directory: webapp
+      - run: npm run lint
+        working-directory: webapp
+
+  unittest:
+    needs: [changes]
+    if: needs.changes.outputs.exists != 'false'
+    name: Webapp unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: webapp
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+
+      - run: npm ci
+        working-directory: webapp
+      - run: npm run test:unit
+        working-directory: webapp
+
+  integration:
+    needs: [changes]
+    if: needs.changes.outputs.exists != 'false'
+    name: Webapp integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: webapp
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+
+      - run: npm ci
+        working-directory: webapp
+      - run: npx playwright install --with-deps
+        working-directory: webapp
+      - run: npm run test:integration
+        working-directory: webapp
+
+  build:
+    needs: [changes]
+    if: needs.changes.outputs.exists != 'false'
+    name: Webapp build test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: webapp
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+
+      - run: npm ci
+        working-directory: webapp
+      - run: npm run build
+        working-directory: webapp
