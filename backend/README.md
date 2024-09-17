@@ -20,6 +20,14 @@ Hot code reloading is provided by [Air](https://github.com/air-verse/air) and ca
 
     docker compose -f compose.air.yaml up --build
 
+### Tests
+
+Tests can be run via
+
+    go test ./...
+
+Currently no distinction exists between unit and integration tests
+
 ### Architecture
 
 TBD
