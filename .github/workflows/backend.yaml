@@ -1,0 +1,59 @@
+name: Backend CI
+
+on:
+  - pull_request
+  - merge_group
+
+concurrency:
+  # Makes sure only one is run per PR
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Backend lint checks
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: backend
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: |
+            backend/go.sum
+
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: backend
+
+  test:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: backend
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: |
+            backend/go.sum
+
+      - run: go test ./...
+        working-directory: backend
+
+  build:
+    name: Backend container build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: backend
+
+      - run: podman build -t packserver backend/

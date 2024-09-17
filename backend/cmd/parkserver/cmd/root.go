@@ -54,7 +54,11 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/parkserver.toml)")
 	rootCmd.PersistentFlags().Uint16VarP(&port, "port", "p", 8080, "port to serve on")
-	viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
+	err := viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
+	// Panic since errors here can only happen due to programming mistakes
+	if err != nil {
+		panic(err)
+	}
 }
 
 // initConfig reads in config file and ENV variables if set.
