@@ -10,7 +10,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    continue-on-error: true # Errors here should not crash the job
+    name: Check backend for changes
+    outputs:
+      exists: ${{ steps.changed.outputs.exists }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - id: changed
+        uses: yumemi-inc/changed-files@v3
+        with:
+          patterns: |
+            .github/workflows/backend.yaml
+            backend/**
+
   lint:
+    needs: [changes]
+    if: needs.changes.outputs.exists != 'false'
+
     name: Backend lint checks
     runs-on: ubuntu-latest
     permissions:
@@ -32,6 +50,9 @@ jobs:
           working-directory: backend
 
   test:
+    needs: [changes]
+    if: needs.changes.outputs.exists != 'false'
+
     name: Backend tests
     runs-on: ubuntu-latest
     steps:
@@ -49,6 +70,9 @@ jobs:
         working-directory: backend
 
   build:
+    needs: [changes]
+    if: needs.changes.outputs.exists != 'false'
+
     name: Backend container build
     runs-on: ubuntu-latest
     steps:
