@@ -1,0 +1,153 @@
+name: Android App CI
+
+on:
+  - pull_request
+  - merge_group
+
+concurrency:
+  # Makes sure only one is run per PR
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    continue-on-error: true # Errors here should not crash the job
+    name: Check android app for changes
+    outputs:
+      exists: ${{ steps.changed.outputs.exists }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - id: changed
+        uses: yumemi-inc/changed-files@v3
+        with:
+          patterns: |
+            .github/workflows/android.yaml
+            android/**
+            !android/.idea/**
+            !android/docs/**
+            !android/README.md
+
+  lint:
+    needs: [changes]
+    if: needs.changes.outputs.exists != 'false'
+
+    name: Android lint checks
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Run ktfmt
+        run: ./gradlew ktfmtCheck
+        working-directory: android
+
+      - name: Run lint checks
+        run: ./gradlew detektMain lintDebug --continue
+        working-directory: android
+
+      - name: Upload Detekt results
+        if: success() || failure() # always upload
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: android/build/reports/detekt/merged.sarif
+          category: detekt
+
+      - name: Upload Android Lint results
+        if: success() || failure() # always upload
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: android/build/reports/lint/merged.sarif
+          category: android-lint
+
+  build:
+    needs: [changes]
+    if: needs.changes.outputs.exists != 'false'
+
+    name: Android tests
+    runs-on: ubuntu-latest
+
+    env:
+      AVD_API_LEVEL: 34
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: android-avd-${{ env.AVD_API_LEVEL }}
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug
+        working-directory: android
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Run unit tests
+        run: ./gradlew :app:testDebugUnitTest
+        working-directory: android
+
+      - name: Create AVD
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.AVD_API_LEVEL }}
+          arch: x86_64
+          target: google_atd
+          profile: Nexus One
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated AVD snapshot"
+          working-directory: android
+
+      - name: Run instrumented tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.AVD_API_LEVEL }}
+          arch: x86_64
+          target: google_atd
+          profile: Nexus One
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: ./gradlew connectedCheck
+          working-directory: android
