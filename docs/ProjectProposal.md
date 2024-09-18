@@ -51,7 +51,7 @@ Our goal is to get 200 users in total for the first deployment phase of this pro
 1. Web application must be responsive.
 2. Server can handle 20 concurrent users at 200 request per minute. 
 ## Acceptance Criteria
-See our [Acceptance Criteria](/Documentation/AcceptanceCriteria.md) for each user story.
+See our [Acceptance Criteria](/docs/AcceptanceCriteria.md) for each user story.
 ## Architecture
 ## Work Distribution
 We distribute our workload for this project as followed:
