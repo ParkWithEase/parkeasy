@@ -3,6 +3,7 @@ node_modules
 # Output
 .output
 .vercel
+.nyc_output
 /.svelte-kit
 /build
 
@@ -22,3 +23,5 @@ vite.config.ts.timestamp-*
 
 # Tests
 test-results
+coverage
+coverage-playwright
