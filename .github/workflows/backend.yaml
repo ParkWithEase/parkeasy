@@ -75,6 +75,8 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: backend/coverage.txt
+          flags: backend
+          disable_file_fixes: true # This is not compatible with sparse-checkout
 
   build:
     needs: [changes]
