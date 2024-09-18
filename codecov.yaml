@@ -1,0 +1,23 @@
+component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+
+  individual_components:
+    - component_id: mod_backend
+      name: Backend
+      paths:
+        - backend/**
+    - component_id: mod_webapp
+      name: Web Application
+      paths:
+        - webapp/**
+    - component_id: mod_android
+      name: Android Application
+      paths:
+        - android/**
+
+flag_mangement:
+  default_rules:
+    carryforward: true
