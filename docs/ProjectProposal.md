@@ -53,6 +53,22 @@ Our goal is to get 200 users in total for the first deployment phase of this pro
 ## Acceptance Criteria
 See our [Acceptance Criteria](/docs/AcceptanceCriteria.md) for each user story.
 ## Architecture
+We have adopted a n-tier architecture for its simplicity and effective layer decoupling. Given the nature of our application, we believe offering a mobile solution is essential, which is why we have chosen to develop an Android and a web-based frontend. Link to our [Architecture Diagram](/docs/Architecture.pdf).
+
+### Technologies
+We wanted to explore something new and different, so we chose a tech stack that we have not worked previously with.
+
+#### Front End
+ * **Android**: For the Android frontend, we opted for Kotlin and Jetpack Compose due to their native support.
+ * **Web**: For our web app, we decided to use Svelte because it is fast and has a shallow learning curve.
+
+#### Server
+We decided to use Go because it is strongly typed, lightweight
+and fast. Go also offers memory allocation and garbage collection at run time to handle possible vulnerabilities and bugs. We chose Go over Rust because Rust has a steeper learning curve and is less mature.
+
+#### Data
+For the data layer, we plan to use cloudflare’s sqlite database as it is fast and cheap.
+
 ## Work Distribution
 We distribute our workload for this project as followed:
 - Frontend: 1 developer
