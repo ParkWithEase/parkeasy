@@ -69,6 +69,8 @@ and fast. Go also offers memory allocation and garbage collection at run time to
 #### Data
 For the data layer, we plan to use cloudflare’s sqlite database as it is fast and cheap.
 
+This architecture will work well for our project due to its balance of simplicity and scalability. The n-tier architecture decouples the frontend, backend, and data layers, allowing each component to be developed, maintained, and scaled independently. Kotlin and Compose provide a robust, native Android experience, while Svelte ensures a lightweight and fast web frontend. Go’s efficiency, and concurrency features make it ideal for handling server-side operations at scale. Cloudflare’s SQLite offers a cost-effective, high-performance solution for managing data. Together, these technologies provide a cohesive and scalable system capable of handling our application's requirements. We can also integrate middleware between layers for caching and load balancing, to enhance performance and scalabilit, if needed, without requiring significant changes to other layers.
+
 ## Work Distribution
 We distribute our workload for this project as followed:
 - Frontend: 1 developer
