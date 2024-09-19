@@ -1,16 +1,16 @@
 ## Project Vision
-**ParkEasy** is a multi-platform application that connects people needing a parking spot with people who own a parking spot. It allows the bookers to book a spot in just a tap of finger at competitive rates and provides owners a way to harness their vacant parking spots to generate passive income. **ParkEasy** is envisioned to be used as a mobile application and a web application. This application is designed for 2 categories of users, booker and seller. 
+**ParkEasy** is a multi-platform application that connects people needing a parking spot with people who own a parking spot. It allows the bookers to book a spot in just a tap of the finger at competitive rates and provides owners with a way to harness their vacant parking spots to generate passive income. **ParkEasy** is envisioned to be used as a mobile application and a web application. This application is designed for 2 categories of users, booker and seller. 
 
 ## Project Summary
-**ParkEasy** let seller make a listing for a parking spot they want to lease. Seller will take a photo of their parking spot, fill in some information such as location, pricing, utilities (such as charging station) and upload them to a public marketplace. Seller would get a notification if a booker decides to make bookings. This will help sellers make passive income from the small piece of real estate that they own but have no use for. 
+**ParkEasy** lets sellers make a listing for a parking spot they want to lease. Seller will take a photo of their parking spot, fill in some information such as location, pricing, and utilities (such as charging station) and upload them to a public marketplace. The seller would get a notification if a booker decides to make bookings. This will help sellers make passive income from the small piece of real estate that they own but have no use for. 
 
-**ParkEasy** allows bookers to browse through various options for parking spots and . Information of all parking spots that are being offered is easily accessed in a list format. bookers can filter, sort by price and distance or search by location to quickly decide which parking spot is the best for them and make bookings. **ParkEasy** can also make recommendation based on booker's destination and information about parking spots near it. Once the bookings has been finalized, booker will receive a unique code that certified their payment and this code can be given to the seller to verify the identity.  
+**ParkEasy** allows bookers to browse through various options for parking spots. Information on all parking spots that are being offered is easily accessed in a list format. Bookers can filter, sort by price and distance or search by location to quickly decide which parking spot is the best for them and make bookings. **ParkEasy** can also make recommendations based on the booker's destination and information about parking spots near it. Once the bookings have been finalized, the booker will receive a unique code that certifies their payment and this code can be given to the seller to verify the identity.  
 
 A seller might have multiple parking spots to lease and for that, we dedicate an entire feature to help manage them. **ParkEasy** keeps track of the performance of your parking places by recording various metric, such as revenue, customer rating, traffic around your parking spot or parking spot's condition. These statistics will help seller decide how to upgrade their parking spot to gain more traction.  
 
-**ParkEasy** also has routing and mapping feature. booker can view the parking spot on an interactive map. Using GPS and google map, **ParkEasy** will make the most optimal route to travel from the current location to the parking spot. This feature is crucial as it enhances the experience of looking for parking spots, especially when the booker is not familiar with the area.
+**ParkEasy** also has a routing and mapping feature. booker can view the parking spot on an interactive map. Using GPS and Google Maps, **ParkEasy** will make the most optimal route to travel from the current location to the parking spot. This feature is crucial as it enhances the experience of looking for parking spots, especially when the booker is not familiar with the area.
 
-One of the most important features we are offering is bidding. Some parking spots are more popular or convenient and booker might want to offer a higher price to gain access to it. Seller might want to see how much of a revenue they can achieve if they know their parking spot is famous. Seller can list their parking spot as an auction. Different booker can continue to bid until no one want to offer a higher price. After a period of time, the highest bidder win the parking spot and can make the booking. This feature will help seller optimize revenue and booker get what they want with more money.  
+One of the most important features we are offering is bidding. Some parking spots are more popular or convenient and bookers might want to offer a higher price to gain access to it. The seller might want to see how much revenue they can achieve if they know their parking spot is famous. The seller can list their parking spot as an auction. Different bookers can continue to bid until no one wants to offer a higher price. After some time, the highest bidder wins the parking spot and can make the booking. This feature will help sellers optimize revenue and bookers get what they want with more money.  
 
 Our goal is to get 200 users in total for the first deployment phase of this project, both bookers and sellers.
 
@@ -44,19 +44,19 @@ Our goal is to get 200 users in total for the first deployment phase of this pro
 - **User Story 1:** As a booker, I want to see the locations of all available parking spots on a map so I can easily compare their distances from my destination.
 - **User Story 2:** As a booker, I want to get directions to the parking spot I booked so I can easily navigate there.
 ### Core Feature 6: Bidding
-- **User Story 1:** As a seller, I want to offer my high demand parking spots in the form of an auction instead of fixed pricing to maximize my profits.
+- **User Story 1:** As a seller, I want to offer my high-demand parking spots in the form of an auction instead of fixed pricing to maximize my profits.
 - **User Story 2:** As a booker, I want to place a bid on parking spots offered as an auction because I am willing to compete with others for a convenient location.
 - **User Story 3:** As a booker, I want to be able to automatically bid up on certain parking spot auctions so I don’t have to keep coming back and checking the auction.
 ### Non-functional Feature:
 1. Web application must be responsive.
-2. Server can handle 20 concurrent users at 200 request per minute. 
+2. Server can handle 20 concurrent users at 200 requests per minute. 
 ## Acceptance Criteria
 See our [Acceptance Criteria](/docs/AcceptanceCriteria.md) for each user story.
 ## Architecture
 We have adopted a n-tier architecture for its simplicity and effective layer decoupling. Given the nature of our application, we believe offering a mobile solution is essential, which is why we have chosen to develop an Android and a web-based frontend. Link to our [Architecture Diagram](/docs/Architecture.pdf).
 
 ### Technologies
-We wanted to explore something new and different, so we chose a tech stack that we have not worked previously with.
+We wanted to explore something new and different, so we chose a tech stack that we had not worked previously with.
 
 #### Front End
  * **Android**: For the Android frontend, we opted for Kotlin and Jetpack Compose due to their native support.
@@ -67,14 +67,18 @@ We decided to use Go because it is strongly typed, lightweight
 and fast. Go also offers memory allocation and garbage collection at run time to handle possible vulnerabilities and bugs. We chose Go over Rust because Rust has a steeper learning curve and is less mature.
 
 #### Data
-For the data layer, we plan to use cloudflare’s sqlite database as it is fast and cheap.
+For the data layer, we plan to use Cloudflare’s SQLite database as it is fast and cheap.
 
-This architecture will work well for our project due to its balance of simplicity and scalability. The n-tier architecture decouples the frontend, backend, and data layers, allowing each component to be developed, maintained, and scaled independently. Kotlin and Compose provide a robust, native Android experience, while Svelte ensures a lightweight and fast web frontend. Go’s efficiency, and concurrency features make it ideal for handling server-side operations at scale. Cloudflare’s SQLite offers a cost-effective, high-performance solution for managing data. Together, these technologies provide a cohesive and scalable system capable of handling our application's requirements. We can also integrate middleware between layers for caching and load balancing, to enhance performance and scalabilit, if needed, without requiring significant changes to other layers.
+This architecture will work well for our project due to its balance of simplicity and scalability. The n-tier architecture decouples the frontend, backend, and data layers, allowing each component to be developed, maintained, and scaled independently. Kotlin and Compose provide a robust, native Android experience, while Svelte ensures a lightweight and fast web frontend. Go’s efficiency, and concurrency features make it ideal for handling server-side operations at scale. Cloudflare’s SQLite offers a cost-effective, high-performance solution for managing data. Together, these technologies provide a cohesive and scalable system capable of handling our application's requirements. We can also integrate middleware between layers for caching and load balancing, to enhance performance and scalability, if needed, without requiring significant changes to other layers.
 
 ## Work Distribution
-We distribute our workload for this project as followed:
+We distribute our workload for this project as follows:
 - Frontend: 1 developer
 - Backend/Server: 2 developers
 - Database: 1 developer
-- Full-stack: 2 developers  
-We believe this is a good distribution because developer get to work in an area that they are more experienced with, which would reduce the amount of learning we have to do at the beginning of the project. We also have a Full-stack team with 2 developers that can work on any layer at any given time. This will give us the flexibility as we can freely relocate our human resource using the Full-stack team should any team need assistance. In term of coordination, we will first discuss about the API for all layers so that we have a good understanding of the interface to be expected. We then create issues on github with priority and tag to categorize them base on the API interface. Developers can choose a task for the layer they are working on. We also assign one dedicated code reviewer on rotation every week to make sure all code is reviewed before merge (that being said, everyone can and should review code) and one person to keep meeting minute. We have setup a discord channel and can quickly discuss or have a meeting should anything come up.
+- Full-stack: 2 developers
+  
+We believe this is a good distribution because developers get to work in an area that they are more experienced with, which would reduce the amount of learning we have to do at the beginning of the project. We also have a Full-stack team with 2 developers who can work on any layer at any given time. This will give us flexibility as we can freely relocate our human resources using the Full-stack team should any team need assistance. In terms of coordination, we will first discuss the API for all layers so that we have a good understanding of the interface to be expected. We then create issues on GitHub with priority and tag to categorize them based on the API interface. Developers can choose a task for the layer they are working on. We also assign one dedicated code reviewer on rotation every week to make sure all code is reviewed before the merge (that being said, everyone can and should review code) and one person to keep meeting minutes. We have set up a discord channel and can quickly discuss or have a meeting should anything come up.
+
+## Proposal Presentation
+Check out our [Proposal Presentation](/docs/ProposalPresentation.pdf).
