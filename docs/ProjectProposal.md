@@ -53,7 +53,7 @@ Our goal is to get 200 users in total for the first deployment phase of this pro
 ## Acceptance Criteria
 See our [Acceptance Criteria](/docs/AcceptanceCriteria.md) for each user story.
 ## Architecture
-We have adopted a n-tier architecture for its simplicity and effective layer decoupling. Given the nature of our application, we believe offering a mobile solution is essential, which is why we have chosen to develop an Android and a web-based frontend. Link to our [Architecture Diagram](/docs/Architecture.pdf).
+We have adopted a n-tier architecture for its simplicity and effective layer decoupling. Given the nature of our application, we believe offering a mobile solution is essential, which is why we have chosen to develop an Android and a web-based frontend. Link to our [Architecture Diagram](/docs/Architecture.png).
 
 ### Technologies
 We wanted to explore something new and different, so we chose a tech stack that we had not worked previously with.
