@@ -50,10 +50,13 @@ Our goal is to get 200 users in total for the first deployment phase of this pro
 ### Non-functional Feature:
 1. Web application must be responsive.
 2. Server can handle 20 concurrent users at 200 requests per minute. 
+3. Server need to have RateLimiting mechanism to protect itself against DDOS
+4. The System needs to verify email before signing up user to make the system more secure as well as allow for password recovery through email
+5. The System needs to have some authentication to increase security 
 ## Acceptance Criteria
 See our [Acceptance Criteria](/docs/AcceptanceCriteria.md) for each user story.
 ## Architecture
-We have adopted a n-tier architecture for its simplicity and effective layer decoupling. Given the nature of our application, we believe offering a mobile solution is essential, which is why we have chosen to develop an Android and a web-based frontend. Link to our [Architecture Diagram](/docs/Architecture.png).
+We have adopted a n-layer architecture for its simplicity and effective layer decoupling. Given the nature of our application, we believe offering a mobile solution is essential, which is why we have chosen to develop an Android and a web-based frontend. Link to our [Architecture Diagram](/docs/Architecture.png).
 
 ### Technologies
 We wanted to explore something new and different, so we chose a tech stack that we had not worked previously with.
@@ -67,9 +70,9 @@ We decided to use Go because it is strongly typed, lightweight
 and fast. Go also offers memory allocation and garbage collection at run time to handle possible vulnerabilities and bugs. We chose Go over Rust because Rust has a steeper learning curve and is less mature.
 
 #### Data
-For the data layer, we plan to use Cloudflare’s SQLite database as it is fast and cheap.
+For the data layer, we plan to use Postgres. We decided to choose a SQL database because we need immediate consistency when it comes to make sure that there is no race condition, especially when it comes to implementing bidding feature. Postgres also scales well with concurrent read-write request and is more stable than MySQL. 
 
-This architecture will work well for our project due to its balance of simplicity and scalability. The n-tier architecture decouples the frontend, backend, and data layers, allowing each component to be developed, maintained, and scaled independently. Kotlin and Compose provide a robust, native Android experience, while Svelte ensures a lightweight and fast web frontend. Go’s efficiency, and concurrency features make it ideal for handling server-side operations at scale. Cloudflare’s SQLite offers a cost-effective, high-performance solution for managing data. Together, these technologies provide a cohesive and scalable system capable of handling our application's requirements. We can also integrate middleware between layers for caching and load balancing, to enhance performance and scalability, if needed, without requiring significant changes to other layers.
+This architecture will work well for our project due to its balance of simplicity and scalability. The n-layer architecture decouples the frontend, backend, and data layers, allowing each component to be developed, maintained, and scaled independently. Kotlin and Compose provide a robust, native Android experience, while Svelte ensures a lightweight and fast web frontend. Go’s efficiency, and concurrency features make it ideal for handling server-side operations at scale. Cloudflare’s SQLite offers a cost-effective, high-performance solution for managing data. Together, these technologies provide a cohesive and scalable system capable of handling our application's requirements. We can also integrate middleware between layers for caching and load balancing, to enhance performance and scalability, if needed, without requiring significant changes to other layers.
 
 ## Work Distribution
 We distribute our workload for this project as follows:
