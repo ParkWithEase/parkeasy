@@ -5,25 +5,26 @@ import (
 	"testing"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRegisterAndAuthenticate(t *testing.T) {
-	srv := NewMemoryAuthService[int]()
+	srv := NewService(auth.NewMemoryRepository())
 	const verysecurepass = "super duper ultra secure password just for testing"
 
 	t.Parallel() // Tests can be run concurrently
 
 	t.Run("email validation smoke test", func(t *testing.T) {
-		testId := 1000
+		testId := int64(1000)
 		// Invalid email smoke test, all implementations should be using validateEmail
 		err := srv.Register("notanemail", verysecurepass, testId)
 		assert.ErrorIs(t, err, ErrInvalidEmail, "make sure this implementation is using validateEmail")
 	})
 
 	t.Run("password validation smoke test", func(t *testing.T) {
-		testId := 1001
+		testId := int64(1001)
 		// Password too short test
 		err := srv.Register("user@example.com", "1", testId)
 		if assert.Error(t, err, "make sure this implementation is using validatePassword") {
@@ -39,7 +40,7 @@ func TestRegisterAndAuthenticate(t *testing.T) {
 	})
 
 	t.Run("successful authentication registration", func(t *testing.T) {
-		testId := 1002
+		testId := int64(1002)
 		const email = "user0@example.com"
 		err := srv.Register(email, verysecurepass, testId)
 		require.Nil(t, err, "basic user/password combination should be successful")
@@ -61,5 +62,15 @@ func TestRegisterAndAuthenticate(t *testing.T) {
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, models.ErrAuthEmailOrPassword, err)
 		}
+	})
+
+	t.Run("duplicate registration", func(t *testing.T) {
+		testId := int64(1003)
+		const email = "user1@example.com"
+		err := srv.Register(email, verysecurepass, testId)
+		require.Nil(t, err)
+
+		err = srv.Register("User1@example.com", verysecurepass, testId)
+		assert.Error(t, err, "duplicate registration should be denied")
 	})
 }

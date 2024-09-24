@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 
+	authRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
@@ -25,8 +26,14 @@ type Config struct {
 func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager) {
 	authMiddleware := routes.NewSessionMiddleware(api, sessionManager)
 	api.UseMiddleware(authMiddleware)
-	huma.AutoRegister(api, routes.NewGreetingRoute(&services.SimpleGreeting{}))
-	huma.AutoRegister(api, routes.NewAuthRoute(auth.NewMemoryAuthService[int](), sessionManager))
+
+	authRepo := authRepo.NewMemoryRepository()
+	authService := auth.NewService(authRepo)
+	authRoute := routes.NewAuthRoute(authService, sessionManager)
+
+	greetingRoute := routes.NewGreetingRoute(&services.SimpleGreeting{})
+	huma.AutoRegister(api, greetingRoute)
+	huma.AutoRegister(api, authRoute)
 }
 
 // Creates a new Huma API instance with routes configured

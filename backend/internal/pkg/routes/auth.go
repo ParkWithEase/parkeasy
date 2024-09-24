@@ -5,19 +5,15 @@ import (
 	"net/http"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
 )
 
 // Represents auth API routes
-type AuthRoute[T any] struct {
-	auth           Authenticator[T]
+type AuthRoute struct {
+	service        *auth.Service
 	sessionManager *scs.SessionManager
-}
-
-// Service provider for AuthRoute
-type Authenticator[T any] interface {
-	Authenticate(email string, password string) (T, error)
 }
 
 // Represents the authentication input
@@ -28,9 +24,9 @@ type AuthInput struct {
 // Creates a new authentication route
 //
 // Note: `sessionManager` should be installed as a global middleware. See NewSessionMiddleware for more details.
-func NewAuthRoute[T any](auth Authenticator[T], sessionManager *scs.SessionManager) *AuthRoute[T] {
-	return &AuthRoute[T]{
-		auth:           auth,
+func NewAuthRoute(service *auth.Service, sessionManager *scs.SessionManager) *AuthRoute {
+	return &AuthRoute{
+		service:        service,
 		sessionManager: sessionManager,
 	}
 }
@@ -46,7 +42,7 @@ func CheckAuthenticated(ctx context.Context, sessionManager *scs.SessionManager)
 }
 
 // Registers the `/auth` routes with Huma
-func (route *AuthRoute[T]) RegisterAuth(api huma.API) {
+func (r *AuthRoute) RegisterAuth(api huma.API) {
 	huma.Register(api, huma.Operation{
 		Method:      http.MethodPost,
 		Path:        "/auth",
@@ -63,20 +59,20 @@ func (route *AuthRoute[T]) RegisterAuth(api huma.API) {
 		},
 	}, func(ctx context.Context, input *AuthInput) (*SessionHeaderOutput, error) {
 		// Destroy the current session if one exists
-		err := route.sessionManager.Destroy(ctx)
+		err := r.sessionManager.Destroy(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		userid, err := route.auth.Authenticate(input.Body.Email, input.Body.Email)
+		userid, err := r.service.Authenticate(input.Body.Email, input.Body.Email)
 		if err != nil {
 			return nil, huma.Error401Unauthorized("Authentication failed", err)
 		}
 
-		route.sessionManager.Put(ctx, SessionKeyPersist, input.Body.Persist)
-		route.sessionManager.Put(ctx, SessionKeyUserId, userid)
+		r.sessionManager.Put(ctx, SessionKeyPersist, input.Body.Persist)
+		r.sessionManager.Put(ctx, SessionKeyUserId, userid)
 
-		result, err := CommitSession(ctx, route.sessionManager)
+		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
 			return nil, err
 		}
@@ -100,15 +96,15 @@ func (route *AuthRoute[T]) RegisterAuth(api huma.API) {
 			},
 		},
 	}, func(ctx context.Context, _ *struct{}) (*SessionHeaderOutput, error) {
-		err := CheckAuthenticated(ctx, route.sessionManager)
+		err := CheckAuthenticated(ctx, r.sessionManager)
 		if err != nil {
 			return nil, err
 		}
-		err = route.sessionManager.RenewToken(ctx)
+		err = r.sessionManager.RenewToken(ctx)
 		if err != nil {
 			return nil, err
 		}
-		result, err := CommitSession(ctx, route.sessionManager)
+		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
 			return nil, err
 		}
@@ -125,11 +121,11 @@ func (route *AuthRoute[T]) RegisterAuth(api huma.API) {
 			},
 		},
 	}, func(ctx context.Context, _ *struct{}) (*SessionHeaderOutput, error) {
-		err := route.sessionManager.Destroy(ctx)
+		err := r.sessionManager.Destroy(ctx)
 		if err != nil {
 			return nil, err
 		}
-		result, err := CommitSession(ctx, route.sessionManager)
+		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
 			return nil, err
 		}
