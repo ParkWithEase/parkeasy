@@ -16,6 +16,7 @@ func TestEmailValidation(t *testing.T) {
 		assert.Error(t, validateEmail("a@"), "mail with empty domain should be invalid")
 		assert.Error(t, validateEmail("@"), "mail with empty domain and local should be invalid")
 		assert.Error(t, validateEmail("@gmail.com"), "mail with empty local should be invalid")
+		assert.Error(t, validateEmail("invalid@i^n_valid.com"), "mail with invalid characters in domain should be invalid")
 	})
 
 	t.Run("size limit checks", func(t *testing.T) {
