@@ -21,3 +21,6 @@ go.work.sum
 
 # env file
 .env
+
+# PostgreSQL volumes db data directory
+db_data/
