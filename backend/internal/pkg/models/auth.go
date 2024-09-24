@@ -3,6 +3,8 @@ package models
 var (
 	ErrAuthEmailExists     = NewUserFacingError("user with given email already exists")
 	ErrAuthEmailOrPassword = NewUserFacingError("invalid email or password")
+	ErrRegInvalidEmail     = NewUserFacingError("email is invalid")
+	ErrRegPasswordLength   = NewUserFacingError("password is too long or too short")
 )
 
 type EmailPasswordLoginInput struct {

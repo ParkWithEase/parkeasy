@@ -1,11 +1,14 @@
 package auth
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/andskur/argon2-hashing"
+	"github.com/google/uuid"
 )
 
 // Argon2 configuration following OWASP recommendations
@@ -28,38 +31,58 @@ func NewService(repo auth.Repository) *Service {
 	}
 }
 
-// Register an authentication record for given user
-func (s *Service) Register(email string, password string, userId int64) error {
+// Create a new authentication record.
+//
+// Returns the associated identity.
+func (s *Service) Create(ctx context.Context, email string, password string) (uuid.UUID, error) {
 	err := validateEmail(email)
 	if err != nil {
-		return err
+		if errors.Is(err, ErrInvalidEmail) {
+			err = models.ErrRegInvalidEmail
+		}
+		return uuid.Nil, err
 	}
 	err = validatePassword(password)
 	if err != nil {
-		return err
+		switch {
+		case errors.Is(err, ErrPasswordTooLong), errors.Is(err, ErrPasswordTooShort):
+			err = models.ErrRegPasswordLength
+		}
+		return uuid.Nil, err
 	}
 
 	email = normalizeEmail(email)
 	hash, err := argon2.GenerateFromPassword([]byte(password), &argon2Params)
 	if err != nil {
-		return fmt.Errorf("cannot register user %v: %w", email, err)
+		return uuid.Nil, fmt.Errorf("cannot register user %v: %w", email, err)
 	}
 
-	err = s.repo.Create(email, hash, userId)
+	result, err := s.repo.Create(ctx, email, hash)
 	if err != nil {
-		return err
+		if errors.Is(err, auth.ErrDuplicateIdentity) {
+			err = models.ErrAuthEmailExists
+		}
+		return uuid.Nil, err
 	}
-	return nil
+	return result, nil
 }
 
-func (s *Service) Authenticate(email string, password string) (int64, error) {
+// Authenticate the given email, password.
+//
+// Returns the associated identity if no error occurs.
+func (s *Service) Authenticate(ctx context.Context, email string, password string) (uuid.UUID, error) {
 	email = normalizeEmail(email)
-	hash, userId, err := s.repo.GetByEmail(email)
+	record, err := s.repo.GetByEmail(ctx, email)
 	if err != nil {
-		return 0, err
+		// Always hash the password to prevent timing attacks
+		_, _ = argon2.GenerateFromPassword([]byte(password), &argon2Params)
+		if errors.Is(err, auth.ErrIdentityNotFound) {
+			err = models.ErrAuthEmailOrPassword
+		}
+		return uuid.Nil, err
 	}
-	if argon2.CompareHashAndPassword(hash, []byte(password)) != nil {
-		return 0, models.ErrAuthEmailOrPassword
+	if argon2.CompareHashAndPassword(record.PasswordHash, []byte(password)) != nil {
+		return uuid.Nil, models.ErrAuthEmailOrPassword
 	}
-	return userId, nil
+	return record.Id, nil
 }

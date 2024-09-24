@@ -35,7 +35,7 @@ func NewAuthRoute(service *auth.Service, sessionManager *scs.SessionManager) *Au
 //
 // Returns 401 Unauthorized if the session is not authenticated
 func CheckAuthenticated(ctx context.Context, sessionManager *scs.SessionManager) error {
-	if sessionManager.Exists(ctx, SessionKeyUserId) {
+	if sessionManager.Exists(ctx, SessionKeyAuthId) {
 		return nil
 	}
 	return huma.Error401Unauthorized("")
@@ -63,18 +63,23 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 		if err != nil {
 			return nil, err
 		}
-
-		userid, err := r.service.Authenticate(input.Body.Email, input.Body.Email)
-		if err != nil {
-			return nil, huma.Error401Unauthorized("Authentication failed", err)
-		}
-
-		r.sessionManager.Put(ctx, SessionKeyPersist, input.Body.Persist)
-		r.sessionManager.Put(ctx, SessionKeyUserId, userid)
-
+		// Generates cookies for the invalidation
 		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
 			return nil, err
+		}
+
+		authId, err := r.service.Authenticate(ctx, input.Body.Email, input.Body.Password)
+		if err != nil {
+			return &result, huma.Error401Unauthorized("Authentication failed", err)
+		}
+
+		r.sessionManager.Put(ctx, SessionKeyPersist, input.Body.Persist)
+		r.sessionManager.Put(ctx, SessionKeyAuthId, authId)
+
+		result, err = CommitSession(ctx, r.sessionManager)
+		if err != nil {
+			return &result, err
 		}
 		return &result, nil
 	})

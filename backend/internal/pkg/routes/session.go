@@ -2,11 +2,13 @@ package routes
 
 import (
 	"context"
+	"encoding/gob"
 	"net/http"
 	"time"
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 
@@ -19,6 +21,7 @@ var CookieSecurityScheme = huma.SecurityScheme{
 
 const (
 	CookieSecuritySchemeName = "cookieAuth"
+	SessionKeyAuthId         = "authid"
 	SessionKeyUserId         = "userid"
 	SessionKeyPersist        = "persist"
 	DefaultSessionLifetime   = 30 * 24 * time.Hour
@@ -38,6 +41,7 @@ func NewSessionManager(store scs.Store) *scs.SessionManager {
 	if store != nil {
 		result.Store = store
 	}
+	gob.Register(uuid.Nil)
 	result.Lifetime = DefaultSessionLifetime
 	result.Cookie.Secure = true
 	result.Cookie.HttpOnly = true

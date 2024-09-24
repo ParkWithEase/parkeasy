@@ -1,11 +1,31 @@
 package auth
 
-import "github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+import (
+	"context"
+	"errors"
+
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/google/uuid"
+)
+
+var (
+	ErrIdentityNotFound  = errors.New("requested identity not found")
+	ErrDuplicateIdentity = errors.New("an identity already exist")
+)
+
+type Identity struct {
+	Email        string
+	PasswordHash models.HashedPassword
+	Id           uuid.UUID
+}
 
 type Repository interface {
-	// Associate an authentication record with a given user
-	Create(email string, passwordHash models.HashedPassword, userId int64) error
+	// Create a new authentication identity
+	Create(ctx context.Context, email string, passwordHash models.HashedPassword) (uuid.UUID, error)
 
-	// Returns the HashedPassword and user id associated with a given email
-	GetByEmail(email string) (models.HashedPassword, int64, error)
+	// Returns the identity associated with a given uuid
+	Get(ctx context.Context, id uuid.UUID) (Identity, error)
+
+	// Returns the identity associated with a given email
+	GetByEmail(ctx context.Context, email string) (Identity, error)
 }
