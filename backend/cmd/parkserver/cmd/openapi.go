@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/app/parkserver"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -13,10 +13,11 @@ var openapiCmd = &cobra.Command{
 	Use:   "openapi",
 	Short: "Print the OpenAPI spec",
 	Run: func(cmd *cobra.Command, args []string) {
-		api := parkserver.NewHumaApi()
+		var config parkserver.Config
+		api := config.NewHumaApi()
 		oapi, err := api.OpenAPI().YAML()
 		if err != nil {
-			log.Fatalf("Cannot export OpenAPI spec: %v", err)
+			log.Fatal().Err(err).Msg("Cannot export OpenAPI spec")
 		}
 		fmt.Println(string(oapi))
 	},

@@ -3,19 +3,22 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/app/parkserver"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
-	cfgFile string
-	port    uint16
+	cfgFile   string
+	debugMode bool
+	insecure  bool
+	port      uint16
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -24,14 +27,22 @@ var rootCmd = &cobra.Command{
 	Short: "ParkEasy API server",
 	Long:  `The API server for ParkEasy app.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Printf("Starting server at :%v", port)
+		if debugMode {
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		}
 
 		// Shutdown on Ctrl-C
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
-		if err := parkserver.ListenAndServe(ctx, fmt.Sprintf(":%v", port)); err != nil {
-			log.Fatal(err)
+		config := parkserver.Config{
+			Addr:     fmt.Sprintf(":%v", port),
+			Insecure: insecure,
+		}
+		log.Info().Uint16("port", port).Msg("server started")
+
+		if err := config.ListenAndServe(ctx); err != nil {
+			log.Fatal().Err(err).Msg("")
 		}
 	},
 }
@@ -52,9 +63,16 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
+	rootCmd.PersistentFlags().BoolVar(&debugMode, "debug", false, "show debug logs")
+	rootCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, "run in insecure mode for development (ie. allow cookies to be sent over HTTP)")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/parkserver.toml)")
 	rootCmd.PersistentFlags().Uint16VarP(&port, "port", "p", 8080, "port to serve on")
 	err := viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
+	// Panic since errors here can only happen due to programming mistakes
+	if err != nil {
+		panic(err)
+	}
+	err = viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
 	// Panic since errors here can only happen due to programming mistakes
 	if err != nil {
 		panic(err)
