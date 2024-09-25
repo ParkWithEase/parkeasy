@@ -1,0 +1,78 @@
+linters:
+  enable:
+    - asasalint
+    - asciicheck
+    - bodyclose
+    - cyclop
+    - dogsled
+    - durationcheck
+    - errname
+    - errorlint
+    - exhaustive
+    - fatcontext
+    - gochecksumtype
+    - gocognit
+    - goconst
+    - gocritic
+    - gofmt
+    - gofumpt
+    - goimports
+    - gosec
+    - inamedparam
+    - inamedparam
+    - intrange
+    - ireturn
+    - makezero
+    - mirror
+    - misspell
+    - nakedret
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - perfsprint
+    - predeclared
+    - reassign
+    - revive
+    - testifylint
+    - unconvert
+    - usestdlibvars
+    - zerologlint
+    - rowserrcheck
+    - sqlclosecheck
+    - tagliatelle
+    - tenv
+    - thelper
+    - tparallel
+    - testableexamples
+
+linters-settings:
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - opinionated
+      - performance
+    disabled-tags:
+      - experimental
+
+  nakedret:
+    max-func-lines: 1
+
+  tagliatelle:
+    case:
+      rules:
+        json: snake
+        yaml: snake
+
+  ireturn:
+    allow:
+      - anon
+      - error
+      - huma\.
+
+issues:
+  exclude-rules:
+    - path: '(.+)_test\.go'
+      linters:
+        - bodyclose # Due to https://github.com/timakin/bodyclose/issues/59

@@ -5,24 +5,52 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"time"
 
+	authRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
+	userRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/user"
+	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 )
 
+type Config struct {
+	// The address to run the server on
+	Addr string
+	// Whether to run server in insecure mode. This allows cookies to be transferred over plain HTTP.
+	Insecure bool
+}
+
 // Register all routes
-func RegisterRoutes(api huma.API) {
-	huma.AutoRegister(api, routes.NewGreetingRoute(&services.SimpleGreeting{}))
+func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager) {
+	authMiddleware := routes.NewSessionMiddleware(api, sessionManager)
+	api.UseMiddleware(authMiddleware)
+
+	authRepository := authRepo.NewMemoryRepository()
+	authService := auth.NewService(authRepository)
+	authRoute := routes.NewAuthRoute(authService, sessionManager)
+
+	userRepository := userRepo.NewMemoryRepository()
+	userService := user.NewService(authService, userRepository)
+	userRoute := routes.NewUserRoute(userService, sessionManager)
+	huma.AutoRegister(api, authRoute)
+	huma.AutoRegister(api, userRoute)
 }
 
 // Creates a new Huma API instance with routes configured
-func NewHumaApi() huma.API {
+func (c *Config) NewHumaAPI() huma.API { //nolint: ireturn // not controlled by us
 	router := http.NewServeMux()
-	config := huma.DefaultConfig("Greeting API", "0.0.0")
+	config := huma.DefaultConfig("ParkEasy API", "0.0.0")
 	api := humago.New(router, config)
-	RegisterRoutes(api)
+	api.OpenAPI().Components.SecuritySchemes = make(map[string]*huma.SecurityScheme)
+	api.OpenAPI().Components.SecuritySchemes[routes.CookieSecuritySchemeName] = &routes.CookieSecurityScheme
+	sessionManager := routes.NewSessionManager(nil)
+	sessionManager.Cookie.Secure = !c.Insecure
+
+	RegisterRoutes(api, sessionManager)
 
 	return api
 }
@@ -30,13 +58,15 @@ func NewHumaApi() huma.API {
 // Listen and serve at `addr`.
 //
 // If `ctx` is cancelled, the server will shutdown gracefully and no error will be returned.
-func ListenAndServe(ctx context.Context, addr string) error {
-	api := NewHumaApi()
+func (c *Config) ListenAndServe(ctx context.Context) error {
+	api := c.NewHumaAPI()
+	huma.NewError = routes.NewErrorFiltered
 
 	srv := http.Server{
-		Addr:        addr,
-		BaseContext: func(net.Listener) context.Context { return ctx },
-		Handler:     api.Adapter(),
+		Addr:              c.Addr,
+		BaseContext:       func(net.Listener) context.Context { return ctx },
+		Handler:           api.Adapter(),
+		ReadHeaderTimeout: 2 * time.Second,
 	}
 
 	go func() {
