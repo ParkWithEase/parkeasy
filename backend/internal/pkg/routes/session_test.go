@@ -9,7 +9,6 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -58,7 +57,6 @@ func TestSessionMiddleware(t *testing.T) {
 	// New session
 	resp = api.Post("/session")
 	assert.Equal(t, resp.Result().StatusCode, http.StatusNoContent)
-	log.Info().Fields(resp.Result().Header).Msg("got header")
 	require.Len(t, resp.Result().Cookies(), 1)
 	sessionCookie := resp.Result().Cookies()[0]
 	assert.Equal(t, manager.Cookie.Name, sessionCookie.Name)

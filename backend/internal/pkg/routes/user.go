@@ -54,12 +54,12 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 		// Destroy the current session if one exists
 		err := r.sessionManager.Destroy(ctx)
 		if err != nil {
-			return nil, err
+			return nil, huma.Error500InternalServerError("", err)
 		}
 		// Generates cookies for the invalidation
 		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return nil, err
+			return nil, huma.Error500InternalServerError("", err)
 		}
 
 		userId, authId, err := r.service.Create(ctx, input.Body.UserProfile, input.Body.Password)
@@ -71,7 +71,7 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 
 		result, err = CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return &result, err
+			return &result, huma.Error500InternalServerError("", err)
 		}
 		return &result, nil
 	})
@@ -100,7 +100,7 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 // Load the current user ID from a connection context.
 //
 // Returns the profile and its internal ID.
-// Returns an error if either the session is unauthenticated or no user profiles are associated with this user.
+// Returns a huma error if either the session is unauthenticated or no user profiles are associated with this user.
 func LoadUserFromContext(ctx context.Context, userSrv *user.Service, sessionManager *scs.SessionManager) (models.UserProfile, int64, error) {
 	err := CheckAuthenticated(ctx, sessionManager)
 	if err != nil {

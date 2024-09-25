@@ -61,12 +61,12 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 		// Destroy the current session if one exists
 		err := r.sessionManager.Destroy(ctx)
 		if err != nil {
-			return nil, err
+			return nil, huma.Error500InternalServerError("", err)
 		}
 		// Generates cookies for the invalidation
 		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return nil, err
+			return nil, huma.Error500InternalServerError("", err)
 		}
 
 		authId, err := r.service.Authenticate(ctx, input.Body.Email, input.Body.Password)
@@ -79,7 +79,7 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 
 		result, err = CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return &result, err
+			return &result, huma.Error500InternalServerError("", err)
 		}
 		return &result, nil
 	})
@@ -107,11 +107,11 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 		}
 		err = r.sessionManager.RenewToken(ctx)
 		if err != nil {
-			return nil, err
+			return nil, huma.Error500InternalServerError("", err)
 		}
 		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return nil, err
+			return nil, huma.Error500InternalServerError("", err)
 		}
 		return &result, nil
 	})
@@ -128,11 +128,11 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 	}, func(ctx context.Context, _ *struct{}) (*SessionHeaderOutput, error) {
 		err := r.sessionManager.Destroy(ctx)
 		if err != nil {
-			return nil, err
+			return nil, huma.Error500InternalServerError("", err)
 		}
 		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return nil, err
+			return nil, huma.Error500InternalServerError("", err)
 		}
 		return &result, nil
 	})

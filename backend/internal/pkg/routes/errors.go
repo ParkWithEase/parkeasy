@@ -11,7 +11,6 @@ import (
 // Huma error handler that automatically logs server errors and filter them from the output
 var NewErrorFiltered = func(status int, msg string, errs ...error) huma.StatusError {
 	details := make([]*huma.ErrorDetail, 0, len(errs))
-	hasServerError := false
 	for _, err := range errs {
 		switch err := err.(type) {
 		case *models.UserFacingError:
@@ -19,14 +18,13 @@ var NewErrorFiltered = func(status int, msg string, errs ...error) huma.StatusEr
 		case huma.ErrorDetailer:
 			details = append(details, err.ErrorDetail())
 		default:
-			hasServerError = true
+			// Don't leak internal errors
 			log.Err(err).Msg("internal error occurred")
+			return &huma.ErrorModel{
+				Status: http.StatusInternalServerError,
+				Title:  http.StatusText(http.StatusInternalServerError),
+			}
 		}
-	}
-
-	if hasServerError {
-		status = http.StatusInternalServerError
-		details = append(details, &huma.ErrorDetail{Message: "Internal error"})
 	}
 
 	return &huma.ErrorModel{
