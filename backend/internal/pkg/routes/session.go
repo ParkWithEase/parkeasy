@@ -21,8 +21,8 @@ var CookieSecurityScheme = huma.SecurityScheme{
 
 const (
 	CookieSecuritySchemeName = "cookieAuth"
-	SessionKeyAuthId         = "authid"
-	SessionKeyUserId         = "userid"
+	SessionKeyAuthID         = "authid"
+	SessionKeyUserID         = "userid"
 	SessionKeyPersist        = "persist"
 	DefaultSessionLifetime   = 30 * 24 * time.Hour
 )
@@ -85,6 +85,8 @@ func CommitSession(ctx context.Context, manager *scs.SessionManager) (SessionHea
 		result.SetCookie = append(result.SetCookie, newSessionCookie(ctx, manager, token, expiry).String())
 	case scs.Destroyed:
 		result.SetCookie = append(result.SetCookie, newSessionCookie(ctx, manager, "", time.Time{}).String())
+	case scs.Unmodified:
+		// nothing to do
 	}
 
 	if len(result.SetCookie) > 0 {

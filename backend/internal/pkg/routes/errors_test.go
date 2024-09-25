@@ -11,6 +11,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInternalError(t *testing.T) {
@@ -29,12 +30,12 @@ func TestInternalError(t *testing.T) {
 	resp := api.Get("/error")
 	assert.Equal(t, http.StatusInternalServerError, resp.Result().StatusCode)
 	errorDetail, err := io.ReadAll(resp.Result().Body)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `{"status":500,"title":"Internal Server Error"}`, string(errorDetail))
 
 	resp = api.Get("/visible-error")
 	assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
 	errorDetail, err = io.ReadAll(resp.Result().Body)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, `{"status":400,"title":"Bad Request","errors":[{"message": "it's ok"}]}`, string(errorDetail))
 }

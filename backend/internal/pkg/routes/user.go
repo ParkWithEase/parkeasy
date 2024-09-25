@@ -62,12 +62,12 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 			return nil, huma.Error500InternalServerError("", err)
 		}
 
-		userId, authId, err := r.service.Create(ctx, input.Body.UserProfile, input.Body.Password)
+		userID, authID, err := r.service.Create(ctx, input.Body.UserProfile, input.Body.Password)
 		if err != nil {
 			return &result, huma.Error400BadRequest("", err)
 		}
-		r.sessionManager.Put(ctx, SessionKeyAuthId, authId)
-		r.sessionManager.Put(ctx, SessionKeyUserId, userId)
+		r.sessionManager.Put(ctx, SessionKeyAuthID, authID)
+		r.sessionManager.Put(ctx, SessionKeyUserID, userID)
 
 		result, err = CommitSession(ctx, r.sessionManager)
 		if err != nil {
@@ -85,7 +85,7 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 				CookieSecuritySchemeName: {},
 			},
 		},
-	}, func(ctx context.Context, input *struct{}) (*UserProfileOutput, error) {
+	}, func(ctx context.Context, _ *struct{}) (*UserProfileOutput, error) {
 		result, _, err := LoadUserFromContext(ctx, r.service, r.sessionManager)
 		if err != nil {
 			return nil, err
@@ -108,18 +108,18 @@ func LoadUserFromContext(ctx context.Context, userSrv *user.Service, sessionMana
 	}
 
 	var result models.UserProfile
-	profileId, ok := sessionManager.Get(ctx, SessionKeyUserId).(int64)
+	profileID, ok := sessionManager.Get(ctx, SessionKeyUserID).(int64)
 	if !ok {
-		result, profileId, err = userSrv.GetProfileByAuth(ctx, sessionManager.Get(ctx, SessionKeyAuthId).(uuid.UUID))
+		result, profileID, err = userSrv.GetProfileByAuth(ctx, sessionManager.Get(ctx, SessionKeyAuthID).(uuid.UUID))
 		if err != nil {
 			return models.UserProfile{}, 0, huma.Error404NotFound("", err)
 		}
-		sessionManager.Put(ctx, SessionKeyUserId, profileId)
+		sessionManager.Put(ctx, SessionKeyUserID, profileID)
 	} else {
-		result, err = userSrv.GetProfileById(ctx, profileId)
+		result, err = userSrv.GetProfileByID(ctx, profileID)
 		if err != nil {
 			return models.UserProfile{}, 0, huma.Error404NotFound("", err)
 		}
 	}
-	return result, profileId, nil
+	return result, profileID, nil
 }

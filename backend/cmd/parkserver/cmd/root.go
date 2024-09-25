@@ -26,7 +26,7 @@ var rootCmd = &cobra.Command{
 	Use:   "parkserver",
 	Short: "ParkEasy API server",
 	Long:  `The API server for ParkEasy app.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		if debugMode {
 			zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		}

@@ -29,13 +29,13 @@ func TestAuthRoutes(t *testing.T) {
 	const testPassword = "very secure password"
 
 	_, err := service.Create(ctx, testEmail, testPassword)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	resp := api.Post("/auth", models.EmailPasswordLoginInput{
 		Email:    testEmail,
 		Password: testPassword,
 	})
-	assert.Equal(t, resp.Result().StatusCode, http.StatusNoContent)
+	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
 	require.Len(t, resp.Result().Cookies(), 1, "a session token should be set")
 	cookie := *resp.Result().Cookies()[0]
 	cookie = http.Cookie{

@@ -21,7 +21,7 @@ const (
 
 // Validate an email local part
 func validateEmailLocal(local string) error {
-	if len(local) == 0 || len(local) > emailLocalLimit {
+	if local == "" || len(local) > emailLocalLimit {
 		return ErrInvalidEmail
 	}
 	return nil
@@ -29,7 +29,7 @@ func validateEmailLocal(local string) error {
 
 // Validate an email domain
 func validateEmailDomain(domain string) error {
-	if len(domain) == 0 || len(domain) > emailLimit {
+	if domain == "" || len(domain) > emailLimit {
 		return ErrInvalidEmail
 	}
 
@@ -45,7 +45,7 @@ func validateEmailDomain(domain string) error {
 
 // Perform simple validation of an email access conforming to OWASP guidelines
 func validateEmail(email string) error {
-	if len(email) == 0 || len(email) > emailLimit {
+	if email == "" || len(email) > emailLimit {
 		return ErrInvalidEmail
 	}
 

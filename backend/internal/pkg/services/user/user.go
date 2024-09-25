@@ -11,14 +11,14 @@ import (
 )
 
 type Service struct {
-	auth auth.Service
+	auth *auth.Service
 	repo user.Repository
 }
 
 // Create a new user service
-func NewService(auth auth.Service, repo user.Repository) *Service {
+func NewService(authService *auth.Service, repo user.Repository) *Service {
 	return &Service{
-		auth: auth,
+		auth: authService,
 		repo: repo,
 	}
 }
@@ -27,24 +27,24 @@ func NewService(auth auth.Service, repo user.Repository) *Service {
 //
 // Returns the internal ID and authentication ID of the user
 func (s *Service) Create(ctx context.Context, profile models.UserProfile, password string) (int64, uuid.UUID, error) {
-	authId, err := s.auth.Create(ctx, profile.Email, password)
+	authID, err := s.auth.Create(ctx, profile.Email, password)
 	if err != nil {
 		return 0, uuid.Nil, err
 	}
 
-	result, err := s.repo.Create(ctx, authId, profile)
+	result, err := s.repo.Create(ctx, authID, profile)
 	if err != nil {
 		// TODO: either delete the auth, or consider creating the user again in an another route
-		return 0, authId, err
+		return 0, authID, err
 	}
 
-	return result, authId, nil
+	return result, authID, nil
 }
 
-func (s *Service) GetProfileById(ctx context.Context, id int64) (models.UserProfile, error) {
-	result, err := s.repo.GetProfileById(ctx, id)
+func (s *Service) GetProfileByID(ctx context.Context, id int64) (models.UserProfile, error) {
+	result, err := s.repo.GetProfileByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, user.ErrUnknownId) {
+		if errors.Is(err, user.ErrUnknownID) {
 			err = models.ErrNoProfile
 		}
 		return models.UserProfile{}, err
@@ -57,11 +57,11 @@ func (s *Service) GetProfileById(ctx context.Context, id int64) (models.UserProf
 func (s *Service) GetProfileByAuth(ctx context.Context, id uuid.UUID) (models.UserProfile, int64, error) {
 	result, err := s.repo.GetProfileByAuth(ctx, id)
 	if err != nil {
-		if errors.Is(err, user.ErrUnknownId) {
+		if errors.Is(err, user.ErrUnknownID) {
 			err = models.ErrNoProfile
 		}
 		return models.UserProfile{}, 0, err
 	}
 
-	return result.UserProfile, result.Id, nil
+	return result.UserProfile, result.ID, nil
 }

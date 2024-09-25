@@ -34,7 +34,7 @@ func NewService(repo auth.Repository) *Service {
 // Create a new authentication record.
 //
 // Returns the associated identity.
-func (s *Service) Create(ctx context.Context, email string, password string) (uuid.UUID, error) {
+func (s *Service) Create(ctx context.Context, email, password string) (uuid.UUID, error) {
 	err := validateEmail(email)
 	if err != nil {
 		if errors.Is(err, ErrInvalidEmail) {
@@ -70,7 +70,7 @@ func (s *Service) Create(ctx context.Context, email string, password string) (uu
 // Authenticate the given email, password.
 //
 // Returns the associated identity if no error occurs.
-func (s *Service) Authenticate(ctx context.Context, email string, password string) (uuid.UUID, error) {
+func (s *Service) Authenticate(ctx context.Context, email, password string) (uuid.UUID, error) {
 	email = normalizeEmail(email)
 	record, err := s.repo.GetByEmail(ctx, email)
 	if err != nil {
@@ -84,5 +84,5 @@ func (s *Service) Authenticate(ctx context.Context, email string, password strin
 	if argon2.CompareHashAndPassword(record.PasswordHash, []byte(password)) != nil {
 		return uuid.Nil, models.ErrAuthEmailOrPassword
 	}
-	return record.Id, nil
+	return record.ID, nil
 }

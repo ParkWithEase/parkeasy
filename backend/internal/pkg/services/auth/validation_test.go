@@ -7,10 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+//nolint:testifylint // errors here are meant to be tested without failing
 func TestEmailValidation(t *testing.T) {
 	t.Parallel() // These tests can be parallelized
 
 	t.Run("semantic checks", func(t *testing.T) {
+		t.Parallel()
+
 		assert.Error(t, validateEmail(""), "empty mail should be invalid")
 		assert.Error(t, validateEmail("boo"), "mail with no domain should be invalid")
 		assert.Error(t, validateEmail("a@"), "mail with empty domain should be invalid")
@@ -20,6 +23,8 @@ func TestEmailValidation(t *testing.T) {
 	})
 
 	t.Run("size limit checks", func(t *testing.T) {
+		t.Parallel()
+
 		longLocalPart, longDomainPart := strings.Repeat("a", 65), strings.Repeat("b", 192)
 		assert.Error(t, validateEmail(longLocalPart+"@gmail.com"), "mail with overly long local should be invalid")
 		assert.Error(t, validateEmail(longLocalPart+"@"+longDomainPart), "mail with overly long local and domain should be invalid")
@@ -28,9 +33,11 @@ func TestEmailValidation(t *testing.T) {
 
 	// Valid email addresses
 	t.Run("valid checks", func(t *testing.T) {
-		assert.Nil(t, validateEmail("user@domain.com"), "a basic email address should be valid")
-		assert.Nil(t, validateEmail("user_1000@domain.something0.com"), "a basic email address should be valid")
-		assert.Nil(t, validateEmail("user+sub@domain-email.com"), "subaddressing should be valid")
+		t.Parallel()
+
+		assert.NoError(t, validateEmail("user@domain.com"), "a basic email address should be valid")
+		assert.NoError(t, validateEmail("user_1000@domain.something0.com"), "a basic email address should be valid")
+		assert.NoError(t, validateEmail("user+sub@domain-email.com"), "subaddressing should be valid")
 	})
 }
 

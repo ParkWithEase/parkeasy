@@ -25,7 +25,7 @@ func TestSessionMiddleware(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
-		manager.Put(ctx, SessionKeyUserId, idCount)
+		manager.Put(ctx, SessionKeyUserID, idCount)
 		idCount++
 
 		result, err := CommitSession(ctx, manager)
@@ -37,26 +37,26 @@ func TestSessionMiddleware(t *testing.T) {
 
 	type SessionOutput struct {
 		Body struct {
-			Id int `json:"id"`
+			ID int `json:"id"`
 		}
 	}
 	huma.Get(api, "/session", func(ctx context.Context, _ *struct{}) (*SessionOutput, error) {
-		data := manager.GetInt(ctx, SessionKeyUserId)
+		data := manager.GetInt(ctx, SessionKeyUserID)
 		result := &SessionOutput{}
-		result.Body.Id = data
+		result.Body.ID = data
 		return result, nil
 	})
 
 	// Verify no session
 	resp := api.Get("/session")
-	assert.Equal(t, resp.Result().StatusCode, http.StatusOK)
+	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 	respBody, err := io.ReadAll(resp.Result().Body)
-	require.Nil(t, err)
-	assert.JSONEq(t, `{"id": 0}`, string(respBody[:]), "there should be no ids before a session is established")
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"id": 0}`, string(respBody), "there should be no ids before a session is established")
 
 	// New session
 	resp = api.Post("/session")
-	assert.Equal(t, resp.Result().StatusCode, http.StatusNoContent)
+	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
 	require.Len(t, resp.Result().Cookies(), 1)
 	sessionCookie := resp.Result().Cookies()[0]
 	assert.Equal(t, manager.Cookie.Name, sessionCookie.Name)
@@ -67,14 +67,14 @@ func TestSessionMiddleware(t *testing.T) {
 		Value: sessionCookie.Value,
 	}
 	resp = api.Get("/session", "Cookie: "+sessionCookie.String())
-	assert.Equal(t, resp.Result().StatusCode, http.StatusOK)
+	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 	respBody, err = io.ReadAll(resp.Result().Body)
-	require.Nil(t, err)
-	assert.JSONEq(t, fmt.Sprintf(`{"id": %v}`, idCount-1), string(respBody[:]))
+	require.NoError(t, err)
+	assert.JSONEq(t, fmt.Sprintf(`{"id": %v}`, idCount-1), string(respBody))
 
 	// New session should delete the last
 	resp = api.Post("/session", "Cookie: "+sessionCookie.String())
-	assert.Equal(t, resp.Result().StatusCode, http.StatusNoContent)
+	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
 	require.Len(t, resp.Result().Cookies(), 1)
 	newSessionCookie := resp.Result().Cookies()[0]
 	assert.Equal(t, manager.Cookie.Name, newSessionCookie.Name)
@@ -85,15 +85,15 @@ func TestSessionMiddleware(t *testing.T) {
 
 	// Verify deleted session
 	resp = api.Get("/session", "Cookie: "+sessionCookie.String())
-	assert.Equal(t, resp.Result().StatusCode, http.StatusOK)
+	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 	respBody, err = io.ReadAll(resp.Result().Body)
-	require.Nil(t, err)
-	assert.JSONEq(t, `{"id": 0}`, string(respBody[:]))
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"id": 0}`, string(respBody))
 
 	// New session should be active
 	resp = api.Get("/session", "Cookie: "+newSessionCookie.String())
-	assert.Equal(t, resp.Result().StatusCode, http.StatusOK)
+	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 	respBody, err = io.ReadAll(resp.Result().Body)
-	require.Nil(t, err)
-	assert.JSONEq(t, fmt.Sprintf(`{"id": %v}`, idCount-1), string(respBody[:]))
+	require.NoError(t, err)
+	assert.JSONEq(t, fmt.Sprintf(`{"id": %v}`, idCount-1), string(respBody))
 }

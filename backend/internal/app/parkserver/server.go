@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"time"
 
 	authRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	userRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
@@ -28,19 +29,19 @@ func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager) {
 	authMiddleware := routes.NewSessionMiddleware(api, sessionManager)
 	api.UseMiddleware(authMiddleware)
 
-	authRepo := authRepo.NewMemoryRepository()
-	authService := auth.NewService(authRepo)
+	authRepository := authRepo.NewMemoryRepository()
+	authService := auth.NewService(authRepository)
 	authRoute := routes.NewAuthRoute(authService, sessionManager)
 
-	userRepo := userRepo.NewMemoryRepository()
-	userService := user.NewService(*authService, userRepo)
+	userRepository := userRepo.NewMemoryRepository()
+	userService := user.NewService(authService, userRepository)
 	userRoute := routes.NewUserRoute(userService, sessionManager)
 	huma.AutoRegister(api, authRoute)
 	huma.AutoRegister(api, userRoute)
 }
 
 // Creates a new Huma API instance with routes configured
-func (c *Config) NewHumaApi() huma.API {
+func (c *Config) NewHumaAPI() huma.API { //nolint: ireturn // not controlled by us
 	router := http.NewServeMux()
 	config := huma.DefaultConfig("ParkEasy API", "0.0.0")
 	api := humago.New(router, config)
@@ -58,13 +59,14 @@ func (c *Config) NewHumaApi() huma.API {
 //
 // If `ctx` is cancelled, the server will shutdown gracefully and no error will be returned.
 func (c *Config) ListenAndServe(ctx context.Context) error {
-	api := c.NewHumaApi()
+	api := c.NewHumaAPI()
 	huma.NewError = routes.NewErrorFiltered
 
 	srv := http.Server{
-		Addr:        c.Addr,
-		BaseContext: func(net.Listener) context.Context { return ctx },
-		Handler:     api.Adapter(),
+		Addr:              c.Addr,
+		BaseContext:       func(net.Listener) context.Context { return ctx },
+		Handler:           api.Adapter(),
+		ReadHeaderTimeout: 2 * time.Second,
 	}
 
 	go func() {

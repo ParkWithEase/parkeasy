@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
@@ -12,11 +13,13 @@ import (
 var NewErrorFiltered = func(status int, msg string, errs ...error) huma.StatusError {
 	details := make([]*huma.ErrorDetail, 0, len(errs))
 	for _, err := range errs {
-		switch err := err.(type) {
-		case *models.UserFacingError:
-			details = append(details, &huma.ErrorDetail{Message: err.Error()})
-		case huma.ErrorDetailer:
-			details = append(details, err.ErrorDetail())
+		var userFacingError *models.UserFacingError
+		var errorDetailer huma.ErrorDetailer
+		switch {
+		case errors.As(err, &userFacingError):
+			details = append(details, &huma.ErrorDetail{Message: userFacingError.Error()})
+		case errors.As(err, &errorDetailer):
+			details = append(details, errorDetailer.ErrorDetail())
 		default:
 			// Don't leak internal errors
 			log.Err(err).Msg("internal error occurred")

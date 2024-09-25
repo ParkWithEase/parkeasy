@@ -16,7 +16,7 @@ var (
 type Identity struct {
 	Email        string
 	PasswordHash models.HashedPassword
-	Id           uuid.UUID
+	ID           uuid.UUID
 }
 
 type Repository interface {

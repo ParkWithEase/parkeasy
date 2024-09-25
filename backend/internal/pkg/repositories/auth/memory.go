@@ -10,14 +10,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type memoryRepository struct {
+// In-memory authentication repository
+type MemoryRepository struct {
 	db          map[uuid.UUID]Identity
 	emailLookup map[string]uuid.UUID
 	mutex       sync.RWMutex
 }
 
 // Create implements Repository.
-func (m *memoryRepository) Create(_ context.Context, email string, passwordHash models.HashedPassword) (uuid.UUID, error) {
+func (m *MemoryRepository) Create(_ context.Context, email string, passwordHash models.HashedPassword) (uuid.UUID, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	if _, ok := m.emailLookup[email]; ok {
@@ -31,7 +32,7 @@ func (m *memoryRepository) Create(_ context.Context, email string, passwordHash 
 		return uuid.Nil, errors.New("uuid collision happened")
 	}
 	m.db[id] = Identity{
-		Id:           id,
+		ID:           id,
 		Email:        email,
 		PasswordHash: passwordHash,
 	}
@@ -40,7 +41,7 @@ func (m *memoryRepository) Create(_ context.Context, email string, passwordHash 
 }
 
 // Get implements Repository.
-func (m *memoryRepository) Get(_ context.Context, id uuid.UUID) (Identity, error) {
+func (m *MemoryRepository) Get(_ context.Context, id uuid.UUID) (Identity, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 	result, ok := m.db[id]
@@ -51,7 +52,7 @@ func (m *memoryRepository) Get(_ context.Context, id uuid.UUID) (Identity, error
 }
 
 // GetByEmail implements Repository.
-func (m *memoryRepository) GetByEmail(_ context.Context, email string) (Identity, error) {
+func (m *MemoryRepository) GetByEmail(_ context.Context, email string) (Identity, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 	id, ok := m.emailLookup[email]
@@ -62,6 +63,6 @@ func (m *memoryRepository) GetByEmail(_ context.Context, email string) (Identity
 	return result, nil
 }
 
-func NewMemoryRepository() Repository {
-	return &memoryRepository{db: make(map[uuid.UUID]Identity), emailLookup: make(map[string]uuid.UUID)}
+func NewMemoryRepository() *MemoryRepository {
+	return &MemoryRepository{db: make(map[uuid.UUID]Identity), emailLookup: make(map[string]uuid.UUID)}
 }
