@@ -60,14 +60,18 @@ func NewSessionMiddleware(api huma.API, manager *scs.SessionManager) func(huma.C
 		newCtx, err := manager.Load(ctx.Context(), token)
 		if err != nil {
 			log.Err(err).Msg("internal error loading from session store")
-			err := huma.WriteErr(api, ctx, 500, "")
-			if err != nil {
-				log.Err(err).Msg("error occurred during huma.WriteErr")
-			}
+			_ = huma.WriteErr(api, ctx, 500, "")
 			return
 		}
 
 		ctx = huma.WithContext(ctx, newCtx)
+
+		if isCookieAuthorizationRequired(ctx.Operation()) {
+			if !manager.Exists(ctx.Context(), SessionKeyAuthID) {
+				_ = huma.WriteErr(api, ctx, http.StatusUnauthorized, "")
+				return
+			}
+		}
 
 		next(ctx)
 	}
@@ -116,4 +120,17 @@ func newSessionCookie(ctx context.Context, manager *scs.SessionManager, token st
 	}
 
 	return &result
+}
+
+func isCookieAuthorizationRequired(op *huma.Operation) bool {
+	if op == nil {
+		return false
+	}
+
+	for _, scheme := range op.Security {
+		if _, ok := scheme[CookieSecuritySchemeName]; ok {
+			return true
+		}
+	}
+	return false
 }

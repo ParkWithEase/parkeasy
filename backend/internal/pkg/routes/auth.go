@@ -31,16 +31,6 @@ func NewAuthRoute(service *auth.Service, sessionManager *scs.SessionManager) *Au
 	}
 }
 
-// Check whether the current session is authenticated
-//
-// Returns 401 Unauthorized if the session is not authenticated
-func CheckAuthenticated(ctx context.Context, sessionManager *scs.SessionManager) error {
-	if sessionManager.Exists(ctx, SessionKeyAuthID) {
-		return nil
-	}
-	return huma.Error401Unauthorized("")
-}
-
 // Registers the `/auth` routes with Huma
 func (r *AuthRoute) RegisterAuth(api huma.API) {
 	huma.Register(api, huma.Operation{
@@ -101,11 +91,7 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 			},
 		},
 	}, func(ctx context.Context, _ *struct{}) (*SessionHeaderOutput, error) {
-		err := CheckAuthenticated(ctx, r.sessionManager)
-		if err != nil {
-			return nil, err
-		}
-		err = r.sessionManager.RenewToken(ctx)
+		err := r.sessionManager.RenewToken(ctx)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("", err)
 		}

@@ -2,8 +2,6 @@ package routes
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"net/http"
 	"testing"
 
@@ -19,14 +17,12 @@ func TestSessionMiddleware(t *testing.T) {
 	manager := NewSessionManager(nil)
 	api.UseMiddleware(NewSessionMiddleware(api, manager))
 
-	idCount := 42
 	huma.Post(api, "/session", func(ctx context.Context, _ *struct{}) (*SessionHeaderOutput, error) {
 		err := manager.Destroy(ctx)
 		if err != nil {
 			return nil, err
 		}
-		manager.Put(ctx, SessionKeyUserID, idCount)
-		idCount++
+		manager.Put(ctx, SessionKeyAuthID, "authed")
 
 		result, err := CommitSession(ctx, manager)
 		if err != nil {
@@ -35,24 +31,20 @@ func TestSessionMiddleware(t *testing.T) {
 		return &result, nil
 	})
 
-	type SessionOutput struct {
-		Body struct {
-			ID int `json:"id"`
-		}
-	}
-	huma.Get(api, "/session", func(ctx context.Context, _ *struct{}) (*SessionOutput, error) {
-		data := manager.GetInt(ctx, SessionKeyUserID)
-		result := &SessionOutput{}
-		result.Body.ID = data
-		return result, nil
+	huma.Register(api, huma.Operation{
+		Method: http.MethodGet,
+		Path:   "/session",
+		Security: []map[string][]string{
+			{
+				CookieSecuritySchemeName: {},
+			},
+		},
+	}, func(_ context.Context, _ *struct{}) (*struct{}, error) {
+		return nil, nil //nolint: nilnil // this endpoint does nothing
 	})
 
-	// Verify no session
 	resp := api.Get("/session")
-	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
-	respBody, err := io.ReadAll(resp.Result().Body)
-	require.NoError(t, err)
-	assert.JSONEq(t, `{"id": 0}`, string(respBody), "there should be no ids before a session is established")
+	assert.Equal(t, http.StatusUnauthorized, resp.Result().StatusCode, "middleware should deny unauthorized requests")
 
 	// New session
 	resp = api.Post("/session")
@@ -67,33 +59,5 @@ func TestSessionMiddleware(t *testing.T) {
 		Value: sessionCookie.Value,
 	}
 	resp = api.Get("/session", "Cookie: "+sessionCookie.String())
-	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
-	respBody, err = io.ReadAll(resp.Result().Body)
-	require.NoError(t, err)
-	assert.JSONEq(t, fmt.Sprintf(`{"id": %v}`, idCount-1), string(respBody))
-
-	// New session should delete the last
-	resp = api.Post("/session", "Cookie: "+sessionCookie.String())
-	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
-	require.Len(t, resp.Result().Cookies(), 1)
-	newSessionCookie := resp.Result().Cookies()[0]
-	assert.Equal(t, manager.Cookie.Name, newSessionCookie.Name)
-	newSessionCookie = &http.Cookie{
-		Name:  newSessionCookie.Name,
-		Value: newSessionCookie.Value,
-	}
-
-	// Verify deleted session
-	resp = api.Get("/session", "Cookie: "+sessionCookie.String())
-	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
-	respBody, err = io.ReadAll(resp.Result().Body)
-	require.NoError(t, err)
-	assert.JSONEq(t, `{"id": 0}`, string(respBody))
-
-	// New session should be active
-	resp = api.Get("/session", "Cookie: "+newSessionCookie.String())
-	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
-	respBody, err = io.ReadAll(resp.Result().Body)
-	require.NoError(t, err)
-	assert.JSONEq(t, fmt.Sprintf(`{"id": %v}`, idCount-1), string(respBody))
+	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode, "middleware should allow authorized requests")
 }

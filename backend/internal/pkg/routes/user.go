@@ -102,12 +102,8 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 // Returns the profile and its internal ID.
 // Returns a huma error if either the session is unauthenticated or no user profiles are associated with this user.
 func LoadUserFromContext(ctx context.Context, userSrv *user.Service, sessionManager *scs.SessionManager) (models.UserProfile, int64, error) {
-	err := CheckAuthenticated(ctx, sessionManager)
-	if err != nil {
-		return models.UserProfile{}, 0, err
-	}
-
 	var result models.UserProfile
+	var err error
 	profileID, ok := sessionManager.Get(ctx, SessionKeyUserID).(int64)
 	if !ok {
 		result, profileID, err = userSrv.GetProfileByAuth(ctx, sessionManager.Get(ctx, SessionKeyAuthID).(uuid.UUID))
