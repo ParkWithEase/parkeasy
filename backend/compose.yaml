@@ -4,15 +4,17 @@ services:
       context: .
       dockerfile: ./Containerfile
     ports:
-      - 8080:8080
+      - "8080:8080"
     depends_on:
       - db
     environment:
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_USER=testuser
-      - DB_PASSWORD=testpassword
-      - DB_NAME=testdb
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: testuser
+      DB_PASSWORD: testpassword
+      DB_NAME: testdb
+    networks:
+      - backend
 
   db:
     image: postgres:16
@@ -21,7 +23,13 @@ services:
       POSTGRES_PASSWORD: testpassword
       POSTGRES_DB: testdb
     ports:
-      - 5432:5432
+      - "5432:5432"
     volumes:
       - ./db_data:/var/lib/postgresql/data
       - ./init_db:/docker-entrypoint-initdb.d/
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge

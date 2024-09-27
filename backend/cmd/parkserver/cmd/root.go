@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/app/parkserver"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -19,6 +20,7 @@ var (
 	debugMode bool
 	insecure  bool
 	port      uint16
+	dbURL     string // New flag to get the Postgres connection URL
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -31,6 +33,13 @@ var rootCmd = &cobra.Command{
 			zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		}
 
+		// Establish a database connection
+		dbPool, err := pgxpool.Connect(context.Background(), dbURL)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Unable to connect to the database")
+		}
+		defer dbPool.Close()
+
 		// Shutdown on Ctrl-C
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
@@ -41,7 +50,8 @@ var rootCmd = &cobra.Command{
 		}
 		log.Info().Uint16("port", port).Msg("server started")
 
-		if err := config.ListenAndServe(ctx); err != nil {
+		// Start the server and pass the dbPool connection
+		if err := config.ListenAndServe(ctx, dbPool); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 	},
@@ -60,20 +70,22 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
 	rootCmd.PersistentFlags().BoolVar(&debugMode, "debug", false, "show debug logs")
 	rootCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, "run in insecure mode for development (ie. allow cookies to be sent over HTTP)")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/parkserver.toml)")
 	rootCmd.PersistentFlags().Uint16VarP(&port, "port", "p", 8080, "port to serve on")
+	rootCmd.PersistentFlags().StringVar(&dbURL, "db-url", "postgres://testuser:testpass@db:5432/testdb", "Database connection URL")
+
+	// Bind flags to viper for configuration
 	err := viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
-	// Panic since errors here can only happen due to programming mistakes
 	if err != nil {
 		panic(err)
 	}
 	err = viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
-	// Panic since errors here can only happen due to programming mistakes
+	if err != nil {
+		panic(err)
+	}
+	err = viper.BindPFlag("db-url", rootCmd.PersistentFlags().Lookup("db-url"))
 	if err != nil {
 		panic(err)
 	}
