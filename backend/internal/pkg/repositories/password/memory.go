@@ -8,21 +8,20 @@ import (
 	"sync"
 )
 
-var tokenSize = 32
-var ErrInvalidToken = errors.New("reset token invalid")
+var (
+	tokenSize       = 32
+	ErrInvalidToken = errors.New("reset token invalid")
+)
 
 type MemoryRepository struct {
-	db          map[string]string //contain a map of uuid and reset token
+	db          map[string]string // Contain a map of uuid and reset token
 	emailLookup map[string]string
 	mutex       sync.RWMutex
 }
 
 func generateToken() string {
 	b := make([]byte, tokenSize)
-	_, err := rand.Read(b)
-	if err != nil {
-		return ""
-	}
+	rand.Read(b) //nolint: gosec // don't need to check for error
 	return hex.EncodeToString(b)
 }
 

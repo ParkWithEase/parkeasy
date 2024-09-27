@@ -111,7 +111,6 @@ func (s *Service) UpdatePassword(ctx context.Context, authID uuid.UUID, oldPassw
 	}
 
 	hash, err := argon2.GenerateFromPassword([]byte(newPassword), &argon2Params)
-
 	if err != nil {
 		return fmt.Errorf("cannot change password for user %v: %w", id.Email, err)
 	}
@@ -162,7 +161,6 @@ func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) 
 	}
 
 	hash, err := argon2.GenerateFromPassword([]byte(newPassword), &argon2Params)
-
 	if err != nil {
 		return fmt.Errorf("cannot change password for user %v: %w", email, err)
 	}
@@ -171,8 +169,8 @@ func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) 
 	if err != nil {
 		return err
 	}
-	err = s.repoPassword.RemovePasswordResetToken(ctx, token)
 
+	err = s.repoPassword.RemovePasswordResetToken(ctx, token)
 	if err != nil {
 		return err
 	}

@@ -75,7 +75,8 @@ func (m *MemoryRepository) UpdatePassword(_ context.Context, authID uuid.UUID, n
 	m.db[authID] = Identity{
 		ID:           identity.ID,
 		Email:        identity.Email,
-		PasswordHash: newPassword}
+		PasswordHash: newPassword,
+	}
 	return nil
 }
 

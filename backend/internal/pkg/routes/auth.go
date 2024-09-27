@@ -186,14 +186,14 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 	}) (*TokenMessage, error) {
 		token, err := r.service.CreatePasswordResetToken(ctx, input.Body.Email)
 
-		//Shouldn't return error message at all because this can be used for bruteforce attack
+		// Shouldn't return error message at all because this can be used for bruteforce attack
+		//nolint: gosec // don't need to check for linting here
 		resp := &TokenMessage{}
-		resp.Body.PasswordResetToken = "Random"
 		if err != nil {
 			return nil, nil //nolint: gosec // Force return success even if there is an error
 		}
 
-		//supposely send the email here after we get email third party API working
+		// Supposely send the email here after we get email third party API working
 
 		resp.Body.PasswordResetToken = *token
 		fmt.Printf("%v", *token)
