@@ -6,17 +6,17 @@ import (
 	"strconv"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
-	services "github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/car"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/car"
 	"github.com/danielgtaylor/huma/v2"
 )
 
 // CarRoute represents car-related API routes
 type CarRoute struct {
-	carService *services.Service
+	carService *car.Service
 }
 
 // NewCarRoute creates a new CarRoute with the given car service
-func NewCarRoute(carService *services.Service) *CarRoute {
+func NewCarRoute(carService *car.Service) *CarRoute {
 	return &CarRoute{
 		carService: carService,
 	}
