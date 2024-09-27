@@ -187,13 +187,17 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 		token, err := r.service.CreatePasswordResetToken(ctx, input.Body.Email)
 
 		// Shouldn't return error message at all because this can be used for bruteforce attack
-		//nolint: gosec // don't need to check for linting here
+
 		resp := &TokenMessage{}
 		if err != nil {
-			return nil, nil //nolint: gosec // Force return success even if there is an error
+			//lint:ignore nilerr // Force return success even if there is an error
+			return resp, nil
 		}
 
+		//TODO: send email using third party API + remove short circuting by returning the same message
+
 		// Supposely send the email here after we get email third party API working
+		// For debuggin purpose, I am only sending it out right now
 
 		resp.Body.PasswordResetToken = *token
 		fmt.Printf("%v", *token)
@@ -217,9 +221,6 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 		if err != nil {
 			return nil, huma.Error400BadRequest("", err)
 		}
-
-		//supposely send the email here after we get email third party API working
-		// For debuggin purpose, I am only sending it out right now
 		resp := &OutputMessage{}
 		resp.Body.Message = "Password reset successfully"
 		return resp, nil

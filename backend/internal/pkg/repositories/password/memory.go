@@ -19,10 +19,13 @@ type MemoryRepository struct {
 	mutex       sync.RWMutex
 }
 
-func generateToken() string {
+func generateToken() (string, error) {
 	b := make([]byte, tokenSize)
-	rand.Read(b) //nolint: gosec // don't need to check for error
-	return hex.EncodeToString(b)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }
 
 func (m *MemoryRepository) CreatePasswordResetToken(_ context.Context, email string) (*string, error) {
@@ -34,7 +37,10 @@ func (m *MemoryRepository) CreatePasswordResetToken(_ context.Context, email str
 		delete(m.emailLookup, email)
 	}
 
-	token := generateToken()
+	token, err := generateToken()
+	if err != nil {
+		return nil, err
+	}
 	m.db[token] = email
 	m.emailLookup[email] = token
 	return &token, nil
