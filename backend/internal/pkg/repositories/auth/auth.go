@@ -30,5 +30,5 @@ type Repository interface {
 	GetByEmail(ctx context.Context, email string) (Identity, error)
 
 	// Update password with a given email
-	UpdatePassword(ctx context.Context, email string, newPassword models.HashedPassword) error
+	UpdatePassword(ctx context.Context, authID uuid.UUID, newPassword models.HashedPassword) error
 }

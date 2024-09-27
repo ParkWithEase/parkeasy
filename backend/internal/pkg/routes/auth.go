@@ -9,6 +9,7 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
 )
 
 // Represents auth API routes
@@ -153,7 +154,11 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 	}, func(ctx context.Context, input *struct {
 		Body models.PasswordUpdateInput
 	}) (*OutputMessage, error) {
-		err := r.service.UpdatePassword(ctx, input.Body.Email, input.Body.OldPassword, input.Body.NewPassword)
+		profileID, ok := r.sessionManager.Get(ctx, SessionKeyAuthID).(uuid.UUID)
+		if !ok {
+			return nil, huma.Error500InternalServerError("", fmt.Errorf("Error"))
+		}
+		err := r.service.UpdatePassword(ctx, profileID, input.Body.OldPassword, input.Body.NewPassword)
 
 		if err != nil {
 			return nil, huma.Error400BadRequest("", err)

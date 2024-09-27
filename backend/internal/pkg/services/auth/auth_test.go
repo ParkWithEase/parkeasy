@@ -8,6 +8,7 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/password"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -100,8 +101,12 @@ func TestPasswordResetAndUpdate(t *testing.T) {
 		refID, err := srv.Create(ctx, email, testPassword)
 		require.NoError(t, err)
 
-		//update date the password
-		err = srv.UpdatePassword(ctx, email, testPassword, newPassword)
+		//Update password on random UUID
+		err = srv.UpdatePassword(ctx, uuid.MustParse("00000000111111112222222233333333"), testPassword, newPassword)
+		assert.Error(t, err)
+
+		//update the the password
+		err = srv.UpdatePassword(ctx, refID, testPassword, newPassword)
 		require.NoError(t, err)
 
 		//Can not authenticate using the old password
@@ -117,7 +122,7 @@ func TestPasswordResetAndUpdate(t *testing.T) {
 
 		//Can not update password with a bad password
 		const badPassword = "123"
-		err = srv.UpdatePassword(ctx, email, newPassword, badPassword)
+		err = srv.UpdatePassword(ctx, refID, newPassword, badPassword)
 		if assert.Error(t, err, "make sure this can not update password with a bad password") {
 			assert.ErrorIs(t, err, models.ErrRegPasswordLength)
 		}

@@ -88,7 +88,6 @@ func TestPasswordUpdateRoutes(t *testing.T) {
 
 	//Update password will fail if not login (meaning no session token yet)
 	resp := api.Put("/password-update", models.PasswordUpdateInput{
-		Email:       testEmail,
 		OldPassword: testPassword,
 		NewPassword: newPassword,
 	})
@@ -110,7 +109,6 @@ func TestPasswordUpdateRoutes(t *testing.T) {
 	//Update password
 	// Should fail when using a bad password
 	resp = api.Put("/password-update", models.PasswordUpdateInput{
-		Email:       testEmail,
 		OldPassword: testPassword,
 		NewPassword: "1",
 	}, "Cookie:"+cookie.String())
@@ -118,7 +116,6 @@ func TestPasswordUpdateRoutes(t *testing.T) {
 
 	//Success if using a normal password
 	resp = api.Put("/password-update", models.PasswordUpdateInput{
-		Email:       testEmail,
 		OldPassword: testPassword,
 		NewPassword: newPassword,
 	}, "Cookie:"+cookie.String())

@@ -90,9 +90,13 @@ func (s *Service) Authenticate(ctx context.Context, email, password string) (uui
 	return record.ID, nil
 }
 
-func (s *Service) UpdatePassword(ctx context.Context, email, oldPassword string, newPassword string) error {
-	email = normalizeEmail(email)
-	_, err := s.Authenticate(ctx, email, oldPassword)
+func (s *Service) UpdatePassword(ctx context.Context, authID uuid.UUID, oldPassword string, newPassword string) error {
+	id, err := s.repo.Get(ctx, authID)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.Authenticate(ctx, id.Email, oldPassword)
 	if err != nil {
 		return err
 	}
@@ -109,10 +113,10 @@ func (s *Service) UpdatePassword(ctx context.Context, email, oldPassword string,
 	hash, err := argon2.GenerateFromPassword([]byte(newPassword), &argon2Params)
 
 	if err != nil {
-		return fmt.Errorf("cannot change password for user %v: %w", email, err)
+		return fmt.Errorf("cannot change password for user %v: %w", id.Email, err)
 	}
 
-	err = s.repo.UpdatePassword(ctx, email, hash)
+	err = s.repo.UpdatePassword(ctx, authID, hash)
 	if err != nil {
 		return err
 	}
@@ -163,7 +167,7 @@ func (s *Service) ResetPassword(ctx context.Context, token string, newPassword s
 		return fmt.Errorf("cannot change password for user %v: %w", email, err)
 	}
 
-	err = s.repo.UpdatePassword(ctx, record.Email, hash)
+	err = s.repo.UpdatePassword(ctx, record.ID, hash)
 	s.repoPassword.RemovePasswordResetToken(ctx, token)
 	if err != nil {
 		return err
