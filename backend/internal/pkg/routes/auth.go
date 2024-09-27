@@ -2,6 +2,7 @@ package routes
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
@@ -19,6 +20,18 @@ type AuthRoute struct {
 // Represents the authentication input
 type AuthInput struct {
 	Body models.EmailPasswordLoginInput
+}
+
+type OutputMessage struct {
+	Body struct {
+		Message string `json:"message" doc:"Return message"`
+	}
+}
+
+type TokenMessage struct {
+	Body struct {
+		PasswordResetToken string `json:"password_token" doc:"Password Reset Token"`
+	}
 }
 
 // Creates a new authentication route
@@ -121,5 +134,85 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 			return nil, huma.Error500InternalServerError("", err)
 		}
 		return &result, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		Method:  http.MethodPut,
+		Path:    "/password-update",
+		Summary: "User change their password",
+		Responses: map[string]*huma.Response{
+			"204": {
+				Description: "User password updated successfully.",
+			},
+		},
+		Security: []map[string][]string{
+			{
+				CookieSecuritySchemeName: {},
+			},
+		},
+	}, func(ctx context.Context, input *struct {
+		Body models.PasswordUpdateInput
+	}) (*OutputMessage, error) {
+		err := r.service.UpdatePassword(ctx, input.Body.Email, input.Body.OldPassword, input.Body.NewPassword)
+
+		if err != nil {
+			return nil, huma.Error400BadRequest("", err)
+		}
+		resp := &OutputMessage{}
+		resp.Body.Message = "Password update successfully"
+		return resp, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		Method:  http.MethodPost,
+		Path:    "/password-token",
+		Summary: "User get a password token to change their password if they forget",
+		Responses: map[string]*huma.Response{
+			"200": {
+				Description: "Password token sent successfully.",
+			},
+		},
+	}, func(ctx context.Context, input *struct {
+		Body models.PasswordResetTokenRequest
+	}) (*TokenMessage, error) {
+		token, err := r.service.CreatePasswordResetToken(ctx, input.Body.Email)
+
+		//Shouldn't return error message at all because this can be used for bruteforce attack
+		resp := &TokenMessage{}
+		resp.Body.PasswordResetToken = "Random"
+		if err != nil {
+			return nil, nil
+		}
+
+		//supposely send the email here after we get email third party API working
+
+		resp.Body.PasswordResetToken = *token
+		fmt.Printf("%v", *token)
+		return resp, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		Method:  http.MethodPut,
+		Path:    "/password-reset",
+		Summary: "User reset their password",
+		Responses: map[string]*huma.Response{
+			"204": {
+				Description: "User password reset successfully.",
+			},
+		},
+	}, func(ctx context.Context, input *struct {
+		Body models.PasswordResetInput
+	}) (*OutputMessage, error) {
+		err := r.service.ResetPassword(ctx, input.Body.PasswordResetToken, input.Body.NewPassword)
+
+		if err != nil {
+			return nil, huma.Error400BadRequest("", err)
+		}
+
+		//supposely send the email here after we get email third party API working
+		// For debuggin purpose, I am only sending it out right now
+		resp := &OutputMessage{}
+		resp.Body.Message = "Password reset successfully"
+		return resp, nil
 	})
 }

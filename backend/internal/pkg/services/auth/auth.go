@@ -7,6 +7,7 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/password"
 	"github.com/andskur/argon2-hashing"
 	"github.com/google/uuid"
 )
@@ -21,13 +22,15 @@ var argon2Params = argon2.Params{
 }
 
 type Service struct {
-	repo auth.Repository
+	repo         auth.Repository
+	repoPassword password.Repository
 }
 
 // Create a new authentication service
-func NewService(repo auth.Repository) *Service {
+func NewService(repo auth.Repository, repoPassword password.Repository) *Service {
 	return &Service{
-		repo: repo,
+		repo:         repo,
+		repoPassword: repoPassword,
 	}
 }
 
@@ -85,4 +88,85 @@ func (s *Service) Authenticate(ctx context.Context, email, password string) (uui
 		return uuid.Nil, models.ErrAuthEmailOrPassword
 	}
 	return record.ID, nil
+}
+
+func (s *Service) UpdatePassword(ctx context.Context, email, oldPassword string, newPassword string) error {
+	email = normalizeEmail(email)
+	_, err := s.Authenticate(ctx, email, oldPassword)
+	if err != nil {
+		return err
+	}
+
+	err = validatePassword(newPassword)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrPasswordTooLong), errors.Is(err, ErrPasswordTooShort):
+			err = models.ErrRegPasswordLength
+		}
+		return err
+	}
+
+	hash, err := argon2.GenerateFromPassword([]byte(newPassword), &argon2Params)
+
+	if err != nil {
+		return fmt.Errorf("cannot change password for user %v: %w", email, err)
+	}
+
+	err = s.repo.UpdatePassword(ctx, email, hash)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) CreatePasswordResetToken(ctx context.Context, email string) (*string, error) {
+	email = normalizeEmail(email)
+	record, err := s.repo.GetByEmail(ctx, email)
+	if err != nil {
+		// Always hash the to prevent timing attacks, in this case, email
+		_, _ = argon2.GenerateFromPassword([]byte(email), &argon2Params)
+		return nil, err
+	}
+
+	token, err := s.repoPassword.CreatePasswordResetToken(ctx, record.Email)
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
+}
+
+func (s *Service) ResetPassword(ctx context.Context, token string, newPassword string) error {
+	email, err := s.repoPassword.VerifyPasswordResetToken(ctx, token)
+	if err != nil {
+		return models.ErrResetTokenInvalid
+	}
+
+	record, err := s.repo.GetByEmail(ctx, *email)
+	if err != nil {
+		// Always hash the to prevent timing attacks, in this case, email
+		_, _ = argon2.GenerateFromPassword([]byte(*email), &argon2Params)
+		return err
+	}
+
+	err = validatePassword(newPassword)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrPasswordTooLong), errors.Is(err, ErrPasswordTooShort):
+			err = models.ErrRegPasswordLength
+		}
+		return err
+	}
+
+	hash, err := argon2.GenerateFromPassword([]byte(newPassword), &argon2Params)
+
+	if err != nil {
+		return fmt.Errorf("cannot change password for user %v: %w", email, err)
+	}
+
+	err = s.repo.UpdatePassword(ctx, record.Email, hash)
+	s.repoPassword.RemovePasswordResetToken(ctx, token)
+	if err != nil {
+		return err
+	}
+	return nil
 }
