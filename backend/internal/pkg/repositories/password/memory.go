@@ -19,8 +19,11 @@ type MemoryRepository struct {
 
 func generateToken() string {
 	b := make([]byte, tokenSize)
-	rand.Read(b)
-	return hex.EncodeToString(b[:])
+	_, err := rand.Read(b)
+	if err != nil {
+		return ""
+	}
+	return hex.EncodeToString(b)
 }
 
 func (m *MemoryRepository) CreatePasswordResetToken(_ context.Context, email string) (*string, error) {

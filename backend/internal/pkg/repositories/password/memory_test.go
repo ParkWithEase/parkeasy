@@ -15,6 +15,7 @@ func TestCreateToken(t *testing.T) {
 	srv := NewMemoryRepository()
 	ctx := context.Background()
 	t.Run("Create password token for email test", func(t *testing.T) {
+		t.Parallel()
 		testEmail := "random-email@gmail.com"
 		token, err := srv.CreatePasswordResetToken(ctx, testEmail)
 		require.NoError(t, err, "Creating a token should always succeed")
@@ -22,6 +23,7 @@ func TestCreateToken(t *testing.T) {
 	})
 
 	t.Run("New token will override old token", func(t *testing.T) {
+		t.Parallel()
 		testEmail := "another-email@gmail.com"
 		token1, err := srv.CreatePasswordResetToken(ctx, testEmail)
 		temp := *token1
@@ -43,11 +45,13 @@ func TestDeleteToken(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Create password token and delete it", func(t *testing.T) {
+		t.Parallel()
 		testEmail := "random-email@gmail.com"
 		token, err := srv.CreatePasswordResetToken(ctx, testEmail)
 		require.NoError(t, err, "Creating a token should always success")
 
-		srv.RemovePasswordResetToken(ctx, *token)
+		err = srv.RemovePasswordResetToken(ctx, *token)
+		require.NoError(t, err)
 		assert.Empty(t, srv.db[*token])
 		assert.Empty(t, srv.emailLookup[testEmail])
 	})
@@ -60,6 +64,7 @@ func TestVerifyPasswordResetToken(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Create password token and verify it", func(t *testing.T) {
+		t.Parallel()
 		testEmail := "whonewworld@hotmail.com"
 		token, err := srv.CreatePasswordResetToken(ctx, testEmail)
 		require.NoError(t, err, "Creating a token should always success")
@@ -71,6 +76,7 @@ func TestVerifyPasswordResetToken(t *testing.T) {
 	})
 
 	t.Run("Try to verify a none existence token", func(t *testing.T) {
+		t.Parallel()
 		email, err := srv.VerifyPasswordResetToken(ctx, "randomrnygoarg")
 		if assert.Error(t, err) {
 			assert.Equal(t, err, ErrInvalidToken)

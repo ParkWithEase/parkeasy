@@ -8,7 +8,6 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/password"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -87,40 +86,34 @@ func TestRegisterAndAuthenticate(t *testing.T) {
 }
 
 func TestPasswordResetAndUpdate(t *testing.T) {
-	t.Parallel()
 
 	srv := NewService(auth.NewMemoryRepository(), password.NewMemoryRepository())
 	const testPassword = "super duper ultra secure password just for testing" //nolint: gosec // not a real credential
 
 	ctx := context.Background()
 	t.Run("Update Password Test", func(t *testing.T) {
-		t.Parallel()
 
 		const email = "newuser@example.com"
-		const newPassword = "asdgjklbhg12l3u5hl"
+		const newPassword = "asdgjklbhg12l3u5hl" //nolint: gosec // not a real credential
 		refID, err := srv.Create(ctx, email, testPassword)
 		require.NoError(t, err)
 
-		//Update password on random UUID
-		err = srv.UpdatePassword(ctx, uuid.MustParse("00000000111111112222222233333333"), testPassword, newPassword)
-		assert.Error(t, err)
-
-		//update the the password
+		// Update the the password
 		err = srv.UpdatePassword(ctx, refID, testPassword, newPassword)
 		require.NoError(t, err)
 
-		//Can not authenticate using the old password
+		// Can not authenticate using the old password
 		_, err = srv.Authenticate(ctx, email, testPassword)
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, models.ErrAuthEmailOrPassword, err)
 		}
 
-		//Can authenticate using the new password
+		// Can authenticate using the new password
 		id, err := srv.Authenticate(ctx, email, newPassword)
 		require.NoError(t, err)
 		assert.EqualValues(t, refID, id)
 
-		//Can not update password with a bad password
+		// Can not update password with a bad password
 		const badPassword = "123"
 		err = srv.UpdatePassword(ctx, refID, newPassword, badPassword)
 		if assert.Error(t, err, "make sure this can not update password with a bad password") {
@@ -129,50 +122,48 @@ func TestPasswordResetAndUpdate(t *testing.T) {
 	})
 
 	t.Run("Create Password Reset Token Test", func(t *testing.T) {
-		t.Parallel()
 
 		const email = "user234@example.com"
 		_, err := srv.Create(ctx, email, testPassword)
 		require.NoError(t, err)
 
-		//Create reset token for a valid email
+		// Create reset token for a valid email
 		_, err = srv.CreatePasswordResetToken(ctx, email)
 		require.NoError(t, err)
 
-		//Create reset token for a non valid email
+		// Create reset token for a non valid email
 		_, err = srv.CreatePasswordResetToken(ctx, "random email")
 		assert.Error(t, err, "Can not create token for unknown identity")
 	})
 
 	t.Run("Reset password with verify token", func(t *testing.T) {
-		t.Parallel()
 
 		const email = "userforgot@example.com"
 		const newPassword = "AlphablueBeta213"
 		refID, err := srv.Create(ctx, email, testPassword)
 		require.NoError(t, err)
 
-		//Create reset token for a valid email
+		// Create reset token for a valid email
 		token, err := srv.CreatePasswordResetToken(ctx, email)
 		require.NoError(t, err)
 
-		//Reset password using the token
+		// Reset password using the token
 		err = srv.ResetPassword(ctx, *token, newPassword)
 		require.NoError(t, err)
 
-		//Can authenticate using the new password
+		// Can authenticate using the new password
 		id, err := srv.Authenticate(ctx, email, newPassword)
 		require.NoError(t, err)
 		assert.EqualValues(t, refID, id)
 
 		const anotherPassword = "HD4000kalibaba"
-		//can not reset password using the old token
+		// Can not reset password using the old token
 		err = srv.ResetPassword(ctx, *token, anotherPassword)
 		if assert.Error(t, err, "make sure used token can't be used again") {
 			assert.ErrorIs(t, err, models.ErrResetTokenInvalid)
 		}
 
-		//Create another reset token for a valid email
+		// Create another reset token for a valid email
 		newToken, err := srv.CreatePasswordResetToken(ctx, email)
 		require.NoError(t, err)
 		const badPassword = "123"

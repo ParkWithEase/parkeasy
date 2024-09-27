@@ -163,7 +163,9 @@ func TestPasswordReset(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 	var data map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&data)
+	err = json.NewDecoder(resp.Body).Decode(&data)
+	require.NoError(t, err)
+
 	token := fmt.Sprintf("%v", data["password_token"])
 	resetInput := models.PasswordResetInput{}
 	resetInput.NewPassword = newPassword

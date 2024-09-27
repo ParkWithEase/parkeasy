@@ -71,7 +71,7 @@ func (m *MemoryRepository) UpdatePassword(_ context.Context, authID uuid.UUID, n
 		return ErrIdentityNotFound
 	}
 
-	//update identity with new password
+	// Update identity with new password
 	m.db[authID] = Identity{
 		ID:           identity.ID,
 		Email:        identity.Email,

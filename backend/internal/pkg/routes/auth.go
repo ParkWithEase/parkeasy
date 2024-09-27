@@ -2,6 +2,7 @@ package routes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -136,7 +137,10 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 		}
 		return &result, nil
 	})
+}
 
+// Register Password update and reset to huma
+func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 	huma.Register(api, huma.Operation{
 		Method:  http.MethodPut,
 		Path:    "/password-update",
@@ -156,7 +160,7 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 	}) (*OutputMessage, error) {
 		profileID, ok := r.sessionManager.Get(ctx, SessionKeyAuthID).(uuid.UUID)
 		if !ok {
-			return nil, huma.Error500InternalServerError("", fmt.Errorf("Error"))
+			return nil, huma.Error500InternalServerError("", errors.New("internal error"))
 		}
 		err := r.service.UpdatePassword(ctx, profileID, input.Body.OldPassword, input.Body.NewPassword)
 
@@ -186,7 +190,7 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 		resp := &TokenMessage{}
 		resp.Body.PasswordResetToken = "Random"
 		if err != nil {
-			return nil, nil
+			return nil, nil //nolint: gosec // Force return success even if there is an error
 		}
 
 		//supposely send the email here after we get email third party API working

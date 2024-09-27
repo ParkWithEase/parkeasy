@@ -7,7 +7,7 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/password"
+	passwordRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/password"
 	"github.com/andskur/argon2-hashing"
 	"github.com/google/uuid"
 )
@@ -23,11 +23,11 @@ var argon2Params = argon2.Params{
 
 type Service struct {
 	repo         auth.Repository
-	repoPassword password.Repository
+	repoPassword passwordRepo.Repository
 }
 
 // Create a new authentication service
-func NewService(repo auth.Repository, repoPassword password.Repository) *Service {
+func NewService(repo auth.Repository, repoPassword passwordRepo.Repository) *Service {
 	return &Service{
 		repo:         repo,
 		repoPassword: repoPassword,
@@ -90,7 +90,7 @@ func (s *Service) Authenticate(ctx context.Context, email, password string) (uui
 	return record.ID, nil
 }
 
-func (s *Service) UpdatePassword(ctx context.Context, authID uuid.UUID, oldPassword string, newPassword string) error {
+func (s *Service) UpdatePassword(ctx context.Context, authID uuid.UUID, oldPassword, newPassword string) error {
 	id, err := s.repo.Get(ctx, authID)
 	if err != nil {
 		return err
@@ -139,7 +139,7 @@ func (s *Service) CreatePasswordResetToken(ctx context.Context, email string) (*
 	return token, nil
 }
 
-func (s *Service) ResetPassword(ctx context.Context, token string, newPassword string) error {
+func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) error {
 	email, err := s.repoPassword.VerifyPasswordResetToken(ctx, token)
 	if err != nil {
 		return models.ErrResetTokenInvalid
@@ -168,7 +168,11 @@ func (s *Service) ResetPassword(ctx context.Context, token string, newPassword s
 	}
 
 	err = s.repo.UpdatePassword(ctx, record.ID, hash)
-	s.repoPassword.RemovePasswordResetToken(ctx, token)
+	if err != nil {
+		return err
+	}
+	err = s.repoPassword.RemovePasswordResetToken(ctx, token)
+
 	if err != nil {
 		return err
 	}
