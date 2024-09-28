@@ -160,7 +160,6 @@ func (s *Service) ResetPassword(ctx context.Context, token resettoken.Token, new
 
 	record, err := s.repo.Get(ctx, authID)
 	if err != nil {
-		// Always hash the to prevent timing attacks, in this case, email
 		return models.ErrResetTokenInvalid
 	}
 

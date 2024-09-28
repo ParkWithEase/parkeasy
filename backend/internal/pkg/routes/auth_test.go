@@ -117,7 +117,7 @@ func TestPasswordUpdateRoutes(t *testing.T) {
 	// Should fail when using a wrong old password
 	resp = api.Put("/auth/password", models.PasswordUpdateInput{
 		OldPassword: "wrong-old-password",
-		NewPassword: "1",
+		NewPassword: "Another",
 	}, "Cookie:"+cookie.String())
 	assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
 
