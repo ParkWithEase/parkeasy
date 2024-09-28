@@ -158,7 +158,7 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 		if err != nil {
 			return nil, huma.Error400BadRequest("", err)
 		}
-		return &struct{}{}, nil
+		return nil, nil //nolint: nilnil // there are no response for this operation
 	})
 
 	huma.Register(api, huma.Operation{
@@ -195,7 +195,7 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 	})
 
 	huma.Register(api, huma.Operation{
-		Method:  http.MethodPut,
+		Method:  http.MethodPost,
 		Path:    "/auth:resetPassword",
 		Summary: "User reset their password",
 		Responses: map[string]*huma.Response{
@@ -207,10 +207,10 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 		Body models.PasswordResetInput
 	},
 	) (*struct{}, error) {
-		err := r.service.ResetPassword(ctx, resettoken.ResetToken(input.Body.PasswordResetToken), input.Body.NewPassword)
+		err := r.service.ResetPassword(ctx, resettoken.Token(input.Body.PasswordResetToken), input.Body.NewPassword)
 		if err != nil {
 			return nil, huma.Error400BadRequest("", err)
 		}
-		return &struct{}{}, nil //lint:ignore nilnil
+		return nil, nil //nolint: nilnil // there are no response for this operation
 	})
 }

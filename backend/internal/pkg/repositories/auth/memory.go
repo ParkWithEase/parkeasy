@@ -64,8 +64,8 @@ func (m *MemoryRepository) GetByEmail(_ context.Context, email string) (Identity
 }
 
 func (m *MemoryRepository) UpdatePassword(_ context.Context, authID uuid.UUID, newPassword models.HashedPassword) error {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	identity, ok := m.db[authID]
 	if !ok {
 		return ErrIdentityNotFound

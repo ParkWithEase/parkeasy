@@ -171,12 +171,12 @@ func TestPasswordReset(t *testing.T) {
 	resetInput.NewPassword = newPassword
 	resetInput.PasswordResetToken = "invalidtoken"
 	// Reset password with the wrong token
-	resp = api.Put("/auth:resetPassword", resetInput)
+	resp = api.Post("/auth:resetPassword", resetInput)
 	assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
 
 	// Reset password with the right token
 	resetInput.PasswordResetToken = token
-	resp = api.Put("/auth:resetPassword", resetInput)
+	resp = api.Post("/auth:resetPassword", resetInput)
 	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
 
 	// Login using the new password

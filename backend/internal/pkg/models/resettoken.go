@@ -11,5 +11,5 @@ type PasswordResetInput struct {
 }
 
 type PasswordResetTokenRequest struct {
-	Email string `json:"email" doc:"The user email"`
+	Email string `json:"email" format:"email" doc:"The user email"`
 }

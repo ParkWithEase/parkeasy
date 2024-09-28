@@ -11,12 +11,12 @@ import (
 var ErrInvalidToken = errors.New("reset token invalid")
 
 type MemoryRepository struct {
-	db           map[ResetToken]uuid.UUID // Contain map of {ResetToken : uuid.UUID}
-	authIDLookup map[uuid.UUID]ResetToken // Contain a map of {uuid.UUID : ResetToken} for fast lookup
+	db           map[Token]uuid.UUID // Contain map of {ResetToken : uuid.UUID}
+	authIDLookup map[uuid.UUID]Token // Contain a map of {uuid.UUID : ResetToken} for fast lookup
 	mutex        sync.RWMutex
 }
 
-func (m *MemoryRepository) CreatePasswordResetToken(_ context.Context, authID uuid.UUID, token ResetToken) error {
+func (m *MemoryRepository) CreatePasswordResetToken(_ context.Context, authID uuid.UUID, token Token) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	oldToken, ok := m.authIDLookup[authID]
@@ -30,7 +30,7 @@ func (m *MemoryRepository) CreatePasswordResetToken(_ context.Context, authID uu
 	return nil
 }
 
-func (m *MemoryRepository) VerifyPasswordResetToken(_ context.Context, token ResetToken) (uuid.UUID, error) {
+func (m *MemoryRepository) VerifyPasswordResetToken(_ context.Context, token Token) (uuid.UUID, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 	authID, ok := m.db[token]
@@ -40,14 +40,14 @@ func (m *MemoryRepository) VerifyPasswordResetToken(_ context.Context, token Res
 	return authID, nil
 }
 
-func (m *MemoryRepository) RemovePasswordResetToken(_ context.Context, token ResetToken) error {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+func (m *MemoryRepository) RemovePasswordResetToken(_ context.Context, token Token) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	delete(m.authIDLookup, m.db[token])
 	delete(m.db, token)
 	return nil
 }
 
 func NewMemoryRepository() *MemoryRepository {
-	return &MemoryRepository{db: make(map[ResetToken]uuid.UUID), authIDLookup: make(map[uuid.UUID]ResetToken)}
+	return &MemoryRepository{db: make(map[Token]uuid.UUID), authIDLookup: make(map[uuid.UUID]Token)}
 }

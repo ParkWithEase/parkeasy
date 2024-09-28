@@ -9,7 +9,7 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
-	resetTokenRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/andskur/argon2-hashing"
 	"github.com/google/uuid"
 )
@@ -25,25 +25,25 @@ var argon2Params = argon2.Params{
 
 const tokenSize = 64
 
-func generateToken() (resetTokenRepo.ResetToken, error) {
+func generateToken() (resettoken.Token, error) {
 	b := make([]byte, tokenSize)
 	_, err := rand.Read(b)
 	if err != nil {
 		return "", err
 	}
-	return resetTokenRepo.ResetToken(hex.EncodeToString(b)), nil
+	return resettoken.Token(hex.EncodeToString(b)), nil
 }
 
 type Service struct {
-	repo         auth.Repository
-	repoPassword resetTokenRepo.Repository
+	repo           auth.Repository
+	resetTokenRepo resettoken.Repository
 }
 
 // Create a new authentication service
-func NewService(repo auth.Repository, repoPassword resetTokenRepo.Repository) *Service {
+func NewService(repo auth.Repository, repoPassword resettoken.Repository) *Service {
 	return &Service{
-		repo:         repo,
-		repoPassword: repoPassword,
+		repo:           repo,
+		resetTokenRepo: repoPassword,
 	}
 }
 
@@ -135,28 +135,25 @@ func (s *Service) UpdatePassword(ctx context.Context, authID uuid.UUID, oldPassw
 	return nil
 }
 
-func (s *Service) CreatePasswordResetToken(ctx context.Context, email string) (resetTokenRepo.ResetToken, error) {
+func (s *Service) CreatePasswordResetToken(ctx context.Context, email string) (resettoken.Token, error) {
 	record, err := s.repo.GetByEmail(ctx, email)
 	if err != nil {
-		// Always hash the to prevent timing attacks, in this case, email
-		randomToken, _ := generateToken()
-		_, _ = argon2.GenerateFromPassword([]byte(randomToken), &argon2Params)
-		return resetTokenRepo.ResetToken(""), err
+		return resettoken.Token(""), err
 	}
 
 	newToken, err := generateToken()
 	if err != nil {
-		return resetTokenRepo.ResetToken(""), err
+		return resettoken.Token(""), err
 	}
-	err = s.repoPassword.CreatePasswordResetToken(ctx, record.ID, newToken)
+	err = s.resetTokenRepo.CreatePasswordResetToken(ctx, record.ID, newToken)
 	if err != nil {
-		return resetTokenRepo.ResetToken(""), err
+		return resettoken.Token(""), err
 	}
 	return newToken, nil
 }
 
-func (s *Service) ResetPassword(ctx context.Context, token resetTokenRepo.ResetToken, newPassword string) error {
-	authID, err := s.repoPassword.VerifyPasswordResetToken(ctx, token)
+func (s *Service) ResetPassword(ctx context.Context, token resettoken.Token, newPassword string) error {
+	authID, err := s.resetTokenRepo.VerifyPasswordResetToken(ctx, token)
 	if err != nil {
 		return models.ErrResetTokenInvalid
 	}
@@ -186,7 +183,7 @@ func (s *Service) ResetPassword(ctx context.Context, token resetTokenRepo.ResetT
 		return err
 	}
 
-	err = s.repoPassword.RemovePasswordResetToken(ctx, token)
+	err = s.resetTokenRepo.RemovePasswordResetToken(ctx, token)
 	if err != nil {
 		return err
 	}

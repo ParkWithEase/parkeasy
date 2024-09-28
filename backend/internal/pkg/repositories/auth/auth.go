@@ -29,6 +29,6 @@ type Repository interface {
 	// Returns the identity associated with a given email
 	GetByEmail(ctx context.Context, email string) (Identity, error)
 
-	// Update password with a given email
+	// Update password with a given authID and new password
 	UpdatePassword(ctx context.Context, authID uuid.UUID, newPassword models.HashedPassword) error
 }
