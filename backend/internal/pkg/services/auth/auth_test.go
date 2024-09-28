@@ -7,7 +7,7 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/password"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,7 +15,7 @@ import (
 func TestRegisterAndAuthenticate(t *testing.T) {
 	t.Parallel()
 
-	srv := NewService(auth.NewMemoryRepository(), password.NewMemoryRepository())
+	srv := NewService(auth.NewMemoryRepository(), resettoken.NewMemoryRepository())
 	const testPassword = "super duper ultra secure password just for testing" //nolint: gosec // not a real credential
 
 	ctx := context.Background()
@@ -86,13 +86,11 @@ func TestRegisterAndAuthenticate(t *testing.T) {
 }
 
 func TestPasswordResetAndUpdate(t *testing.T) {
-
-	srv := NewService(auth.NewMemoryRepository(), password.NewMemoryRepository())
+	srv := NewService(auth.NewMemoryRepository(), resettoken.NewMemoryRepository())
 	const testPassword = "super duper ultra secure password just for testing" //nolint: gosec // not a real credential
 
 	ctx := context.Background()
 	t.Run("Update Password Test", func(t *testing.T) {
-
 		const email = "newuser@example.com"
 		const newPassword = "asdgjklbhg12l3u5hl" //nolint: gosec // not a real credential
 		refID, err := srv.Create(ctx, email, testPassword)
@@ -122,33 +120,32 @@ func TestPasswordResetAndUpdate(t *testing.T) {
 	})
 
 	t.Run("Create Password Reset Token Test", func(t *testing.T) {
-
 		const email = "user234@example.com"
 		_, err := srv.Create(ctx, email, testPassword)
 		require.NoError(t, err)
 
-		// Create reset token for a valid email
+		// Create reset token for a valid authID
+
 		_, err = srv.CreatePasswordResetToken(ctx, email)
 		require.NoError(t, err)
 
-		// Create reset token for a non valid email
-		_, err = srv.CreatePasswordResetToken(ctx, "random email")
+		// Create reset token for a non valid authID
+		_, err = srv.CreatePasswordResetToken(ctx, "random@email.com")
 		assert.Error(t, err, "Can not create token for unknown identity")
 	})
 
 	t.Run("Reset password with verify token", func(t *testing.T) {
-
 		const email = "userforgot@example.com"
 		const newPassword = "AlphablueBeta213"
 		refID, err := srv.Create(ctx, email, testPassword)
 		require.NoError(t, err)
 
-		// Create reset token for a valid email
+		// Create reset token for a valid authID
 		token, err := srv.CreatePasswordResetToken(ctx, email)
 		require.NoError(t, err)
 
 		// Reset password using the token
-		err = srv.ResetPassword(ctx, *token, newPassword)
+		err = srv.ResetPassword(ctx, token, newPassword)
 		require.NoError(t, err)
 
 		// Can authenticate using the new password
@@ -158,21 +155,21 @@ func TestPasswordResetAndUpdate(t *testing.T) {
 
 		const anotherPassword = "HD4000kalibaba"
 		// Can not reset password using the old token
-		err = srv.ResetPassword(ctx, *token, anotherPassword)
+		err = srv.ResetPassword(ctx, token, anotherPassword)
 		if assert.Error(t, err, "make sure used token can't be used again") {
 			assert.ErrorIs(t, err, models.ErrResetTokenInvalid)
 		}
 
-		// Create another reset token for a valid email
+		// Create another reset token for a valid authID
 		newToken, err := srv.CreatePasswordResetToken(ctx, email)
 		require.NoError(t, err)
 		const badPassword = "123"
-		err = srv.ResetPassword(ctx, *newToken, badPassword)
+		err = srv.ResetPassword(ctx, newToken, badPassword)
 		if assert.Error(t, err, "Can't reset password with a bad password") {
 			assert.ErrorIs(t, err, models.ErrRegPasswordLength)
 		}
 
-		err = srv.ResetPassword(ctx, *newToken, anotherPassword)
+		err = srv.ResetPassword(ctx, newToken, anotherPassword)
 		require.NoError(t, err)
 		id, err = srv.Authenticate(ctx, email, anotherPassword)
 		require.NoError(t, err)

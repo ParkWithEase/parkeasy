@@ -8,7 +8,7 @@ import (
 	"time"
 
 	authRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/password"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	userRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
@@ -30,7 +30,7 @@ func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager) {
 	authMiddleware := routes.NewSessionMiddleware(api, sessionManager)
 	api.UseMiddleware(authMiddleware)
 
-	passwordRepository := password.NewMemoryRepository()
+	passwordRepository := resettoken.NewMemoryRepository()
 	authRepository := authRepo.NewMemoryRepository()
 	authService := auth.NewService(authRepository, passwordRepository)
 	authRoute := routes.NewAuthRoute(authService, sessionManager)

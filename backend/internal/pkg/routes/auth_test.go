@@ -9,7 +9,7 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	authRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/password"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
@@ -19,7 +19,7 @@ import (
 
 func TestAuthRoutes(t *testing.T) {
 	repo := authRepo.NewMemoryRepository()
-	repoPassword := password.NewMemoryRepository()
+	repoPassword := resettoken.NewMemoryRepository()
 	service := auth.NewService(repo, repoPassword)
 	session := NewSessionManager(nil)
 	route := NewAuthRoute(service, session)
@@ -70,7 +70,7 @@ func TestAuthRoutes(t *testing.T) {
 
 func TestPasswordUpdateRoutes(t *testing.T) {
 	repo := authRepo.NewMemoryRepository()
-	repoPassword := password.NewMemoryRepository()
+	repoPassword := resettoken.NewMemoryRepository()
 	service := auth.NewService(repo, repoPassword)
 	session := NewSessionManager(nil)
 	route := NewAuthRoute(service, session)
@@ -87,7 +87,7 @@ func TestPasswordUpdateRoutes(t *testing.T) {
 	require.NoError(t, err)
 
 	// Update password will fail if not login (meaning no session token yet)
-	resp := api.Put("/password-update", models.PasswordUpdateInput{
+	resp := api.Put("/auth/password", models.PasswordUpdateInput{
 		OldPassword: testPassword,
 		NewPassword: newPassword,
 	})
@@ -108,18 +108,18 @@ func TestPasswordUpdateRoutes(t *testing.T) {
 
 	// Update password
 	// Should fail when using a bad password
-	resp = api.Put("/password-update", models.PasswordUpdateInput{
+	resp = api.Put("/auth/password", models.PasswordUpdateInput{
 		OldPassword: testPassword,
 		NewPassword: "1",
 	}, "Cookie:"+cookie.String())
 	assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
 
 	// Success if using a normal password
-	resp = api.Put("/password-update", models.PasswordUpdateInput{
+	resp = api.Put("/auth/password", models.PasswordUpdateInput{
 		OldPassword: testPassword,
 		NewPassword: newPassword,
 	}, "Cookie:"+cookie.String())
-	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
 
 	// Logout
 	resp = api.Delete("/auth", "Cookie:"+cookie.String())
@@ -135,7 +135,7 @@ func TestPasswordUpdateRoutes(t *testing.T) {
 
 func TestPasswordReset(t *testing.T) {
 	repo := authRepo.NewMemoryRepository()
-	repoPassword := password.NewMemoryRepository()
+	repoPassword := resettoken.NewMemoryRepository()
 	service := auth.NewService(repo, repoPassword)
 	session := NewSessionManager(nil)
 	route := NewAuthRoute(service, session)
@@ -152,13 +152,13 @@ func TestPasswordReset(t *testing.T) {
 	require.NoError(t, err)
 
 	// Request Token using invalid email. Wouldn't return a token but status is ok
-	resp := api.Post("/password-token", models.PasswordResetTokenRequest{
+	resp := api.Post("/auth:forgotPassword", models.PasswordResetTokenRequest{
 		Email: "invalid@example.com",
 	})
 	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
 	// Request Token
-	resp = api.Post("/password-token", models.PasswordResetTokenRequest{
+	resp = api.Post("/auth:forgotPassword", models.PasswordResetTokenRequest{
 		Email: testEmail,
 	})
 	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
@@ -171,13 +171,13 @@ func TestPasswordReset(t *testing.T) {
 	resetInput.NewPassword = newPassword
 	resetInput.PasswordResetToken = "invalidtoken"
 	// Reset password with the wrong token
-	resp = api.Put("/password-reset", resetInput)
+	resp = api.Put("/auth:resetPassword", resetInput)
 	assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
 
 	// Reset password with the right token
 	resetInput.PasswordResetToken = token
-	resp = api.Put("/password-reset", resetInput)
-	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+	resp = api.Put("/auth:resetPassword", resetInput)
+	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
 
 	// Login using the new password
 	resp = api.Post("/auth", models.EmailPasswordLoginInput{

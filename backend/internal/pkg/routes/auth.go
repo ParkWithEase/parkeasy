@@ -2,11 +2,11 @@ package routes
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
@@ -22,12 +22,6 @@ type AuthRoute struct {
 // Represents the authentication input
 type AuthInput struct {
 	Body models.EmailPasswordLoginInput
-}
-
-type OutputMessage struct {
-	Body struct {
-		Message string `json:"message" doc:"Return message"`
-	}
 }
 
 type TokenMessage struct {
@@ -143,7 +137,7 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 	huma.Register(api, huma.Operation{
 		Method:  http.MethodPut,
-		Path:    "/password-update",
+		Path:    "/auth/password",
 		Summary: "User change their password",
 		Responses: map[string]*huma.Response{
 			"204": {
@@ -157,24 +151,19 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 		},
 	}, func(ctx context.Context, input *struct {
 		Body models.PasswordUpdateInput
-	}) (*OutputMessage, error) {
-		profileID, ok := r.sessionManager.Get(ctx, SessionKeyAuthID).(uuid.UUID)
-		if !ok {
-			return nil, huma.Error500InternalServerError("", errors.New("internal error"))
-		}
-		err := r.service.UpdatePassword(ctx, profileID, input.Body.OldPassword, input.Body.NewPassword)
-
+	},
+	) (*struct{}, error) {
+		authID, _ := r.sessionManager.Get(ctx, SessionKeyAuthID).(uuid.UUID)
+		err := r.service.UpdatePassword(ctx, authID, input.Body.OldPassword, input.Body.NewPassword)
 		if err != nil {
 			return nil, huma.Error400BadRequest("", err)
 		}
-		resp := &OutputMessage{}
-		resp.Body.Message = "Password update successfully"
-		return resp, nil
+		return &struct{}{}, nil
 	})
 
 	huma.Register(api, huma.Operation{
 		Method:  http.MethodPost,
-		Path:    "/password-token",
+		Path:    "/auth:forgotPassword",
 		Summary: "User get a password token to change their password if they forget",
 		Responses: map[string]*huma.Response{
 			"200": {
@@ -183,7 +172,8 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 		},
 	}, func(ctx context.Context, input *struct {
 		Body models.PasswordResetTokenRequest
-	}) (*TokenMessage, error) {
+	},
+	) (*TokenMessage, error) {
 		token, err := r.service.CreatePasswordResetToken(ctx, input.Body.Email)
 
 		// Shouldn't return error message at all because this can be used for bruteforce attack
@@ -194,19 +184,19 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 			return resp, nil
 		}
 
-		//TODO: send email using third party API + remove short circuting by returning the same message
+		// TODO: send email using third party API + remove short circuting by returning the same message
 
 		// Supposely send the email here after we get email third party API working
 		// For debuggin purpose, I am only sending it out right now
 
-		resp.Body.PasswordResetToken = *token
-		fmt.Printf("%v", *token)
+		resp.Body.PasswordResetToken = string(token)
+		fmt.Printf("%v", token)
 		return resp, nil
 	})
 
 	huma.Register(api, huma.Operation{
 		Method:  http.MethodPut,
-		Path:    "/password-reset",
+		Path:    "/auth:resetPassword",
 		Summary: "User reset their password",
 		Responses: map[string]*huma.Response{
 			"204": {
@@ -215,14 +205,12 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 		},
 	}, func(ctx context.Context, input *struct {
 		Body models.PasswordResetInput
-	}) (*OutputMessage, error) {
-		err := r.service.ResetPassword(ctx, input.Body.PasswordResetToken, input.Body.NewPassword)
-
+	},
+	) (*struct{}, error) {
+		err := r.service.ResetPassword(ctx, resettoken.ResetToken(input.Body.PasswordResetToken), input.Body.NewPassword)
 		if err != nil {
 			return nil, huma.Error400BadRequest("", err)
 		}
-		resp := &OutputMessage{}
-		resp.Body.Message = "Password reset successfully"
-		return resp, nil
+		return &struct{}{}, nil //lint:ignore nilnil
 	})
 }
