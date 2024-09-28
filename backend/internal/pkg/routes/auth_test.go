@@ -114,6 +114,13 @@ func TestPasswordUpdateRoutes(t *testing.T) {
 	}, "Cookie:"+cookie.String())
 	assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
 
+	// Should fail when using a wrong old password
+	resp = api.Put("/auth/password", models.PasswordUpdateInput{
+		OldPassword: "wrong-old-password",
+		NewPassword: "1",
+	}, "Cookie:"+cookie.String())
+	assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
+
 	// Success if using a normal password
 	resp = api.Put("/auth/password", models.PasswordUpdateInput{
 		OldPassword: testPassword,
@@ -152,13 +159,13 @@ func TestPasswordReset(t *testing.T) {
 	require.NoError(t, err)
 
 	// Request Token using invalid email. Wouldn't return a token but status is ok
-	resp := api.Post("/auth:forgotPassword", models.PasswordResetTokenRequest{
+	resp := api.Post("/auth/password:forgot", models.PasswordResetTokenRequest{
 		Email: "invalid@example.com",
 	})
 	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
 	// Request Token
-	resp = api.Post("/auth:forgotPassword", models.PasswordResetTokenRequest{
+	resp = api.Post("/auth/password:forgot", models.PasswordResetTokenRequest{
 		Email: testEmail,
 	})
 	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
@@ -171,12 +178,12 @@ func TestPasswordReset(t *testing.T) {
 	resetInput.NewPassword = newPassword
 	resetInput.PasswordResetToken = "invalidtoken"
 	// Reset password with the wrong token
-	resp = api.Post("/auth:resetPassword", resetInput)
+	resp = api.Post("/auth/password:reset", resetInput)
 	assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
 
 	// Reset password with the right token
 	resetInput.PasswordResetToken = token
-	resp = api.Post("/auth:resetPassword", resetInput)
+	resp = api.Post("/auth/password:reset", resetInput)
 	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
 
 	// Login using the new password

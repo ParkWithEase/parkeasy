@@ -16,7 +16,7 @@ type MemoryRepository struct {
 	mutex        sync.RWMutex
 }
 
-func (m *MemoryRepository) CreatePasswordResetToken(_ context.Context, authID uuid.UUID, token Token) error {
+func (m *MemoryRepository) Create(_ context.Context, authID uuid.UUID, token Token) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	oldToken, ok := m.authIDLookup[authID]
@@ -30,7 +30,7 @@ func (m *MemoryRepository) CreatePasswordResetToken(_ context.Context, authID uu
 	return nil
 }
 
-func (m *MemoryRepository) VerifyPasswordResetToken(_ context.Context, token Token) (uuid.UUID, error) {
+func (m *MemoryRepository) Get(_ context.Context, token Token) (uuid.UUID, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 	authID, ok := m.db[token]
@@ -40,11 +40,19 @@ func (m *MemoryRepository) VerifyPasswordResetToken(_ context.Context, token Tok
 	return authID, nil
 }
 
-func (m *MemoryRepository) RemovePasswordResetToken(_ context.Context, token Token) error {
+func (m *MemoryRepository) Delete(_ context.Context, token Token) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	delete(m.authIDLookup, m.db[token])
-	delete(m.db, token)
+	authID, ok := m.db[token]
+	if ok {
+		delete(m.db, token)
+	}
+
+	_, ok = m.authIDLookup[authID]
+	if ok {
+		delete(m.authIDLookup, authID)
+	}
+
 	return nil
 }
 

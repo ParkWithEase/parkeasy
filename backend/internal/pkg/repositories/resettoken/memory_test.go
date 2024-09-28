@@ -19,7 +19,7 @@ func TestCreateToken(t *testing.T) {
 		t.Parallel()
 		testUUID := uuid.New()
 		testToken := Token("NewResetToken")
-		err := repo.CreatePasswordResetToken(ctx, testUUID, testToken)
+		err := repo.Create(ctx, testUUID, testToken)
 		require.NoError(t, err, "Creating a token should always succeed")
 		assert.EqualValues(t, testToken, repo.authIDLookup[testUUID])
 	})
@@ -29,10 +29,10 @@ func TestCreateToken(t *testing.T) {
 		testUUID := uuid.New()
 		testToken1 := Token("NewResetToken123")
 		testToken2 := Token("AnotherTestToken321")
-		err := repo.CreatePasswordResetToken(ctx, testUUID, testToken1)
+		err := repo.Create(ctx, testUUID, testToken1)
 		require.NoError(t, err, "Creating a token should always success")
 
-		err = repo.CreatePasswordResetToken(ctx, testUUID, testToken2)
+		err = repo.Create(ctx, testUUID, testToken2)
 		require.NoError(t, err, "Creating a token should always success")
 
 		fmt.Printf("token1 %v, token 2 %v , current %v", testToken1, testToken2, repo.authIDLookup[testUUID])
@@ -51,10 +51,10 @@ func TestDeleteToken(t *testing.T) {
 		t.Parallel()
 		testUUID := uuid.New()
 		testToken := Token("NewResetToken123")
-		err := repo.CreatePasswordResetToken(ctx, testUUID, testToken)
+		err := repo.Create(ctx, testUUID, testToken)
 		require.NoError(t, err, "Creating a token should always success")
 
-		err = repo.RemovePasswordResetToken(ctx, testToken)
+		err = repo.Delete(ctx, testToken)
 		require.NoError(t, err)
 		assert.Empty(t, repo.db[testToken])
 		assert.Empty(t, repo.authIDLookup[testUUID])
@@ -71,10 +71,10 @@ func TestVerifyPasswordResetToken(t *testing.T) {
 		t.Parallel()
 		testUUID := uuid.New()
 		testToken := Token("NewResetToken123")
-		err := repo.CreatePasswordResetToken(ctx, testUUID, testToken)
+		err := repo.Create(ctx, testUUID, testToken)
 		require.NoError(t, err, "Creating a token should always success")
 
-		authID, err := repo.VerifyPasswordResetToken(ctx, testToken)
+		authID, err := repo.Get(ctx, testToken)
 		require.NoError(t, err, "A token exist so this should be a success")
 
 		assert.Equal(t, testUUID, authID)
@@ -82,7 +82,7 @@ func TestVerifyPasswordResetToken(t *testing.T) {
 
 	t.Run("Try to verify a none existence token", func(t *testing.T) {
 		t.Parallel()
-		authID, err := repo.VerifyPasswordResetToken(ctx, "randomrnygoarg")
+		authID, err := repo.Get(ctx, "randomrnygoarg")
 		if assert.Error(t, err) {
 			assert.Equal(t, err, ErrInvalidToken)
 		}

@@ -40,10 +40,10 @@ type Service struct {
 }
 
 // Create a new authentication service
-func NewService(repo auth.Repository, repoPassword resettoken.Repository) *Service {
+func NewService(repo auth.Repository, repoToken resettoken.Repository) *Service {
 	return &Service{
 		repo:           repo,
-		resetTokenRepo: repoPassword,
+		resetTokenRepo: repoToken,
 	}
 }
 
@@ -145,7 +145,7 @@ func (s *Service) CreatePasswordResetToken(ctx context.Context, email string) (r
 	if err != nil {
 		return resettoken.Token(""), err
 	}
-	err = s.resetTokenRepo.CreatePasswordResetToken(ctx, record.ID, newToken)
+	err = s.resetTokenRepo.Create(ctx, record.ID, newToken)
 	if err != nil {
 		return resettoken.Token(""), err
 	}
@@ -153,7 +153,7 @@ func (s *Service) CreatePasswordResetToken(ctx context.Context, email string) (r
 }
 
 func (s *Service) ResetPassword(ctx context.Context, token resettoken.Token, newPassword string) error {
-	authID, err := s.resetTokenRepo.VerifyPasswordResetToken(ctx, token)
+	authID, err := s.resetTokenRepo.Get(ctx, token)
 	if err != nil {
 		return models.ErrResetTokenInvalid
 	}
@@ -183,7 +183,7 @@ func (s *Service) ResetPassword(ctx context.Context, token resettoken.Token, new
 		return err
 	}
 
-	err = s.resetTokenRepo.RemovePasswordResetToken(ctx, token)
+	err = s.resetTokenRepo.Delete(ctx, token)
 	if err != nil {
 		return err
 	}

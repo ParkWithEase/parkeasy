@@ -163,7 +163,7 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 
 	huma.Register(api, huma.Operation{
 		Method:  http.MethodPost,
-		Path:    "/auth:forgotPassword",
+		Path:    "/auth/password:forgot",
 		Summary: "User get a password token to change their password if they forget",
 		Responses: map[string]*huma.Response{
 			"200": {
@@ -196,7 +196,7 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 
 	huma.Register(api, huma.Operation{
 		Method:  http.MethodPost,
-		Path:    "/auth:resetPassword",
+		Path:    "/auth/password:reset",
 		Summary: "User reset their password",
 		Responses: map[string]*huma.Response{
 			"204": {
