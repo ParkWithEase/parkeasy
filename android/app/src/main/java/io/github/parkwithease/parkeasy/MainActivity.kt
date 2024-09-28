@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -82,6 +84,15 @@ fun LoginForm() {
                     Spacer(Modifier.size(4.dp))
                     PasswordField()
                     Spacer(Modifier.size(4.dp))
+                    Row(
+                        modifier = Modifier.width(280.dp)
+                    ) {
+                        Spacer(Modifier.weight(1f)) // Space for future register button
+                        Spacer(Modifier.size(4.dp))
+                        LoginButton(
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }
@@ -127,4 +138,14 @@ fun PasswordField() {
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         singleLine = true
     )
+}
+
+@Composable
+fun LoginButton(modifier: Modifier = Modifier) {
+    Button(
+        onClick = { },
+        modifier = modifier
+    ) {
+        Text(stringResource(R.string.login))
+    }
 }

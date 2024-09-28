@@ -5,4 +5,6 @@
     <string name="password">Password</string>
     <string name="passwordicon">Password Icon</string>
     <string name="logo">ParkEasy Logo</string>
+    <string name="login">Login</string>
+    <string name="register">Register</string>
 </resources>
