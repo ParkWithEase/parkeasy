@@ -16,6 +16,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/rs/cors"
 )
 
 type Config struct {
@@ -69,6 +70,26 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 		Handler:           api.Adapter(),
 		ReadHeaderTimeout: 2 * time.Second,
+	}
+
+	if c.Insecure {
+		corsMiddleware := cors.New(cors.Options{
+			AllowedMethods: []string{
+				http.MethodGet,
+				http.MethodHead,
+				http.MethodPut,
+				http.MethodPost,
+				http.MethodDelete,
+			},
+			// NOTE: This allow all credentials to be passed across CORS
+			//
+			// It is very insecure, and as such should only be enabled for development
+			AllowOriginFunc: func(_ string) bool {
+				return true
+			},
+			AllowCredentials: true,
+		})
+		srv.Handler = corsMiddleware.Handler(srv.Handler)
 	}
 
 	go func() {

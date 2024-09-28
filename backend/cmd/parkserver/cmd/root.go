@@ -31,6 +31,10 @@ var rootCmd = &cobra.Command{
 			zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		}
 
+		if insecure {
+			log.Warn().Msg("running in insecure mode")
+		}
+
 		// Shutdown on Ctrl-C
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
