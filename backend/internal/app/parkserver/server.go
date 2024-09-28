@@ -80,6 +80,7 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 				http.MethodPut,
 				http.MethodPost,
 				http.MethodDelete,
+				http.MethodPatch,
 			},
 			// NOTE: This allow all credentials to be passed across CORS
 			//
