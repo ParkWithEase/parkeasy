@@ -24,3 +24,4 @@ go.work.sum
 
 # PostgreSQL volumes db data directory
 db_data/
+parkeasy.toml

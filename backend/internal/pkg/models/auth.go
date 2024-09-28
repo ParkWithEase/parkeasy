@@ -5,6 +5,7 @@ var (
 	ErrAuthEmailOrPassword = NewUserFacingError("invalid email or password")
 	ErrRegInvalidEmail     = NewUserFacingError("email is invalid")
 	ErrRegPasswordLength   = NewUserFacingError("password is too long or too short")
+	ErrResetTokenInvalid   = NewUserFacingError("password reset token invalid")
 )
 
 type EmailPasswordLoginInput struct {
