@@ -74,7 +74,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, "run in insecure mode for development (ie. allow cookies to be sent over HTTP)")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/parkserver.toml)")
 	rootCmd.PersistentFlags().Uint16VarP(&port, "port", "p", 8080, "port to serve on")
-	rootCmd.PersistentFlags().StringVar(&dbURL, "db-url", "postgres://testuser:testpass@db:5432/testdb", "Database connection URL")
+	rootCmd.PersistentFlags().StringVar(&dbURL, "db-url", "postgres://testuser:testpassword@db:5432/testdb", "Database connection URL")
 
 	// Bind flags to viper for configuration
 	err := viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
