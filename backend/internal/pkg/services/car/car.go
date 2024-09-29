@@ -1,74 +1,87 @@
 package car
 
 import (
-	"context"
-	"log"
-
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
-	"github.com/jackc/pgx/v4/pgxpool"
+    "context"
+    "log"
+    "github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+    "github.com/jackc/pgconn"
+    "github.com/jackc/pgx/v4"
 )
 
-type Service struct {
-	DB *pgxpool.Pool
+// Service interface for car-related operations
+type Service interface {
+    GetCarsByUserID(ctx context.Context, userID int) ([]models.Car, error)
+    DeleteCarByUserID(ctx context.Context, userID, carID int) error
+    UpdateCar(ctx context.Context, userID, carID int, licensePlate, make, model, color string) error
 }
 
-// NewService creates a new instance of CarService with the given database pool
-func NewService(db *pgxpool.Pool) *Service {
-	return &Service{
-		DB: db,
-	}
+// DB represents the database operations used by the Service
+type DB interface {
+    Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
+    Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
 }
 
-func (s *Service) GetCarsByUserID(ctx context.Context, userID int) ([]models.Car, error) {
-	log.Printf("Querying cars for UserID: %d", userID)
+// Service struct holds the database interface and implements the Service interface
+type service struct {
+    DB DB
+}
 
-	rows, err := s.DB.Query(ctx, `SELECT CarId, LicensePlate, Make, Model, Color FROM Car WHERE UserId=$1`, userID)
-	if err != nil {
-		log.Printf("Error executing query: %v", err) // Add logging for query error
-		return nil, err
-	}
-	defer rows.Close()
+// NewService creates a new instance of Service with the given database
+func NewService(db DB) Service {
+    return &service{DB: db}
+}
 
-	var cars []models.Car
-	for rows.Next() {
-		var car models.Car
-		if err := rows.Scan(&car.CarID, &car.LicensePlate, &car.Make, &car.Model, &car.Color); err != nil {
-			log.Printf("Error scanning row: %v", err) // Add logging for scan error
-			return nil, err
-		}
-		cars = append(cars, car)
-	}
+// GetCarsByUserID retrieves cars for a given user ID
+func (s *service) GetCarsByUserID(ctx context.Context, userID int) ([]models.Car, error) {
+    log.Printf("Querying cars for UserID: %d", userID)
 
-	log.Printf("Cars found: %v", cars)
-	return cars, nil
+    rows, err := s.DB.Query(ctx, `SELECT CarId, LicensePlate, Make, Model, Color FROM Car WHERE UserId=$1`, userID)
+    if err != nil {
+        log.Printf("Error executing query: %v", err)
+        return nil, err
+    }
+    defer rows.Close()
+
+    var cars []models.Car
+    for rows.Next() {
+        var car models.Car
+        if err := rows.Scan(&car.CarID, &car.LicensePlate, &car.Make, &car.Model, &car.Color); err != nil {
+            log.Printf("Error scanning row: %v", err)
+            return nil, err
+        }
+        cars = append(cars, car)
+    }
+
+    log.Printf("Cars found: %v", cars)
+    return cars, nil
 }
 
 // DeleteCarByUserID deletes a car associated with a given user ID and car ID.
-func (s *Service) DeleteCarByUserID(ctx context.Context, userID int, carID int) error {
-	log.Printf("Deleting car with ID %d for UserID: %d", carID, userID)
+func (s *service) DeleteCarByUserID(ctx context.Context, userID int, carID int) error {
+    log.Printf("Deleting car with ID %d for UserID: %d", carID, userID)
 
-	_, err := s.DB.Exec(ctx, `DELETE FROM Car WHERE UserId=$1 AND CarId=$2`, userID, carID)
-	if err != nil {
-		log.Printf("Error deleting car: %v", err)
-		return err
-	}
+    _, err := s.DB.Exec(ctx, `DELETE FROM Car WHERE UserId=$1 AND CarId=$2`, userID, carID)
+    if err != nil {
+        log.Printf("Error deleting car: %v", err)
+        return err
+    }
 
-	log.Printf("Car with ID %d deleted for UserID: %d", carID, userID)
-	return nil
+    log.Printf("Car with ID %d deleted for UserID: %d", carID, userID)
+    return nil
 }
 
 // UpdateCar updates a car's information
-func (s *Service) UpdateCar(ctx context.Context, userID, carID int, licensePlate, make, model, color string) error {
-	log.Printf("Updating car ID %d for user ID %d", carID, userID)
+func (s *service) UpdateCar(ctx context.Context, userID, carID int, licensePlate, make, model, color string) error {
+    log.Printf("Updating car ID %d for user ID %d", carID, userID)
 
-	_, err := s.DB.Exec(ctx, `UPDATE Car SET LicensePlate=$1, Make=$2, Model=$3, Color=$4 WHERE UserId=$5 AND CarId=$6`,
-		licensePlate, make, model, color, userID, carID)
+    _, err := s.DB.Exec(ctx, `UPDATE Car SET LicensePlate=$1, Make=$2, Model=$3, Color=$4 WHERE UserId=$5 AND CarId=$6`,
+        licensePlate, make, model, color, userID, carID)
 
-	if err != nil {
-		log.Printf("Error executing update: %v", err)
-		return err
-	}
+    if err != nil {
+        log.Printf("Error executing update: %v", err)
+        return err
+    }
 
-	log.Printf("Car ID %d updated successfully", carID)
-	return nil
+    log.Printf("Car ID %d updated successfully", carID)
+    return nil
 }

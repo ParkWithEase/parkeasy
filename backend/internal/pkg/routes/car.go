@@ -13,11 +13,11 @@ import (
 
 // CarRoute represents car-related API routes
 type CarRoute struct {
-	carService *car.Service
+	carService car.Service // Change here to use the interface directly
 }
 
 // NewCarRoute creates a new CarRoute with the given car service
-func NewCarRoute(carService *car.Service) *CarRoute {
+func NewCarRoute(carService car.Service) *CarRoute { // Change here to use the interface directly
 	return &CarRoute{
 		carService: carService,
 	}
