@@ -33,6 +33,11 @@ var rootCmd = &cobra.Command{
 			zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		}
 
+		// see init() for insecure definition
+		if insecure {
+			log.Warn().Msg("running in insecure mode")
+		}
+
 		// Establish a database connection
 		dbPool, err := pgxpool.Connect(context.Background(), dbURL)
 		if err != nil {

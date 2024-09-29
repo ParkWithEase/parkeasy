@@ -63,6 +63,23 @@ func (m *MemoryRepository) GetByEmail(_ context.Context, email string) (Identity
 	return result, nil
 }
 
+func (m *MemoryRepository) UpdatePassword(_ context.Context, authID uuid.UUID, newPassword models.HashedPassword) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	identity, ok := m.db[authID]
+	if !ok {
+		return ErrIdentityNotFound
+	}
+
+	// Update identity with new password
+	m.db[authID] = Identity{
+		ID:           identity.ID,
+		Email:        identity.Email,
+		PasswordHash: newPassword,
+	}
+	return nil
+}
+
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{db: make(map[uuid.UUID]Identity), emailLookup: make(map[string]uuid.UUID)}
 }

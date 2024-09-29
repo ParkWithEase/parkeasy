@@ -7,6 +7,7 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,7 +15,7 @@ import (
 func TestRegisterAndAuthenticate(t *testing.T) {
 	t.Parallel()
 
-	srv := NewService(auth.NewMemoryRepository())
+	srv := NewService(auth.NewMemoryRepository(), resettoken.NewMemoryRepository())
 	const testPassword = "super duper ultra secure password just for testing" //nolint: gosec // not a real credential
 
 	ctx := context.Background()
@@ -81,5 +82,97 @@ func TestRegisterAndAuthenticate(t *testing.T) {
 
 		_, err = srv.Create(ctx, "User1@example.com", testPassword)
 		assert.Error(t, err, "duplicate registration should be denied")
+	})
+}
+
+func TestPasswordResetAndUpdate(t *testing.T) {
+	srv := NewService(auth.NewMemoryRepository(), resettoken.NewMemoryRepository())
+	const testPassword = "super duper ultra secure password just for testing" //nolint: gosec // not a real credential
+
+	ctx := context.Background()
+	t.Run("Update Password Test", func(t *testing.T) {
+		const email = "newuser@example.com"
+		const newPassword = "asdgjklbhg12l3u5hl" //nolint: gosec // not a real credential
+		refID, err := srv.Create(ctx, email, testPassword)
+		require.NoError(t, err)
+
+		// Update the the password
+		err = srv.UpdatePassword(ctx, refID, testPassword, newPassword)
+		require.NoError(t, err)
+
+		// Can not authenticate using the old password
+		_, err = srv.Authenticate(ctx, email, testPassword)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, models.ErrAuthEmailOrPassword, err)
+		}
+
+		// Can authenticate using the new password
+		id, err := srv.Authenticate(ctx, email, newPassword)
+		require.NoError(t, err)
+		assert.EqualValues(t, refID, id)
+
+		// Can not update password with a bad password
+		const badPassword = "123"
+		err = srv.UpdatePassword(ctx, refID, newPassword, badPassword)
+		if assert.Error(t, err, "make sure this can not update password with a bad password") {
+			assert.ErrorIs(t, err, models.ErrRegPasswordLength)
+		}
+	})
+
+	t.Run("Create Password Reset Token Test", func(t *testing.T) {
+		const email = "user234@example.com"
+		_, err := srv.Create(ctx, email, testPassword)
+		require.NoError(t, err)
+
+		// Create reset token for a valid authID
+
+		_, err = srv.CreatePasswordResetToken(ctx, email)
+		require.NoError(t, err)
+
+		// Create reset token for a non valid authID
+		_, err = srv.CreatePasswordResetToken(ctx, "random@email.com")
+		assert.Error(t, err, "Can not create token for unknown identity")
+	})
+
+	t.Run("Reset password with verify token", func(t *testing.T) {
+		const email = "userforgot@example.com"
+		const newPassword = "AlphablueBeta213"
+		refID, err := srv.Create(ctx, email, testPassword)
+		require.NoError(t, err)
+
+		// Create reset token for a valid authID
+		token, err := srv.CreatePasswordResetToken(ctx, email)
+		require.NoError(t, err)
+
+		// Reset password using the token
+		err = srv.ResetPassword(ctx, token, newPassword)
+		require.NoError(t, err)
+
+		// Can authenticate using the new password
+		id, err := srv.Authenticate(ctx, email, newPassword)
+		require.NoError(t, err)
+		assert.EqualValues(t, refID, id)
+
+		const anotherPassword = "HD4000kalibaba"
+		// Can not reset password using the old token
+		err = srv.ResetPassword(ctx, token, anotherPassword)
+		if assert.Error(t, err, "make sure used token can't be used again") {
+			assert.ErrorIs(t, err, models.ErrResetTokenInvalid)
+		}
+
+		// Create another reset token for a valid authID
+		newToken, err := srv.CreatePasswordResetToken(ctx, email)
+		require.NoError(t, err)
+		const badPassword = "123"
+		err = srv.ResetPassword(ctx, newToken, badPassword)
+		if assert.Error(t, err, "Can't reset password with a bad password") {
+			assert.ErrorIs(t, err, models.ErrRegPasswordLength)
+		}
+
+		err = srv.ResetPassword(ctx, newToken, anotherPassword)
+		require.NoError(t, err)
+		id, err = srv.Authenticate(ctx, email, anotherPassword)
+		require.NoError(t, err)
+		assert.EqualValues(t, refID, id)
 	})
 }
