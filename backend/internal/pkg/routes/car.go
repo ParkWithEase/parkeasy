@@ -2,7 +2,6 @@ package routes
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -64,7 +63,6 @@ func (route *CarRoute) RegisterCarRoutes(api huma.API) {
 		resp := &CarOutput{
 			Body: cars,
 		}
-		log.Printf("Returning cars: %+v", resp) // Log response for debugging
 
 		return resp, nil
 	})
@@ -110,9 +108,6 @@ func (route *CarRoute) RegisterCarRoutes(api huma.API) {
 			return nil, huma.NewError(http.StatusBadRequest, "Invalid car ID")
 		}
 	
-		// Debugging: Check if input is populated
-		log.Printf("Received input: LicensePlate=%s, Make=%s, Model=%s, Color=%s", input.Body.LicensePlate, input.Body.Make, input.Body.Model, input.Body.Color)
-	
 		// Update car details in the service
 		err = route.carService.UpdateCar(ctx, userID, carID, input.Body.LicensePlate, input.Body.Make, input.Body.Model, input.Body.Color)
 		if err != nil {
@@ -128,7 +123,6 @@ func (route *CarRoute) RegisterCarRoutes(api huma.API) {
 		resp := &CarOutput{
 			Body: cars,
 		}
-		log.Printf("Updated car: %+v", resp) // Log response for debugging
 	
 		return resp, nil
 	})
@@ -142,9 +136,6 @@ func (route *CarRoute) RegisterCarRoutes(api huma.API) {
 		if err != nil {
 			return nil, huma.NewError(http.StatusBadRequest, "Invalid user ID")
 		}
-	
-		// Debugging: Check if input is populated
-		log.Printf("Received input: LicensePlate=%s, Make=%s, Model=%s, Color=%s", input.Body.LicensePlate, input.Body.Make, input.Body.Model, input.Body.Color)
 	
 		// Insert new car using the service
 		err = route.carService.CreateCar(ctx, userID, input.Body.LicensePlate, input.Body.Make, input.Body.Model, input.Body.Color)
@@ -161,8 +152,7 @@ func (route *CarRoute) RegisterCarRoutes(api huma.API) {
 		resp := &CarOutput{
 			Body: cars,
 		}
-		log.Printf("Created new car: %+v", resp) // Log response for debugging
-	
+
 		return resp, nil
 	})
 	
