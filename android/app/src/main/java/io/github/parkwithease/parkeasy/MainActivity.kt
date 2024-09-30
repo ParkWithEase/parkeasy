@@ -95,7 +95,11 @@ fun LoginForm() {
     val onPasswordChange = { input: String ->
         password = input
     }
-    val onLoginClick = { }
+    val onLoginClick = {
+        runBlocking {
+            login(Credentials(email, password))
+        }
+    }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
