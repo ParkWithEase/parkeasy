@@ -63,3 +63,20 @@ func TestUpdateCar(t *testing.T) {
 	err := service.UpdateCar(ctx, 1, 1, "ABC123", "Toyota", "Corolla", "Blue")
 	assert.NoError(t, err)
 }
+
+// TestCreateCar tests CreateCar function
+func TestCreateCar(t *testing.T) {
+	mockDB := &MockDB{
+		ExecFunc: func(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
+			// Simulate successful insertion
+			return pgconn.CommandTag{}, nil
+		},
+	}
+	ctx := context.Background()
+
+	service := NewService(mockDB)
+
+	// Call CreateCar with sample data
+	err := service.CreateCar(ctx, 1, "XYZ789", "Honda", "Civic", "Red")
+	assert.NoError(t, err)
+}

@@ -30,12 +30,12 @@ type CarOutput struct {
 
 type NoContentOutput struct{}
 
-// UpdateCarInput represents the input for the update car operation
-type UpdateCarInput struct {
-	LicensePlate string `json:"licensePlate"`
-	Make         string `json:"make"`
-	Model        string `json:"model"`
-	Color        string `json:"color"`
+// CreateUpdateCarInput represents the input for the create and update car operation
+type CreateUpdateCarInput struct {
+    LicensePlate string `json:"licensePlate" doc:"License plate of the car"`
+    Make         string `json:"make" doc:"Make of the car"`
+    Model        string `json:"model" doc:"Model of the car"`
+    Color        string `json:"color" doc:"Color of the car"`
 }
 
 // RegisterCarRoutes registers the `/users/{id}/cars` route with Huma
@@ -97,7 +97,7 @@ func (route *CarRoute) RegisterCarRoutes(api huma.API) {
 	huma.Put(api, "/users/{userId}/cars/{carId}", func(ctx context.Context, input *struct {
 		UserID string           `path:"userId" example:"1" doc:"User ID for the car owner"`
 		CarID  string           `path:"carId" example:"1" doc:"Car ID to update"`
-		Body   UpdateCarInput   `body:""` // Body as an UpdateCarInput struct
+		Body   CreateUpdateCarInput   `body:""` // Body as an CreateUpdateCarInput struct
 	}) (*CarOutput, error) {
 		// Parse UserID and CarID to int
 		userID, err := strconv.Atoi(input.UserID)
@@ -133,5 +133,37 @@ func (route *CarRoute) RegisterCarRoutes(api huma.API) {
 		return resp, nil
 	})
 	
-
+	huma.Post(api, "/users/{userId}/cars", func(ctx context.Context, input *struct {
+		UserID string         `path:"userId" example:"1" doc:"User ID for the car owner"`
+		Body   CreateUpdateCarInput `body:""` // Body as a CreateCarInput struct
+	}) (*CarOutput, error) {
+		// Parse UserID to int
+		userID, err := strconv.Atoi(input.UserID)
+		if err != nil {
+			return nil, huma.NewError(http.StatusBadRequest, "Invalid user ID")
+		}
+	
+		// Debugging: Check if input is populated
+		log.Printf("Received input: LicensePlate=%s, Make=%s, Model=%s, Color=%s", input.Body.LicensePlate, input.Body.Make, input.Body.Model, input.Body.Color)
+	
+		// Insert new car using the service
+		err = route.carService.CreateCar(ctx, userID, input.Body.LicensePlate, input.Body.Make, input.Body.Model, input.Body.Color)
+		if err != nil {
+			return nil, huma.NewError(http.StatusInternalServerError, "Failed to create car")
+		}
+	
+		// Retrieve the updated list of cars for the user
+		cars, err := route.carService.GetCarsByUserID(ctx, userID)
+		if err != nil {
+			return nil, huma.NewError(http.StatusInternalServerError, "Failed to retrieve inserted car")
+		}
+	
+		resp := &CarOutput{
+			Body: cars,
+		}
+		log.Printf("Created new car: %+v", resp) // Log response for debugging
+	
+		return resp, nil
+	})
+	
 }

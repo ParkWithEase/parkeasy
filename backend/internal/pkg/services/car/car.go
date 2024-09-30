@@ -13,6 +13,7 @@ type Service interface {
     GetCarsByUserID(ctx context.Context, userID int) ([]models.Car, error)
     DeleteCarByUserID(ctx context.Context, userID, carID int) error
     UpdateCar(ctx context.Context, userID, carID int, licensePlate, make, model, color string) error
+	CreateCar (ctx context.Context, userID int, licensePlate, make, model, color string) error
 }
 
 // DB represents the database operations used by the Service
@@ -83,5 +84,21 @@ func (s *service) UpdateCar(ctx context.Context, userID, carID int, licensePlate
     }
 
     log.Printf("Car ID %d updated successfully", carID)
+    return nil
+}
+
+// CreateCar inserts a new car for the given user into the database
+func (s *service) CreateCar(ctx context.Context, userID int, licensePlate, make, model, color string) error {
+    log.Printf("Creating new car for user ID %d", userID)
+
+    _, err := s.DB.Exec(ctx, `INSERT INTO Car (UserId, LicensePlate, Make, Model, Color) VALUES ($1, $2, $3, $4, $5)`,
+        userID, licensePlate, make, model, color)
+
+    if err != nil {
+        log.Printf("Error executing insert: %v", err)
+        return err
+    }
+
+    log.Printf("New car created successfully for user ID %d", userID)
     return nil
 }

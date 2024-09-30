@@ -122,15 +122,6 @@ func TestDeleteCarFailure(t *testing.T) {
 	assert.JSONEq(t, expected, string(body))
 }
 
-type MockDB struct {
-   ExecFunc func(ctx context.Context, query string, args ...interface{}) (pgconn.CommandTag, error)
-}
-
-func (m *MockDB) Exec(ctx context.Context, query string, args ...interface{}) (pgconn.CommandTag, error) {
-   return m.ExecFunc(ctx, query, args...)
-}
-
-
 func TestUpdateCarSuccess(t *testing.T) {
     // Create a mock database
     mockDB := &car.MockDB{
@@ -149,7 +140,6 @@ func TestUpdateCarSuccess(t *testing.T) {
     // Check that there was no error
     require.NoError(t, err)
 }
-
 
 func TestUpdateCarFailure(t *testing.T) {
     // Mock the car service with an error for the UpdateCar function
@@ -184,5 +174,57 @@ func TestUpdateCarFailure(t *testing.T) {
 
     // Expected JSON response for the failure case
     expected := `{"status":500,"title":"Internal Server Error","detail":"Failed to update car"}`
+    assert.JSONEq(t, expected, string(body))
+}
+
+func TestCreateCarSuccess(t *testing.T) {
+    // Create a mock database
+    mockDB := &car.MockDB{
+        ExecFunc: func(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
+            // Simulate a successful insert
+            return pgconn.CommandTag("INSERT 0 1"), nil
+        },
+    }
+
+    // Create the service with the mock database
+    svc := car.NewService(mockDB)
+
+    // Call the CreateCar method
+    err := svc.CreateCar(context.Background(), 1, "XYZ789", "Honda", "Civic", "Blue")
+
+    // Check that there was no error
+    require.NoError(t, err)
+}
+
+
+func TestCreateCarInvalidUserID(t *testing.T) {
+    // Mock the car service (you don't need to define the behavior for this test since it won't be called)
+    mockCarService := &car.MockService{}
+
+    // Initialize the API for testing
+    _, api := humatest.New(t)
+    route := NewCarRoute(mockCarService)
+    route.RegisterCarRoutes(api)
+
+    // Prepare the create body as a map
+    createBody := map[string]any{
+        "licensePlate": "XYZ789",
+        "make":        "Honda",
+        "model":       "Civic",
+        "color":       "Blue",
+    }
+
+    // Make a POST request with an invalid user ID (non-numeric)
+    resp := api.Post("/users/abc/cars", "", createBody)  // 'abc' is non-numeric
+
+    // Assert the response status code is 400 Bad Request
+    assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
+
+    // Read the response body
+    body, err := io.ReadAll(resp.Result().Body)
+    require.NoError(t, err)
+
+    // Expected JSON response for the invalid user ID case
+    expected := `{"status":400,"title":"Bad Request","detail":"Invalid user ID"}`
     assert.JSONEq(t, expected, string(body))
 }
