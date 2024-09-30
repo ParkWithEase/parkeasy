@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent { ParkEasyTheme { LoginPage() } }
+        HttpService.setHost(getString(R.string.api_host))
     }
 }
 
@@ -101,7 +102,7 @@ fun EmailField(text: String, onValueChange: (String) -> Unit, modifier: Modifier
         leadingIcon = {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.email),
-                contentDescription = stringResource(R.string.emailicon),
+                contentDescription = stringResource(R.string.email_icon),
             )
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -119,7 +120,7 @@ fun PasswordField(text: String, onValueChange: (String) -> Unit, modifier: Modif
         leadingIcon = {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.password),
-                contentDescription = stringResource(R.string.passwordicon),
+                contentDescription = stringResource(R.string.password_icon),
             )
         },
         visualTransformation = PasswordVisualTransformation(),

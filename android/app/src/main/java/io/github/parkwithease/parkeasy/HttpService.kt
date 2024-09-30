@@ -17,8 +17,8 @@ import io.ktor.http.setCookie
 import io.ktor.serialization.kotlinx.json.json
 
 object HttpService {
-    const val API_HOST = "http://10.0.2.2:8080"
-    var SESSION_COOKIE: Cookie? = null
+    private var API_HOST: String = ""
+    private var SESSION_COOKIE: Cookie? = null
 
     private val client: HttpClient by lazy {
         HttpClient(Android) {
@@ -29,12 +29,17 @@ object HttpService {
                 logger =
                     object : Logger {
                         override fun log(message: String) {
-                            Log.d("HTTP call", message)
+                            Log.d("HTTP", message)
                         }
                     }
                 level = LogLevel.ALL
             }
         }
+    }
+
+    fun setHost(host: String) {
+        Log.d("HTTP", API_HOST)
+        API_HOST = host
     }
 
     suspend fun login(credentials: Credentials) {
@@ -46,6 +51,6 @@ object HttpService {
         if (response.setCookie().size == 1) {
             SESSION_COOKIE = response.setCookie()[0]
         }
-        Log.d("HTTP call", SESSION_COOKIE.toString())
+        Log.d("HTTP", SESSION_COOKIE.toString())
     }
 }
