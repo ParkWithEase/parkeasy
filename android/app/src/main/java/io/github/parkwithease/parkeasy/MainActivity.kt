@@ -47,13 +47,13 @@ class MainActivity : ComponentActivity() {
 
 @Preview(showSystemUi = true, device = "id:pixel_8")
 @Composable
-fun LoginPagePreview() {
-    ParkEasyTheme { LoginPage() }
+private fun LoginPagePreview(modifier: Modifier = Modifier) {
+    ParkEasyTheme { LoginPage(modifier) }
 }
 
 @Composable
-fun LoginPage() {
-    Surface {
+fun LoginPage(modifier: Modifier = Modifier) {
+    Surface(modifier) {
         Column {
             Row(
                 verticalAlignment = Alignment.Bottom,
@@ -72,13 +72,13 @@ fun LoginPage() {
 }
 
 @Composable
-fun LoginForm() {
+fun LoginForm(modifier: Modifier = Modifier) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val onEmailChange = { input: String -> email = input }
     val onPasswordChange = { input: String -> password = input }
     val onLoginClick = { runBlocking { login(Credentials(email, password)) } }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize()) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier.fillMaxSize()) {
         EmailField(email, onEmailChange)
         Spacer(Modifier.size(4.dp))
         PasswordField(password, onPasswordChange)
@@ -93,7 +93,7 @@ fun LoginForm() {
 }
 
 @Composable
-fun EmailField(text: String, onValueChange: (String) -> Unit) {
+fun EmailField(text: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
     OutlinedTextField(
         value = text,
         onValueChange = { onValueChange(it) },
@@ -106,11 +106,12 @@ fun EmailField(text: String, onValueChange: (String) -> Unit) {
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         singleLine = true,
+        modifier = modifier
     )
 }
 
 @Composable
-fun PasswordField(text: String, onValueChange: (String) -> Unit) {
+fun PasswordField(text: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
     OutlinedTextField(
         value = text,
         onValueChange = { onValueChange(it) },
@@ -124,6 +125,7 @@ fun PasswordField(text: String, onValueChange: (String) -> Unit) {
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         singleLine = true,
+        modifier = modifier
     )
 }
 
