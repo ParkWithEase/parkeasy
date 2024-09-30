@@ -1,12 +1,11 @@
-<script>
-    import '../app.css';
-</script>
+<script>import '../app.css';</script>
 
 <div class="app">
     <main>
-        <slot />
+        <slot></slot>
     </main>
 </div>
+
 
 <style>
     .app {
