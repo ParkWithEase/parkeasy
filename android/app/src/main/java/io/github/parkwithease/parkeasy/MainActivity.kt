@@ -106,7 +106,7 @@ fun EmailField(text: String, onValueChange: (String) -> Unit, modifier: Modifier
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         singleLine = true,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -125,7 +125,7 @@ fun PasswordField(text: String, onValueChange: (String) -> Unit, modifier: Modif
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         singleLine = true,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
