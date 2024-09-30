@@ -22,29 +22,28 @@ object HttpService {
 
     private val client: HttpClient by lazy {
         HttpClient(Android) {
-            install(ContentNegotiation) {
-                json()
-            }
-            install(HttpCookies) {
+            install(ContentNegotiation) { json() }
+            install(HttpCookies) {}
 
-            }
             install(Logging) {
-                logger = object : Logger {
-                    override fun log(message: String) {
-                        Log.d("HTTP call", message)
+                logger =
+                    object : Logger {
+                        override fun log(message: String) {
+                            Log.d("HTTP call", message)
+                        }
                     }
-                }
                 level = LogLevel.ALL
             }
         }
     }
 
     suspend fun login(credentials: Credentials) {
-        val response = client.post("$API_HOST/auth") {
-            contentType(ContentType.Application.Json)
-            setBody(credentials)
-        }
-        if(response.setCookie().size == 1) {
+        val response =
+            client.post("$API_HOST/auth") {
+                contentType(ContentType.Application.Json)
+                setBody(credentials)
+            }
+        if (response.setCookie().size == 1) {
             SESSION_COOKIE = response.setCookie()[0]
         }
         Log.d("HTTP call", SESSION_COOKIE.toString())

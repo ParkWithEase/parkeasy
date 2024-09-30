@@ -1,4 +1,5 @@
 package io.github.parkwithease.parkeasy.ui.theme
+
 import androidx.compose.ui.graphics.Color
 
 val primaryLight = Color(0xFF436833)
@@ -216,10 +217,3 @@ val surfaceContainerLowDarkHighContrast = Color(0xFF191D17)
 val surfaceContainerDarkHighContrast = Color(0xFF1D211A)
 val surfaceContainerHighDarkHighContrast = Color(0xFF282B24)
 val surfaceContainerHighestDarkHighContrast = Color(0xFF32362F)
-
-
-
-
-
-
-

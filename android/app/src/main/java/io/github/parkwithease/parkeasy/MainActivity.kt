@@ -41,20 +41,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent {
-            ParkEasyTheme {
-                LoginPage()
-            }
-        }
+        setContent { ParkEasyTheme { LoginPage() } }
     }
 }
 
 @Preview(showSystemUi = true, device = "id:pixel_8")
 @Composable
 fun LoginPagePreview() {
-    ParkEasyTheme {
-        LoginPage()
-    }
+    ParkEasyTheme { LoginPage() }
 }
 
 @Composable
@@ -64,23 +58,15 @@ fun LoginPage() {
             Row(
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxSize()
+                modifier = Modifier.weight(1f).fillMaxSize(),
             ) {
                 Image(
                     painter = painterResource(R.drawable.outlined_stacked),
                     contentDescription = stringResource(R.string.logo),
-                    modifier = Modifier.size(280.dp)
+                    modifier = Modifier.size(280.dp),
                 )
             }
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxSize()
-            ) {
-                LoginForm()
-            }
+            Row(modifier = Modifier.weight(1f).fillMaxSize()) { LoginForm() }
         }
     }
 }
@@ -89,102 +75,59 @@ fun LoginPage() {
 fun LoginForm() {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    val onEmailChange = { input: String ->
-        email = input
-    }
-    val onPasswordChange = { input: String ->
-        password = input
-    }
-    val onLoginClick = {
-        runBlocking {
-            login(Credentials(email, password))
-        }
-    }
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        EmailField(
-            email,
-            onEmailChange
-        )
+    val onEmailChange = { input: String -> email = input }
+    val onPasswordChange = { input: String -> password = input }
+    val onLoginClick = { runBlocking { login(Credentials(email, password)) } }
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxSize()) {
+        EmailField(email, onEmailChange)
         Spacer(Modifier.size(4.dp))
-        PasswordField(
-            password,
-            onPasswordChange
-        )
+        PasswordField(password, onPasswordChange)
         Spacer(Modifier.size(4.dp))
-        Row(
-            modifier = Modifier.width(280.dp)
-        ) {
+        Row(modifier = Modifier.width(280.dp)) {
             Spacer(Modifier.weight(1f)) // Space for future register button
             Spacer(Modifier.size(4.dp))
 
-            LoginButton(
-                modifier = Modifier.weight(1f),
-                onLoginClick
-            )
+            LoginButton(modifier = Modifier.weight(1f), onLoginClick)
         }
     }
 }
 
 @Composable
-fun EmailField(
-    text: String,
-    onValueChange: (String) -> Unit,
-) {
+fun EmailField(text: String, onValueChange: (String) -> Unit) {
     OutlinedTextField(
         value = text,
-        onValueChange = {
-            onValueChange(it)
-        },
-        label = {
-            Text(stringResource(R.string.email))
-        },
+        onValueChange = { onValueChange(it) },
+        label = { Text(stringResource(R.string.email)) },
         leadingIcon = {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.email),
-                contentDescription = stringResource(R.string.emailicon))
+                contentDescription = stringResource(R.string.emailicon),
+            )
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-        singleLine = true
+        singleLine = true,
     )
 }
 
 @Composable
-fun PasswordField(
-    text: String,
-    onValueChange: (String) -> Unit
-) {
+fun PasswordField(text: String, onValueChange: (String) -> Unit) {
     OutlinedTextField(
         value = text,
-        onValueChange = {
-            onValueChange(it)
-        },
-        label = {
-            Text(stringResource(R.string.password))
-        },
+        onValueChange = { onValueChange(it) },
+        label = { Text(stringResource(R.string.password)) },
         leadingIcon = {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.password),
-                contentDescription = stringResource(R.string.passwordicon))
+                contentDescription = stringResource(R.string.passwordicon),
+            )
         },
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-        singleLine = true
+        singleLine = true,
     )
 }
 
 @Composable
-fun LoginButton(
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-    ) {
-    Button(
-        onClick = { onClick() },
-        modifier = modifier
-    ) {
-        Text(stringResource(R.string.login))
-    }
+fun LoginButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Button(onClick = { onClick() }, modifier = modifier) { Text(stringResource(R.string.login)) }
 }
