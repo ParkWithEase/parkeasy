@@ -78,7 +78,7 @@ fun LoginForm(modifier: Modifier = Modifier) {
     val onEmailChange = { input: String -> email = input }
     val onPasswordChange = { input: String -> password = input }
     val onLoginClick = { runBlocking { login(Credentials(email, password)) } }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier.fillMaxSize()) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp), modifier = modifier.fillMaxSize()) {
         EmailField(email, onEmailChange)
         Spacer(Modifier.size(4.dp))
         PasswordField(password, onPasswordChange)
