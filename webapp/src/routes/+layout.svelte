@@ -14,6 +14,9 @@
         flex-direction: column;
         align-items: center;
         min-height: 100vh;
+        font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        color: black;
+        background-image: url('../lib/images/background.jpg');
     }
 
     main {
