@@ -3,7 +3,6 @@
 </script>
 
 <div class="app">
-
     <main>
         <slot />
     </main>
@@ -13,6 +12,7 @@
     .app {
         display: flex;
         flex-direction: column;
+        align-items: center;
         min-height: 100vh;
     }
 
