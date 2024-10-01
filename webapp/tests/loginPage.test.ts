@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import { expect, test, vi, describe } from 'vitest';
-import LoginPage from "../src/lib/LoginPage.svelte";
+import LoginPage from '../src/routes/auth/login/+page.svelte';
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -21,4 +21,4 @@ describe('render test', () => {
         const button = screen.getByText('Submit');
         expect(button).toBeDefined();
     });
-}
+});

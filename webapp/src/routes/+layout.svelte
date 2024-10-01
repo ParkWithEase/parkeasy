@@ -1,13 +1,6 @@
 <script>
-    import "../app.css";
-    import {
-        Footer,
-        FooterBrand,
-        FooterCopyright,
-        FooterIcon,
-        FooterLink,
-        FooterLinkGroup,
-    } from "flowbite-svelte";
+    import '../app.css';
+    import { Footer, FooterCopyright, FooterLinkGroup } from 'flowbite-svelte';
 </script>
 
 <body class="app">
@@ -26,14 +19,14 @@
 </Footer>
 
 <style>
-    @import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap");
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
     .app {
         display: flex;
         flex-direction: column;
         align-items: center;
         color: black;
         font-family: Fredoka, sans-serif;
-        background-image: url("$lib/images/background.png");
+        background-image: url('$lib/images/background.png');
         background-size: 100%;
     }
 

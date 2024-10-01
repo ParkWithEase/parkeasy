@@ -1,12 +1,12 @@
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
-@import "@fontsource/fira-mono";
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+@import '@fontsource/fira-mono';
 
 :root {
-    @import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap");
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
     --font-body: Fredoka, sans-serif;
-    --font-mono: "Fira Mono", monospace;
+    --font-mono: 'Fira Mono', monospace;
     --color-bg-0: rgb(202, 216, 228);
     --color-bg-1: hsl(209, 36%, 86%);
     --color-bg-2: hsl(224, 44%, 95%);
@@ -29,12 +29,7 @@ body {
             rgba(255, 255, 255, 0.75) 0%,
             rgba(255, 255, 255, 0) 100%
         ),
-        linear-gradient(
-            180deg,
-            var(--color-bg-0) 0%,
-            var(--color-bg-1) 15%,
-            var(--color-bg-2) 50%
-        );
+        linear-gradient(180deg, var(--color-bg-0) 0%, var(--color-bg-1) 15%, var(--color-bg-2) 50%);
 }
 
 h1,
@@ -111,4 +106,17 @@ button:focus:not(:focus-visible) {
     position: absolute;
     width: 1px;
     white-space: nowrap;
+}
+
+:global(bx--btn.bx--btn--primary) {
+    color: rgb(0, 248, 248);
+    background-color: black;
+    margin: 10px;
+    padding: 5px;
+    border: 1px solid white;
+    border-radius: 5px;
+}
+
+:global(bx--form--fluid.fluidForm.bx--form) {
+    border: 2px solid black;
 }
