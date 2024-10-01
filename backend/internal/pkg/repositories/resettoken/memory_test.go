@@ -2,13 +2,23 @@ package resettoken
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func (m *MemoryRepository) getByAuthID(_ context.Context, authID uuid.UUID) (Token, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	token, ok := m.authIDLookup[authID]
+	if !ok {
+		return "", errors.New("unknown auth ID")
+	}
+	return token, nil
+}
 
 func TestCreateToken(t *testing.T) {
 	t.Parallel()
@@ -21,7 +31,9 @@ func TestCreateToken(t *testing.T) {
 		testToken := Token("NewResetToken")
 		err := repo.Create(ctx, testUUID, testToken)
 		require.NoError(t, err, "Creating a token should always succeed")
-		assert.EqualValues(t, testToken, repo.authIDLookup[testUUID])
+		storedToken, err := repo.getByAuthID(ctx, testUUID)
+		require.NoError(t, err)
+		assert.EqualValues(t, testToken, storedToken)
 	})
 
 	t.Run("New token will override old token", func(t *testing.T) {
@@ -35,9 +47,10 @@ func TestCreateToken(t *testing.T) {
 		err = repo.Create(ctx, testUUID, testToken2)
 		require.NoError(t, err, "Creating a token should always success")
 
-		fmt.Printf("token1 %v, token 2 %v , current %v", testToken1, testToken2, repo.authIDLookup[testUUID])
-		assert.NotEqualValues(t, testToken1, repo.authIDLookup[testUUID], "current token shouldn't be the old token")
-		assert.EqualValues(t, testToken2, repo.authIDLookup[testUUID], "current token should be the most recently created one")
+		storedToken, err := repo.getByAuthID(ctx, testUUID)
+		require.NoError(t, err)
+		assert.NotEqualValues(t, testToken1, storedToken, "current token shouldn't be the old token")
+		assert.EqualValues(t, testToken2, storedToken, "current token should be the most recently created one")
 	})
 }
 
@@ -56,8 +69,12 @@ func TestDeleteToken(t *testing.T) {
 
 		err = repo.Delete(ctx, testToken)
 		require.NoError(t, err)
-		assert.Empty(t, repo.db[testToken])
-		assert.Empty(t, repo.authIDLookup[testUUID])
+		_, err = repo.Get(ctx, testToken)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, ErrInvalidToken)
+		}
+		_, err = repo.getByAuthID(ctx, testUUID)
+		assert.Error(t, err)
 	})
 }
 
