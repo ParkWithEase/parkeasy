@@ -1,25 +1,15 @@
 <script>
     import '../app.css';
-    import { Footer, FooterCopyright, FooterLinkGroup } from 'flowbite-svelte';
 </script>
 
-<body class="app">
-    <main class="mainLoginPage">
-        <slot></slot>
-    </main>
-</body>
+<slot></slot>
 
-<Footer>
-    <div class="footer">
-        <FooterCopyright href="/" by="parkeasy™" year={2024} />
-        <FooterLinkGroup
-            ulClass="flex flex-wrap items-center mt-3 text-sm text-gray-500 dark:text-gray-400 sm:mt-0"
-        ></FooterLinkGroup>
-    </div>
-</Footer>
+<footer class="footer">
+    <p>By ParkEasy Team 2024</p>
+</footer>
 
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
+    /* @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
     .app {
         display: flex;
         flex-direction: column;
@@ -28,21 +18,12 @@
         font-family: Fredoka, sans-serif;
         background-image: url('$lib/images/background.png');
         background-size: 100%;
-    }
-
-    .mainLoginPage {
-        display: flex;
-        flex-direction: row;
-        box-sizing: border-box;
-    }
+    } */
 
     .footer {
-        display: flex;
-        flex-direction: row;
-        justify-content: center;
-        color: black;
-        font-family: Fredoka, sans-serif;
-        background-color: rgb(7, 7, 7);
-        padding: 5px;
+        position: absolute;
+        text-align: center;
+        width: 100%;
+        bottom: 0px;
     }
 </style>

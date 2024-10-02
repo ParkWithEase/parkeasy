@@ -2,6 +2,7 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 @import '@fontsource/fira-mono';
+@import 'carbon-components-svelte/css/white.css';
 
 :root {
     @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');

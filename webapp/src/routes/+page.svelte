@@ -1,26 +1,31 @@
 <script lang="ts">
-    import isLogIn from '../loginData';
     import { goto } from '$app/navigation';
-    import { onMount } from 'svelte';
+    import { BACKEND_SERVER } from '$lib/constants';
 
-    onMount(() => {
-        if (!$isLogIn) {
-            goto('/auth/login');
+    async function logout() {
+        try {
+            const response = await fetch(`${BACKEND_SERVER}/auth`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (response.ok) {
+                goto('/auth/login');
+            } else {
+                throw new Error("Can't log out for some reason");
+            }
+        } catch {
+            throw new Error('Something went wrong');
         }
-    });
-    const logout = () => {
-        $isLogIn = false;
-        goto('/auth/login');
-    };
+    }
 </script>
 
 <section class="loginForm">
-    <h2>Welcome back!</h2>
+    <h1>Welcome back!</h1>
     <input type="button" value="logout" on:click={logout} />
 </section>
 
 <style>
-    h2 {
+    h1 {
         font-size: 25px;
         font-weight: bold;
     }

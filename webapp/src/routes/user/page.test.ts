@@ -5,6 +5,7 @@ import Page from './+page.svelte';
 
 const mockedGetUser = () =>
     Promise.resolve({
+        ok: true,
         json() {
             return {
                 full_name: 'tano',

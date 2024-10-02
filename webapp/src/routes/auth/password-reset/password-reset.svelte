@@ -59,60 +59,51 @@
     }
 </script>
 
-<html lang="en">
+<div class="form-container">
     <h1>Reset your password</h1>
-    <body>
-        <div class="form-container">
-            <form on:submit={resetPassword}>
-                <div>
-                    <label for="new-password"> New password</label>
-                    <input type="password" id="new-password" bind:value={password} />
-                </div>
-
-                <div>
-                    <label for="confirm-password">Confirm password</label>
-                    <input type="password" id="confirm-password" bind:value={passwordConfirm} />
-                </div>
-
-                <div>
-                    <input type="submit" />
-                </div>
-
-                <div>
-                    {#if successMessage}
-                        <p style="color:green">{successMessage}</p>
-                    {/if}
-
-                    {#if errorMessage}
-                        <p style="color:red">{errorMessage}</p>
-                    {/if}
-                </div>
-            </form>
+    <form on:submit={resetPassword}>
+        <div>
+            <label for="new-password"> New password</label>
+            <input type="password" id="new-password" bind:value={password} />
         </div>
-    </body>
-</html>
+
+        <div>
+            <label for="confirm-password">Confirm password</label>
+            <input type="password" id="confirm-password" bind:value={passwordConfirm} />
+        </div>
+
+        <div>
+            <input type="submit" />
+        </div>
+
+        <div>
+            {#if successMessage}
+                <p style="color:green">{successMessage}</p>
+            {/if}
+
+            {#if errorMessage}
+                <p style="color:red">{errorMessage}</p>
+            {/if}
+        </div>
+    </form>
+</div>
 
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f0f8f0;
-        color: #333;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        height: 100vh;
-        margin: 0;
-    }
-
     .form-container {
         background-color: #d9f8d9;
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
         border-radius: 10px;
         padding: 20px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        width: auto;
+        width: fit-content;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        margin-right: -50%;
+        transform: translate(-50%, -50%);
         margin-top: 20px;
     }
 

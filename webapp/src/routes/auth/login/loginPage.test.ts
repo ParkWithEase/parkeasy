@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import { expect, test, vi, describe } from 'vitest';
-import LoginPage from '../src/routes/auth/login/+page.svelte';
+import LoginPage from './+page.svelte';
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -13,12 +13,12 @@ describe('render test', () => {
         });
 
         render(LoginPage);
-        const newPassword = screen.getByLabelText('Username');
+        const newPassword = screen.getByLabelText('Email');
         expect(newPassword).toBeDefined();
         const confirmPassword = screen.getByText('Password');
         expect(confirmPassword).toBeDefined();
 
-        const button = screen.getByText('Submit');
+        const button = screen.getByText('Login');
         expect(button).toBeDefined();
     });
 });
