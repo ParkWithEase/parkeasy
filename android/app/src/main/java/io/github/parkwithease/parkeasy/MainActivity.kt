@@ -8,7 +8,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -87,7 +86,7 @@ fun LoginForm(modifier: Modifier = Modifier) {
         EmailField(email, onEmailChange)
         PasswordField(password, onPasswordChange)
         Row(modifier = Modifier.width(280.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Spacer(Modifier.weight(1f)) // Space for future register button
+            RegisterButton(modifier = Modifier.weight(1f), {})
             LoginButton(modifier = Modifier.weight(1f), onLoginClick)
         }
     }
@@ -133,4 +132,11 @@ fun PasswordField(text: String, onValueChange: (String) -> Unit, modifier: Modif
 @Composable
 fun LoginButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Button(onClick = { onClick() }, modifier = modifier) { Text(stringResource(R.string.login)) }
+}
+
+@Composable
+fun RegisterButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Button(onClick = { onClick() }, modifier = modifier, enabled = false) {
+        Text(stringResource(R.string.register))
+    }
 }
