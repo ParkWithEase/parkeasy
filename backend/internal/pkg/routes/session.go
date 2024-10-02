@@ -27,6 +27,10 @@ const (
 	DefaultSessionLifetime   = 30 * 24 * time.Hour
 )
 
+type SessionDataGetter interface {
+	Get(ctx context.Context, key string) any
+}
+
 // Headers to commit into the result
 type SessionHeaderOutput struct {
 	SetCookie    []string `header:"Set-Cookie"`

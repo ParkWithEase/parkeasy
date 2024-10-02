@@ -97,6 +97,31 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 	})
 }
 
+// Returns a middleware that loads the active user ID into context if exists
+//
+// Session handler should be installed before this middleware
+func (r *UserRoute) CreateUserIDMiddleware(api huma.API) func(huma.Context, func(huma.Context)) {
+	return func(ctx huma.Context, next func(huma.Context)) {
+		_, ok := r.sessionManager.Get(ctx.Context(), SessionKeyUserID).(int64)
+		if !ok {
+			authID, ok := r.sessionManager.Get(ctx.Context(), SessionKeyAuthID).(uuid.UUID)
+			if !ok {
+				_ = huma.WriteErr(api, ctx, http.StatusUnauthorized, "")
+				return
+			}
+
+			_, profileID, err := r.service.GetProfileByAuth(ctx.Context(), authID)
+			if err != nil {
+				_ = huma.WriteErr(api, ctx, http.StatusNotFound, "", err)
+				return
+			}
+			r.sessionManager.Put(ctx.Context(), SessionKeyUserID, profileID)
+		}
+
+		next(ctx)
+	}
+}
+
 // Load the current user ID from a connection context.
 //
 // Returns the profile and its internal ID.
