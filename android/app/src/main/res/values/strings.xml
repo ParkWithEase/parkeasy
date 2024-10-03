@@ -1,3 +1,11 @@
 <resources>
+    <string name="api_host">http://10.0.2.2:8080</string>
     <string name="app_name">ParkEasy</string>
+    <string name="email">Email</string>
+    <string name="email_icon">Email Icon</string>
+    <string name="password">Password</string>
+    <string name="password_icon">Password Icon</string>
+    <string name="logo">ParkEasy Logo</string>
+    <string name="login">Login</string>
+    <string name="register">Register</string>
 </resources>
