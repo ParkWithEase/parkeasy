@@ -4,79 +4,322 @@ import (
 	"context"
 	"testing"
 
-	// "github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
-	"github.com/jackc/pgconn"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/car"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-    // "github.com/jackc/pgx/v4"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
-// // TestGetCarsByUserID tests GetCarsByUserID function
-// func TestGetCarsByUserID(t *testing.T) {
-// 	mockDB := &MockDB{
-// 		QueryFunc: func(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
-// 			return &MockRows{
-// 				rows: []models.Car{
-// 					{CarID: 1, LicensePlate: "ABC123", Make: "Toyota", Model: "Corolla", Color: "Blue"},
-// 					{CarID: 2, LicensePlate: "XYZ789", Make: "Honda", Model: "Civic", Color: "Red"},
-// 				},
-// 				idx: 0,
-// 			}, nil
-// 		},
-// 	}
-// 	ctx := context.Background()
-
-// 	service := NewService(mockDB)
-
-// 	cars, err := service.GetCarsByUserID(ctx, 1)
-// 	assert.NoError(t, err)
-// 	assert.Len(t, cars, 2)
-// 	assert.Equal(t, "ABC123", cars[0].LicensePlate)
-// 	assert.Equal(t, "XYZ789", cars[1].LicensePlate)
-// }
-
-// TestDeleteCarByUserID tests DeleteCarByUserID function
-func TestDeleteCarByUserID(t *testing.T) {
-	mockDB := &MockDB{
-		ExecFunc: func(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
-			return pgconn.CommandTag{}, nil
-		},
-	}
-	ctx := context.Background()
-
-	service := NewService(mockDB)
-
-	err := service.DeleteCarByUserID(ctx, 1, 1)
-	assert.NoError(t, err)
+type mockRepo struct {
+	mock.Mock
 }
 
-// TestUpdateCar tests UpdateCar function
-func TestUpdateCar(t *testing.T) {
-	mockDB := &MockDB{
-		ExecFunc: func(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
-			return pgconn.CommandTag{}, nil
-		},
-	}
-	ctx := context.Background()
+const (
+	testOwnerID    = 0
+	testStrangerID = 1
+)
 
-	service := NewService(mockDB)
-
-	err := service.UpdateCar(ctx, 1, 1, "ABC123", "Toyota", "Corolla", "Blue")
-	assert.NoError(t, err)
+var ownedTestEntry = car.Entry{
+	Car: models.Car{
+		Details: sampleDetails,
+	},
+	InternalID: 0,
+	OwnerID:    testOwnerID,
 }
 
-// TestCreateCar tests CreateCar function
-func TestCreateCar(t *testing.T) {
-	mockDB := &MockDB{
-		ExecFunc: func(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
-			// Simulate successful insertion
-			return pgconn.CommandTag{}, nil
-		},
-	}
-	ctx := context.Background()
+var (
+	testOwnerCarID    = uuid.New()
+)
 
-	service := NewService(mockDB)
+func (m *mockRepo) AddGetCalls() *mock.Call {
+	return m.On("GetByUUID", mock.Anything, testOwnerCarID).
+		Return(ownedTestEntry, nil).
+		On("GetByUUID", mock.Anything, mock.Anything).
+		Return(car.Entry{}, car.ErrNotFound)
+}
 
-	// Call CreateCar with sample data
-	err := service.CreateCar(ctx, 1, "XYZ789", "Honda", "Civic", "Red")
-	assert.NoError(t, err)
+// Create implements car.Repository.
+func (m *mockRepo) Create(ctx context.Context, userID int64, carModel *models.CarCreationInput) (int64, car.Entry, error) {
+	args := m.Called(ctx, userID, carModel)
+	return args.Get(0).(int64), args.Get(1).(car.Entry), args.Error(2)
+}
+
+// DeleteByUUID implements car.Repository.
+func (m *mockRepo) DeleteByUUID(ctx context.Context, carID uuid.UUID) error {
+	args := m.Called(ctx, carID)
+	return args.Error(0)
+}
+
+// GetByUUID implements car.Repository.
+func (m *mockRepo) GetByUUID(ctx context.Context, carID uuid.UUID) (car.Entry, error) {
+	args := m.Called(ctx, carID)
+	return args.Get(0).(car.Entry), args.Error(1)
+}
+
+// UpdateByUUID implements car.Repository.
+func (m *mockRepo) UpdateByUUID(ctx context.Context, carID uuid.UUID) (car.Entry, error) {
+	args := m.Called(ctx, carID)
+	return args.Get(0).(car.Entry), args.Error(1)
+}
+
+// GetOwnerByUUID implements car.Repository.
+func (m *mockRepo) GetOwnerByUUID(ctx context.Context, carID uuid.UUID) (int64, error) {
+	args := m.Called(ctx, carID)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+var sampleDetails = models.CarDetails{
+	LicensePlate:    "HTV 678",
+	Make:   	     "Honda",
+	Model:           "Civic",
+	Color:           "Blue",
+}
+
+func TestCreate(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	t.Run("correct details", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		srv := NewCarService(repo)
+
+		input := &models.CarCreationInput{
+			Details: sampleDetails,
+		}
+		repo.On("Create", mock.Anything, int64(0), input).
+			Return(
+				int64(0),
+				car.Entry{
+					Car: models.Car{
+						Details: input.Details,
+					},
+					InternalID: 0,
+					OwnerID:    0,
+				},
+				nil,
+			).
+			Once()
+		_, _, err := srv.Create(ctx, 0, input)
+		require.NoError(t, err)
+		repo.AssertExpectations(t)
+	})
+
+
+	t.Run("license plate fit check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		srv := NewCarService(repo)
+
+		details := sampleDetails
+		details.LicensePlate = "Invalid Plate"
+		_, _, err := srv.Create(ctx, 0, &models.CarCreationInput{
+			Details: details,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidLicensePlate)
+		}
+		repo.AssertNotCalled(t, "Create")
+	})
+
+	t.Run("non empty make", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		srv := NewCarService(repo)
+
+		details := sampleDetails
+		details.Make = ""
+		_, _, err := srv.Create(ctx, 0, &models.CarCreationInput{
+			Details: details,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidMake)
+		}
+		repo.AssertNotCalled(t, "Create")
+	})
+
+	t.Run("non empty model", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		srv := NewCarService(repo)
+
+		details := sampleDetails
+		details.Model = ""
+		_, _, err := srv.Create(ctx, 0, &models.CarCreationInput{
+			Details: details,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidModel)
+		}
+		repo.AssertNotCalled(t, "Create")
+	})
+
+	t.Run("non empty color", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		srv := NewCarService(repo)
+
+		details := sampleDetails
+		details.Color = ""
+		_, _, err := srv.Create(ctx, 0, &models.CarCreationInput{
+			Details: details,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidColor)
+		}
+		repo.AssertNotCalled(t, "Create")
+	})
+}
+
+func TestGet(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	t.Run("car not found check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.On("GetByUUID", mock.Anything, uuid.Nil).
+			Return(car.Entry{}, car.ErrNotFound).Once()
+		srv := NewCarService(repo)
+
+		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrCarNotFound)
+		}
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("owner can get their own cars", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.AddGetCalls()
+		srv := NewCarService(repo)
+
+		car, err := srv.GetByUUID(ctx, testOwnerID, testOwnerCarID)
+		require.NoError(t, err)
+		assert.Equal(t, ownedTestEntry.Car, car)
+	})
+
+	t.Run("strangers cannot get other's cars", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.AddGetCalls()
+		srv := NewCarService(repo)
+
+		_, err := srv.GetByUUID(ctx, testStrangerID, testOwnerCarID)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrCarNotFound)
+		}
+		repo.AssertNotCalled(t, "GetByUUID")
+	})
+}
+
+func TestDelete(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	t.Run("owner can delete their cars", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.AddGetCalls()
+		srv := NewCarService(repo)
+
+		repo.On("DeleteByUUID", mock.Anything, mock.Anything).
+			Return(nil)
+		err := srv.DeleteByUUID(ctx, testOwnerID, testOwnerCarID)
+		require.NoError(t, err)
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("deleting non-existent cars does not produce errors", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.AddGetCalls()
+		srv := NewCarService(repo)
+
+		err := srv.DeleteByUUID(ctx, testOwnerID, uuid.Nil)
+		require.NoError(t, err)
+		// NOTE: due to permission checking, we actually don't call Delete on the repo since
+		// the car doesn't exist when queried
+		repo.AssertNotCalled(t, "DeleteByUUID")
+	})
+
+	t.Run("deleting a car by stranger is not allowed", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.AddGetCalls()
+		srv := NewCarService(repo)
+
+		err := srv.DeleteByUUID(ctx, testStrangerID, testOwnerCarID)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrCarOwned)
+		}
+		repo.AssertNotCalled(t, "DeleteByUUID")
+	})
+}
+
+
+func TestUpdate(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	t.Run("car not found check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.On("GetByUUID", mock.Anything, uuid.Nil).
+			Return(car.Entry{}, car.ErrNotFound).Once()
+		srv := NewCarService(repo)
+
+		_, err := srv.UpdateByUUID(ctx, testOwnerID, uuid.Nil)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrCarNotFound)
+		}
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("owner can update their own cars", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.AddGetCalls()
+		srv := NewCarService(repo)
+
+		car, err := srv.UpdateByUUID(ctx, testOwnerID, testOwnerCarID)
+		require.NoError(t, err)
+		assert.Equal(t, ownedTestEntry.Car, car)
+	})
+
+	t.Run("strangers cannot update other's cars", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.AddGetCalls()
+		srv := NewCarService(repo)
+
+		_, err := srv.UpdateByUUID(ctx, testStrangerID, testOwnerCarID)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrCarNotFound)
+		}
+		repo.AssertNotCalled(t, "DeleteByUUID")
+	})
 }

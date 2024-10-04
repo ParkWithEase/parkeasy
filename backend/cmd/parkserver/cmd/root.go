@@ -56,7 +56,7 @@ var rootCmd = &cobra.Command{
 		log.Info().Uint16("port", port).Msg("server started")
 
 		// Start the server and pass the dbPool connection
-		if err := config.ListenAndServe(ctx, dbPool); err != nil {
+		if err := config.ListenAndServe(ctx); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 	},

@@ -38,42 +38,13 @@ func (m *mockParkingSpotService) GetByUUID(ctx context.Context, userID int64, sp
 	return args.Get(0).(models.ParkingSpot), args.Error(1)
 }
 
-type (
-	// A simple adapter for context.Value
-	fakeSessionDataGetter struct{}
-	fakeSessionDataKey    string
-)
-
-// Get implements SessionDataGetter.
-func (fakeSessionDataGetter) Get(ctx context.Context, key string) any { //nolint: ireturn // required by interface
-	return ctx.Value(fakeSessionDataKey(key))
-}
-
-func fakeUserMiddleware(ctx huma.Context, next func(huma.Context)) {
-	next(ctx)
-}
-
-func jsonAnyify(v any) any { //nolint: ireturn // this is intentional
-	j, err := json.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
-	var result any
-	err = json.Unmarshal(j, &result)
-	if err != nil {
-		panic(err)
-	}
-
-	return result
-}
-
 func TestCreateParkingSpot(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	const testUserID = int64(0)
-	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testUserID)
+	ctx = context.WithValue(ctx, FakeSessionDataKey(SessionKeyUserID), testUserID)
 
 	testInput := models.ParkingSpotCreationInput{
 		Location: models.ParkingSpotLocation{
@@ -87,7 +58,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -114,7 +85,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -133,7 +104,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrParkingSpotDuplicate.Error(),
 			Location: "body.location",
-			Value:    jsonAnyify(testInput.Location),
+			Value:    JsonAnyify(testInput.Location),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
@@ -159,7 +130,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -178,7 +149,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrInvalidStreetAddress.Error(),
 			Location: "body.location.street_address",
-			Value:    jsonAnyify(testInput.Location.StreetAddress),
+			Value:    JsonAnyify(testInput.Location.StreetAddress),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
@@ -189,7 +160,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -204,7 +175,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -222,7 +193,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrCountryNotSupported.Error(),
 			Location: "body.location.country",
-			Value:    jsonAnyify(testInput.Location.CountryCode),
+			Value:    JsonAnyify(testInput.Location.CountryCode),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
@@ -233,7 +204,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -251,7 +222,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrInvalidPostalCode.Error(),
 			Location: "body.location.postal_code",
-			Value:    jsonAnyify(testInput.Location.PostalCode),
+			Value:    JsonAnyify(testInput.Location.PostalCode),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
@@ -262,7 +233,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -279,7 +250,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrInvalidCoordinate.Error(),
 			Location: "body.location",
-			Value:    jsonAnyify(testInput.Location),
+			Value:    JsonAnyify(testInput.Location),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
@@ -293,13 +264,13 @@ func TestGetParkingSpot(t *testing.T) {
 	const testUserID = int64(0)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testUserID)
+	ctx = context.WithValue(ctx, FakeSessionDataKey(SessionKeyUserID), testUserID)
 
 	t.Run("all good", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -325,7 +296,7 @@ func TestGetParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -344,7 +315,7 @@ func TestGetParkingSpot(t *testing.T) {
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
 			Message:  models.ErrParkingSpotNotFound.Error(),
 			Location: "path.id",
-			Value:    jsonAnyify(testUUID),
+			Value:    JsonAnyify(testUUID),
 		})
 
 		srv.AssertExpectations(t)
@@ -357,13 +328,13 @@ func TestDeleteParkingSpot(t *testing.T) {
 	const testUserID = int64(0)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testUserID)
+	ctx = context.WithValue(ctx, FakeSessionDataKey(SessionKeyUserID), testUserID)
 
 	t.Run("all good", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -382,7 +353,7 @@ func TestDeleteParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -401,7 +372,7 @@ func TestDeleteParkingSpot(t *testing.T) {
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
 			Message:  models.ErrParkingSpotNotFound.Error(),
 			Location: "path.id",
-			Value:    jsonAnyify(testUUID),
+			Value:    JsonAnyify(testUUID),
 		})
 
 		srv.AssertExpectations(t)
@@ -411,10 +382,10 @@ func TestDeleteParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
-		ctx := context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), int64(0))
+		ctx := context.WithValue(ctx, FakeSessionDataKey(SessionKeyUserID), int64(0))
 
 		testUUID := uuid.New()
 		srv.On("DeleteByUUID", mock.Anything, testUserID, testUUID).
@@ -431,7 +402,7 @@ func TestDeleteParkingSpot(t *testing.T) {
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
 			Message:  models.ErrParkingSpotOwned.Error(),
 			Location: "path.id",
-			Value:    jsonAnyify(testUUID),
+			Value:    JsonAnyify(testUUID),
 		})
 
 		srv.AssertExpectations(t)

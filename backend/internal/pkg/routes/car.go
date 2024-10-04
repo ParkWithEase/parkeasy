@@ -3,157 +3,202 @@ package routes
 import (
 	"context"
 	"net/http"
-	"strconv"
+	"errors"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/car"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
 )
+
+// Service provider for `CarRoute`
+type CarServicer interface {
+	// Creates a new car attached to `userID`.
+	//
+	// Returns the spot internal ID and the model.
+	Create(ctx context.Context, userID int64, spot *models.CarCreationInput) (int64, models.Car, error)
+	// Get the car with `carID` if `userID` has enough permission to view the resource.
+	GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.Car, error)
+	// Delete the car with `carID` if `userID` owns the resource.
+	DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
+	// Update the car with `carID` if `userID` has enough permission to view the resource.
+	UpdateByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.Car, error)
+}
 
 // CarRoute represents car-related API routes
 type CarRoute struct {
-	carService car.Service // Change here to use the interface directly
-}
-
-// NewCarRoute creates a new CarRoute with the given car service
-func NewCarRoute(carService car.Service) *CarRoute { // Change here to use the interface directly
-	return &CarRoute{
-		carService: carService,
-	}
+	service CarServicer
+	sessionGetter  SessionDataGetter
+	userMiddleware func(huma.Context, func(huma.Context))	
 }
 
 // CarOutput represents the output of the car retrieval operation
 type CarOutput struct {
-	Body []models.Car `json:"cars"`
+	Body models.Car
 }
 
-type NoContentOutput struct{}
-
-// CreateUpdateCarInput represents the input for the create and update car operation
-type CreateUpdateCarInput struct {
-    LicensePlate string `json:"licensePlate" doc:"License plate of the car"`
-    Make         string `json:"make" doc:"Make of the car"`
-    Model        string `json:"model" doc:"Model of the car"`
-    Color        string `json:"color" doc:"Color of the car"`
+// Returns a new `CarRoute`
+func NewCarRoute(
+	service CarServicer,
+	sessionGetter SessionDataGetter,
+	userMiddleware func(huma.Context, func(huma.Context)),
+) *CarRoute {
+	return &CarRoute{
+		service:        service,
+		sessionGetter:  sessionGetter,
+		userMiddleware: userMiddleware,
+	}
 }
 
-// RegisterCarRoutes registers the `/users/{id}/cars` route with Huma
-func (route *CarRoute) RegisterCarRoutes(api huma.API) {
-	huma.Get(api, "/users/{id}/cars", func(ctx context.Context, input *struct {
-		UserID string `path:"id" example:"1" doc:"User ID to fetch cars for"`
-	}) (*CarOutput, error) {
-		// Parse UserID to int
-		uid, err := strconv.Atoi(input.UserID)
+// Registers `/car` routes
+func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundling inflates complexity level
+	huma.Register(api, huma.Operation{
+		Method:        http.MethodPost,
+		Path:          "/cars",
+		Summary:       "Create a new car",
+		DefaultStatus: http.StatusCreated,
+		Errors:        []int{http.StatusUnprocessableEntity, http.StatusUnauthorized},
+		Security: []map[string][]string{
+			{
+				CookieSecuritySchemeName: {},
+			},
+		},
+		Middlewares: huma.Middlewares{r.userMiddleware},
+	}, func(ctx context.Context, input *struct {
+		Body models.CarCreationInput
+	},
+	) (*CarOutput, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
-			return nil, huma.NewError(http.StatusBadRequest, "Invalid user ID")
+			switch {
+			case errors.Is(err, models.ErrInvalidLicensePlate):
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "body.details.license_plate",
+					Value:    input.Body.Details.LicensePlate,
+				}
+			case errors.Is(err, models.ErrInvalidMake):
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "body.details.make",
+					Value:    input.Body.Details.Make,
+				}
+			case errors.Is(err, models.ErrInvalidModel):
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "body.details.model",
+					Value:    input.Body.Details.Model,
+				}
+			case errors.Is(err, models.ErrInvalidColor):
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "body.details.color",
+					Value:    input.Body.Details.Color,
+				}
+			}
+			return nil, huma.Error422UnprocessableEntity("", err)
 		}
-
-		// Retrieve cars from the service, which queries the database
-		cars, err := route.carService.GetCarsByUserID(ctx, uid)
-		if err != nil {
-			return nil, huma.NewError(http.StatusInternalServerError, "Failed to retrieve cars")
-		}
-
-		if len(cars) == 0 {
-			// Explicitly return a 404 Not Found if no cars are found
-			return nil, huma.NewError(http.StatusNotFound, "No cars found for the user")
-		}
-
-		// Prepare the response and log it
-		resp := &CarOutput{
-			Body: cars,
-		}
-
-		return resp, nil
+		return &CarOutput{Body: result}, nil
 	})
 
-	// New DELETE route
-	huma.Delete(api, "/users/{id}/cars/{carID}", func(ctx context.Context, input *struct {
-		UserID string `path:"id" example:"1" doc:"User ID to delete cars for"`
-		CarID  string `path:"carID" example:"1" doc:"Car ID to delete"`
-	}) (*NoContentOutput, error) {
-		// Parse UserID and CarID to int
-		uid, err := strconv.Atoi(input.UserID)
+	huma.Register(api, huma.Operation{
+		Method:  http.MethodGet,
+		Path:    "/cars/{id}",
+		Summary: "Get information about a car",
+		Errors:  []int{http.StatusUnauthorized, http.StatusNotFound},
+		Security: []map[string][]string{
+			{
+				CookieSecuritySchemeName: {},
+			},
+		},
+		Middlewares: huma.Middlewares{r.userMiddleware},
+	}, func(ctx context.Context, input *struct {
+		ID uuid.UUID `path:"id"`
+	},
+	) (*CarOutput, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		result, err := r.service.GetByUUID(ctx, userID, input.ID)
 		if err != nil {
-			return nil, huma.NewError(http.StatusBadRequest, "Invalid user ID")
+			if errors.Is(err, models.ErrCarNotFound) {
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "path.id",
+					Value:    input.ID,
+				}
+				return nil, huma.Error404NotFound("", err)
+			}
+			return nil, huma.Error400BadRequest("", err)
 		}
-		cid, err := strconv.Atoi(input.CarID)
-		if err != nil {
-			return nil, huma.NewError(http.StatusBadRequest, "Invalid car ID")
-		}
-
-		// Delete the car from the service
-		err = route.carService.DeleteCarByUserID(ctx, uid, cid)
-		if err != nil {
-			return nil, huma.NewError(http.StatusInternalServerError, "Failed to delete car")
-		}
-
-		// Return a 204 No Content response
-		return nil, nil // Returning nil indicates a 204 response with no content
+		return &CarOutput{Body: result}, nil
 	})
 
-	huma.Put(api, "/users/{userId}/cars/{carId}", func(ctx context.Context, input *struct {
-		UserID string           `path:"userId" example:"1" doc:"User ID for the car owner"`
-		CarID  string           `path:"carId" example:"1" doc:"Car ID to update"`
-		Body   CreateUpdateCarInput   `body:""` // Body as an CreateUpdateCarInput struct
-	}) (*CarOutput, error) {
-		// Parse UserID and CarID to int
-		userID, err := strconv.Atoi(input.UserID)
+	huma.Register(api, huma.Operation{
+		Method:  http.MethodDelete,
+		Path:    "/cars/{id}",
+		Summary: "Delete the specified car",
+		Errors:  []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
+		Security: []map[string][]string{
+			{
+				CookieSecuritySchemeName: {},
+			},
+		},
+		Middlewares: huma.Middlewares{r.userMiddleware},
+	}, func(ctx context.Context, input *struct {
+		ID uuid.UUID `path:"id"`
+	},
+	) (*struct{}, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		err := r.service.DeleteByUUID(ctx, userID, input.ID)
 		if err != nil {
-			return nil, huma.NewError(http.StatusBadRequest, "Invalid user ID")
+			switch {
+			case errors.Is(err, models.ErrCarNotFound):
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "path.id",
+					Value:    input.ID,
+				}
+				return nil, huma.Error404NotFound("", err)
+			case errors.Is(err, models.ErrCarOwned):
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "path.id",
+					Value:    input.ID,
+				}
+				return nil, huma.Error403Forbidden("", err)
+			}
+			return nil, huma.Error400BadRequest("", err)
 		}
-	
-		carID, err := strconv.Atoi(input.CarID)
-		if err != nil {
-			return nil, huma.NewError(http.StatusBadRequest, "Invalid car ID")
-		}
-	
-		// Update car details in the service
-		err = route.carService.UpdateCar(ctx, userID, carID, input.Body.LicensePlate, input.Body.Make, input.Body.Model, input.Body.Color)
-		if err != nil {
-			return nil, huma.NewError(http.StatusInternalServerError, "Failed to update car")
-		}
-	
-		// Retrieve updated car details
-		cars, err := route.carService.GetCarsByUserID(ctx, userID)
-		if err != nil {
-			return nil, huma.NewError(http.StatusInternalServerError, "Failed to retrieve updated cars")
-		}
-	
-		resp := &CarOutput{
-			Body: cars,
-		}
-	
-		return resp, nil
+		return nil, nil //nolint: nilnil // this route returns nothing on success
 	})
-	
-	huma.Post(api, "/users/{userId}/cars", func(ctx context.Context, input *struct {
-		UserID string         `path:"userId" example:"1" doc:"User ID for the car owner"`
-		Body   CreateUpdateCarInput `body:""` // Body as a CreateCarInput struct
-	}) (*CarOutput, error) {
-		// Parse UserID to int
-		userID, err := strconv.Atoi(input.UserID)
-		if err != nil {
-			return nil, huma.NewError(http.StatusBadRequest, "Invalid user ID")
-		}
-	
-		// Insert new car using the service
-		err = route.carService.CreateCar(ctx, userID, input.Body.LicensePlate, input.Body.Make, input.Body.Model, input.Body.Color)
-		if err != nil {
-			return nil, huma.NewError(http.StatusInternalServerError, "Failed to create car")
-		}
-	
-		// Retrieve the updated list of cars for the user
-		cars, err := route.carService.GetCarsByUserID(ctx, userID)
-		if err != nil {
-			return nil, huma.NewError(http.StatusInternalServerError, "Failed to retrieve inserted car")
-		}
-	
-		resp := &CarOutput{
-			Body: cars,
-		}
 
-		return resp, nil
-	})
-	
+	huma.Register(api, huma.Operation{
+		Method:  http.MethodPut,
+		Path:    "/cars/{id}",
+		Summary: "Update information about a car",
+		Errors:  []int{http.StatusUnauthorized, http.StatusNotFound},
+		Security: []map[string][]string{
+			{
+				CookieSecuritySchemeName: {},
+			},
+		},
+		Middlewares: huma.Middlewares{r.userMiddleware},
+	}, func(ctx context.Context, input *struct {
+		ID uuid.UUID `path:"id"`
+	},
+	) (*CarOutput, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		result, err := r.service.UpdateByUUID(ctx, userID, input.ID)
+		if err != nil {
+			if errors.Is(err, models.ErrCarNotFound) {
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "path.id",
+					Value:    input.ID,
+				}
+				return nil, huma.Error404NotFound("", err)
+			}
+			return nil, huma.Error400BadRequest("", err)
+		}
+		return &CarOutput{Body: result}, nil
+	})	
 }

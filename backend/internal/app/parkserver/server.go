@@ -12,13 +12,13 @@ import (
 	userRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/car"
+	// "github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/car"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/user"
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/rs/cors"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Config struct {
@@ -26,10 +26,12 @@ type Config struct {
 	Addr string
 	// Whether to run server in insecure mode. This allows cookies to be transferred over plain HTTP.
 	Insecure bool
+	// Database pool for Postgres connection
+	DBPool *pgxpool.Pool
 }
 
-// Register all routes
-func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager, dbPool *pgxpool.Pool) {
+
+func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager, cfg *Config) {
 	authMiddleware := routes.NewSessionMiddleware(api, sessionManager)
 	api.UseMiddleware(authMiddleware)
 
@@ -44,14 +46,14 @@ func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager, dbPool *pg
 	huma.AutoRegister(api, authRoute)
 	huma.AutoRegister(api, userRoute)
 
-	carService := car.NewService(dbPool)
-	carRoute := routes.NewCarRoute(carService)
-	huma.AutoRegister(api, carRoute)
-
+	// carService := car.NewCarService(cfg.DBPool)
+	// carRoute := routes.NewCarRoute(carService)
+	// huma.AutoRegister(api, carRoute)
 }
 
+
 // Creates a new Huma API instance with routes configured
-func (c *Config) NewHumaAPI(dbPool *pgxpool.Pool) huma.API {
+func (c *Config) NewHumaAPI() huma.API {
 	router := http.NewServeMux()
 	config := huma.DefaultConfig("ParkEasy API", "0.0.0")
 	api := humago.New(router, config)
@@ -60,16 +62,17 @@ func (c *Config) NewHumaAPI(dbPool *pgxpool.Pool) huma.API {
 	sessionManager := routes.NewSessionManager(nil)
 	sessionManager.Cookie.Secure = !c.Insecure
 
-	RegisterRoutes(api, sessionManager, dbPool) // Pass dbPool to register car routes
+	RegisterRoutes(api, sessionManager, c) // Pass Config instead of dbPool
 
 	return api
 }
 
+
 // Listen and serve at `addr`.
 //
 // If `ctx` is cancelled, the server will shutdown gracefully and no error will be returned.
-func (c *Config) ListenAndServe(ctx context.Context, dbPool *pgxpool.Pool) error {
-	api := c.NewHumaAPI(dbPool)
+func (c *Config) ListenAndServe(ctx context.Context) error {
+	api := c.NewHumaAPI()
 	huma.NewError = routes.NewErrorFiltered
 
 	srv := http.Server{
@@ -89,9 +92,6 @@ func (c *Config) ListenAndServe(ctx context.Context, dbPool *pgxpool.Pool) error
 				http.MethodDelete,
 				http.MethodPatch,
 			},
-			// NOTE: This allow all credentials to be passed across CORS
-			//
-			// It is very insecure, and as such should only be enabled for development
 			AllowOriginFunc: func(_ string) bool {
 				return true
 			},

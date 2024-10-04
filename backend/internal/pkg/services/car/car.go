@@ -1,90 +1,87 @@
 package car
 
 import (
-    "context"
-    "github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
-    "github.com/jackc/pgconn"
-    "github.com/jackc/pgx/v4"
+	"context"
+	"errors"
+	"regexp"
+
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/car"
+	"github.com/google/uuid"
 )
 
-// Service interface for car-related operations
-type Service interface {
-    GetCarsByUserID(ctx context.Context, userID int) ([]models.Car, error)
-    DeleteCarByUserID(ctx context.Context, userID, carID int) error
-    UpdateCar(ctx context.Context, userID, carID int, licensePlate, make, model, color string) error
-	CreateCar (ctx context.Context, userID int, licensePlate, make, model, color string) error
+type Service struct {
+	repo car.Repository
 }
 
-// DB represents the database operations used by the Service
-type DB interface {
-    Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
-    Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
+func NewCarService(repo car.Repository) *Service {
+	return &Service{
+		repo: repo,
+	}
 }
 
-// Service struct holds the database interface and implements the Service interface
-type service struct {
-    DB DB
+func (s *Service) Create(ctx context.Context, userID int64, car *models.CarCreationInput) (int64, models.Car, error) {
+	var licensePlatePattern = regexp.MustCompile(`^[A-Za-z0-9 ]{2,8}$`)
+	if !licensePlatePattern.MatchString(car.Details.LicensePlate) {
+		return 0, models.Car{}, models.ErrInvalidLicensePlate
+	}
+	if car.Details.Make == "" {
+		return 0, models.Car{}, models.ErrInvalidMake
+	}
+	if car.Details.Model == "" {
+		return 0, models.Car{}, models.ErrInvalidModel
+	}
+	if car.Details.Color == "" {
+		return 0, models.Car{}, models.ErrInvalidColor
+	}
+
+	internalID, result, err := s.repo.Create(ctx, userID, car)
+	if err != nil {
+		return 0, models.Car{}, err
+	}
+	return internalID, result.Car, nil
 }
 
-// NewService creates a new instance of Service with the given database
-func NewService(db DB) Service {
-    return &service{DB: db}
+func (s *Service) GetByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error) {
+	result, err := s.repo.GetByUUID(ctx, carID)
+	if err != nil {
+		if errors.Is(err, car.ErrNotFound) {
+			err = models.ErrCarNotFound
+		}
+		return models.Car{}, err
+	}
+	if result.OwnerID != userID {
+		return models.Car{}, models.ErrCarNotFound
+	}
+	return result.Car, nil
 }
 
-// GetCarsByUserID retrieves cars for a given user ID
-func (s *service) GetCarsByUserID(ctx context.Context, userID int) ([]models.Car, error) {
-
-    rows, err := s.DB.Query(ctx, `SELECT CarId, LicensePlate, Make, Model, Color FROM Car WHERE UserId=$1`, userID)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
-
-    var cars []models.Car
-    for rows.Next() {
-        var car models.Car
-        if err := rows.Scan(&car.CarID, &car.LicensePlate, &car.Make, &car.Model, &car.Color); err != nil {
-            return nil, err
-        }
-        cars = append(cars, car)
-    }
-
-    return cars, nil
+func (s *Service) DeleteByUUID(ctx context.Context, userID int64, carID uuid.UUID) error {
+	result, err := s.repo.GetByUUID(ctx, carID)
+	if err != nil {
+		// It's not an error to delete something that doesn't exist
+		if errors.Is(err, car.ErrNotFound) {
+			return nil
+		}
+		return err
+	}
+	if result.OwnerID != userID {
+		return models.ErrCarOwned
+	}
+	return s.repo.DeleteByUUID(ctx, carID)
 }
 
-// DeleteCarByUserID deletes a car associated with a given user ID and car ID.
-func (s *service) DeleteCarByUserID(ctx context.Context, userID int, carID int) error {
-
-    _, err := s.DB.Exec(ctx, `DELETE FROM Car WHERE UserId=$1 AND CarId=$2`, userID, carID)
-    if err != nil {
-        return err
-    }
-
-    return nil
+func (s *Service) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error) {
+	result, err := s.repo.GetByUUID(ctx, carID)
+	if err != nil {
+		if errors.Is(err, car.ErrNotFound) {
+			err = models.ErrCarNotFound
+		}
+		return models.Car{}, err
+	}
+	if result.OwnerID != userID {
+		return models.Car{}, models.ErrCarNotFound
+	}
+	return result.Car, nil
 }
 
-// UpdateCar updates a car's information
-func (s *service) UpdateCar(ctx context.Context, userID, carID int, licensePlate, make, model, color string) error {
-
-    _, err := s.DB.Exec(ctx, `UPDATE Car SET LicensePlate=$1, Make=$2, Model=$3, Color=$4 WHERE UserId=$5 AND CarId=$6`,
-        licensePlate, make, model, color, userID, carID)
-
-    if err != nil {
-        return err
-    }
-
-    return nil
-}
-
-// CreateCar inserts a new car for the given user into the database
-func (s *service) CreateCar(ctx context.Context, userID int, licensePlate, make, model, color string) error {
-
-    _, err := s.DB.Exec(ctx, `INSERT INTO Car (UserId, LicensePlate, Make, Model, Color) VALUES ($1, $2, $3, $4, $5)`,
-        userID, licensePlate, make, model, color)
-
-    if err != nil {
-        return err
-    }
-
-    return nil
-}
