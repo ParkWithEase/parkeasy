@@ -5,18 +5,36 @@ import (
 	"errors"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
 	"github.com/google/uuid"
 )
 
+// interface for the authentication service
+type AuthServicer interface {
+	// Create creates a new authentication record and returns the associated identity.
+	Create(ctx context.Context, email, password string) (uuid.UUID, error)
+
+	// Authenticate authenticates the given email and password, and returns the associated identity.
+	Authenticate(ctx context.Context, email, password string) (uuid.UUID, error)
+
+	// UpdatePassword updates the password for a given user, ensuring the old password is correct.
+	UpdatePassword(ctx context.Context, authID uuid.UUID, oldPassword, newPassword string) error
+
+	// CreatePasswordResetToken generates a new password reset token for a given email.
+	CreatePasswordResetToken(ctx context.Context, email string) (resettoken.Token, error)
+
+	// ResetPassword resets the password for a given reset token.
+	ResetPassword(ctx context.Context, token resettoken.Token, newPassword string) error
+}
+
 type Service struct {
-	auth *auth.Service
+	auth AuthServicer
 	repo user.Repository
 }
 
 // Create a new user service
-func NewService(authService *auth.Service, repo user.Repository) *Service {
+func NewService(authService AuthServicer, repo user.Repository) *Service {
 	return &Service{
 		auth: authService,
 		repo: repo,
