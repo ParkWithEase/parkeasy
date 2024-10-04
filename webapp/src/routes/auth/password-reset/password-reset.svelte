@@ -1,6 +1,6 @@
 <script lang="ts">
     import FormHeader from '$lib/components/form-header.svelte';
-    import { BACKEND_SERVER, PASSWORD_NOT_MATCH } from '$lib/constants';
+    import { BACKEND_SERVER, INTERNAL_SERVER_ERROR, PASSWORD_NOT_MATCH } from '$lib/constants';
     import { Form, PasswordInput } from 'carbon-components-svelte';
 
     export let resetToken: string | null;
@@ -57,7 +57,7 @@
                     successMessage = '';
                 }
             } catch {
-                errorMessage = 'Something went wrong in the server T_T';
+                errorMessage = INTERNAL_SERVER_ERROR;
                 successMessage = '';
             }
         }

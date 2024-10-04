@@ -1,7 +1,7 @@
 <script lang="ts">
     import FormHeader from '$lib/components/form-header.svelte';
     import SubmitButton from '$lib/components/submit-button.svelte';
-    import { BACKEND_SERVER } from '$lib/constants';
+    import { BACKEND_SERVER, INTERNAL_SERVER_ERROR } from '$lib/constants';
     import { Form, TextInput } from 'carbon-components-svelte';
 
     let email: string;
@@ -35,7 +35,7 @@
             }
         } catch (err) {
             console.log(err);
-            errorMessage = 'Something went wrong in the server';
+            errorMessage = INTERNAL_SERVER_ERROR;
         }
     }
 </script>

@@ -1,7 +1,7 @@
 <script lang="ts">
     import FormHeader from '$lib/components/form-header.svelte';
     import SubmitButton from '$lib/components/submit-button.svelte';
-    import { BACKEND_SERVER, PASSWORD_NOT_MATCH } from '$lib/constants';
+    import { BACKEND_SERVER, INTERNAL_SERVER_ERROR, PASSWORD_NOT_MATCH } from '$lib/constants';
     import { Form, TextInput, PasswordInput } from 'carbon-components-svelte';
     let firstName: string;
     let lastName: string;
@@ -50,7 +50,7 @@
                     errorMessage = data.errors[0].message;
                 }
             } catch {
-                errorMessage = 'Something went wrong in the server T_T';
+                errorMessage = INTERNAL_SERVER_ERROR;
                 successMessage = '';
             }
         }
