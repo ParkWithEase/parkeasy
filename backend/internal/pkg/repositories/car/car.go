@@ -14,9 +14,7 @@ type Entry struct {
 	OwnerID    int64 // The user id owning this car
 }
 
-var (
-	ErrNotFound = errors.New("no car found")
-)
+var ErrNotFound = errors.New("no car found")
 
 type Repository interface {
 	Create(ctx context.Context, userID int64, spot *models.CarCreationInput) (int64, Entry, error)

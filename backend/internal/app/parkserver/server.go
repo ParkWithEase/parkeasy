@@ -12,13 +12,12 @@ import (
 	userRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
-	// "github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/car"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/user"
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
-	"github.com/rs/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/cors"
 )
 
 type Config struct {
@@ -30,8 +29,7 @@ type Config struct {
 	DBPool *pgxpool.Pool
 }
 
-
-func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager, cfg *Config) {
+func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager) {
 	authMiddleware := routes.NewSessionMiddleware(api, sessionManager)
 	api.UseMiddleware(authMiddleware)
 
@@ -45,15 +43,10 @@ func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager, cfg *Confi
 	userRoute := routes.NewUserRoute(userService, sessionManager)
 	huma.AutoRegister(api, authRoute)
 	huma.AutoRegister(api, userRoute)
-
-	// carService := car.NewCarService(cfg.DBPool)
-	// carRoute := routes.NewCarRoute(carService)
-	// huma.AutoRegister(api, carRoute)
 }
 
-
 // Creates a new Huma API instance with routes configured
-func (c *Config) NewHumaAPI() huma.API {
+func (c *Config) NewHumaAPI() huma.API { //nolint: ireturn // this is intentional
 	router := http.NewServeMux()
 	config := huma.DefaultConfig("ParkEasy API", "0.0.0")
 	api := humago.New(router, config)
@@ -62,11 +55,10 @@ func (c *Config) NewHumaAPI() huma.API {
 	sessionManager := routes.NewSessionManager(nil)
 	sessionManager.Cookie.Secure = !c.Insecure
 
-	RegisterRoutes(api, sessionManager, c) // Pass Config instead of dbPool
+	RegisterRoutes(api, sessionManager) // Pass Config instead of dbPool
 
 	return api
 }
-
 
 // Listen and serve at `addr`.
 //
@@ -92,6 +84,9 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 				http.MethodDelete,
 				http.MethodPatch,
 			},
+			// NOTE: This allow all credentials to be passed across CORS
+			//
+			// It is very insecure, and as such should only be enabled for development
 			AllowOriginFunc: func(_ string) bool {
 				return true
 			},
@@ -102,10 +97,13 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 
 	go func() {
 		<-ctx.Done()
+		// Ignore shutdown errors, not that we can do anything about them
 		_ = srv.Shutdown(context.Background())
 	}()
 
 	err := srv.ListenAndServe()
+	// ServerClosed just meant that the server has shutdown
+
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
 	}

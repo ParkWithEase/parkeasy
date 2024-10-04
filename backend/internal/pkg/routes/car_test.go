@@ -50,28 +50,32 @@ func TestCreateCar(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	const testUserID = int64(0)
-	ctx = context.WithValue(ctx, FakeSessionDataKey(SessionKeyUserID), testUserID)
+	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testUserID)
 
 	testInput := models.CarCreationInput{
-		Details: models.CarDetails{
-			LicensePlate: 	"test lp",
-			Make:    		"test make",
-			Model:   		"test model",
-			Color:   		"test color",
-		},
+		LicensePlate: "HTV 678",
+		Make:         "Honda",
+		Model:        "Civic",
+		Color:        "Blue",
 	}
 
 	t.Run("all good", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
 		carUUID := uuid.New()
 		srv.On("Create", mock.Anything, testUserID, &testInput).
-			Return(int64(0), models.Car{Details: testInput.Details, ID: carUUID}, nil).
+			Return(int64(0), models.Car{
+				LicensePlate: testInput.LicensePlate,
+				Make:         testInput.Make,
+				Model:        testInput.Model,
+				Color:        testInput.Color,
+				ID:           carUUID,
+			}, nil).
 			Once()
 
 		resp := api.PostCtx(ctx, "/cars", testInput)
@@ -82,8 +86,15 @@ func TestCreateCar(t *testing.T) {
 		err := json.Unmarshal(respBody, &car)
 		require.NoError(t, err)
 
-		assert.Equal(t, testInput.Details, car.Details)
-		assert.Equal(t, carUUID, car.ID)
+		testOutput := models.Car{
+			LicensePlate: car.LicensePlate,
+			Make:         car.Make,
+			Model:        car.Model,
+			Color:        car.Color,
+			ID:           carUUID,
+		}
+
+		assert.Equal(t, testOutput, car)
 
 		srv.AssertExpectations(t)
 	})
@@ -92,7 +103,7 @@ func TestCreateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -110,20 +121,19 @@ func TestCreateCar(t *testing.T) {
 
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrInvalidLicensePlate.Error(),
-			Location: "body.details.license_plate",
-			Value:    JsonAnyify(testInput.Details.LicensePlate),
+			Location: "body.license_plate",
+			Value:    jsonAnyify(testInput.LicensePlate),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
 	})
 
-
 	t.Run("car make errors", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -140,20 +150,19 @@ func TestCreateCar(t *testing.T) {
 
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrInvalidMake.Error(),
-			Location: "body.details.make",
-			Value:    JsonAnyify(testInput.Details.Make),
+			Location: "body.make",
+			Value:    jsonAnyify(testInput.Make),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
 	})
 
-
 	t.Run("car model errors", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -170,8 +179,8 @@ func TestCreateCar(t *testing.T) {
 
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrInvalidModel.Error(),
-			Location: "body.details.model",
-			Value:    JsonAnyify(testInput.Details.Model),
+			Location: "body.model",
+			Value:    jsonAnyify(testInput.Model),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
@@ -182,7 +191,7 @@ func TestCreateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -198,8 +207,8 @@ func TestCreateCar(t *testing.T) {
 
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrInvalidColor.Error(),
-			Location: "body.details.color",
-			Value:    JsonAnyify(testInput.Details.Color),
+			Location: "body.color",
+			Value:    jsonAnyify(testInput.Color),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
@@ -213,13 +222,13 @@ func TestGetCar(t *testing.T) {
 	const testUserID = int64(0)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	ctx = context.WithValue(ctx, FakeSessionDataKey(SessionKeyUserID), testUserID)
+	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testUserID)
 
 	t.Run("all good", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -245,7 +254,7 @@ func TestGetCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -264,7 +273,7 @@ func TestGetCar(t *testing.T) {
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
 			Message:  models.ErrCarNotFound.Error(),
 			Location: "path.id",
-			Value:    JsonAnyify(testUUID),
+			Value:    jsonAnyify(testUUID),
 		})
 
 		srv.AssertExpectations(t)
@@ -277,13 +286,13 @@ func TestDeleteCar(t *testing.T) {
 	const testUserID = int64(0)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	ctx = context.WithValue(ctx, FakeSessionDataKey(SessionKeyUserID), testUserID)
+	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testUserID)
 
 	t.Run("all good", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -302,7 +311,7 @@ func TestDeleteCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -321,7 +330,7 @@ func TestDeleteCar(t *testing.T) {
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
 			Message:  models.ErrCarNotFound.Error(),
 			Location: "path.id",
-			Value:    JsonAnyify(testUUID),
+			Value:    jsonAnyify(testUUID),
 		})
 
 		srv.AssertExpectations(t)
@@ -331,10 +340,10 @@ func TestDeleteCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
-		ctx := context.WithValue(ctx, FakeSessionDataKey(SessionKeyUserID), int64(0))
+		ctx := context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), int64(0))
 
 		testUUID := uuid.New()
 		srv.On("DeleteByUUID", mock.Anything, testUserID, testUUID).
@@ -351,7 +360,7 @@ func TestDeleteCar(t *testing.T) {
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
 			Message:  models.ErrCarOwned.Error(),
 			Location: "path.id",
-			Value:    JsonAnyify(testUUID),
+			Value:    jsonAnyify(testUUID),
 		})
 
 		srv.AssertExpectations(t)
@@ -364,39 +373,35 @@ func TestUpdateCar(t *testing.T) {
 	const testUserID = int64(0)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	ctx = context.WithValue(ctx, FakeSessionDataKey(SessionKeyUserID), testUserID)
+	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testUserID)
 
 	t.Run("all good", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
 		testUUID := uuid.New()
 		updatedCar := models.Car{
-			ID: testUUID,
-			Details: models.CarDetails{
-				LicensePlate: "ABC123",
-				Make:        "Toyota",
-				Model:       "Corolla",
-				Color:       "Red",
-			},
+			ID:           testUUID,
+			LicensePlate: "ABC123",
+			Make:         "Toyota",
+			Model:        "Corolla",
+			Color:        "Red",
 		}
-		
+
 		srv.On("UpdateByUUID", mock.Anything, testUserID, testUUID).
 			Return(updatedCar, nil).
 			Once()
 
 		// Simulate an update request
 		updateRequest := models.CarCreationInput{
-			Details: models.CarDetails{
-				LicensePlate: "ABC123",
-				Make:        "Toyota",
-				Model:       "Corolla",
-				Color:       "Red",
-			},
+			LicensePlate: "ABC123",
+			Make:         "Toyota",
+			Model:        "Corolla",
+			Color:        "Red",
 		}
 		reqBody, _ := json.Marshal(updateRequest)
 
@@ -417,7 +422,7 @@ func TestUpdateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, FakeSessionDataGetter{}, FakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -428,12 +433,10 @@ func TestUpdateCar(t *testing.T) {
 
 		// Simulate an update request
 		updateRequest := models.CarCreationInput{
-			Details: models.CarDetails{
-				LicensePlate: "ABC123",
-				Make:        "Toyota",
-				Model:       "Corolla",
-				Color:       "Red",
-			},
+			LicensePlate: "ABC123",
+			Make:         "Toyota",
+			Model:        "Corolla",
+			Color:        "Red",
 		}
 		reqBody, _ := json.Marshal(updateRequest)
 
@@ -447,7 +450,7 @@ func TestUpdateCar(t *testing.T) {
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
 			Message:  models.ErrCarNotFound.Error(),
 			Location: "path.id",
-			Value:    JsonAnyify(testUUID),
+			Value:    jsonAnyify(testUUID),
 		})
 
 		srv.AssertExpectations(t)

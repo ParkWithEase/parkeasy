@@ -14,28 +14,28 @@ type Service struct {
 	repo car.Repository
 }
 
-func NewCarService(repo car.Repository) *Service {
+func New(repo car.Repository) *Service {
 	return &Service{
 		repo: repo,
 	}
 }
 
-func (s *Service) Create(ctx context.Context, userID int64, car *models.CarCreationInput) (int64, models.Car, error) {
-	var licensePlatePattern = regexp.MustCompile(`^[A-Za-z0-9 ]{2,8}$`)
-	if !licensePlatePattern.MatchString(car.Details.LicensePlate) {
+func (s *Service) Create(ctx context.Context, userID int64, carModel *models.CarCreationInput) (int64, models.Car, error) {
+	licensePlatePattern := regexp.MustCompile(`^[A-Za-z0-9 ]{2,8}$`)
+	if !licensePlatePattern.MatchString(carModel.LicensePlate) {
 		return 0, models.Car{}, models.ErrInvalidLicensePlate
 	}
-	if car.Details.Make == "" {
+	if carModel.Make == "" {
 		return 0, models.Car{}, models.ErrInvalidMake
 	}
-	if car.Details.Model == "" {
+	if carModel.Model == "" {
 		return 0, models.Car{}, models.ErrInvalidModel
 	}
-	if car.Details.Color == "" {
+	if carModel.Color == "" {
 		return 0, models.Car{}, models.ErrInvalidColor
 	}
 
-	internalID, result, err := s.repo.Create(ctx, userID, car)
+	internalID, result, err := s.repo.Create(ctx, userID, carModel)
 	if err != nil {
 		return 0, models.Car{}, err
 	}
@@ -84,4 +84,3 @@ func (s *Service) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUI
 	}
 	return result.Car, nil
 }
-

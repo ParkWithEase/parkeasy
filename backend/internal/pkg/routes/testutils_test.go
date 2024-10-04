@@ -9,20 +9,20 @@ import (
 
 type (
 	// A simple adapter for context.Value
-	FakeSessionDataGetter struct{}
-	FakeSessionDataKey    string
+	fakeSessionDataGetter struct{}
+	fakeSessionDataKey    string
 )
 
-// Get implements SessionDataGetter.
-func (FakeSessionDataGetter) Get(ctx context.Context, key string) any { //nolint: ireturn // required by interface
-	return ctx.Value(FakeSessionDataKey(key))
+// Get implements SessionDataGetter
+func (fakeSessionDataGetter) Get(ctx context.Context, key string) any { //nolint: ireturn // this is intentional
+	return ctx.Value(fakeSessionDataKey(key))
 }
 
-func FakeUserMiddleware(ctx huma.Context, next func(huma.Context)) {
+func fakeUserMiddleware(ctx huma.Context, next func(huma.Context)) {
 	next(ctx)
 }
 
-func JsonAnyify(v any) any { //nolint: ireturn // this is intentional
+func jsonAnyify(v any) any { //nolint: ireturn // this is intentional
 	j, err := json.Marshal(v)
 	if err != nil {
 		panic(err)

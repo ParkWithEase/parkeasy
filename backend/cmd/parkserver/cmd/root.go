@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/app/parkserver"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -39,11 +39,11 @@ var rootCmd = &cobra.Command{
 		}
 
 		// Establish a database connection
-		dbPool, err := pgxpool.Connect(context.Background(), dbURL)
+		conn, err := pgx.Connect(context.Background(), dbURL)
 		if err != nil {
 			log.Fatal().Err(err).Msg("Unable to connect to the database")
 		}
-		defer dbPool.Close()
+		defer conn.Close(context.Background())
 
 		// Shutdown on Ctrl-C
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

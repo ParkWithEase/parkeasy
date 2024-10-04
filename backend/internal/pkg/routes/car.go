@@ -2,8 +2,8 @@ package routes
 
 import (
 	"context"
-	"net/http"
 	"errors"
+	"net/http"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/danielgtaylor/huma/v2"
@@ -26,9 +26,9 @@ type CarServicer interface {
 
 // CarRoute represents car-related API routes
 type CarRoute struct {
-	service CarServicer
+	service        CarServicer
 	sessionGetter  SessionDataGetter
-	userMiddleware func(huma.Context, func(huma.Context))	
+	userMiddleware func(huma.Context, func(huma.Context))
 }
 
 // CarOutput represents the output of the car retrieval operation
@@ -74,26 +74,26 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 			case errors.Is(err, models.ErrInvalidLicensePlate):
 				err = &huma.ErrorDetail{
 					Message:  err.Error(),
-					Location: "body.details.license_plate",
-					Value:    input.Body.Details.LicensePlate,
+					Location: "body.license_plate",
+					Value:    input.Body.LicensePlate,
 				}
 			case errors.Is(err, models.ErrInvalidMake):
 				err = &huma.ErrorDetail{
 					Message:  err.Error(),
-					Location: "body.details.make",
-					Value:    input.Body.Details.Make,
+					Location: "body.make",
+					Value:    input.Body.Make,
 				}
 			case errors.Is(err, models.ErrInvalidModel):
 				err = &huma.ErrorDetail{
 					Message:  err.Error(),
-					Location: "body.details.model",
-					Value:    input.Body.Details.Model,
+					Location: "body.model",
+					Value:    input.Body.Model,
 				}
 			case errors.Is(err, models.ErrInvalidColor):
 				err = &huma.ErrorDetail{
 					Message:  err.Error(),
-					Location: "body.details.color",
-					Value:    input.Body.Details.Color,
+					Location: "body.color",
+					Value:    input.Body.Color,
 				}
 			}
 			return nil, huma.Error422UnprocessableEntity("", err)
@@ -200,5 +200,5 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 			return nil, huma.Error400BadRequest("", err)
 		}
 		return &CarOutput{Body: result}, nil
-	})	
+	})
 }

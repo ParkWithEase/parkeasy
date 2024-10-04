@@ -23,15 +23,16 @@ const (
 
 var ownedTestEntry = car.Entry{
 	Car: models.Car{
-		Details: sampleDetails,
+		LicensePlate: "HTV 678",
+		Make:         "Honda",
+		Model:        "Civic",
+		Color:        "Blue",
 	},
 	InternalID: 0,
 	OwnerID:    testOwnerID,
 }
 
-var (
-	testOwnerCarID    = uuid.New()
-)
+var testOwnerCarID = uuid.New()
 
 func (m *mockRepo) AddGetCalls() *mock.Call {
 	return m.On("GetByUUID", mock.Anything, testOwnerCarID).
@@ -70,12 +71,12 @@ func (m *mockRepo) GetOwnerByUUID(ctx context.Context, carID uuid.UUID) (int64, 
 	return args.Get(0).(int64), args.Error(1)
 }
 
-var sampleDetails = models.CarDetails{
-	LicensePlate:    "HTV 678",
-	Make:   	     "Honda",
-	Model:           "Civic",
-	Color:           "Blue",
-}
+var (
+	testLicensePlate = "HTV 678"
+	testMake         = "Honda"
+	testModel        = "Civic"
+	testColor        = "Blue"
+)
 
 func TestCreate(t *testing.T) {
 	t.Parallel()
@@ -87,17 +88,23 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := NewCarService(repo)
+		srv := New(repo)
 
 		input := &models.CarCreationInput{
-			Details: sampleDetails,
+			LicensePlate: testLicensePlate,
+			Make:         testMake,
+			Model:        testModel,
+			Color:        testColor,
 		}
 		repo.On("Create", mock.Anything, int64(0), input).
 			Return(
 				int64(0),
 				car.Entry{
 					Car: models.Car{
-						Details: input.Details,
+						LicensePlate: testLicensePlate,
+						Make:         testMake,
+						Model:        testModel,
+						Color:        testColor,
 					},
 					InternalID: 0,
 					OwnerID:    0,
@@ -110,17 +117,18 @@ func TestCreate(t *testing.T) {
 		repo.AssertExpectations(t)
 	})
 
-
 	t.Run("license plate fit check", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := NewCarService(repo)
+		srv := New(repo)
 
-		details := sampleDetails
-		details.LicensePlate = "Invalid Plate"
+		invalidPlate := "Invalid Plate"
 		_, _, err := srv.Create(ctx, 0, &models.CarCreationInput{
-			Details: details,
+			LicensePlate: invalidPlate,
+			Make:         testMake,
+			Model:        testModel,
+			Color:        testColor,
 		})
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrInvalidLicensePlate)
@@ -132,12 +140,13 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := NewCarService(repo)
+		srv := New(repo)
 
-		details := sampleDetails
-		details.Make = ""
 		_, _, err := srv.Create(ctx, 0, &models.CarCreationInput{
-			Details: details,
+			LicensePlate: testLicensePlate,
+			Make:         "",
+			Model:        testModel,
+			Color:        testColor,
 		})
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrInvalidMake)
@@ -149,12 +158,13 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := NewCarService(repo)
+		srv := New(repo)
 
-		details := sampleDetails
-		details.Model = ""
 		_, _, err := srv.Create(ctx, 0, &models.CarCreationInput{
-			Details: details,
+			LicensePlate: testLicensePlate,
+			Make:         testMake,
+			Model:        "",
+			Color:        testColor,
 		})
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrInvalidModel)
@@ -166,12 +176,13 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := NewCarService(repo)
+		srv := New(repo)
 
-		details := sampleDetails
-		details.Color = ""
 		_, _, err := srv.Create(ctx, 0, &models.CarCreationInput{
-			Details: details,
+			LicensePlate: testLicensePlate,
+			Make:         testMake,
+			Model:        testModel,
+			Color:        "",
 		})
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrInvalidColor)
@@ -191,7 +202,7 @@ func TestGet(t *testing.T) {
 		repo := new(mockRepo)
 		repo.On("GetByUUID", mock.Anything, uuid.Nil).
 			Return(car.Entry{}, car.ErrNotFound).Once()
-		srv := NewCarService(repo)
+		srv := New(repo)
 
 		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil)
 		if assert.Error(t, err) {
@@ -205,11 +216,11 @@ func TestGet(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewCarService(repo)
+		srv := New(repo)
 
-		car, err := srv.GetByUUID(ctx, testOwnerID, testOwnerCarID)
+		carResult, err := srv.GetByUUID(ctx, testOwnerID, testOwnerCarID)
 		require.NoError(t, err)
-		assert.Equal(t, ownedTestEntry.Car, car)
+		assert.Equal(t, ownedTestEntry.Car, carResult)
 	})
 
 	t.Run("strangers cannot get other's cars", func(t *testing.T) {
@@ -217,7 +228,7 @@ func TestGet(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewCarService(repo)
+		srv := New(repo)
 
 		_, err := srv.GetByUUID(ctx, testStrangerID, testOwnerCarID)
 		if assert.Error(t, err) {
@@ -238,7 +249,7 @@ func TestDelete(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewCarService(repo)
+		srv := New(repo)
 
 		repo.On("DeleteByUUID", mock.Anything, mock.Anything).
 			Return(nil)
@@ -252,7 +263,7 @@ func TestDelete(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewCarService(repo)
+		srv := New(repo)
 
 		err := srv.DeleteByUUID(ctx, testOwnerID, uuid.Nil)
 		require.NoError(t, err)
@@ -266,7 +277,7 @@ func TestDelete(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewCarService(repo)
+		srv := New(repo)
 
 		err := srv.DeleteByUUID(ctx, testStrangerID, testOwnerCarID)
 		if assert.Error(t, err) {
@@ -275,7 +286,6 @@ func TestDelete(t *testing.T) {
 		repo.AssertNotCalled(t, "DeleteByUUID")
 	})
 }
-
 
 func TestUpdate(t *testing.T) {
 	t.Parallel()
@@ -288,7 +298,7 @@ func TestUpdate(t *testing.T) {
 		repo := new(mockRepo)
 		repo.On("GetByUUID", mock.Anything, uuid.Nil).
 			Return(car.Entry{}, car.ErrNotFound).Once()
-		srv := NewCarService(repo)
+		srv := New(repo)
 
 		_, err := srv.UpdateByUUID(ctx, testOwnerID, uuid.Nil)
 		if assert.Error(t, err) {
@@ -302,11 +312,11 @@ func TestUpdate(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewCarService(repo)
+		srv := New(repo)
 
-		car, err := srv.UpdateByUUID(ctx, testOwnerID, testOwnerCarID)
+		carResult, err := srv.UpdateByUUID(ctx, testOwnerID, testOwnerCarID)
 		require.NoError(t, err)
-		assert.Equal(t, ownedTestEntry.Car, car)
+		assert.Equal(t, ownedTestEntry.Car, carResult)
 	})
 
 	t.Run("strangers cannot update other's cars", func(t *testing.T) {
@@ -314,7 +324,7 @@ func TestUpdate(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewCarService(repo)
+		srv := New(repo)
 
 		_, err := srv.UpdateByUUID(ctx, testStrangerID, testOwnerCarID)
 		if assert.Error(t, err) {

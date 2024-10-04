@@ -96,7 +96,7 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		input := &models.ParkingSpotCreationInput{
 			Location: sampleLocation,
@@ -124,7 +124,7 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		input := &models.ParkingSpotCreationInput{
 			Location: sampleLocation,
@@ -147,7 +147,7 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		location := sampleLocation
 		location.CountryCode = "US"
@@ -164,7 +164,7 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		location := sampleLocation
 		location.PostalCode += " addon"
@@ -181,7 +181,7 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		location := sampleLocation
 		location.StreetAddress = ""
@@ -198,7 +198,7 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		location := sampleLocation
 		location.Longitude = 0
@@ -223,7 +223,7 @@ func TestGet(t *testing.T) {
 		repo := new(mockRepo)
 		repo.On("GetByUUID", mock.Anything, uuid.Nil).
 			Return(parkingspot.Entry{}, parkingspot.ErrNotFound).Once()
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil)
 		if assert.Error(t, err) {
@@ -237,7 +237,7 @@ func TestGet(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		spot, err := srv.GetByUUID(ctx, testNonOwnerID, testPublicSpotID)
 		require.NoError(t, err)
@@ -249,7 +249,7 @@ func TestGet(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		spot, err := srv.GetByUUID(ctx, testOwnerID, testPrivateSpotID)
 		require.NoError(t, err)
@@ -261,7 +261,7 @@ func TestGet(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		_, err := srv.GetByUUID(ctx, testNonOwnerID, testPrivateSpotID)
 		if assert.Error(t, err) {
@@ -282,7 +282,7 @@ func TestDelete(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		repo.On("DeleteByUUID", mock.Anything, mock.Anything).
 			Return(nil).Twice()
@@ -298,7 +298,7 @@ func TestDelete(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		err := srv.DeleteByUUID(ctx, testOwnerID, uuid.Nil)
 		require.NoError(t, err)
@@ -312,7 +312,7 @@ func TestDelete(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		err := srv.DeleteByUUID(ctx, testNonOwnerID, testPrivateSpotID)
 		require.NoError(t, err)
@@ -324,7 +324,7 @@ func TestDelete(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := NewParkingSpotService(repo)
+		srv := New(repo)
 
 		err := srv.DeleteByUUID(ctx, testNonOwnerID, testPublicSpotID)
 		if assert.Error(t, err) {

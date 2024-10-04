@@ -14,7 +14,7 @@ var openapiCmd = &cobra.Command{
 	Short: "Print the OpenAPI spec",
 	Run: func(_ *cobra.Command, _ []string) {
 		var config parkserver.Config
-		api := config.NewHumaAPI()  
+		api := config.NewHumaAPI()
 		oapi, err := api.OpenAPI().YAML()
 		if err != nil {
 			log.Fatal().Err(err).Msg("Cannot export OpenAPI spec")
