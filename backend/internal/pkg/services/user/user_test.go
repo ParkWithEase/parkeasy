@@ -149,10 +149,10 @@ func TestGetProfileByID(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	userRepoMock := new(mockUserRepo)
-
 	t.Run("Valid profile: profile found", func(t *testing.T) {
 		t.Parallel()
+
+		userRepoMock := new(mockUserRepo)
 
 		expectedProfile := models.UserProfile{
 			Email:    "test@example.com",
@@ -178,6 +178,8 @@ func TestGetProfileByID(t *testing.T) {
 	t.Run("profile not found", func(t *testing.T) {
 		t.Parallel()
 
+		userRepoMock := new(mockUserRepo)
+
 		userRepoMock.On("GetProfileByID", mock.Anything, int64(1)).
 			Return(user.Profile{}, user.ErrUnknownID).Once()
 
@@ -199,10 +201,11 @@ func TestGetProfileByAuth(t *testing.T) {
 	defer cancel()
 
 	authID := uuid.New()
-	userRepoMock := new(mockUserRepo)
 
 	t.Run("profile found", func(t *testing.T) {
 		t.Parallel()
+
+		userRepoMock := new(mockUserRepo)
 
 		expectedProfile := models.UserProfile{
 			Email:    "test@example.com",
@@ -228,6 +231,8 @@ func TestGetProfileByAuth(t *testing.T) {
 
 	t.Run("profile not found", func(t *testing.T) {
 		t.Parallel()
+
+		userRepoMock := new(mockUserRepo)
 
 		userRepoMock.On("GetProfileByAuth", mock.Anything, authID).
 			Return(user.Profile{}, user.ErrUnknownID).Once()
