@@ -3,6 +3,7 @@ import { expect, test, vi, describe } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
 import PasswordReset from './password-reset.svelte';
+import { PASSWORD_NOT_MATCH } from '$lib/constants';
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -16,9 +17,9 @@ describe('fetchData test', () => {
 
         render(PasswordReset, { resetToken: 'random' });
         const user = userEvent.setup();
-        const newPassword = screen.getByLabelText('New password');
+        const newPassword = screen.getByLabelText('New Password');
         expect(newPassword).toBeDefined();
-        const confirmPassword = screen.getByText('Confirm password');
+        const confirmPassword = screen.getByLabelText('Confirm Password');
         expect(confirmPassword).toBeDefined();
 
         //Test match password
@@ -45,9 +46,9 @@ describe('fetchData test', () => {
 
         render(PasswordReset, { resetToken: 'random' });
         const user = userEvent.setup();
-        const newPassword = screen.getByLabelText('New password');
+        const newPassword = screen.getByLabelText('New Password');
         expect(newPassword).toBeDefined();
-        const confirmPassword = screen.getByText('Confirm password');
+        const confirmPassword = screen.getByLabelText('Confirm Password');
         expect(confirmPassword).toBeDefined();
 
         //Test unmatch password
@@ -56,7 +57,7 @@ describe('fetchData test', () => {
         await user.click(confirmPassword);
         await user.keyboard('random unmatch');
 
-        let errorMessage = screen.queryByText("password doesn't match");
+        let errorMessage = screen.queryByText(PASSWORD_NOT_MATCH);
         expect(errorMessage).toBeDefined();
 
         const button = screen.getByRole('button', { name: /submit/i });

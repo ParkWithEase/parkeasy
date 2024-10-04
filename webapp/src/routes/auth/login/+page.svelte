@@ -1,8 +1,9 @@
 <script lang="ts">
     import { BACKEND_SERVER } from '$lib/constants';
     import logo from '$lib/images/parkeasy-logo.png';
-    import { TextInput, PasswordInput, Button, Form } from 'carbon-components-svelte';
+    import { TextInput, PasswordInput, Form } from 'carbon-components-svelte';
     import { goto } from '$app/navigation';
+    import SubmitButton from '$lib/components/submit-button.svelte';
 
     let email: string = '';
     let password: string = '';
@@ -31,58 +32,31 @@
     }
 </script>
 
-<div class="loginSection">
-    <div class="loginForm">
-        <img src={logo} alt="logo" class="logo" />
-        <Form>
-            <TextInput
-                class="input-field"
-                labelText="Email"
-                placeholder="Enter email..."
-                required
-                bind:value={email}
-            />
-            <PasswordInput
-                required
-                type="password"
-                labelText="Password"
-                placeholder="Enter password..."
-                class="input-field"
-                bind:value={password}
-            />
-        </Form>
+<div class="auth-form">
+    <img src={logo} alt="logo" class="logo-medium" />
+    <Form on:submit={login}>
+        <TextInput labelText="Email" placeholder="Enter email..." required bind:value={email} />
+        <PasswordInput
+            required
+            type="password"
+            labelText="Password"
+            placeholder="Enter password..."
+            bind:value={password}
+        />
+        <SubmitButton buttonText={'Login'} />
         {#if loginFail}
             <div>
                 <p style="color:red">Wrong password or Email</p>
             </div>
         {/if}
-        <Button type="submit" on:click={login}>Login</Button>
-    </div>
+    </Form>
+
+    <p>Forgot your password? <a href="/auth/password-forgot">Go here</a></p>
+    <p>Don't have an account? <a href="/auth/signup">Create one</a></p>
 </div>
 
 <style>
-    .loginForm {
-        display: flex;
-        flex-direction: column;
-        align-items: self-start;
-        width: auto;
-        height: auto;
-        padding: 2rem;
-        background-color: #c3e9bb;
-        border-radius: 2rem;
-        border: 0.2rem solid #070707;
-    }
-
-    .loginSection {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        margin-right: -50%;
-        transform: translate(-50%, -50%);
-    }
-
-    .logo {
-        border-radius: 2rem;
-        max-width: 15rem;
+    p {
+        font-weight: 600;
     }
 </style>

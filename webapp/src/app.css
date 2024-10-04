@@ -25,12 +25,7 @@ body {
     background-attachment: fixed;
     background-color: var(--color-bg-1);
     background-size: 100vw 100vh;
-    background-image: radial-gradient(
-            50% 50% at 50% 50%,
-            rgba(255, 255, 255, 0.75) 0%,
-            rgba(255, 255, 255, 0) 100%
-        ),
-        linear-gradient(180deg, var(--color-bg-0) 0%, var(--color-bg-1) 15%, var(--color-bg-2) 50%);
+    background-image: url('$lib/images/background.png');
 }
 
 h1,
@@ -72,6 +67,10 @@ pre {
     color: var(--color-text);
 }
 
+a {
+    color: #0b6ca5;
+}
+
 .text-column {
     display: flex;
     max-width: 48rem;
@@ -79,6 +78,50 @@ pre {
     flex-direction: column;
     justify-content: center;
     margin: 0 auto;
+}
+
+.logo-small {
+    border-radius: 2rem;
+    max-width: 12rem;
+}
+
+.logo-medium {
+    border-radius: 2rem;
+    max-width: 15rem;
+}
+.submit-button {
+    background-color: #070707;
+    color: white;
+    border-radius: 4px;
+    font-size: 1rem;
+    min-width: 6rem;
+    min-height: 2rem;
+    margin: 0.5rem 0 0.5rem 0;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-items: center;
+    width: auto;
+    height: auto;
+    padding: 2rem;
+    background-color: #c3e9bb;
+    border-radius: 2rem;
+    border: 0.2rem solid #070707;
+
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-right: -50%;
+    transform: translate(-50%, -50%);
+}
+
+.submit-button:hover {
+    background-color: rgb(51, 51, 51);
 }
 
 input,
