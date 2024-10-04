@@ -39,7 +39,7 @@ func (m *mockAuthService) ResetPassword(ctx context.Context, token resettoken.To
 	return args.Error(1)
 }
 
-func (m *mockAuthService) UpdatePassword(ctx context.Context, authID uuid.UUID, oldPassword string, newPassword string) error {
+func (m *mockAuthService) UpdatePassword(ctx context.Context, authID uuid.UUID, oldPassword, newPassword string) error {
 	args := m.Called(ctx, authID, oldPassword, newPassword)
 	return args.Error(1)
 }
@@ -69,7 +69,7 @@ func TestServiceCreate(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	t.Cleanup(cancel)
 
 	profile := models.UserProfile{
 		FullName: "Test User",
@@ -113,7 +113,7 @@ func TestServiceCreate(t *testing.T) {
 		svc := NewService(authMock, userRepoMock)
 		_, _, err := svc.Create(ctx, profile, "password")
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, "auth service error", err.Error())
 
 		authMock.AssertExpectations(t)
@@ -134,7 +134,7 @@ func TestServiceCreate(t *testing.T) {
 		svc := NewService(authMock, userRepoMock)
 		_, _, err := svc.Create(ctx, profile, "password")
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, "repository error", err.Error())
 
 		authMock.AssertExpectations(t)
@@ -147,7 +147,7 @@ func TestGetProfileByID(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	t.Cleanup(cancel)
 
 	t.Run("Valid profile: profile found", func(t *testing.T) {
 		t.Parallel()
@@ -186,7 +186,7 @@ func TestGetProfileByID(t *testing.T) {
 		svc := NewService(nil, userRepoMock)
 		_, err := svc.GetProfileByID(ctx, int64(1))
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, models.ErrNoProfile, err)
 
 		userRepoMock.AssertExpectations(t)
@@ -198,7 +198,7 @@ func TestGetProfileByAuth(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	t.Cleanup(cancel)
 
 	authID := uuid.New()
 
@@ -240,7 +240,7 @@ func TestGetProfileByAuth(t *testing.T) {
 		svc := NewService(nil, userRepoMock)
 		_, _, err := svc.GetProfileByAuth(ctx, authID)
 
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Equal(t, models.ErrNoProfile, err)
 
 		userRepoMock.AssertExpectations(t)

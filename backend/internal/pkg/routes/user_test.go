@@ -20,11 +20,11 @@ import (
 
 // TestUserRoutes will test the basic functionality of user routes: user creation and fetching user info.
 func TestUserRoutes(t *testing.T) {
-	userRepo := userRepo.NewMemoryRepository()
-	authRepo := authRepo.NewMemoryRepository()
+	userRepository := userRepo.NewMemoryRepository()
+	authRepository := authRepo.NewMemoryRepository()
 	repoPassword := resettoken.NewMemoryRepository()
-	authService := auth.NewService(authRepo, repoPassword)
-	service := user.NewService(authService, userRepo)
+	authService := auth.NewService(authRepository, repoPassword)
+	service := user.NewService(authService, userRepository)
 	session := NewSessionManager(nil)
 	route := NewUserRoute(service, session)
 
