@@ -1,10 +1,9 @@
 @import '@fontsource/fira-mono';
 @import 'carbon-components-svelte/css/white.css';
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
 
 :root {
-    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
     --font-body: Fredoka, sans-serif;
-    --font-mono: 'Fira Mono', monospace;
     --color-bg-0: rgb(202, 216, 228);
     --color-bg-1: hsl(209, 36%, 86%);
     --color-bg-2: hsl(224, 44%, 95%);
@@ -18,6 +17,7 @@
 }
 
 body {
+    font-family: Fredoka, sans-serif;
     margin: 0;
     background-attachment: fixed;
     background-color: var(--color-bg-1);
