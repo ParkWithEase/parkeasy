@@ -2,7 +2,7 @@ package io.github.parkwithease.parkeasy.data
 
 import android.util.Log
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.android.Android
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.plugins.logging.LogLevel
@@ -21,7 +21,7 @@ object HttpService {
     private var SESSION_COOKIE: Cookie? = null
 
     private val client: HttpClient by lazy {
-        HttpClient(Android) {
+        HttpClient(OkHttp) {
             install(ContentNegotiation) { json() }
             install(HttpCookies) {}
 
