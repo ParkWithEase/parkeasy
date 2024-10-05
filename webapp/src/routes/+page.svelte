@@ -2,7 +2,7 @@
     import { goto } from '$app/navigation';
     import { BACKEND_SERVER } from '$lib/constants';
 
-    async function logout() {
+    export async function logout() {
         try {
             const response = await fetch(`${BACKEND_SERVER}/auth`, {
                 method: 'DELETE',

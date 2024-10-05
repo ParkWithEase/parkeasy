@@ -33,7 +33,7 @@
             background-color: white;
             padding: 1rem 2rem;
             border-radius: 20px;
-            font-size: 1rem;
+            font-size: 1.3rem;
             font-weight: bold;
             color: black;
             text-decoration: none;
