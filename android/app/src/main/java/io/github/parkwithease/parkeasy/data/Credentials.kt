@@ -1,4 +1,4 @@
-package io.github.parkwithease.parkeasy
+package io.github.parkwithease.parkeasy.data
 
 import kotlinx.serialization.Serializable
 

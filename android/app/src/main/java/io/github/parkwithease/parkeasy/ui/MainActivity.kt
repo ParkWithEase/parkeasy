@@ -1,4 +1,4 @@
-package io.github.parkwithease.parkeasy
+package io.github.parkwithease.parkeasy.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -32,7 +32,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.parkwithease.parkeasy.HttpService.login
+import io.github.parkwithease.parkeasy.data.Credentials
+import io.github.parkwithease.parkeasy.R
+import io.github.parkwithease.parkeasy.data.HttpService
+import io.github.parkwithease.parkeasy.data.HttpService.login
 import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
 import kotlinx.coroutines.runBlocking
 

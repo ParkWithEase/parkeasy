@@ -1,4 +1,4 @@
-package io.github.parkwithease.parkeasy
+package io.github.parkwithease.parkeasy.data
 
 import android.util.Log
 import io.ktor.client.HttpClient
