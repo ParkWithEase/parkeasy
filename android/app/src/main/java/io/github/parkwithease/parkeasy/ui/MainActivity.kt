@@ -32,8 +32,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.parkwithease.parkeasy.data.Credentials
 import io.github.parkwithease.parkeasy.R
+import io.github.parkwithease.parkeasy.data.Credentials
 import io.github.parkwithease.parkeasy.data.HttpService
 import io.github.parkwithease.parkeasy.data.HttpService.login
 import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
