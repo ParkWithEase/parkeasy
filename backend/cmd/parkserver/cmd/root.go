@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/app/parkserver"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -38,20 +38,21 @@ var rootCmd = &cobra.Command{
 			log.Warn().Msg("running in insecure mode")
 		}
 
-		// Establish a database connection
-		conn, err := pgx.Connect(context.Background(), dbURL)
-		if err != nil {
-			log.Fatal().Err(err).Msg("Unable to connect to the database")
-		}
-		defer conn.Close(context.Background())
-
 		// Shutdown on Ctrl-C
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
+		// Establish a database connection
+		pool, err := pgxpool.New(context.Background(), dbURL)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Unable to connect to the database")
+		}
+		defer pool.Close()
+
 		config := parkserver.Config{
 			Addr:     fmt.Sprintf(":%v", port),
 			Insecure: insecure,
+			DBPool:   pool,  // Pass pool to config
 		}
 		log.Info().Uint16("port", port).Msg("server started")
 
@@ -83,6 +84,8 @@ func init() {
 
 	// Bind flags to viper for configuration
 	err := viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
+
+	// Panic since errors here can only happen due to programming mistakes
 	if err != nil {
 		panic(err)
 	}

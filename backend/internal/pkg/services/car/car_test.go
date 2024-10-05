@@ -23,10 +23,7 @@ const (
 
 var ownedTestEntry = car.Entry{
 	Car: models.Car{
-		LicensePlate: "HTV 678",
-		Make:         "Honda",
-		Model:        "Civic",
-		Color:        "Blue",
+		Details: sampleDetails,
 	},
 	InternalID: 0,
 	OwnerID:    testOwnerID,
@@ -71,12 +68,12 @@ func (m *mockRepo) GetOwnerByUUID(ctx context.Context, carID uuid.UUID) (int64, 
 	return args.Get(0).(int64), args.Error(1)
 }
 
-var (
-	testLicensePlate = "HTV 678"
-	testMake         = "Honda"
-	testModel        = "Civic"
-	testColor        = "Blue"
-)
+var sampleDetails = models.CarDetails{
+	LicensePlate: "HTV 678",
+	Make:         "Honda",
+	Model:        "Civic",
+	Color:        "Blue",
+}
 
 func TestCreate(t *testing.T) {
 	t.Parallel()
@@ -91,20 +88,14 @@ func TestCreate(t *testing.T) {
 		srv := New(repo)
 
 		input := &models.CarCreationInput{
-			LicensePlate: testLicensePlate,
-			Make:         testMake,
-			Model:        testModel,
-			Color:        testColor,
+			CarDetails: sampleDetails,
 		}
 		repo.On("Create", mock.Anything, int64(0), input).
 			Return(
 				int64(0),
 				car.Entry{
 					Car: models.Car{
-						LicensePlate: testLicensePlate,
-						Make:         testMake,
-						Model:        testModel,
-						Color:        testColor,
+						Details: input.CarDetails,
 					},
 					InternalID: 0,
 					OwnerID:    0,
@@ -123,12 +114,10 @@ func TestCreate(t *testing.T) {
 		repo := new(mockRepo)
 		srv := New(repo)
 
-		invalidPlate := "Invalid Plate"
+		details := sampleDetails
+		details.LicensePlate = "Invalid Plate"
 		_, _, err := srv.Create(ctx, 0, &models.CarCreationInput{
-			LicensePlate: invalidPlate,
-			Make:         testMake,
-			Model:        testModel,
-			Color:        testColor,
+			CarDetails: details,
 		})
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrInvalidLicensePlate)
@@ -142,11 +131,10 @@ func TestCreate(t *testing.T) {
 		repo := new(mockRepo)
 		srv := New(repo)
 
+		details := sampleDetails
+		details.Make = ""
 		_, _, err := srv.Create(ctx, 0, &models.CarCreationInput{
-			LicensePlate: testLicensePlate,
-			Make:         "",
-			Model:        testModel,
-			Color:        testColor,
+			CarDetails: details,
 		})
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrInvalidMake)
@@ -160,11 +148,10 @@ func TestCreate(t *testing.T) {
 		repo := new(mockRepo)
 		srv := New(repo)
 
+		details := sampleDetails
+		details.Model = ""
 		_, _, err := srv.Create(ctx, 0, &models.CarCreationInput{
-			LicensePlate: testLicensePlate,
-			Make:         testMake,
-			Model:        "",
-			Color:        testColor,
+			CarDetails: details,
 		})
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrInvalidModel)
@@ -178,11 +165,10 @@ func TestCreate(t *testing.T) {
 		repo := new(mockRepo)
 		srv := New(repo)
 
+		details := sampleDetails
+		details.Color = ""
 		_, _, err := srv.Create(ctx, 0, &models.CarCreationInput{
-			LicensePlate: testLicensePlate,
-			Make:         testMake,
-			Model:        testModel,
-			Color:        "",
+			CarDetails: details,
 		})
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrInvalidColor)

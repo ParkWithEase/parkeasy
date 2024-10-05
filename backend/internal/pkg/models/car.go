@@ -11,18 +11,19 @@ var (
 	ErrInvalidColor        = NewUserFacingError("the specified color is invalid")
 )
 
-type Car struct {
-	LicensePlate string    `json:"license_plate" doc:"The license plate of the car"`
-	Make         string    `json:"make" doc:"The make of the car"`
-	Model        string    `json:"model" doc:"The model of the car"`
-	Color        string    `json:"color" doc:"The color of the car"`
-	ID           uuid.UUID `json:"id" doc:"ID of this resource"`
-}
-
-// CreateUpdateCarInput represents the input for the create and update car operation
-type CarCreationInput struct {
+type CarDetails struct {
 	LicensePlate string `json:"license_plate" doc:"The license plate of the car"`
 	Make         string `json:"make" doc:"The make of the car"`
 	Model        string `json:"model" doc:"The model of the car"`
 	Color        string `json:"color" doc:"The color of the car"`
+}
+
+type Car struct {
+	Details CarDetails `json:"details" doc:"details"`
+	ID      uuid.UUID  `json:"id" doc:"ID of this resource"`
+}
+
+// CreateUpdateCarInput represents the input for the create and update car operation
+type CarCreationInput struct {
+	CarDetails
 }

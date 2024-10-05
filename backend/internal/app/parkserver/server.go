@@ -55,7 +55,7 @@ func (c *Config) NewHumaAPI() huma.API { //nolint: ireturn // this is intentiona
 	sessionManager := routes.NewSessionManager(nil)
 	sessionManager.Cookie.Secure = !c.Insecure
 
-	RegisterRoutes(api, sessionManager) // Pass Config instead of dbPool
+	RegisterRoutes(api, sessionManager)
 
 	return api
 }

@@ -53,10 +53,12 @@ func TestCreateCar(t *testing.T) {
 	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testUserID)
 
 	testInput := models.CarCreationInput{
-		LicensePlate: "HTV 678",
-		Make:         "Honda",
-		Model:        "Civic",
-		Color:        "Blue",
+		CarDetails: models.CarDetails{
+			LicensePlate: "HTV 678",
+			Make:         "Honda",
+			Model:        "Civic",
+			Color:        "Blue",
+		},
 	}
 
 	t.Run("all good", func(t *testing.T) {
@@ -69,13 +71,7 @@ func TestCreateCar(t *testing.T) {
 
 		carUUID := uuid.New()
 		srv.On("Create", mock.Anything, testUserID, &testInput).
-			Return(int64(0), models.Car{
-				LicensePlate: testInput.LicensePlate,
-				Make:         testInput.Make,
-				Model:        testInput.Model,
-				Color:        testInput.Color,
-				ID:           carUUID,
-			}, nil).
+			Return(int64(0), models.Car{Details: testInput.CarDetails, ID: carUUID}, nil).
 			Once()
 
 		resp := api.PostCtx(ctx, "/cars", testInput)
@@ -86,15 +82,8 @@ func TestCreateCar(t *testing.T) {
 		err := json.Unmarshal(respBody, &car)
 		require.NoError(t, err)
 
-		testOutput := models.Car{
-			LicensePlate: car.LicensePlate,
-			Make:         car.Make,
-			Model:        car.Model,
-			Color:        car.Color,
-			ID:           carUUID,
-		}
-
-		assert.Equal(t, testOutput, car)
+		assert.Equal(t, testInput.CarDetails, car.Details)
+		assert.Equal(t, carUUID, car.ID)
 
 		srv.AssertExpectations(t)
 	})
@@ -385,11 +374,13 @@ func TestUpdateCar(t *testing.T) {
 
 		testUUID := uuid.New()
 		updatedCar := models.Car{
-			ID:           testUUID,
-			LicensePlate: "ABC123",
-			Make:         "Toyota",
-			Model:        "Corolla",
-			Color:        "Red",
+			ID: testUUID,
+			Details: models.CarDetails{
+				LicensePlate: "ABC123",
+				Make:         "Toyota",
+				Model:        "Corolla",
+				Color:        "Red",
+			},
 		}
 
 		srv.On("UpdateByUUID", mock.Anything, testUserID, testUUID).
@@ -398,10 +389,12 @@ func TestUpdateCar(t *testing.T) {
 
 		// Simulate an update request
 		updateRequest := models.CarCreationInput{
-			LicensePlate: "ABC123",
-			Make:         "Toyota",
-			Model:        "Corolla",
-			Color:        "Red",
+			CarDetails: models.CarDetails{
+				LicensePlate: "ABC123",
+				Make:         "Toyota",
+				Model:        "Corolla",
+				Color:        "Red",
+			},
 		}
 		reqBody, _ := json.Marshal(updateRequest)
 
@@ -433,10 +426,12 @@ func TestUpdateCar(t *testing.T) {
 
 		// Simulate an update request
 		updateRequest := models.CarCreationInput{
-			LicensePlate: "ABC123",
-			Make:         "Toyota",
-			Model:        "Corolla",
-			Color:        "Red",
+			CarDetails: models.CarDetails{
+				LicensePlate: "ABC123",
+				Make:         "Toyota",
+				Model:        "Corolla",
+				Color:        "Red",
+			},
 		}
 		reqBody, _ := json.Marshal(updateRequest)
 
