@@ -42,7 +42,9 @@ func TestCreateIdentity(t *testing.T) {
 
 		// Attempt to create another identity with the same email
 		_, err = repo.Create(ctx, testEmail, testPassword)
-		assert.ErrorIs(t, err, ErrDuplicateIdentity, "Creating a duplicate identity should fail")
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, ErrDuplicateIdentity, "Creating a duplicate identity should fail")
+		}
 	})
 }
 
@@ -70,7 +72,9 @@ func TestGetIdentity(t *testing.T) {
 		t.Parallel()
 		randomID := uuid.New()
 		_, err := repo.Get(ctx, randomID)
-		assert.ErrorIs(t, err, ErrIdentityNotFound, "Getting a non-existent identity should fail")
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, ErrIdentityNotFound, "Getting a non-existent identity should fail")
+		}
 	})
 }
 
@@ -97,7 +101,9 @@ func TestGetIdentityByEmail(t *testing.T) {
 	t.Run("Get non-existent identity by email", func(t *testing.T) {
 		t.Parallel()
 		_, err := repo.GetByEmail(ctx, "nonexistent@example.com")
-		assert.ErrorIs(t, err, ErrIdentityNotFound, "Getting a non-existent identity by email should fail")
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, ErrIdentityNotFound, "Getting a non-existent identity by email should fail")
+		}
 	})
 }
 
@@ -130,6 +136,8 @@ func TestUpdatePassword(t *testing.T) {
 		randomID := uuid.New()
 		newPassword := models.HashedPassword("newhashedpassword")
 		err := repo.UpdatePassword(ctx, randomID, newPassword)
-		assert.ErrorIs(t, err, ErrIdentityNotFound, "Updating the password of a non-existent identity should fail")
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, ErrIdentityNotFound, "Updating the password of a non-existent identity should fail")
+		}
 	})
 }

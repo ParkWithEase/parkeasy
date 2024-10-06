@@ -44,7 +44,7 @@ func TestUserRoutes(t *testing.T) {
 		},
 		Password: testPassword,
 	})
-	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode, "user creation should return status 204 No Content")
+	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
 	require.Len(t, resp.Result().Cookies(), 1, "a session token should be set after user creation")
 	cookie := *resp.Result().Cookies()[0]
 	cookie = http.Cookie{
@@ -66,7 +66,7 @@ func TestUserRoutes(t *testing.T) {
 
 	// Test Getting User Information without cookie
 	resp = api.Get("/user")
-	assert.Equal(t, http.StatusUnauthorized, resp.Result().StatusCode, "get user info should return status 401 Unauthorized, if no cookie passed")
+	assert.Equal(t, http.StatusUnauthorized, resp.Result().StatusCode)
 
 	// Test for trying to create an account again
 	// If one tries to create an account again, it should result in a bad request
@@ -77,5 +77,5 @@ func TestUserRoutes(t *testing.T) {
 		},
 		Password: testPassword,
 	})
-	assert.Equal(t, http.StatusBadRequest, response.Result().StatusCode, "user creation should return status 400 as user account already exists")
+	assert.Equal(t, http.StatusBadRequest, response.Result().StatusCode, "user creation should fail as user account already exists")
 }

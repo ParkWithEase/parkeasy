@@ -48,7 +48,9 @@ func TestCreateProfile(t *testing.T) {
 
 		// Attempt to create another profile with the same auth ID
 		_, err = repo.Create(ctx, testUUID, testProfile)
-		assert.ErrorIs(t, err, ErrProfileExists, "Creating a duplicate profile should fail")
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, ErrProfileExists, "Creating a duplicate profile should fail")
+		}
 	})
 }
 
@@ -79,7 +81,9 @@ func TestGetProfileByID(t *testing.T) {
 	t.Run("Get non-existent profile by ID", func(t *testing.T) {
 		t.Parallel()
 		_, err := repo.GetProfileByID(ctx, 9999)
-		assert.ErrorIs(t, err, ErrUnknownID, "Getting a non-existent profile should fail")
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, ErrUnknownID, "Getting a non-existent profile should fail")
+		}
 	})
 }
 
@@ -111,6 +115,8 @@ func TestGetProfileByAuth(t *testing.T) {
 		t.Parallel()
 		randomUUID := uuid.New()
 		_, err := repo.GetProfileByAuth(ctx, randomUUID)
-		assert.ErrorIs(t, err, ErrUnknownID, "Getting a non-existent profile by auth ID should fail")
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, ErrUnknownID, "Getting a non-existent profile by auth ID should fail")
+		}
 	})
 }
