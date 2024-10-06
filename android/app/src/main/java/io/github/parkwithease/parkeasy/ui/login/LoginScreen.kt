@@ -24,9 +24,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
+import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
 
 @Composable
 fun LoginScreen(
@@ -38,6 +40,24 @@ fun LoginScreen(
     val onEmailChange = viewModel::onEmailChange
     val onPasswordChange = viewModel::onPasswordChange
     val onLoginPress = viewModel::onLoginPress
+    LoginScreenInner(email, password, onEmailChange, onPasswordChange, onLoginPress, modifier)
+}
+
+@Preview
+@Composable
+private fun PreviewLoginScreenInner() {
+    ParkEasyTheme { LoginScreenInner("", "", {}, {}, {}) }
+}
+
+@Composable
+fun LoginScreenInner(
+    email: String,
+    password: String,
+    onEmailChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onLoginPress: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Surface(modifier) {
         Column {
             Row(
