@@ -29,6 +29,7 @@ type Config struct {
 	DBPool *pgxpool.Pool
 }
 
+// Register all routes
 func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager) {
 	authMiddleware := routes.NewSessionMiddleware(api, sessionManager)
 	api.UseMiddleware(authMiddleware)

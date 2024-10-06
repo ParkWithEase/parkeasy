@@ -19,7 +19,7 @@ type CarDetails struct {
 }
 
 type Car struct {
-	Details CarDetails `json:"details" doc:"details"`
+	Details CarDetails `json:"details" doc:"Details about the car"`
 	ID      uuid.UUID  `json:"id" doc:"ID of this resource"`
 }
 

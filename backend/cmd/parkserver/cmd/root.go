@@ -52,7 +52,7 @@ var rootCmd = &cobra.Command{
 		config := parkserver.Config{
 			Addr:     fmt.Sprintf(":%v", port),
 			Insecure: insecure,
-			DBPool:   pool,  // Pass pool to config
+			DBPool:   pool, // Pass pool to config
 		}
 		log.Info().Uint16("port", port).Msg("server started")
 
@@ -76,6 +76,9 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
+	// Cobra supports persistent flags, which, if defined here,
+	// will be global for your application.
+
 	rootCmd.PersistentFlags().BoolVar(&debugMode, "debug", false, "show debug logs")
 	rootCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, "run in insecure mode for development (ie. allow cookies to be sent over HTTP)")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/parkserver.toml)")
@@ -84,16 +87,17 @@ func init() {
 
 	// Bind flags to viper for configuration
 	err := viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
-
 	// Panic since errors here can only happen due to programming mistakes
 	if err != nil {
 		panic(err)
 	}
 	err = viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
+	// Panic since errors here can only happen due to programming mistakes
 	if err != nil {
 		panic(err)
 	}
-	err = viper.BindPFlag("db-url", rootCmd.PersistentFlags().Lookup("db-url"))
+	err = viper.BindPFlag("db.url", rootCmd.PersistentFlags().Lookup("db-url"))
+	// Panic since errors here can only happen due to programming mistakes
 	if err != nil {
 		panic(err)
 	}
