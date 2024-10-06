@@ -16,6 +16,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/cors"
 )
 
@@ -24,6 +25,8 @@ type Config struct {
 	Addr string
 	// Whether to run server in insecure mode. This allows cookies to be transferred over plain HTTP.
 	Insecure bool
+	// Database pool for Postgres connection
+	DBPool *pgxpool.Pool
 }
 
 // Register all routes
@@ -44,7 +47,7 @@ func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager) {
 }
 
 // Creates a new Huma API instance with routes configured
-func (c *Config) NewHumaAPI() huma.API { //nolint: ireturn // not controlled by us
+func (c *Config) NewHumaAPI() huma.API { //nolint: ireturn // this is intentional
 	router := http.NewServeMux()
 	config := huma.DefaultConfig("ParkEasy API", "0.0.0")
 	api := humago.New(router, config)
@@ -101,6 +104,7 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 
 	err := srv.ListenAndServe()
 	// ServerClosed just meant that the server has shutdown
+
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
 	}
