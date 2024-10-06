@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS ValidationToken (
 -- Car details owned by a user
 CREATE TABLE IF NOT EXISTS Car (
   CarId SERIAL PRIMARY KEY,
+  UUID UUID NOT NULL UNIQUE,
   LicensePlate TEXT,
   Make TEXT,
   Model TEXT,

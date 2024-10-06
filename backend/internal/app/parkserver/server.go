@@ -6,18 +6,34 @@ import (
 	"net"
 	"net/http"
 	"time"
+	// "log"
+	// "fmt"
+
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
 
 	authRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
-	userRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
+
+	userRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/user"
+
+	carRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/car"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/car"
+
+	// parkingSpotRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
+	// "github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/parkingspot"
+
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/cors"
+	// "github.com/golang-migrate/migrate/v4"
+	// "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/lib/pq"
+
 )
 
 type Config struct {
@@ -30,7 +46,7 @@ type Config struct {
 }
 
 // Register all routes
-func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager) {
+func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager, c *Config) {
 	authMiddleware := routes.NewSessionMiddleware(api, sessionManager)
 	api.UseMiddleware(authMiddleware)
 
@@ -42,9 +58,65 @@ func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager) {
 	userRepository := userRepo.NewMemoryRepository()
 	userService := user.NewService(authService, userRepository)
 	userRoute := routes.NewUserRoute(userService, sessionManager)
+
+	// parkingSpotRepo := parkingSpotRepo.New(c.DBPool)
+	// parkingSpotService := parkingspot.NewService(parkingSpotRepo)
+	// parkingSpotRoute := routes.NewParkingSpotRoute(parkingSpotService, sessionManager, authMiddleware)
+
+	carRepo := carRepo.New(c.DBPool)
+	carService := car.NewService(carRepo)
+	carRoute := routes.NewCarRoute(carService, sessionManager, authMiddleware)
+
 	huma.AutoRegister(api, authRoute)
 	huma.AutoRegister(api, userRoute)
+	// huma.AutoRegister(api, parkingSpotRoute)
+	huma.AutoRegister(api, carRoute)
+
+	// // Run migrations
+	// if err := runMigrations(c.DBPool); err != nil {
+	// 	log.Fatalf("Migration failed: %v", err)
+	// }
 }
+
+
+// func runMigrations(pool *pgxpool.Pool) error {
+// 	// Extract sql.DB from pgxpool.Pool
+// 	conn, err := pool.Acquire(context.Background())
+// 	if err != nil {
+// 		return fmt.Errorf("unable to acquire connection: %w", err)
+// 	}
+// 	defer conn.Release()
+
+// 	db, err := sql.Open("postgres", conn.Conn().Config().ConnString())
+// 	if err != nil {
+// 		return fmt.Errorf("unable to open sql.DB: %w", err)
+// 	}
+// 	defer db.Close()
+
+// 	// Initialize the postgres driver with sql.DB
+// 	driver, err := postgres.WithInstance(db, &postgres.Config{})
+// 	if err != nil {
+// 		return fmt.Errorf("could not create migration driver: %w", err)
+// 	}
+
+// 	// Initialize the migrate instance
+// 	m, err := migrate.NewWithDatabaseInstance(
+// 		"file://migrations", // Directory with migration files
+// 		"postgres",          // Database name
+// 		driver,
+// 	)
+// 	if err != nil {
+// 		return fmt.Errorf("could not create migrate instance: %w", err)
+// 	}
+
+// 	// Run migrations
+// 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+// 		return fmt.Errorf("could not run migrations: %w", err)
+// 	}
+
+// 	fmt.Println("Migrations ran successfully")
+// 	return nil
+// }
 
 // Creates a new Huma API instance with routes configured
 func (c *Config) NewHumaAPI() huma.API { //nolint: ireturn // this is intentional
@@ -56,7 +128,7 @@ func (c *Config) NewHumaAPI() huma.API { //nolint: ireturn // this is intentiona
 	sessionManager := routes.NewSessionManager(nil)
 	sessionManager.Cookie.Secure = !c.Insecure
 
-	RegisterRoutes(api, sessionManager)
+	RegisterRoutes(api, sessionManager, c)
 
 	return api
 }

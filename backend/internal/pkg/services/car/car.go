@@ -14,7 +14,7 @@ type Service struct {
 	repo car.Repository
 }
 
-func New(repo car.Repository) *Service {
+func NewService(repo car.Repository) *Service {
 	return &Service{
 		repo: repo,
 	}

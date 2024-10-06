@@ -5,8 +5,20 @@ import (
 	"errors"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/google/uuid"
 )
+
+type ParkingSpotRepository struct {
+	DBPool *pgxpool.Pool 
+}
+
+func New(pool *pgxpool.Pool) *ParkingSpotRepository {
+	return &ParkingSpotRepository{
+		DBPool:       pool,
+	}
+}
 
 type Entry struct {
 	models.ParkingSpot
@@ -23,6 +35,6 @@ var (
 type Repository interface {
 	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, Entry, error)
 	GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error)
-	GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error)
+	// GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error)
 	DeleteByUUID(ctx context.Context, spotID uuid.UUID) error
 }

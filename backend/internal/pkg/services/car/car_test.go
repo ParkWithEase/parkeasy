@@ -57,7 +57,7 @@ func (m *mockRepo) GetByUUID(ctx context.Context, carID uuid.UUID) (car.Entry, e
 }
 
 // UpdateByUUID implements car.Repository.
-func (m *mockRepo) UpdateByUUID(ctx context.Context, carID uuid.UUID) (car.Entry, error) {
+func (m *mockRepo) UpdateByUUID(ctx context.Context, carID uuid.UUID, carModel *models.CarCreationInput) (car.Entry, error) {
 	args := m.Called(ctx, carID)
 	return args.Get(0).(car.Entry), args.Error(1)
 }
@@ -85,7 +85,7 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := New(repo)
+		srv := NewService(repo)
 
 		input := &models.CarCreationInput{
 			CarDetails: sampleDetails,
@@ -112,7 +112,7 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := New(repo)
+		srv := NewService(repo)
 
 		details := sampleDetails
 		details.LicensePlate = "Invalid Plate"
@@ -129,7 +129,7 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := New(repo)
+		srv := NewService(repo)
 
 		details := sampleDetails
 		details.Make = ""
@@ -146,7 +146,7 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := New(repo)
+		srv := NewService(repo)
 
 		details := sampleDetails
 		details.Model = ""
@@ -163,7 +163,7 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := New(repo)
+		srv := NewService(repo)
 
 		details := sampleDetails
 		details.Color = ""
@@ -188,7 +188,7 @@ func TestGet(t *testing.T) {
 		repo := new(mockRepo)
 		repo.On("GetByUUID", mock.Anything, uuid.Nil).
 			Return(car.Entry{}, car.ErrNotFound).Once()
-		srv := New(repo)
+		srv := NewService(repo)
 
 		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil)
 		if assert.Error(t, err) {
@@ -202,7 +202,7 @@ func TestGet(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := New(repo)
+		srv := NewService(repo)
 
 		carResult, err := srv.GetByUUID(ctx, testOwnerID, testOwnerCarID)
 		require.NoError(t, err)
@@ -214,7 +214,7 @@ func TestGet(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := New(repo)
+		srv := NewService(repo)
 
 		_, err := srv.GetByUUID(ctx, testStrangerID, testOwnerCarID)
 		if assert.Error(t, err) {
@@ -235,7 +235,7 @@ func TestDelete(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := New(repo)
+		srv := NewService(repo)
 
 		repo.On("DeleteByUUID", mock.Anything, mock.Anything).
 			Return(nil)
@@ -249,7 +249,7 @@ func TestDelete(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := New(repo)
+		srv := NewService(repo)
 
 		err := srv.DeleteByUUID(ctx, testOwnerID, uuid.Nil)
 		require.NoError(t, err)
@@ -263,7 +263,7 @@ func TestDelete(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := New(repo)
+		srv := NewService(repo)
 
 		err := srv.DeleteByUUID(ctx, testStrangerID, testOwnerCarID)
 		if assert.Error(t, err) {
@@ -284,7 +284,7 @@ func TestUpdate(t *testing.T) {
 		repo := new(mockRepo)
 		repo.On("GetByUUID", mock.Anything, uuid.Nil).
 			Return(car.Entry{}, car.ErrNotFound).Once()
-		srv := New(repo)
+		srv := NewService(repo)
 
 		_, err := srv.UpdateByUUID(ctx, testOwnerID, uuid.Nil)
 		if assert.Error(t, err) {
@@ -298,7 +298,7 @@ func TestUpdate(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := New(repo)
+		srv := NewService(repo)
 
 		carResult, err := srv.UpdateByUUID(ctx, testOwnerID, testOwnerCarID)
 		require.NoError(t, err)
@@ -310,7 +310,7 @@ func TestUpdate(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.AddGetCalls()
-		srv := New(repo)
+		srv := NewService(repo)
 
 		_, err := srv.UpdateByUUID(ctx, testStrangerID, testOwnerCarID)
 		if assert.Error(t, err) {
