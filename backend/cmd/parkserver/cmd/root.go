@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/app/parkserver"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -19,6 +20,7 @@ var (
 	debugMode bool
 	insecure  bool
 	port      uint16
+	dbURL     string // New flag to get the Postgres connection URL
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -40,12 +42,21 @@ var rootCmd = &cobra.Command{
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 
+		// Establish a database connection
+		pool, err := pgxpool.New(context.Background(), dbURL)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Unable to connect to the database")
+		}
+		defer pool.Close()
+
 		config := parkserver.Config{
 			Addr:     fmt.Sprintf(":%v", port),
 			Insecure: insecure,
+			DBPool:   pool, // Pass pool to config
 		}
 		log.Info().Uint16("port", port).Msg("server started")
 
+		// Start the server and pass the dbPool connection
 		if err := config.ListenAndServe(ctx); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
@@ -72,12 +83,20 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, "run in insecure mode for development (ie. allow cookies to be sent over HTTP)")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/parkserver.toml)")
 	rootCmd.PersistentFlags().Uint16VarP(&port, "port", "p", 8080, "port to serve on")
+	rootCmd.PersistentFlags().StringVar(&dbURL, "db-url", "postgres://testuser:testpassword@db:5432/testdb", "Database connection URL")
+
+	// Bind flags to viper for configuration
 	err := viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
 	// Panic since errors here can only happen due to programming mistakes
 	if err != nil {
 		panic(err)
 	}
 	err = viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
+	// Panic since errors here can only happen due to programming mistakes
+	if err != nil {
+		panic(err)
+	}
+	err = viper.BindPFlag("db.url", rootCmd.PersistentFlags().Lookup("db-url"))
 	// Panic since errors here can only happen due to programming mistakes
 	if err != nil {
 		panic(err)
