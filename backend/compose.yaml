@@ -5,15 +5,18 @@ services:
       dockerfile: ./Containerfile
     command: --insecure
     ports:
-      - 8080:8080
+      - "8080:8080"
     depends_on:
-      - db
+      db:
+        condition: service_healthy      
     environment:
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_USER=testuser
-      - DB_PASSWORD=testpassword
-      - DB_NAME=testdb
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: testuser
+      DB_PASSWORD: testpassword
+      DB_NAME: testdb
+    networks:
+      - backend
 
   db:
     image: postgres:16
@@ -22,7 +25,18 @@ services:
       POSTGRES_PASSWORD: testpassword
       POSTGRES_DB: testdb
     ports:
-      - 5432:5432
+      - "5432:5432"
     volumes:
       - ./db_data:/var/lib/postgresql/data
       - ./init_db:/docker-entrypoint-initdb.d/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d testdb -U testuser"]
+      interval: 5s
+      timeout: 5s
+      retries: 5      
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge

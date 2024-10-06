@@ -2,6 +2,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
 import process from 'node:process';
 import IstanbulPlugin from 'vite-plugin-istanbul';
+import { svelteTesting } from '@testing-library/svelte/vite';
 
 export default defineConfig({
     build: {
@@ -9,6 +10,7 @@ export default defineConfig({
     },
     plugins: [
         sveltekit(),
+        svelteTesting(),
         ...(process.env.VITE_COVERAGE == 'true'
             ? [
                   IstanbulPlugin({
@@ -23,6 +25,7 @@ export default defineConfig({
     ],
     test: {
         include: ['src/**/*.{test,spec}.{js,ts}'],
+        environment: 'happy-dom',
         coverage: {
             provider: 'istanbul',
             reporter: ['text', 'clover']
