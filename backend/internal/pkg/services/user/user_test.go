@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -22,26 +21,6 @@ type mockAuthService struct {
 func (m *mockAuthService) Create(ctx context.Context, email, password string) (uuid.UUID, error) {
 	args := m.Called(ctx, email, password)
 	return args.Get(0).(uuid.UUID), args.Error(1)
-}
-
-func (m *mockAuthService) Authenticate(ctx context.Context, email, password string) (uuid.UUID, error) {
-	args := m.Called(ctx, email, password)
-	return args.Get(0).(uuid.UUID), args.Error(1)
-}
-
-func (m *mockAuthService) CreatePasswordResetToken(ctx context.Context, email string) (resettoken.Token, error) {
-	args := m.Called(ctx, email)
-	return args.Get(0).(resettoken.Token), args.Error(1)
-}
-
-func (m *mockAuthService) ResetPassword(ctx context.Context, token resettoken.Token, newPassword string) error {
-	args := m.Called(ctx, token, newPassword)
-	return args.Error(1)
-}
-
-func (m *mockAuthService) UpdatePassword(ctx context.Context, authID uuid.UUID, oldPassword, newPassword string) error {
-	args := m.Called(ctx, authID, oldPassword, newPassword)
-	return args.Error(1)
 }
 
 // mock implementation of the user.Repository
