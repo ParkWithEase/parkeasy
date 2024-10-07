@@ -88,10 +88,17 @@ var rootCmd = &cobra.Command{
 			Insecure: insecure,
 			DBPool:   pool, // Pass pool to config
 		}
-		log.Info().Uint16("port", port).Msg("server started")
 
+		log.Info().Msg("running migrations")
+		err = config.RunMigrations()
+		if err != nil {
+			log.Fatal().Err(err).Msg("")
+		}
+
+		log.Info().Uint16("port", port).Msg("server started")
 		// Start the server and pass the dbPool connection
-		if err := config.ListenAndServe(ctx); err != nil {
+		err = config.ListenAndServe(ctx)
+		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 	},
