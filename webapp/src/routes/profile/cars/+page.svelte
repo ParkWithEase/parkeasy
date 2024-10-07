@@ -32,52 +32,29 @@
         selectedCarIndex = index;
     }
 
-    let carLicensePlateInput: string;
-    let carColorInput: string;
-    let carModelInput: string;
-    let carMakeInput: string;
-
     function handleCreate(event: Event) {
         event.preventDefault();
-        let newCar = {
-            license_plate: carLicensePlateInput,
-            color: carColorInput,
-            model: carModelInput,
-            make: carMakeInput
+        const formData = new FormData(event.target as HTMLFormElement);
+        const newCar = {
+            license_plate: formData.get('license-plate') as string,
+            color: formData.get('color') as string,
+            model: formData.get('model') as string,
+            make: formData.get('make') as string
         };
-
         carList = [...carList, newCar];
         isAddModalOpen = false;
-        clearUp();
     }
 
     function handleEdit(event: Event) {
         event.preventDefault();
+        const formData = new FormData(event.target as HTMLFormElement);
         carList[selectedCarIndex] = {
-            license_plate: carLicensePlateInput,
-            color: carColorInput,
-            model: carModelInput,
-            make: carMakeInput
+            license_plate: formData.get('license-plate') as string,
+            color: formData.get('color') as string,
+            model: formData.get('model') as string,
+            make: formData.get('make') as string
         };
-        clearUpEditMode();
-    }
-
-    function clearUpEditMode() {
         isEditModalOpen = false;
-        clearUp();
-    }
-    function clearUp() {
-        carLicensePlateInput = '';
-        carColorInput = '';
-        carModelInput = '';
-        carMakeInput = '';
-    }
-
-    function loadFormInput(car: Car) {
-        carLicensePlateInput = car.license_plate;
-        carColorInput = car.color;
-        carModelInput = car.model;
-        carMakeInput = car.make;
     }
 
     function handleDelete() {
@@ -86,6 +63,11 @@
             carList = [...carList];
             isViewModalOpen = false;
         }
+    }
+
+    function resetForm(id: string) {
+        let form = document.getElementById(id) as HTMLFormElement;
+        form.reset();
     }
 </script>
 
@@ -120,43 +102,34 @@
     modalHeading="Car information"
     passiveModal
     on:open
-    on:close={() => clearUpEditMode()}
+    on:close={() => {
+        isEditModalOpen = false;
+        resetForm('edit-form');
+    }}
 >
     {@const selectedCar = carList[selectedCarIndex]}
     {#if isEditModalOpen}
         {#if selectedCar != undefined}
-            <Form on:submit={handleEdit}>
+            <Form id="edit-form" on:submit={handleEdit}>
                 <input
                     type="image"
                     class="modal-icon"
                     alt="cancel edit button"
                     src={cancelButton}
-                    on:click={() => clearUpEditMode()}
+                    on:click={() => {
+                        isEditModalOpen = false;
+                        resetForm('edit-form');
+                    }}
                 />
                 <TextInput
                     required
                     labelText="License plate"
-                    bind:value={carLicensePlateInput}
-                    placeholder={selectedCar.license_plate}
+                    name="license-plate"
+                    value={selectedCar.license_plate}
                 />
-                <TextInput
-                    required
-                    labelText="Color"
-                    bind:value={carColorInput}
-                    placeholder={selectedCar.color}
-                />
-                <TextInput
-                    required
-                    labelText="Model"
-                    bind:value={carModelInput}
-                    placeholder={selectedCar.model}
-                />
-                <TextInput
-                    required
-                    labelText="Make"
-                    bind:value={carMakeInput}
-                    placeholder={selectedCar.make}
-                />
+                <TextInput required labelText="Color" name="color" value={selectedCar.color} />
+                <TextInput required labelText="Model" name="model" value={selectedCar.model} />
+                <TextInput required labelText="Make" name="make" value={selectedCar.make} />
                 <SubmitButton buttonText={'Submit'} />
             </Form>
         {/if}
@@ -180,7 +153,6 @@
                     alt="edit button"
                     on:click={() => {
                         isEditModalOpen = true;
-                        loadFormInput(selectedCar);
                     }}
                 />
                 <input
@@ -201,28 +173,18 @@
     modalHeading="Car information"
     passiveModal
     on:open
-    on:close={clearUp}
+    on:close={() => resetForm('create-form')}
 >
-    <Form on:submit={handleCreate}>
+    <Form id="create-form" on:submit={handleCreate}>
         <TextInput
             required
             labelText="License plate"
-            bind:value={carLicensePlateInput}
+            name="license-plate"
             placeholder="Your car license plate"
         />
-        <TextInput
-            required
-            labelText="Color"
-            bind:value={carColorInput}
-            placeholder="Car's color"
-        />
-        <TextInput
-            required
-            labelText="Model"
-            bind:value={carModelInput}
-            placeholder="Car's model"
-        />
-        <TextInput required labelText="Make" bind:value={carMakeInput} placeholder="Car's make" />
+        <TextInput required labelText="Color" name="color" placeholder="Car's color" />
+        <TextInput required labelText="Model" name="model" placeholder="Car's model" />
+        <TextInput required name="make" labelText="Make" placeholder="Car's make" />
         <SubmitButton buttonText={'Submit'} />
     </Form>
 </Modal>
