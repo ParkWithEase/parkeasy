@@ -8,5 +8,4 @@ data class RegistrationCredentials(
     @SerialName("full_name") val name: String,
     val email: String,
     val password: String,
-    val persist: Boolean = true,
 )
