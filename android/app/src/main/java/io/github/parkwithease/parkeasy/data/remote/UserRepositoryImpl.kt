@@ -2,6 +2,7 @@ package io.github.parkwithease.parkeasy.data.remote
 
 import android.util.Log
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
+import io.github.parkwithease.parkeasy.di.IoDispatcher
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
 import io.ktor.client.HttpClient
@@ -13,13 +14,17 @@ import io.ktor.http.ContentType
 import io.ktor.http.Cookie
 import io.ktor.http.contentType
 import io.ktor.http.setCookie
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class UserRepositoryImpl(private val client: HttpClient, private val authStore: AuthRepository) :
-    UserRepository {
+class UserRepositoryImpl(
+    private val client: HttpClient,
+    private val authRepo: AuthRepository,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+) : UserRepository {
     override suspend fun login(credentials: LoginCredentials): Boolean {
-        return withContext(Dispatchers.IO) {
+        return withContext(ioDispatcher) {
             var success = false
             var sessionCookie: Cookie? = null
             val response =
@@ -29,7 +34,7 @@ class UserRepositoryImpl(private val client: HttpClient, private val authStore: 
                 }
             if (response.setCookie().size == 1) {
                 sessionCookie = response.setCookie()[0]
-                authStore.set(sessionCookie)
+                authRepo.set(sessionCookie)
                 success = true
             }
             Log.d("HTTP", sessionCookie.toString())
@@ -38,7 +43,7 @@ class UserRepositoryImpl(private val client: HttpClient, private val authStore: 
     }
 
     override suspend fun register(credentials: RegistrationCredentials): Boolean {
-        return withContext(Dispatchers.IO) {
+        return withContext(ioDispatcher) {
             var success = false
             var sessionCookie: Cookie? = null
             val response =
@@ -48,7 +53,7 @@ class UserRepositoryImpl(private val client: HttpClient, private val authStore: 
                 }
             if (response.setCookie().size == 1) {
                 sessionCookie = response.setCookie()[0]
-                authStore.set(sessionCookie)
+                authRepo.set(sessionCookie)
                 success = true
             }
             Log.d("HTTP", sessionCookie.toString())
@@ -57,15 +62,15 @@ class UserRepositoryImpl(private val client: HttpClient, private val authStore: 
     }
 
     override suspend fun logout() {
-        withContext(Dispatchers.IO) {
-            val authCookie = authStore.getSession()
+        withContext(ioDispatcher) {
+            val authCookie = authRepo.getSession()
             if (authCookie != null) {
                 val response =
                     client.delete("/auth") {
                         contentType(ContentType.Application.Json)
                         cookie(authCookie.name, authCookie.value)
                     }
-                authStore.reset()
+                authRepo.reset()
                 Log.d("HTTP", response.toString())
             }
         }

@@ -24,12 +24,23 @@ import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.serialization.kotlinx.json.json
+import javax.inject.Qualifier
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+
+@Retention(AnnotationRetention.BINARY) @Qualifier annotation class IoDispatcher
 
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth")
+
+    @IoDispatcher
+    @Provides
+    fun providesIoDispatcher(
+        dispatcher: CoroutineDispatcher = Dispatchers.IO
+    ): CoroutineDispatcher = dispatcher
 
     @Provides
     @Singleton
