@@ -19,7 +19,8 @@ class AuthRepositoryImpl(private val dataStore: DataStore<Preferences>) : AuthRe
     override suspend fun getSession(): Cookie {
         val sessionFlow: Flow<String> =
             dataStore.data.map { preferences -> preferences[session] ?: "" }
-        return parseServerSetCookieHeader(sessionFlow.first())
+        return if (sessionFlow.first() != "") parseServerSetCookieHeader(sessionFlow.first())
+        else Cookie("session", "")
     }
 
     override suspend fun getStatus(): Boolean {

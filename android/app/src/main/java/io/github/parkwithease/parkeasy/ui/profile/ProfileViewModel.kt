@@ -22,12 +22,12 @@ constructor(private val authRepo: AuthRepository, private val userRepo: UserRepo
         runBlocking { launch { _loggedIn.value = authRepo.getStatus() } }
     }
 
-    private suspend fun logout() {
-        userRepo.logout()
+    private fun logout() {
+        runBlocking { launch { userRepo.logout() } }
         _loggedIn.value = false
     }
 
     fun onLogoutPress() {
-        runBlocking { logout() }
+        logout()
     }
 }

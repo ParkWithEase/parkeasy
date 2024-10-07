@@ -64,12 +64,12 @@ constructor(private val authRepo: AuthRepository, private val userRepo: UserRepo
     }
 
     fun onLoginPress() {
-        runBlocking { login(LoginCredentials(_email.value, _password.value)) }
+        runBlocking { launch { login(LoginCredentials(_email.value, _password.value)) } }
     }
 
     fun onRegisterPress() {
         runBlocking {
-            register(RegistrationCredentials(_name.value, _email.value, _password.value))
+            launch { register(RegistrationCredentials(_name.value, _email.value, _password.value)) }
         }
     }
 

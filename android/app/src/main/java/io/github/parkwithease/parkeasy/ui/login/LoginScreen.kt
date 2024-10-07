@@ -81,13 +81,13 @@ fun LoginScreen(
             viewModel::onRegisterPress,
             viewModel::onSwitchPress,
         )
-    LoginScreenInner(state, events, modifier)
     val onLoginEvent: () -> Unit = onLogin
     LaunchedEffect(state.loggedIn) {
         if (state.loggedIn) {
             onLoginEvent()
         }
     }
+    LoginScreenInner(state, events, modifier)
 }
 
 @Preview

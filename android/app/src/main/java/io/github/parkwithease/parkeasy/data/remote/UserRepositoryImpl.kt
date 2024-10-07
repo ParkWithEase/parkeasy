@@ -26,14 +26,14 @@ class UserRepositoryImpl(
     override suspend fun login(credentials: LoginCredentials): Boolean {
         return withContext(ioDispatcher) {
             var success = false
-            var sessionCookie: Cookie? = null
+            val sessionCookie: Cookie?
             val response =
                 client.post("/auth") {
                     contentType(ContentType.Application.Json)
                     setBody(credentials)
                 }
-            if (response.setCookie().size == 1) {
-                sessionCookie = response.setCookie()[0]
+            sessionCookie = response.setCookie().firstOrNull()
+            if (sessionCookie != null) {
                 authRepo.set(sessionCookie)
                 success = true
             }
@@ -45,14 +45,14 @@ class UserRepositoryImpl(
     override suspend fun register(credentials: RegistrationCredentials): Boolean {
         return withContext(ioDispatcher) {
             var success = false
-            var sessionCookie: Cookie? = null
+            val sessionCookie: Cookie?
             val response =
                 client.post("/user") {
                     contentType(ContentType.Application.Json)
                     setBody(credentials)
                 }
-            if (response.setCookie().size == 1) {
-                sessionCookie = response.setCookie()[0]
+            sessionCookie = response.setCookie().firstOrNull()
+            if (sessionCookie != null) {
                 authRepo.set(sessionCookie)
                 success = true
             }
