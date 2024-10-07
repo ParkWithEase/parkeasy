@@ -12,4 +12,5 @@
     <string name="not_registered">Not registered?</string>
     <string name="login_instead">Login Instead</string>
     <string name="register_instead">Register Instead</string>
+    <string name="forgot_password">Forgot Password?</string>
 </resources>

@@ -5,6 +5,7 @@ import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
+import io.github.parkwithease.parkeasy.model.ResetCredentials
 import io.ktor.client.HttpClient
 import io.ktor.client.request.cookie
 import io.ktor.client.request.delete
@@ -12,6 +13,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.Cookie
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.setCookie
 import kotlinx.coroutines.CoroutineDispatcher
@@ -73,6 +75,17 @@ class UserRepositoryImpl(
                 authRepo.reset()
                 Log.d("HTTP", response.toString())
             }
+        }
+    }
+
+    override suspend fun reset(credentials: ResetCredentials): Boolean {
+        return withContext(ioDispatcher) {
+            val response =
+                client.post("/auth/password:forgot") {
+                    contentType(ContentType.Application.Json)
+                    setBody(credentials)
+                }
+            return@withContext response.status == HttpStatusCode.OK
         }
     }
 }

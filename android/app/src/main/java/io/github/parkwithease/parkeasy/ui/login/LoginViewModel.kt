@@ -7,6 +7,7 @@ import io.github.parkwithease.parkeasy.data.remote.UserRepository
 import io.github.parkwithease.parkeasy.model.Event
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
+import io.github.parkwithease.parkeasy.model.ResetCredentials
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,24 +44,6 @@ constructor(private val authRepo: AuthRepository, private val userRepo: UserRepo
         runBlocking { launch { _loggedIn.value = authRepo.getStatus() } }
     }
 
-    private suspend fun login(credentials: LoginCredentials) {
-        if (userRepo.login(credentials)) {
-            _loggedIn.value = true
-            _message.value = Event("Logged in successfully")
-        } else {
-            _message.value = Event("Error logging in")
-        }
-    }
-
-    private suspend fun register(credentials: RegistrationCredentials) {
-        if (userRepo.register(credentials)) {
-            _loggedIn.value = true
-            _message.value = Event("Registered successfully")
-        } else {
-            _message.value = Event("Error registering")
-        }
-    }
-
     fun onNameChange(input: String) {
         _name.value = input
     }
@@ -78,12 +61,44 @@ constructor(private val authRepo: AuthRepository, private val userRepo: UserRepo
     }
 
     fun onLoginPress() {
-        runBlocking { launch { login(LoginCredentials(_email.value, _password.value)) } }
+        runBlocking {
+            launch {
+                if (userRepo.login(LoginCredentials(_email.value, _password.value))) {
+                    _loggedIn.value = true
+                    _message.value = Event("Logged in successfully")
+                } else {
+                    _message.value = Event("Error logging in")
+                }
+            }
+        }
     }
 
     fun onRegisterPress() {
         runBlocking {
-            launch { register(RegistrationCredentials(_name.value, _email.value, _password.value)) }
+            launch {
+                if (
+                    userRepo.register(
+                        RegistrationCredentials(_name.value, _email.value, _password.value)
+                    )
+                ) {
+                    _loggedIn.value = true
+                    _message.value = Event("Registered successfully")
+                } else {
+                    _message.value = Event("Error registering")
+                }
+            }
+        }
+    }
+
+    fun onResetPress() {
+        runBlocking {
+            launch {
+                if (userRepo.reset(ResetCredentials(_email.value))) {
+                    _message.value = Event("Reset email sent\nJk... we're working on it")
+                } else {
+                    _message.value = Event("Error resetting password")
+                }
+            }
         }
     }
 
