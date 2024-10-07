@@ -6,8 +6,8 @@ import androidx.navigation.compose.composable
 
 private const val ProfileRoute = "profile"
 
-fun NavGraphBuilder.profileScreen() {
-    composable(ProfileRoute) { ProfileScreen() }
+fun NavGraphBuilder.profileScreen(onLogout: () -> Unit) {
+    composable(ProfileRoute) { ProfileScreen(onLogout) }
 }
 
 fun NavController.navigateToProfile() = this.navigate(ProfileRoute)

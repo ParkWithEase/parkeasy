@@ -1,4 +1,4 @@
-package io.github.parkwithease.parkeasy.ui.nav
+package io.github.parkwithease.parkeasy.ui.navbar
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu

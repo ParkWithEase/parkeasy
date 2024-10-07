@@ -1,4 +1,4 @@
-package io.github.parkwithease.parkeasy.data
+package io.github.parkwithease.parkeasy.data.local
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -12,27 +12,33 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-class AuthStoreImpl(private val dataStore: DataStore<Preferences>) : AuthStore {
-    private val loggedIn = booleanPreferencesKey("loggedIn")
+class AuthRepositoryImpl(private val dataStore: DataStore<Preferences>) : AuthRepository {
     private val session = stringPreferencesKey("session")
+    private val status = booleanPreferencesKey("status")
 
-    override suspend fun get(): Cookie {
+    override suspend fun getSession(): Cookie {
         val sessionFlow: Flow<String> =
             dataStore.data.map { preferences -> preferences[session] ?: "" }
         return parseServerSetCookieHeader(sessionFlow.first())
     }
 
+    override suspend fun getStatus(): Boolean {
+        val sessionFlow: Flow<Boolean> =
+            dataStore.data.map { preferences -> preferences[status] ?: false }
+        return sessionFlow.first()
+    }
+
     override suspend fun set(cookie: Cookie) {
         dataStore.edit { settings ->
-            settings[loggedIn] = true
             settings[session] = renderSetCookieHeader(cookie)
+            settings[status] = true
         }
     }
 
     override suspend fun reset() {
         dataStore.edit { settings ->
-            settings[loggedIn] = false
             settings[session] = ""
+            settings[status] = false
         }
     }
 }

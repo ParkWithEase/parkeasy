@@ -2,16 +2,21 @@ package io.github.parkwithease.parkeasy.ui.login
 
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.parkwithease.parkeasy.data.UserRepository
+import io.github.parkwithease.parkeasy.data.local.AuthRepository
+import io.github.parkwithease.parkeasy.data.remote.UserRepository
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 @HiltViewModel
-class LoginViewModel @Inject constructor(private val repo: UserRepository) : ViewModel() {
+class LoginViewModel
+@Inject
+constructor(private val authRepo: AuthRepository, private val userRepo: UserRepository) :
+    ViewModel() {
     private val _name = MutableStateFlow("")
     val name = _name.asStateFlow()
 
@@ -30,12 +35,16 @@ class LoginViewModel @Inject constructor(private val repo: UserRepository) : Vie
     private val _loggedIn = MutableStateFlow(false)
     val loggedIn = _loggedIn.asStateFlow()
 
+    init {
+        runBlocking { launch { _loggedIn.value = authRepo.getStatus() } }
+    }
+
     private suspend fun login(credentials: LoginCredentials) {
-        _loggedIn.value = repo.login(credentials)
+        _loggedIn.value = userRepo.login(credentials)
     }
 
     private suspend fun register(credentials: RegistrationCredentials) {
-        _loggedIn.value = repo.register(credentials)
+        _loggedIn.value = userRepo.register(credentials)
     }
 
     fun onNameChange(input: String) {

@@ -1,4 +1,4 @@
-package io.github.parkwithease.parkeasy.ui.nav
+package io.github.parkwithease.parkeasy.ui.navbar
 
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
