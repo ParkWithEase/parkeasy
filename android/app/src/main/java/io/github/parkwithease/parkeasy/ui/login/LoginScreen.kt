@@ -1,6 +1,8 @@
 package io.github.parkwithease.parkeasy.ui.login
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,8 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,6 +28,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
@@ -96,78 +103,115 @@ private fun LoginScreenInner(
                     modifier = Modifier.size(280.dp),
                 )
             }
-            Row(modifier = Modifier.weight(1f).fillMaxSize()) { LoginForm(state, events) }
+            Row(modifier = Modifier.weight(1f).fillMaxSize()) { LoginForm(state, events, 280.dp) }
         }
     }
 }
 
 @Composable
-private fun LoginForm(state: LoginState, events: LoginEvents, modifier: Modifier = Modifier) {
+private fun LoginForm(
+    state: LoginState,
+    events: LoginEvents,
+    width: Dp,
+    modifier: Modifier = Modifier,
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = modifier.fillMaxSize(),
     ) {
-        EmailField(state.email, events.onEmailChange)
-        PasswordField(state.password, events.onPasswordChange)
-        Row(modifier = Modifier.width(280.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            RegisterButton(modifier = Modifier.weight(1f), events.onRegisterPress)
-            LoginButton(modifier = Modifier.weight(1f), events.onLoginPress)
+        AnimatedVisibility(state.registering) {
+            LoginField(
+                state.name,
+                events.onNameChange,
+                stringResource(R.string.name),
+                Icons.Filled.Person,
+                KeyboardOptions(keyboardType = KeyboardType.Text),
+            )
         }
+        LoginField(
+            state.email,
+            events.onEmailChange,
+            stringResource(R.string.email),
+            ImageVector.vectorResource(R.drawable.email),
+            KeyboardOptions(keyboardType = KeyboardType.Email),
+        )
+        LoginField(
+            state.password,
+            events.onPasswordChange,
+            stringResource(R.string.password),
+            ImageVector.vectorResource(R.drawable.password),
+            KeyboardOptions(keyboardType = KeyboardType.Password),
+            visualTransformation = PasswordVisualTransformation(),
+        )
+        AnimatedVisibility(state.registering) {
+            LoginField(
+                state.confirmPassword,
+                events.onConfirmPasswordChange,
+                stringResource(R.string.confirm_password),
+                ImageVector.vectorResource(R.drawable.password),
+                KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = PasswordVisualTransformation(),
+            )
+        }
+        LoginButton(
+            stringResource(if (state.registering) R.string.register else R.string.login),
+            if (state.registering) events.onRegisterPress else events.onLoginPress,
+            Modifier.width(width),
+        )
+        SwitchText(
+            stringResource(
+                if (state.registering) R.string.already_registered else R.string.not_registered
+            ),
+            stringResource(
+                if (state.registering) R.string.login_instead else R.string.register_instead
+            ),
+            events.onSwitchPress,
+        )
     }
 }
 
 @Composable
-private fun EmailField(
-    text: String,
+private fun LoginField(
+    value: String,
     onValueChange: (String) -> Unit,
+    label: String,
+    imageVector: ImageVector,
+    keyboardOptions: KeyboardOptions,
     modifier: Modifier = Modifier,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
     OutlinedTextField(
-        value = text,
+        value = value,
         onValueChange = { onValueChange(it) },
-        label = { Text(stringResource(R.string.email)) },
-        leadingIcon = {
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.email),
-                contentDescription = stringResource(R.string.email_icon),
-            )
-        },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+        label = { Text(label) },
+        leadingIcon = { Icon(imageVector = imageVector, contentDescription = label) },
+        visualTransformation = visualTransformation,
+        keyboardOptions = keyboardOptions,
         singleLine = true,
         modifier = modifier,
     )
 }
 
 @Composable
-private fun PasswordField(
+private fun LoginButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Button(onClick = { onClick() }, modifier = modifier) { Text(label) }
+}
+
+@Composable
+private fun SwitchText(
     text: String,
-    onValueChange: (String) -> Unit,
+    clickableText: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    OutlinedTextField(
-        value = text,
-        onValueChange = { onValueChange(it) },
-        label = { Text(stringResource(R.string.password)) },
-        leadingIcon = {
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.password),
-                contentDescription = stringResource(R.string.password_icon),
-            )
-        },
-        visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-        singleLine = true,
-        modifier = modifier,
-    )
-}
-
-@Composable
-private fun LoginButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Button(onClick = { onClick() }, modifier = modifier) { Text(stringResource(R.string.login)) }
-}
-
-@Composable
-private fun RegisterButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Button(onClick = { onClick() }, modifier = modifier) { Text(stringResource(R.string.register)) }
+    Row(modifier) {
+        Text(text, color = MaterialTheme.colorScheme.onSurface)
+        Text(" ")
+        Text(
+            clickableText,
+            Modifier.clickable { onClick() },
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
 }
