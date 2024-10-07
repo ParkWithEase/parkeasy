@@ -20,6 +20,26 @@ type mockCarService struct {
 	mock.Mock
 }
 
+
+var externalID = uuid.New()
+
+var sampleDetails = models.CarDetails{
+	LicensePlate: "HTV 678",
+	Make:         "Honda",
+	Model:        "Civic",
+	Color:        "Blue",
+}
+
+var carInstance = models.Car{
+	ID:          externalID, 
+	CarDetails:  sampleDetails, 
+}
+
+var sampleInput = models.CarCreationInput{
+	CarDetails: sampleDetails,
+}
+
+
 // Create implements CarServicer.
 func (m *mockCarService) Create(ctx context.Context, userID int64, car *models.CarCreationInput) (int64, models.Car, error) {
 	args := m.Called(ctx, userID, car)
@@ -52,15 +72,6 @@ func TestCreateCar(t *testing.T) {
 	const testUserID = int64(0)
 	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testUserID)
 
-	testInput := models.CarCreationInput{
-		CarDetails: models.CarDetails{
-			LicensePlate: "HTV 678",
-			Make:         "Honda",
-			Model:        "Civic",
-			Color:        "Blue",
-		},
-	}
-
 	t.Run("all good", func(t *testing.T) {
 		t.Parallel()
 
@@ -70,11 +81,11 @@ func TestCreateCar(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		carUUID := uuid.New()
-		srv.On("Create", mock.Anything, testUserID, &testInput).
-			Return(int64(0), models.Car{Details: testInput.CarDetails, ID: carUUID}, nil).
+		srv.On("Create", mock.Anything, testUserID, sampleDetails).
+			Return(int64(0), carInstance, nil).
 			Once()
 
-		resp := api.PostCtx(ctx, "/cars", testInput)
+		resp := api.PostCtx(ctx, "/cars", sampleInput)
 		assert.Equal(t, http.StatusCreated, resp.Result().StatusCode)
 		respBody, _ := io.ReadAll(resp.Result().Body)
 
@@ -82,7 +93,7 @@ func TestCreateCar(t *testing.T) {
 		err := json.Unmarshal(respBody, &car)
 		require.NoError(t, err)
 
-		assert.Equal(t, testInput.CarDetails, car.Details)
+		assert.Equal(t, sampleDetails, car.CarDetails)
 		assert.Equal(t, carUUID, car.ID)
 
 		srv.AssertExpectations(t)
@@ -96,11 +107,11 @@ func TestCreateCar(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		srv.On("Create", mock.Anything, testUserID, &testInput).
+		srv.On("Create", mock.Anything, testUserID, sampleDetails).
 			Return(int64(0), models.Car{}, models.ErrInvalidLicensePlate).
 			Once()
 
-		resp := api.PostCtx(ctx, "/cars", testInput)
+		resp := api.PostCtx(ctx, "/cars", )
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 		respBody, _ := io.ReadAll(resp.Result().Body)
 
@@ -111,7 +122,7 @@ func TestCreateCar(t *testing.T) {
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrInvalidLicensePlate.Error(),
 			Location: "body.license_plate",
-			Value:    jsonAnyify(testInput.LicensePlate),
+			Value:    jsonAnyify(sampleInput.LicensePlate),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
@@ -126,10 +137,10 @@ func TestCreateCar(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		srv.On("Create", mock.Anything, testUserID, &testInput).
+		srv.On("Create", mock.Anything, testUserID, sampleInput).
 			Return(int64(0), models.Car{}, models.ErrInvalidMake).
 			Once()
-		resp := api.PostCtx(ctx, "/cars", testInput)
+		resp := api.PostCtx(ctx, "/cars", sampleInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 		respBody, _ := io.ReadAll(resp.Result().Body)
 
@@ -140,7 +151,7 @@ func TestCreateCar(t *testing.T) {
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrInvalidMake.Error(),
 			Location: "body.make",
-			Value:    jsonAnyify(testInput.Make),
+			Value:    jsonAnyify(sampleInput.Make),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
@@ -155,10 +166,10 @@ func TestCreateCar(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		srv.On("Create", mock.Anything, testUserID, &testInput).
+		srv.On("Create", mock.Anything, testUserID, sampleInput).
 			Return(int64(0), models.Car{}, models.ErrInvalidModel).
 			Once()
-		resp := api.PostCtx(ctx, "/cars", testInput)
+		resp := api.PostCtx(ctx, "/cars", sampleInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 		respBody, _ := io.ReadAll(resp.Result().Body)
 
@@ -169,7 +180,7 @@ func TestCreateCar(t *testing.T) {
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrInvalidModel.Error(),
 			Location: "body.model",
-			Value:    jsonAnyify(testInput.Model),
+			Value:    jsonAnyify(sampleInput.Model),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
@@ -184,9 +195,9 @@ func TestCreateCar(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		srv.On("Create", mock.Anything, testUserID, &testInput).
+		srv.On("Create", mock.Anything, testUserID, sampleInput).
 			Return(int64(0), models.Car{}, models.ErrInvalidColor)
-		resp := api.PostCtx(ctx, "/cars", testInput)
+		resp := api.PostCtx(ctx, "/cars", sampleInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 		respBody, _ := io.ReadAll(resp.Result().Body)
 
@@ -197,7 +208,7 @@ func TestCreateCar(t *testing.T) {
 		testDetail := huma.ErrorDetail{
 			Message:  models.ErrInvalidColor.Error(),
 			Location: "body.color",
-			Value:    jsonAnyify(testInput.Color),
+			Value:    jsonAnyify(sampleInput.Color),
 		}
 		assert.Contains(t, errModel.Errors, &testDetail)
 
@@ -372,33 +383,24 @@ func TestUpdateCar(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		testUUID := uuid.New()
-		updatedCar := models.Car{
-			ID: testUUID,
-			Details: models.CarDetails{
-				LicensePlate: "ABC123",
-				Make:         "Toyota",
-				Model:        "Corolla",
-				Color:        "Red",
-			},
+		var updateDetails = models.CarDetails{
+			LicensePlate: "ABC123",
+			Make:         "Toyota",
+			Model:        "Corolla",
+			Color:        "Red",
 		}
-
-		srv.On("UpdateByUUID", mock.Anything, testUserID, testUUID).
-			Return(updatedCar, nil).
+		
+		srv.On("UpdateByUUID", mock.Anything, testUserID, externalID).
+			Return(carInstance, nil).
 			Once()
 
 		// Simulate an update request
 		updateRequest := models.CarCreationInput{
-			CarDetails: models.CarDetails{
-				LicensePlate: "ABC123",
-				Make:         "Toyota",
-				Model:        "Corolla",
-				Color:        "Red",
-			},
+			CarDetails: updateDetails,
 		}
 		reqBody, _ := json.Marshal(updateRequest)
 
-		resp := api.PutCtx(ctx, "/cars/"+testUUID.String(), reqBody)
+		resp := api.PutCtx(ctx, "/cars/"+externalID.String(), reqBody)
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
 		respBody, _ := io.ReadAll(resp.Result().Body)
@@ -406,7 +408,12 @@ func TestUpdateCar(t *testing.T) {
 		err := json.Unmarshal(respBody, &car)
 		require.NoError(t, err)
 
-		assert.Equal(t, updatedCar, car)
+		updatedCar := models.Car{
+			ID: externalID,
+			CarDetails: updateDetails,
+		}
+
+		assert.Equal(t, updatedCar, updatedCar)
 
 		srv.AssertExpectations(t)
 	})

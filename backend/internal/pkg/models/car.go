@@ -19,8 +19,8 @@ type CarDetails struct {
 }
 
 type Car struct {
-	Details CarDetails `json:"details" doc:"Details about the car"`
-	ID      uuid.UUID  `json:"id" doc:"ID of this resource"`
+	ID uuid.UUID  `json:"id" doc:"ID of this resource"`
+	CarDetails
 }
 
 // CreateUpdateCarInput represents the input for the create and update car operation

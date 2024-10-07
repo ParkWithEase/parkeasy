@@ -29,9 +29,9 @@ func New(pool *pgxpool.Pool) *CarRepository {
 }
 
 type Entry struct {
+	InternalID int64 		// The internal ID of this car
 	models.Car
-	InternalID int64 // The internal ID of this car
-	OwnerID    int64 // The user id owning this car
+	OwnerID    int64 		// The user id owning this car
 }
 
 var ErrNotFound = errors.New("no car found")
@@ -51,8 +51,8 @@ func (r *CarRepository) Create(ctx context.Context, userID int64, car *models.Ca
 	}
 
 	query := psql.Insert(
-		im.Into("Car"),
-		im.Values(psql.Arg(uuid.New(), car.LicensePlate, car.Make, car.Model, car.Color, userID)),
+		im.Into("car", "uuid", "licenseplate", "make", "model", "color", "userid"),
+		im.Values(psql.Arg(uuid.New(), car.LicensePlate, car.Make, car.Model, car.Color, 1)),
 	)
 
 	// Executing the query and mapping the result using scan.StructMapper
@@ -115,7 +115,7 @@ func (r *CarRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (Entry, 
 
 	query := psql.Select(
 		sm.From("Car"),
-		sm.Where(psql.Quote("UUID").EQ(psql.Arg(carID))),
+		sm.Where(psql.Quote("uuid").EQ(psql.Arg(carID))),
 	)
 
 	// Executing the query and mapping the result using scan.StructMapper

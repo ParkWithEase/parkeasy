@@ -21,11 +21,23 @@ const (
 	testStrangerID = 1
 )
 
+var externalID = uuid.New()
+
+var sampleDetails = models.CarDetails{
+	LicensePlate: "HTV 678",
+	Make:         "Honda",
+	Model:        "Civic",
+	Color:        "Blue",
+}
+
+var carInstance = models.Car{
+	ID:          externalID, 
+	CarDetails:  sampleDetails, 
+}
+
 var ownedTestEntry = car.Entry{
-	Car: models.Car{
-		Details: sampleDetails,
-	},
 	InternalID: 0,
+	Car: carInstance,
 	OwnerID:    testOwnerID,
 }
 
@@ -68,13 +80,6 @@ func (m *mockRepo) GetOwnerByUUID(ctx context.Context, carID uuid.UUID) (int64, 
 	return args.Get(0).(int64), args.Error(1)
 }
 
-var sampleDetails = models.CarDetails{
-	LicensePlate: "HTV 678",
-	Make:         "Honda",
-	Model:        "Civic",
-	Color:        "Blue",
-}
-
 func TestCreate(t *testing.T) {
 	t.Parallel()
 
@@ -90,15 +95,14 @@ func TestCreate(t *testing.T) {
 		input := &models.CarCreationInput{
 			CarDetails: sampleDetails,
 		}
+
 		repo.On("Create", mock.Anything, int64(0), input).
 			Return(
 				int64(0),
 				car.Entry{
-					Car: models.Car{
-						Details: input.CarDetails,
-					},
-					InternalID: 0,
-					OwnerID:    0,
+					InternalID: 0,      
+					Car:        carInstance,
+					OwnerID:    0,      
 				},
 				nil,
 			).

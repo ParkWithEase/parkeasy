@@ -79,45 +79,6 @@ func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager, c *Config)
 }
 
 
-// func runMigrations(pool *pgxpool.Pool) error {
-// 	// Extract sql.DB from pgxpool.Pool
-// 	conn, err := pool.Acquire(context.Background())
-// 	if err != nil {
-// 		return fmt.Errorf("unable to acquire connection: %w", err)
-// 	}
-// 	defer conn.Release()
-
-// 	db, err := sql.Open("postgres", conn.Conn().Config().ConnString())
-// 	if err != nil {
-// 		return fmt.Errorf("unable to open sql.DB: %w", err)
-// 	}
-// 	defer db.Close()
-
-// 	// Initialize the postgres driver with sql.DB
-// 	driver, err := postgres.WithInstance(db, &postgres.Config{})
-// 	if err != nil {
-// 		return fmt.Errorf("could not create migration driver: %w", err)
-// 	}
-
-// 	// Initialize the migrate instance
-// 	m, err := migrate.NewWithDatabaseInstance(
-// 		"file://migrations", // Directory with migration files
-// 		"postgres",          // Database name
-// 		driver,
-// 	)
-// 	if err != nil {
-// 		return fmt.Errorf("could not create migrate instance: %w", err)
-// 	}
-
-// 	// Run migrations
-// 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-// 		return fmt.Errorf("could not run migrations: %w", err)
-// 	}
-
-// 	fmt.Println("Migrations ran successfully")
-// 	return nil
-// }
-
 // Creates a new Huma API instance with routes configured
 func (c *Config) NewHumaAPI() huma.API { //nolint: ireturn // this is intentional
 	router := http.NewServeMux()
