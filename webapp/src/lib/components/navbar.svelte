@@ -45,10 +45,7 @@
             transition: 0.3s;
         }
 
-    
-        .text-logo{
-            max-height: 7rem;
-        }
-        
-          
-    </style> 
+    .text-logo {
+        max-height: 7rem;
+    }
+</style>
