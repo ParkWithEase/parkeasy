@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.data.remote.UserRepository
+import io.github.parkwithease.parkeasy.model.Event
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
 import javax.inject.Inject
@@ -35,16 +36,29 @@ constructor(private val authRepo: AuthRepository, private val userRepo: UserRepo
     private val _loggedIn = MutableStateFlow(false)
     val loggedIn = _loggedIn.asStateFlow()
 
+    private val _message = MutableStateFlow(Event.initial(""))
+    val message = _message.asStateFlow()
+
     init {
         runBlocking { launch { _loggedIn.value = authRepo.getStatus() } }
     }
 
     private suspend fun login(credentials: LoginCredentials) {
-        _loggedIn.value = userRepo.login(credentials)
+        if (userRepo.login(credentials)) {
+            _loggedIn.value = true
+            _message.value = Event("Logged in successfully")
+        } else {
+            _message.value = Event("Error logging in")
+        }
     }
 
     private suspend fun register(credentials: RegistrationCredentials) {
-        _loggedIn.value = userRepo.register(credentials)
+        if (userRepo.register(credentials)) {
+            _loggedIn.value = true
+            _message.value = Event("Registered successfully")
+        } else {
+            _message.value = Event("Error registering")
+        }
     }
 
     fun onNameChange(input: String) {
