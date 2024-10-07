@@ -76,3 +76,5 @@ issues:
     - path: '(.+)_test\.go'
       linters:
         - bodyclose # Due to https://github.com/timakin/bodyclose/issues/59
+  exclude-files:
+    - internal/pkg/dbmodels
