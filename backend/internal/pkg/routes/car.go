@@ -15,7 +15,7 @@ type CarServicer interface {
 	// Creates a new car attached to `userID`.
 	//
 	// Returns the spot internal ID and the model.
-	Create(ctx context.Context, userID int64, spot *models.CarCreationInput) (int64, models.Car, error)
+	Create(ctx context.Context, userID int64, spot *models.CarCreationInput) (uuid.UUID, error)
 	// Get the car with `carID` if `userID` has enough permission to view the resource.
 	GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.Car, error)
 	// Delete the car with `carID` if `userID` owns the resource.
@@ -34,6 +34,11 @@ type CarRoute struct {
 // CarOutput represents the output of the car retrieval operation
 type CarOutput struct {
 	Body models.Car
+}
+
+// CarCreationOutput represents the output for the create car operation
+type CarCreationOutput struct {
+	CarUUID uuid.UUID `json:"car_id" doc:"ID of the created car"`
 }
 
 // Returns a new `CarRoute`
@@ -66,9 +71,9 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 	}, func(ctx context.Context, input *struct {
 		Body models.CarCreationInput
 	},
-	) (*CarOutput, error) {
+	) (*CarCreationOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		_, result, err := r.service.Create(ctx, userID, &input.Body)
+		carUUID, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
 			switch {
 			case errors.Is(err, models.ErrInvalidLicensePlate):
@@ -98,7 +103,10 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 			}
 			return nil, huma.Error422UnprocessableEntity("", err)
 		}
-		return &CarOutput{Body: result}, nil
+
+        return &CarCreationOutput{
+            CarUUID: carUUID,
+        }, nil
 	})
 
 	huma.Register(api, huma.Operation{

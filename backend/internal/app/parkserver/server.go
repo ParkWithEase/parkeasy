@@ -2,10 +2,12 @@ package parkserver
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net"
 	"net/http"
 	"time"
+
 	// "log"
 	// "fmt"
 
@@ -28,12 +30,13 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/jackc/pgx/v5/pgxpool"
+	// "github.com/jackc/pgx/v5/stdlib"
 	"github.com/rs/cors"
+
 	// "github.com/golang-migrate/migrate/v4"
 	// "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
-
 )
 
 type Config struct {
@@ -43,6 +46,8 @@ type Config struct {
 	Insecure bool
 	// Database pool for Postgres connection
 	DBPool *pgxpool.Pool
+
+	DBConn *sql.DB
 }
 
 // Register all routes
@@ -63,7 +68,7 @@ func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager, c *Config)
 	// parkingSpotService := parkingspot.NewService(parkingSpotRepo)
 	// parkingSpotRoute := routes.NewParkingSpotRoute(parkingSpotService, sessionManager, authMiddleware)
 
-	carRepo := carRepo.New(c.DBPool)
+	carRepo := carRepo.NewPostgres(c.DBConn)
 	carService := car.NewService(carRepo)
 	carRoute := routes.NewCarRoute(carService, sessionManager, authMiddleware)
 
