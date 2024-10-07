@@ -13,6 +13,7 @@ type contextKey string
 
 var (
 	authCtx = newContextual[*models.Auth]("auth")
+	carCtx  = newContextual[*models.Car]("car")
 	userCtx = newContextual[*models.User]("user")
 )
 

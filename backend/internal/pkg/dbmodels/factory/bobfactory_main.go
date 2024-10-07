@@ -5,6 +5,7 @@ package factory
 
 type Factory struct {
 	baseAuthMods AuthModSlice
+	baseCarMods  CarModSlice
 	baseUserMods UserModSlice
 }
 
@@ -20,6 +21,18 @@ func (f *Factory) NewAuth(mods ...AuthMod) *AuthTemplate {
 	}
 
 	AuthModSlice(mods).Apply(o)
+
+	return o
+}
+
+func (f *Factory) NewCar(mods ...CarMod) *CarTemplate {
+	o := &CarTemplate{f: f}
+
+	if f != nil {
+		f.baseCarMods.Apply(o)
+	}
+
+	CarModSlice(mods).Apply(o)
 
 	return o
 }
@@ -42,6 +55,14 @@ func (f *Factory) ClearBaseAuthMods() {
 
 func (f *Factory) AddBaseAuthMod(mods ...AuthMod) {
 	f.baseAuthMods = append(f.baseAuthMods, mods...)
+}
+
+func (f *Factory) ClearBaseCarMods() {
+	f.baseCarMods = nil
+}
+
+func (f *Factory) AddBaseCarMod(mods ...CarMod) {
+	f.baseCarMods = append(f.baseCarMods, mods...)
 }
 
 func (f *Factory) ClearBaseUserMods() {

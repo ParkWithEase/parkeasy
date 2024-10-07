@@ -51,6 +51,7 @@ type UsersStmt = bob.QueryStmt[*User, UserSlice]
 
 // userR is where relationships are stored.
 type userR struct {
+	UseruuidCar  *Car  // car.car_useruuid_fkey
 	AuthuuidAuth *Auth // users.users_authuuid_fkey
 }
 
@@ -302,6 +303,7 @@ func buildUserWhere[Q psql.Filterable](cols userColumns) userWhere[Q] {
 
 type userJoins[Q dialect.Joinable] struct {
 	typ          string
+	UseruuidCar  func(context.Context) modAs[Q, carColumns]
 	AuthuuidAuth func(context.Context) modAs[Q, authColumns]
 }
 
@@ -312,6 +314,7 @@ func (j userJoins[Q]) aliasedAs(alias string) userJoins[Q] {
 func buildUserJoins[Q dialect.Joinable](cols userColumns, typ string) userJoins[Q] {
 	return userJoins[Q]{
 		typ:          typ,
+		UseruuidCar:  usersJoinUseruuidCar[Q](cols, typ),
 		AuthuuidAuth: usersJoinAuthuuidAuth[Q](cols, typ),
 	}
 }
@@ -411,6 +414,25 @@ func (o UserSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	return nil
 }
 
+func usersJoinUseruuidCar[Q dialect.Joinable](from userColumns, typ string) func(context.Context) modAs[Q, carColumns] {
+	return func(ctx context.Context) modAs[Q, carColumns] {
+		return modAs[Q, carColumns]{
+			c: CarColumns,
+			f: func(to carColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Cars.Name(ctx).As(to.Alias())).On(
+						to.Useruuid.EQ(from.Useruuid),
+					))
+				}
+
+				return mods
+			},
+		}
+	}
+}
+
 func usersJoinAuthuuidAuth[Q dialect.Joinable](from userColumns, typ string) func(context.Context) modAs[Q, authColumns] {
 	return func(ctx context.Context) modAs[Q, authColumns] {
 		return modAs[Q, authColumns]{
@@ -428,6 +450,24 @@ func usersJoinAuthuuidAuth[Q dialect.Joinable](from userColumns, typ string) fun
 			},
 		}
 	}
+}
+
+// UseruuidCar starts a query for related objects on car
+func (o *User) UseruuidCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
+	return Cars.Query(ctx, exec, append(mods,
+		sm.Where(CarColumns.Useruuid.EQ(psql.Arg(o.Useruuid))),
+	)...)
+}
+
+func (os UserSlice) UseruuidCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
+	PKArgs := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgs[i] = psql.ArgGroup(o.Useruuid)
+	}
+
+	return Cars.Query(ctx, exec, append(mods,
+		sm.Where(psql.Group(CarColumns.Useruuid).In(PKArgs...)),
+	)...)
 }
 
 // AuthuuidAuth starts a query for related objects on auth
@@ -454,6 +494,18 @@ func (o *User) Preload(name string, retrieved any) error {
 	}
 
 	switch name {
+	case "UseruuidCar":
+		rel, ok := retrieved.(*Car)
+		if !ok {
+			return fmt.Errorf("user cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.UseruuidCar = rel
+
+		if rel != nil {
+			rel.R.UseruuidUser = o
+		}
+		return nil
 	case "AuthuuidAuth":
 		rel, ok := retrieved.(*Auth)
 		if !ok {
@@ -469,6 +521,94 @@ func (o *User) Preload(name string, retrieved any) error {
 	default:
 		return fmt.Errorf("user has no relationship %q", name)
 	}
+}
+
+func PreloadUserUseruuidCar(opts ...psql.PreloadOption) psql.Preloader {
+	return psql.Preload[*Car, CarSlice](orm.Relationship{
+		Name: "UseruuidCar",
+		Sides: []orm.RelSide{
+			{
+				From: "users",
+				To:   TableNames.Cars,
+				ToExpr: func(ctx context.Context) bob.Expression {
+					return Cars.Name(ctx)
+				},
+				FromColumns: []string{
+					ColumnNames.Users.Useruuid,
+				},
+				ToColumns: []string{
+					ColumnNames.Cars.Useruuid,
+				},
+			},
+		},
+	}, Cars.Columns().Names(), opts...)
+}
+
+func ThenLoadUserUseruuidCar(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
+	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+		loader, isLoader := retrieved.(interface {
+			LoadUserUseruuidCar(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+		})
+		if !isLoader {
+			return fmt.Errorf("object %T cannot load UserUseruuidCar", retrieved)
+		}
+
+		err := loader.LoadUserUseruuidCar(ctx, exec, queryMods...)
+
+		// Don't cause an issue due to missing relationships
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+
+		return err
+	})
+}
+
+// LoadUserUseruuidCar loads the user's UseruuidCar into the .R struct
+func (o *User) LoadUserUseruuidCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.UseruuidCar = nil
+
+	related, err := o.UseruuidCar(ctx, exec, mods...).One()
+	if err != nil {
+		return err
+	}
+
+	related.R.UseruuidUser = o
+
+	o.R.UseruuidCar = related
+	return nil
+}
+
+// LoadUserUseruuidCar loads the user's UseruuidCar into the .R struct
+func (os UserSlice) LoadUserUseruuidCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	cars, err := os.UseruuidCar(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		for _, rel := range cars {
+			if o.Useruuid != rel.Useruuid {
+				continue
+			}
+
+			rel.R.UseruuidUser = o
+
+			o.R.UseruuidCar = rel
+			break
+		}
+	}
+
+	return nil
 }
 
 func PreloadUserAuthuuidAuth(opts ...psql.PreloadOption) psql.Preloader {
@@ -555,6 +695,58 @@ func (os UserSlice) LoadUserAuthuuidAuth(ctx context.Context, exec bob.Executor,
 			break
 		}
 	}
+
+	return nil
+}
+
+func insertUserUseruuidCar0(ctx context.Context, exec bob.Executor, car1 *CarSetter, user0 *User) (*Car, error) {
+	car1.Useruuid = omit.From(user0.Useruuid)
+
+	ret, err := Cars.Insert(ctx, exec, car1)
+	if err != nil {
+		return ret, fmt.Errorf("insertUserUseruuidCar0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachUserUseruuidCar0(ctx context.Context, exec bob.Executor, count int, car1 *Car, user0 *User) (*Car, error) {
+	setter := &CarSetter{
+		Useruuid: omit.From(user0.Useruuid),
+	}
+
+	err := Cars.Update(ctx, exec, setter, car1)
+	if err != nil {
+		return nil, fmt.Errorf("attachUserUseruuidCar0: %w", err)
+	}
+
+	return car1, nil
+}
+
+func (user0 *User) InsertUseruuidCar(ctx context.Context, exec bob.Executor, related *CarSetter) error {
+	car1, err := insertUserUseruuidCar0(ctx, exec, related, user0)
+	if err != nil {
+		return err
+	}
+
+	user0.R.UseruuidCar = car1
+
+	car1.R.UseruuidUser = user0
+
+	return nil
+}
+
+func (user0 *User) AttachUseruuidCar(ctx context.Context, exec bob.Executor, car1 *Car) error {
+	var err error
+
+	_, err = attachUserUseruuidCar0(ctx, exec, 1, car1, user0)
+	if err != nil {
+		return err
+	}
+
+	user0.R.UseruuidCar = car1
+
+	car1.R.UseruuidUser = user0
 
 	return nil
 }

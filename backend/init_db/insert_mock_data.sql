@@ -3,11 +3,11 @@
 -- --======================================================--
 
 -- -- Insert mock data for User
-INSERT INTO Users (PasswordHash, FirstName, LastName, Email, IsVerified)
-VALUES 
-('hashpassword1', 'John', 'Doe', 'john.doe@example.com', TRUE),
-('hashpassword2', 'Jane', 'Smith', 'jane.smith@example.com', FALSE),
-('hashpassword3', 'Alice', 'Johnson', 'alice.johnson@example.com', TRUE);
+-- INSERT INTO Users (PasswordHash, FirstName, LastName, Email, IsVerified)
+-- VALUES 
+-- ('hashpassword1', 'John', 'Doe', 'john.doe@example.com', TRUE),
+-- ('hashpassword2', 'Jane', 'Smith', 'jane.smith@example.com', FALSE),
+-- ('hashpassword3', 'Alice', 'Johnson', 'alice.johnson@example.com', TRUE);
 
 -- -- Insert mock data for Car
 -- INSERT INTO Car (LicensePlate, Make, Model, Color, UserId)
