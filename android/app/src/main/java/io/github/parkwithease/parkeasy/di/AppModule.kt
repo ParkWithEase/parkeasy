@@ -13,8 +13,8 @@ import dagger.hilt.components.SingletonComponent
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.data.AuthStore
 import io.github.parkwithease.parkeasy.data.AuthStoreImpl
-import io.github.parkwithease.parkeasy.data.ParkEasyRepository
-import io.github.parkwithease.parkeasy.data.ParkEasyRepositoryImpl
+import io.github.parkwithease.parkeasy.data.UserRepository
+import io.github.parkwithease.parkeasy.data.UserRepositoryImpl
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -57,7 +57,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideParkEasyRepository(client: HttpClient, authStore: AuthStore): ParkEasyRepository {
-        return ParkEasyRepositoryImpl(client, authStore)
+    fun provideUserRepository(client: HttpClient, authStore: AuthStore): UserRepository {
+        return UserRepositoryImpl(client, authStore)
     }
 }

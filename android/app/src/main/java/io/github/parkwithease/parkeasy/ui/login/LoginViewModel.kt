@@ -2,22 +2,22 @@ package io.github.parkwithease.parkeasy.ui.login
 
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.parkwithease.parkeasy.data.ParkEasyRepository
-import io.github.parkwithease.parkeasy.model.Credentials
+import io.github.parkwithease.parkeasy.data.UserRepository
+import io.github.parkwithease.parkeasy.model.LoginCredentials
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.runBlocking
 
 @HiltViewModel
-class LoginViewModel @Inject constructor(private val repo: ParkEasyRepository) : ViewModel() {
+class LoginViewModel @Inject constructor(private val repo: UserRepository) : ViewModel() {
     private val _email = MutableStateFlow("")
     val email = _email.asStateFlow()
 
     private val _password = MutableStateFlow("")
     val password = _password.asStateFlow()
 
-    suspend fun login(credentials: Credentials) {
+    suspend fun login(credentials: LoginCredentials) {
         return repo.login(credentials)
     }
 
@@ -30,6 +30,6 @@ class LoginViewModel @Inject constructor(private val repo: ParkEasyRepository) :
     }
 
     fun onLoginPress() {
-        runBlocking { login(Credentials(_email.value, _password.value)) }
+        runBlocking { login(LoginCredentials(_email.value, _password.value)) }
     }
 }
