@@ -3,27 +3,24 @@ services:
     build:
       context: .
       dockerfile: ./Containerfile
-    command: --insecure
     ports:
       - "8080:8080"
     depends_on:
       db:
-        condition: service_healthy      
+        condition: service_healthy
+    env_file:
+      - .env
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: testuser
-      DB_PASSWORD: testpassword
-      DB_NAME: testdb
+      INSECURE: true
     networks:
       - backend
 
   db:
     image: postgres:16
     environment:
-      POSTGRES_USER: testuser
-      POSTGRES_PASSWORD: testpassword
-      POSTGRES_DB: testdb
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
@@ -33,7 +30,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -d testdb -U testuser"]
       interval: 5s
       timeout: 5s
-      retries: 5      
+      retries: 5
     networks:
       - backend
 
