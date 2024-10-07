@@ -13,19 +13,17 @@ open class Event<out T>(private val content: T) {
         }
     }
 
-    fun peekContent(): T = content
-
-    /**
-     * Instantiates an Event that's already been handled. Necessary because StateFlow does not allow
-     * null.
-     *
-     * @param T the content type.
-     * @param content the content to initialize with.
-     * @return the initialized handled Event.
-     */
     companion object {
+        /**
+         * Instantiates an Event that's already been handled. Necessary because StateFlow does not
+         * allow null.
+         *
+         * @param T the content type.
+         * @param content the content to initialize with.
+         * @return the initialized handled Event.
+         */
         fun <T> initial(content: T): Event<T> {
-            val event = Event<T>(content)
+            val event = Event(content)
             event.hasBeenHandled = true
             return event
         }
