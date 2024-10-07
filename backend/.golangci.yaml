@@ -76,3 +76,9 @@ issues:
     - path: '(.+)_test\.go'
       linters:
         - bodyclose # Due to https://github.com/timakin/bodyclose/issues/59
+    - path: '(.+)_integration_test\.go'
+      linters:
+        - tparallel # Many integration tests requires serialization
+
+  exclude-files:
+    - internal/pkg/dbmodels

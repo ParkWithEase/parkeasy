@@ -27,6 +27,11 @@ var (
 	insecure  bool
 	port      uint16
 	dbURL     string // New flag to get the Postgres connection URL
+	dbHost    string
+	dbPort    uint16
+	dbUser    string
+	dbPass    string
+	dbName    string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -83,10 +88,17 @@ var rootCmd = &cobra.Command{
 			Insecure: insecure,
 			DBPool:   pool, // Pass pool to config
 		}
-		log.Info().Uint16("port", port).Msg("server started")
 
+		log.Info().Msg("running migrations")
+		err = config.RunMigrations()
+		if err != nil {
+			log.Fatal().Err(err).Msg("")
+		}
+
+		log.Info().Uint16("port", port).Msg("server started")
 		// Start the server and pass the dbPool connection
-		if err := config.ListenAndServe(ctx); err != nil {
+		err = config.ListenAndServe(ctx)
+		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 	},
