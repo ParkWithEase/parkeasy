@@ -19,6 +19,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,10 +30,12 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
+import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
 
 private data class LoginState(
     val name: String,
@@ -40,6 +43,7 @@ private data class LoginState(
     val password: String,
     val confirmPassword: String,
     val registering: Boolean,
+    val loggedIn: Boolean,
 )
 
 private data class LoginEvents(
@@ -54,6 +58,7 @@ private data class LoginEvents(
 
 @Composable
 fun LoginScreen(
+    onLogin: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel<LoginViewModel>(),
 ) {
@@ -64,6 +69,7 @@ fun LoginScreen(
             viewModel.password.collectAsState().value,
             viewModel.confirmPassword.collectAsState().value,
             viewModel.registering.collectAsState().value,
+            viewModel.loggedIn.collectAsState().value,
         )
     val events =
         LoginEvents(
@@ -76,13 +82,21 @@ fun LoginScreen(
             viewModel::onSwitchPress,
         )
     LoginScreenInner(state, events, modifier)
+    val onLoginEvent: () -> Unit = onLogin
+    LaunchedEffect(state.loggedIn) {
+        if (state.loggedIn) {
+            onLoginEvent()
+        }
+    }
 }
 
-// @Preview
-// @Composable
-// private fun PreviewLoginScreenInner() {
-//    ParkEasyTheme { LoginScreenInner("", "", {}, {}, {}) }
-// }
+@Preview
+@Composable
+private fun PreviewLoginScreenInner() {
+    val state = LoginState("", "", "", "", registering = false, loggedIn = false)
+    val events = LoginEvents({}, {}, {}, {}, {}, {}, {})
+    ParkEasyTheme { LoginScreenInner(state, events) }
+}
 
 @Composable
 private fun LoginScreenInner(

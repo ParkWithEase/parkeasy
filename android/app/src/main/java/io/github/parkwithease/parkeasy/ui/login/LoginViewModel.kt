@@ -27,12 +27,15 @@ class LoginViewModel @Inject constructor(private val repo: UserRepository) : Vie
     private val _registering = MutableStateFlow(false)
     val registering = _registering.asStateFlow()
 
-    suspend fun login(credentials: LoginCredentials) {
-        return repo.login(credentials)
+    private val _loggedIn = MutableStateFlow(false)
+    val loggedIn = _loggedIn.asStateFlow()
+
+    private suspend fun login(credentials: LoginCredentials) {
+        _loggedIn.value = repo.login(credentials)
     }
 
-    suspend fun register(credentials: RegistrationCredentials) {
-        return repo.register(credentials)
+    private suspend fun register(credentials: RegistrationCredentials) {
+        _loggedIn.value = repo.register(credentials)
     }
 
     fun onNameChange(input: String) {

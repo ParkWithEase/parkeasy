@@ -13,7 +13,8 @@ import io.ktor.http.setCookie
 
 class UserRepositoryImpl(private val client: HttpClient, private val authStore: AuthStore) :
     UserRepository {
-    override suspend fun login(credentials: LoginCredentials) {
+    override suspend fun login(credentials: LoginCredentials): Boolean {
+        var success = false
         var sessionCookie: Cookie? = null
         val response =
             client.post("/auth") {
@@ -23,11 +24,14 @@ class UserRepositoryImpl(private val client: HttpClient, private val authStore: 
         if (response.setCookie().size == 1) {
             sessionCookie = response.setCookie()[0]
             authStore.set(sessionCookie)
+            success = true
         }
         Log.d("HTTP", sessionCookie.toString())
+        return success
     }
 
-    override suspend fun register(credentials: RegistrationCredentials) {
+    override suspend fun register(credentials: RegistrationCredentials): Boolean {
+        var success = false
         var sessionCookie: Cookie? = null
         val response =
             client.post("/user") {
@@ -37,7 +41,9 @@ class UserRepositoryImpl(private val client: HttpClient, private val authStore: 
         if (response.setCookie().size == 1) {
             sessionCookie = response.setCookie()[0]
             authStore.set(sessionCookie)
+            success = true
         }
         Log.d("HTTP", sessionCookie.toString())
+        return success
     }
 }
