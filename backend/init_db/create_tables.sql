@@ -3,19 +3,23 @@
 --======================================================--
 
 -- User details
+CREATE TABLE IF NOT EXISTS Auth (
+  Uuid UUID NOT NULL UNIQUE,
+  Email TEXT PRIMARY KEY,
+  PasswordHash TEXT
+);
+
 CREATE TABLE IF NOT EXISTS Users (
   UserId SERIAL PRIMARY KEY,
-  PasswordHash TEXT,
-  FirstName TEXT,
-  LastName TEXT,
+  FullName TEXT,
   Email TEXT,
-  IsVerified BOOLEAN
+  Uuid UUID NOT NULL UNIQUE,
+  CONSTRAINT fk_users_auth FOREIGN KEY (Uuid, Email) REFERENCES Auth(Uuid, Email)
 );
 
 -- Session token details for each user
 CREATE TABLE IF NOT EXISTS SessionToken (
   SessionToken TEXT,
-  Device TEXT,
   ExpirationTime TIMESTAMP,
   UserId INTEGER,
   PRIMARY KEY (SessionToken, UserId),
