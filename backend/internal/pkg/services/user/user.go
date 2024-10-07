@@ -6,17 +6,22 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
 	"github.com/google/uuid"
 )
 
+// interface for the authentication service
+type AuthServicer interface {
+	// Create creates a new authentication record and returns the associated identity.
+	Create(ctx context.Context, email, password string) (uuid.UUID, error)
+}
+
 type Service struct {
-	auth *auth.Service
+	auth AuthServicer
 	repo user.Repository
 }
 
 // Create a new user service
-func NewService(authService *auth.Service, repo user.Repository) *Service {
+func NewService(authService AuthServicer, repo user.Repository) *Service {
 	return &Service{
 		auth: authService,
 		repo: repo,

@@ -4,6 +4,9 @@ plugins {
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.ktfmt)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.hilt) apply false
+    alias(libs.plugins.kotlin.ksp) apply false
+    alias(libs.plugins.compose.compiler) apply false
 }
 
 val mergeDetektReports by
