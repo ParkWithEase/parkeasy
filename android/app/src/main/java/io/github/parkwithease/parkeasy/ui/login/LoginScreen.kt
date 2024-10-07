@@ -45,6 +45,7 @@ private data class LoginState(
     val email: String,
     val password: String,
     val confirmPassword: String,
+    val matchingPasswords: Boolean,
     val registering: Boolean,
     val loggedIn: Boolean,
 )
@@ -74,6 +75,7 @@ fun LoginScreen(
             viewModel.email.collectAsState().value,
             viewModel.password.collectAsState().value,
             viewModel.confirmPassword.collectAsState().value,
+            viewModel.matchingPasswords.collectAsState().value,
             viewModel.registering.collectAsState().value,
             viewModel.loggedIn.collectAsState().value,
         )
@@ -105,7 +107,8 @@ fun LoginScreen(
 @Preview
 @Composable
 private fun PreviewLoginScreenInner() {
-    val state = LoginState("", "", "", "", registering = false, loggedIn = false)
+    val state =
+        LoginState("", "", "", "", matchingPasswords = false, registering = false, loggedIn = false)
     val events = LoginEvents({}, {}, {}, {}, {}, {}, {}, {})
     ParkEasyTheme { LoginScreenInner(state, events) }
 }
@@ -206,6 +209,7 @@ private fun LoginFields(state: LoginState, events: LoginEvents, modifier: Modifi
                 stringResource(R.string.confirm_password),
                 ImageVector.vectorResource(R.drawable.password),
                 KeyboardOptions(keyboardType = KeyboardType.Password),
+                isError = !state.matchingPasswords,
                 visualTransformation = PasswordVisualTransformation(),
             )
         }
@@ -220,6 +224,7 @@ private fun LoginField(
     imageVector: ImageVector,
     keyboardOptions: KeyboardOptions,
     modifier: Modifier = Modifier,
+    isError: Boolean = false,
     visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
     OutlinedTextField(
@@ -227,6 +232,7 @@ private fun LoginField(
         onValueChange = { onValueChange(it) },
         label = { Text(label) },
         leadingIcon = { Icon(imageVector = imageVector, contentDescription = label) },
+        isError = isError,
         visualTransformation = visualTransformation,
         keyboardOptions = keyboardOptions,
         singleLine = true,

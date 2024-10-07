@@ -31,6 +31,9 @@ constructor(private val authRepo: AuthRepository, private val userRepo: UserRepo
     private val _confirmPassword = MutableStateFlow("")
     val confirmPassword = _confirmPassword.asStateFlow()
 
+    private val _matchingPasswords = MutableStateFlow(true)
+    val matchingPasswords = _matchingPasswords.asStateFlow()
+
     private val _registering = MutableStateFlow(false)
     val registering = _registering.asStateFlow()
 
@@ -58,6 +61,7 @@ constructor(private val authRepo: AuthRepository, private val userRepo: UserRepo
 
     fun onConfirmPasswordChange(input: String) {
         _confirmPassword.value = input
+        _matchingPasswords.value = _password.value == _confirmPassword.value
     }
 
     fun onLoginPress() {
@@ -74,19 +78,23 @@ constructor(private val authRepo: AuthRepository, private val userRepo: UserRepo
     }
 
     fun onRegisterPress() {
-        runBlocking {
-            launch {
-                if (
-                    userRepo.register(
-                        RegistrationCredentials(_name.value, _email.value, _password.value)
-                    )
-                ) {
-                    _loggedIn.value = true
-                    _message.value = Event("Registered successfully")
-                } else {
-                    _message.value = Event("Error registering")
+        if (_password.value == _confirmPassword.value) {
+            runBlocking {
+                launch {
+                    if (
+                        userRepo.register(
+                            RegistrationCredentials(_name.value, _email.value, _password.value)
+                        )
+                    ) {
+                        _loggedIn.value = true
+                        _message.value = Event("Registered successfully")
+                    } else {
+                        _message.value = Event("Error registering")
+                    }
                 }
             }
+        } else {
+            _message.value = Event("Passwords don't match")
         }
     }
 
