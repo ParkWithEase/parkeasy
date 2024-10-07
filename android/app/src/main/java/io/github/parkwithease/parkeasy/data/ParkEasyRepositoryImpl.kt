@@ -10,7 +10,8 @@ import io.ktor.http.Cookie
 import io.ktor.http.contentType
 import io.ktor.http.setCookie
 
-class ParkEasyRepositoryImpl(private val client: HttpClient) : ParkEasyRepository {
+class ParkEasyRepositoryImpl(private val client: HttpClient, private val authStore: AuthStore) :
+    ParkEasyRepository {
     override suspend fun login(credentials: Credentials) {
         var sessionCookie: Cookie? = null
         val response =
@@ -20,6 +21,7 @@ class ParkEasyRepositoryImpl(private val client: HttpClient) : ParkEasyRepositor
             }
         if (response.setCookie().size == 1) {
             sessionCookie = response.setCookie()[0]
+            authStore.set(sessionCookie)
         }
         Log.d("HTTP", sessionCookie.toString())
     }
