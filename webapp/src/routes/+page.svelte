@@ -1,8 +1,9 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { BACKEND_SERVER } from '$lib/constants';
+    import Navbar from '$lib/components/navbar.svelte';
 
-    export async function logout() {
+    async function logout() {
         try {
             const response = await fetch(`${BACKEND_SERVER}/auth`, {
                 method: 'DELETE',
@@ -18,6 +19,8 @@
         }
     }
 </script>
+
+<Navbar />
 
 <section class="loginForm">
     <h1>Welcome back!</h1>

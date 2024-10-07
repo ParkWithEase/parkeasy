@@ -1,20 +1,11 @@
 <script>
     import '../app.css';
+    import Footer from '$lib/components/footer.svelte';
 </script>
 
 <slot></slot>
 
-<footer class="footer">
-    <p>&copyparkeasy 2024</p>
-</footer>
+<Footer />
 
 <style>
-    .footer {
-        background-color: black;
-        color: lightgreen;
-        position: absolute;
-        text-align: center;
-        width: 100%;
-        bottom: 0px;
-    }
 </style>

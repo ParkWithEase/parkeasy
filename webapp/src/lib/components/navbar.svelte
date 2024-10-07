@@ -9,6 +9,7 @@
         /></a>
         <a class="nav-link" href="/profile/user-profile">book a spot</a>
         <a class="nav-link" href="/profile/user-profile">list your spot</a>
+        <a class="nav-link" href="/profile/user-profile">my profile</a>
         <a class="nav-link" href="/">about us</a>
     </nav>
     
@@ -21,12 +22,11 @@
             height: 7rem; 
             background-color: #000;   
             color: #FFF;   
-            z-index: -1;  
+            z-index: 999;  
             display: flex;   
             flex-direction: row;
             justify-content: space-evenly; 
             align-items: center; 
-            transition: all 0.2s ease-out;
         } 
     
         .nav-link {

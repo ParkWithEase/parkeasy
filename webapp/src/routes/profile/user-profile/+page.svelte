@@ -1,6 +1,24 @@
 <script lang="ts">
+    import { goto } from '$app/navigation';
+    import { BACKEND_SERVER } from '$lib/constants';
     import userClipart from '$lib/images/user-clipart.png';
     import Navbar from '$lib/components/navbar.svelte';
+
+    async function logout() {
+        try {
+            const response = await fetch(`${BACKEND_SERVER}/auth`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (response.ok) {
+                goto('/auth/login');
+            } else {
+                throw new Error("Can't log out for some reason");
+            }
+        } catch {
+            throw new Error('Something went wrong');
+        }
+    }
 </script>
 
 <Navbar />
@@ -8,13 +26,13 @@
 <div class="container">
     <div class="sidebar">
         <a href="/profile/user-profile"
-            ><img src={userClipart} alt="user" class="logo-medium"
+            ><img src={userClipart} alt="user" class="logo-extra-small"
         /></a>
         <a class="sidebar-link" href="/profile/user-profile">User Profile</a>
         <a class="sidebar-link" href="/profile/user-profile">Booking History</a>
         <a class="sidebar-link" href="/">Listing History</a>
         <a class="sidebar-link" href="/">Preference Cars</a>
-        <a class="logout-link" href="/">Logout</a>
+        <a class="logout-link" href='/' on:click={logout}>Logout</a>
     </div>
     <div class="listing-container">
 
@@ -26,7 +44,7 @@
         display: flex;
         flex-direction: row;
         margin: 10rem 3rem;
-        min-height: 75vh;
+        min-height: 70vh;
     }
 
     .container > div{
@@ -38,7 +56,6 @@
     .sidebar{
         display: flex;
         width: 25%;
-        min-height: 100%;
         flex-direction: column;
         font-size: 1.2rem;
         font-weight: bold;
@@ -48,7 +65,7 @@
 
     .sidebar > a {
         margin: 1rem;
-        padding: 1rem 7rem;
+        padding: 1rem 5rem;
         border-radius: 10px;
         text-decoration: none;
         color: #000000;
