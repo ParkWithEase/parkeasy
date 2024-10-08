@@ -15,14 +15,11 @@ class AuthRepositoryImpl(private val dataStore: DataStore<Preferences>) : AuthRe
     private val session = stringPreferencesKey("session")
     private val status = booleanPreferencesKey("status")
 
-    override val sessionFlow: Flow<Cookie>
-        get() =
-            dataStore.data.map { preferences ->
-                parseServerSetCookieHeader(preferences[session] ?: "")
-            }
+    override val sessionFlow: Flow<Cookie> =
+        dataStore.data.map { preferences -> parseServerSetCookieHeader(preferences[session] ?: "") }
 
-    override val statusFlow: Flow<Boolean>
-        get() = dataStore.data.map { preferences -> preferences[status] ?: false }
+    override val statusFlow: Flow<Boolean> =
+        dataStore.data.map { preferences -> preferences[status] ?: false }
 
     override suspend fun set(cookie: Cookie) {
         dataStore.edit { settings ->
