@@ -78,7 +78,7 @@ class UserRepositoryImpl(
         }
     }
 
-    override suspend fun reset(credentials: ResetCredentials): Boolean {
+    override suspend fun requestResetToken(credentials: ResetCredentials): Boolean {
         val response =
             withContext(ioDispatcher) {
                 client.post("/auth/password:forgot") {

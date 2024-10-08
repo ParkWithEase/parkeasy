@@ -101,7 +101,7 @@ constructor(private val authRepo: AuthRepository, private val userRepo: UserRepo
     fun onResetPress() {
         runBlocking {
             launch {
-                if (userRepo.reset(ResetCredentials(_email.value))) {
+                if (userRepo.requestResetToken(ResetCredentials(_email.value))) {
                     _message.value = Event("Reset email sent\nJk... we're working on it")
                 } else {
                     _message.value = Event("Error resetting password")
