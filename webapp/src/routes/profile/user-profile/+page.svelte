@@ -1,8 +1,6 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { BACKEND_SERVER } from '$lib/constants';
-    import userClipart from '$lib/images/user-clipart.png';
-    import Navbar from '$lib/components/navbar.svelte';
 
     async function logout() {
         try {

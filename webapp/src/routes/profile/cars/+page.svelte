@@ -67,6 +67,10 @@
 
     function resetForm(id: string) {
         let form = document.getElementById(id) as HTMLFormElement;
+        if (form == undefined)
+    {
+        return;
+    }
         form.reset();
     }
 </script>

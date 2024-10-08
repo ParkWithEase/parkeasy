@@ -88,9 +88,8 @@
 
     a.active {
         color:#ffffff;
-        background-color: #090909;
-        border: 1px solid #fcfcfc;
-        transition: 0.5s;
+        background-color: #32683b;
+        transition: 0.3s;
     }
 
     .logout-link:hover {
