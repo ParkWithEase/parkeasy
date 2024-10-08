@@ -42,7 +42,6 @@ func (p *PostgresRepository) Create(ctx context.Context, id uuid.UUID, profile m
 	}
 	err = tx.Commit()
 	if err != nil {
-		// TODO: Handle duplicate error
 		return 0, fmt.Errorf("could not commit transaction: %w", err)
 	}
 	return inserted.Userid, nil

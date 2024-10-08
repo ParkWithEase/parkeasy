@@ -37,12 +37,14 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	authMiddleware := routes.NewSessionMiddleware(api, sessionManager)
 	api.UseMiddleware(authMiddleware)
 
+	db := bob.NewDB(stdlib.OpenDBFromPool(c.DBPool))
+
 	passwordRepository := resettoken.NewMemoryRepository()
-	authRepository := authRepo.NewPostgres(bob.NewDB(stdlib.OpenDBFromPool(c.DBPool)))
+	authRepository := authRepo.NewPostgres(db)
 	authService := auth.NewService(authRepository, passwordRepository)
 	authRoute := routes.NewAuthRoute(authService, sessionManager)
 
-	userRepository := userRepo.NewPostgres(bob.NewDB(stdlib.OpenDBFromPool(c.DBPool)))
+	userRepository := userRepo.NewPostgres(db)
 	userService := user.NewService(authService, userRepository)
 	userRoute := routes.NewUserRoute(userService, sessionManager)
 	huma.AutoRegister(api, authRoute)

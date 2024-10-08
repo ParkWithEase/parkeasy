@@ -32,9 +32,9 @@ func TestPostgresIntegration(t *testing.T) {
 	pool, err := pgxpool.New(ctx, connString)
 	require.NoError(t, err, "could not connect to db")
 	t.Cleanup(func() { pool.Close() })
-	db := stdlib.OpenDBFromPool(pool)
+	db := bob.NewDB(stdlib.OpenDBFromPool(pool))
 
-	repo := NewPostgres(bob.NewDB(db))
+	repo := NewPostgres(db)
 	t.Run("basic add & get", func(t *testing.T) {
 		t.Cleanup(func() {
 			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
