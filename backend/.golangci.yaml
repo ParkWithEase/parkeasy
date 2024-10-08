@@ -69,7 +69,10 @@ linters-settings:
     allow:
       - anon
       - error
-      - huma\.
+      - empty
+
+      # no concrete types are exposed for huma.API
+      - github.com\/danielgtaylor\/huma\/v2\.API
 
 issues:
   exclude-rules:
