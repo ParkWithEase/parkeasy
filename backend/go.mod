@@ -67,6 +67,7 @@ require (
 	github.com/andskur/argon2-hashing v0.1.3
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/hcl v1.0.0 // indirect

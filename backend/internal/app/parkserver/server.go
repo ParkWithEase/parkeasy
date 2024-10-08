@@ -23,8 +23,8 @@ import (
 	carRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/car"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/car"
 
-	// parkingSpotRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
-	// "github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/parkingspot"
+	parkingSpotRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/parkingspot"
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
@@ -53,6 +53,8 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	authMiddleware := routes.NewSessionMiddleware(api, sessionManager)
 	api.UseMiddleware(authMiddleware)
 
+	bobDB := bob.NewDB(stdlib.OpenDBFromPool(c.DBPool))
+
 	passwordRepository := resettoken.NewMemoryRepository()
 	authRepository := authRepo.NewMemoryRepository()
 	authService := auth.NewService(authRepository, passwordRepository)
@@ -62,12 +64,9 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	userService := user.NewService(authService, userRepository)
 	userRoute := routes.NewUserRoute(userService, sessionManager)
 
-	// parkingSpotRepo := parkingSpotRepo.New(c.DBPool)
-	// parkingSpotService := parkingspot.NewService(parkingSpotRepo)
-	// parkingSpotRoute := routes.NewParkingSpotRoute(parkingSpotService, sessionManager, authMiddleware)
-
-	bobDB := bob.NewDB(stdlib.OpenDBFromPool(c.DBPool))
-
+	parkingSpotRepo := parkingSpotRepo.NewPostgres(bobDB)
+	parkingSpotService := parkingspot.New(parkingSpotRepo)
+	parkingSpotRoute := routes.NewParkingSpotRoute(parkingSpotService, sessionManager, authMiddleware)
 
 	carRepo := carRepo.NewPostgres(bobDB)
 	carService := car.New(carRepo)
@@ -75,7 +74,7 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 
 	huma.AutoRegister(api, authRoute)
 	huma.AutoRegister(api, userRoute)
-	// huma.AutoRegister(api, parkingSpotRoute)
+	huma.AutoRegister(api, parkingSpotRoute)
 	huma.AutoRegister(api, carRoute)
 }
 
