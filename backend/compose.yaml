@@ -24,8 +24,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./db_data:/var/lib/postgresql/data
-      - ./init_db:/docker-entrypoint-initdb.d/
+      - database:/var/lib/postgres/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d testdb -U testuser"]
       interval: 5s
@@ -37,3 +36,6 @@ services:
 networks:
   backend:
     driver: bridge
+
+volumes:
+  database:
