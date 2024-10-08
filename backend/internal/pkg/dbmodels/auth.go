@@ -47,7 +47,8 @@ type AuthsStmt = bob.QueryStmt[*Auth, AuthSlice]
 
 // authR is where relationships are stored.
 type authR struct {
-	AuthuuidUser *User // users.users_authuuid_fkey
+	AuthuuidResettoken *Resettoken // resettoken.resettoken_authuuid_fkey
+	AuthuuidUser       *User       // users.users_authuuid_fkey
 }
 
 // AuthSetter is used for insert/upsert/update operations
@@ -219,8 +220,9 @@ func buildAuthWhere[Q psql.Filterable](cols authColumns) authWhere[Q] {
 }
 
 type authJoins[Q dialect.Joinable] struct {
-	typ          string
-	AuthuuidUser func(context.Context) modAs[Q, userColumns]
+	typ                string
+	AuthuuidResettoken func(context.Context) modAs[Q, resettokenColumns]
+	AuthuuidUser       func(context.Context) modAs[Q, userColumns]
 }
 
 func (j authJoins[Q]) aliasedAs(alias string) authJoins[Q] {
@@ -229,8 +231,9 @@ func (j authJoins[Q]) aliasedAs(alias string) authJoins[Q] {
 
 func buildAuthJoins[Q dialect.Joinable](cols authColumns, typ string) authJoins[Q] {
 	return authJoins[Q]{
-		typ:          typ,
-		AuthuuidUser: authsJoinAuthuuidUser[Q](cols, typ),
+		typ:                typ,
+		AuthuuidResettoken: authsJoinAuthuuidResettoken[Q](cols, typ),
+		AuthuuidUser:       authsJoinAuthuuidUser[Q](cols, typ),
 	}
 }
 
@@ -329,6 +332,25 @@ func (o AuthSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	return nil
 }
 
+func authsJoinAuthuuidResettoken[Q dialect.Joinable](from authColumns, typ string) func(context.Context) modAs[Q, resettokenColumns] {
+	return func(ctx context.Context) modAs[Q, resettokenColumns] {
+		return modAs[Q, resettokenColumns]{
+			c: ResettokenColumns,
+			f: func(to resettokenColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Resettokens.Name(ctx).As(to.Alias())).On(
+						to.Authuuid.EQ(from.Authuuid),
+					))
+				}
+
+				return mods
+			},
+		}
+	}
+}
+
 func authsJoinAuthuuidUser[Q dialect.Joinable](from authColumns, typ string) func(context.Context) modAs[Q, userColumns] {
 	return func(ctx context.Context) modAs[Q, userColumns] {
 		return modAs[Q, userColumns]{
@@ -346,6 +368,24 @@ func authsJoinAuthuuidUser[Q dialect.Joinable](from authColumns, typ string) fun
 			},
 		}
 	}
+}
+
+// AuthuuidResettoken starts a query for related objects on resettoken
+func (o *Auth) AuthuuidResettoken(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ResettokensQuery {
+	return Resettokens.Query(ctx, exec, append(mods,
+		sm.Where(ResettokenColumns.Authuuid.EQ(psql.Arg(o.Authuuid))),
+	)...)
+}
+
+func (os AuthSlice) AuthuuidResettoken(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ResettokensQuery {
+	PKArgs := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgs[i] = psql.ArgGroup(o.Authuuid)
+	}
+
+	return Resettokens.Query(ctx, exec, append(mods,
+		sm.Where(psql.Group(ResettokenColumns.Authuuid).In(PKArgs...)),
+	)...)
 }
 
 // AuthuuidUser starts a query for related objects on users
@@ -372,6 +412,18 @@ func (o *Auth) Preload(name string, retrieved any) error {
 	}
 
 	switch name {
+	case "AuthuuidResettoken":
+		rel, ok := retrieved.(*Resettoken)
+		if !ok {
+			return fmt.Errorf("auth cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.AuthuuidResettoken = rel
+
+		if rel != nil {
+			rel.R.AuthuuidAuth = o
+		}
+		return nil
 	case "AuthuuidUser":
 		rel, ok := retrieved.(*User)
 		if !ok {
@@ -387,6 +439,94 @@ func (o *Auth) Preload(name string, retrieved any) error {
 	default:
 		return fmt.Errorf("auth has no relationship %q", name)
 	}
+}
+
+func PreloadAuthAuthuuidResettoken(opts ...psql.PreloadOption) psql.Preloader {
+	return psql.Preload[*Resettoken, ResettokenSlice](orm.Relationship{
+		Name: "AuthuuidResettoken",
+		Sides: []orm.RelSide{
+			{
+				From: "auth",
+				To:   TableNames.Resettokens,
+				ToExpr: func(ctx context.Context) bob.Expression {
+					return Resettokens.Name(ctx)
+				},
+				FromColumns: []string{
+					ColumnNames.Auths.Authuuid,
+				},
+				ToColumns: []string{
+					ColumnNames.Resettokens.Authuuid,
+				},
+			},
+		},
+	}, Resettokens.Columns().Names(), opts...)
+}
+
+func ThenLoadAuthAuthuuidResettoken(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
+	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+		loader, isLoader := retrieved.(interface {
+			LoadAuthAuthuuidResettoken(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+		})
+		if !isLoader {
+			return fmt.Errorf("object %T cannot load AuthAuthuuidResettoken", retrieved)
+		}
+
+		err := loader.LoadAuthAuthuuidResettoken(ctx, exec, queryMods...)
+
+		// Don't cause an issue due to missing relationships
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+
+		return err
+	})
+}
+
+// LoadAuthAuthuuidResettoken loads the auth's AuthuuidResettoken into the .R struct
+func (o *Auth) LoadAuthAuthuuidResettoken(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.AuthuuidResettoken = nil
+
+	related, err := o.AuthuuidResettoken(ctx, exec, mods...).One()
+	if err != nil {
+		return err
+	}
+
+	related.R.AuthuuidAuth = o
+
+	o.R.AuthuuidResettoken = related
+	return nil
+}
+
+// LoadAuthAuthuuidResettoken loads the auth's AuthuuidResettoken into the .R struct
+func (os AuthSlice) LoadAuthAuthuuidResettoken(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	resettokens, err := os.AuthuuidResettoken(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		for _, rel := range resettokens {
+			if o.Authuuid != rel.Authuuid {
+				continue
+			}
+
+			rel.R.AuthuuidAuth = o
+
+			o.R.AuthuuidResettoken = rel
+			break
+		}
+	}
+
+	return nil
 }
 
 func PreloadAuthAuthuuidUser(opts ...psql.PreloadOption) psql.Preloader {
@@ -473,6 +613,58 @@ func (os AuthSlice) LoadAuthAuthuuidUser(ctx context.Context, exec bob.Executor,
 			break
 		}
 	}
+
+	return nil
+}
+
+func insertAuthAuthuuidResettoken0(ctx context.Context, exec bob.Executor, resettoken1 *ResettokenSetter, auth0 *Auth) (*Resettoken, error) {
+	resettoken1.Authuuid = omit.From(auth0.Authuuid)
+
+	ret, err := Resettokens.Insert(ctx, exec, resettoken1)
+	if err != nil {
+		return ret, fmt.Errorf("insertAuthAuthuuidResettoken0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachAuthAuthuuidResettoken0(ctx context.Context, exec bob.Executor, count int, resettoken1 *Resettoken, auth0 *Auth) (*Resettoken, error) {
+	setter := &ResettokenSetter{
+		Authuuid: omit.From(auth0.Authuuid),
+	}
+
+	err := Resettokens.Update(ctx, exec, setter, resettoken1)
+	if err != nil {
+		return nil, fmt.Errorf("attachAuthAuthuuidResettoken0: %w", err)
+	}
+
+	return resettoken1, nil
+}
+
+func (auth0 *Auth) InsertAuthuuidResettoken(ctx context.Context, exec bob.Executor, related *ResettokenSetter) error {
+	resettoken1, err := insertAuthAuthuuidResettoken0(ctx, exec, related, auth0)
+	if err != nil {
+		return err
+	}
+
+	auth0.R.AuthuuidResettoken = resettoken1
+
+	resettoken1.R.AuthuuidAuth = auth0
+
+	return nil
+}
+
+func (auth0 *Auth) AttachAuthuuidResettoken(ctx context.Context, exec bob.Executor, resettoken1 *Resettoken) error {
+	var err error
+
+	_, err = attachAuthAuthuuidResettoken0(ctx, exec, 1, resettoken1, auth0)
+	if err != nil {
+		return err
+	}
+
+	auth0.R.AuthuuidResettoken = resettoken1
+
+	resettoken1.R.AuthuuidAuth = auth0
 
 	return nil
 }

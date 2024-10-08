@@ -105,10 +105,10 @@ func (p *PostgresRepository) UpdatePassword(ctx context.Context, authID uuid.UUI
 		um.Set(dbmodels.AuthColumns.Passwordhash, psql.Arg(string(newPassword))),
 	)
 
-	//Execute the query
+	// Execute the query
 	_, err := bob.Exec(ctx, db, query)
 	if err != nil {
-		return fmt.Errorf("could not execute update: %v", err)
+		return fmt.Errorf("could not execute update: %w", err)
 	}
 
 	return nil

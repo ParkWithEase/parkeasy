@@ -46,7 +46,7 @@ func (p *PostgresRepository) Create(ctx context.Context, id uuid.UUID, profile m
 		// TODO: Handle duplicate error
 		return 0, fmt.Errorf("could not commit transaction: %w", err)
 	}
-	return int64(inserted.Userid), nil
+	return inserted.Userid, nil
 }
 
 // GetProfileById implements Repository.
@@ -70,7 +70,7 @@ func (p *PostgresRepository) GetProfileByID(ctx context.Context, id int64) (Prof
 			Email:    result.Email,
 		},
 		Auth: result.Authuuid,
-		ID:   int64(result.Userid),
+		ID:   result.Userid,
 	}, err
 }
 
@@ -95,6 +95,6 @@ func (p *PostgresRepository) GetProfileByAuth(ctx context.Context, id uuid.UUID)
 			Email:    result.Email,
 		},
 		Auth: result.Authuuid,
-		ID:   int64(result.Userid),
+		ID:   result.Userid,
 	}, err
 }
