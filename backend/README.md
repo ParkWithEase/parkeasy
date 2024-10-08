@@ -25,9 +25,6 @@ This server uses [Bob](https://bob.stephenafamo.com/) for building and running S
 
 In order to get the most out of the library, a model must be generated from the database. To do this:
 
-    # Remove previous model. This is optional
-    rm -rf internal/pkg/dbmodels
-
     # Remove database, if any. This is optional
     # NOTE: THIS WILL DESTROY YOUR EXISTING DB
     docker compose -f compose.yaml down -v

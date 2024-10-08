@@ -1,3 +1,5 @@
+no_factory: true
+
 psql:
   dsn: "postgres://testuser:testpassword@localhost:5432/testdb?sslmode=disable"
   uuid_pkg: google

@@ -5,9 +5,6 @@ package dbmodels
 
 import (
 	"context"
-	"database/sql"
-	"errors"
-	"fmt"
 
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
@@ -18,8 +15,6 @@ import (
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/expr"
-	"github.com/stephenafamo/bob/mods"
-	"github.com/stephenafamo/bob/orm"
 )
 
 // Auth is an object representing the database table.
@@ -28,8 +23,6 @@ type Auth struct {
 	Authuuid     uuid.UUID `db:"authuuid" `
 	Email        string    `db:"email" `
 	Passwordhash string    `db:"passwordhash" `
-
-	R authR `db:"-" `
 }
 
 // AuthSlice is an alias for a slice of pointers to Auth.
@@ -44,11 +37,6 @@ type AuthsQuery = *psql.ViewQuery[*Auth, AuthSlice]
 
 // AuthsStmt is a prepared statment on auth
 type AuthsStmt = bob.QueryStmt[*Auth, AuthSlice]
-
-// authR is where relationships are stored.
-type authR struct {
-	AuthuuidUser *User // users.users_authuuid_fkey
-}
 
 // AuthSetter is used for insert/upsert/update operations
 // All values are optional, and do not have to be set
@@ -218,22 +206,6 @@ func buildAuthWhere[Q psql.Filterable](cols authColumns) authWhere[Q] {
 	}
 }
 
-type authJoins[Q dialect.Joinable] struct {
-	typ          string
-	AuthuuidUser func(context.Context) modAs[Q, userColumns]
-}
-
-func (j authJoins[Q]) aliasedAs(alias string) authJoins[Q] {
-	return buildAuthJoins[Q](buildAuthColumns(alias), j.typ)
-}
-
-func buildAuthJoins[Q dialect.Joinable](cols authColumns, typ string) authJoins[Q] {
-	return authJoins[Q]{
-		typ:          typ,
-		AuthuuidUser: authsJoinAuthuuidUser[Q](cols, typ),
-	}
-}
-
 // FindAuth retrieves a single record by primary key
 // If cols is empty Find will return all columns.
 func FindAuth(ctx context.Context, exec bob.Executor, AuthidPK int32, cols ...string) (*Auth, error) {
@@ -283,7 +255,7 @@ func (o *Auth) Reload(ctx context.Context, exec bob.Executor) error {
 	if err != nil {
 		return err
 	}
-	o2.R = o.R
+
 	*o = *o2
 
 	return nil
@@ -320,211 +292,11 @@ func (o AuthSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 			if new.Authid != old.Authid {
 				continue
 			}
-			new.R = old.R
+
 			*old = *new
 			break
 		}
 	}
-
-	return nil
-}
-
-func authsJoinAuthuuidUser[Q dialect.Joinable](from authColumns, typ string) func(context.Context) modAs[Q, userColumns] {
-	return func(ctx context.Context) modAs[Q, userColumns] {
-		return modAs[Q, userColumns]{
-			c: UserColumns,
-			f: func(to userColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Users.Name(ctx).As(to.Alias())).On(
-						to.Authuuid.EQ(from.Authuuid),
-					))
-				}
-
-				return mods
-			},
-		}
-	}
-}
-
-// AuthuuidUser starts a query for related objects on users
-func (o *Auth) AuthuuidUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
-	return Users.Query(ctx, exec, append(mods,
-		sm.Where(UserColumns.Authuuid.EQ(psql.Arg(o.Authuuid))),
-	)...)
-}
-
-func (os AuthSlice) AuthuuidUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
-	PKArgs := make([]bob.Expression, len(os))
-	for i, o := range os {
-		PKArgs[i] = psql.ArgGroup(o.Authuuid)
-	}
-
-	return Users.Query(ctx, exec, append(mods,
-		sm.Where(psql.Group(UserColumns.Authuuid).In(PKArgs...)),
-	)...)
-}
-
-func (o *Auth) Preload(name string, retrieved any) error {
-	if o == nil {
-		return nil
-	}
-
-	switch name {
-	case "AuthuuidUser":
-		rel, ok := retrieved.(*User)
-		if !ok {
-			return fmt.Errorf("auth cannot load %T as %q", retrieved, name)
-		}
-
-		o.R.AuthuuidUser = rel
-
-		if rel != nil {
-			rel.R.AuthuuidAuth = o
-		}
-		return nil
-	default:
-		return fmt.Errorf("auth has no relationship %q", name)
-	}
-}
-
-func PreloadAuthAuthuuidUser(opts ...psql.PreloadOption) psql.Preloader {
-	return psql.Preload[*User, UserSlice](orm.Relationship{
-		Name: "AuthuuidUser",
-		Sides: []orm.RelSide{
-			{
-				From: "auth",
-				To:   TableNames.Users,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Users.Name(ctx)
-				},
-				FromColumns: []string{
-					ColumnNames.Auths.Authuuid,
-				},
-				ToColumns: []string{
-					ColumnNames.Users.Authuuid,
-				},
-			},
-		},
-	}, Users.Columns().Names(), opts...)
-}
-
-func ThenLoadAuthAuthuuidUser(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
-	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
-		loader, isLoader := retrieved.(interface {
-			LoadAuthAuthuuidUser(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
-		})
-		if !isLoader {
-			return fmt.Errorf("object %T cannot load AuthAuthuuidUser", retrieved)
-		}
-
-		err := loader.LoadAuthAuthuuidUser(ctx, exec, queryMods...)
-
-		// Don't cause an issue due to missing relationships
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil
-		}
-
-		return err
-	})
-}
-
-// LoadAuthAuthuuidUser loads the auth's AuthuuidUser into the .R struct
-func (o *Auth) LoadAuthAuthuuidUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if o == nil {
-		return nil
-	}
-
-	// Reset the relationship
-	o.R.AuthuuidUser = nil
-
-	related, err := o.AuthuuidUser(ctx, exec, mods...).One()
-	if err != nil {
-		return err
-	}
-
-	related.R.AuthuuidAuth = o
-
-	o.R.AuthuuidUser = related
-	return nil
-}
-
-// LoadAuthAuthuuidUser loads the auth's AuthuuidUser into the .R struct
-func (os AuthSlice) LoadAuthAuthuuidUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if len(os) == 0 {
-		return nil
-	}
-
-	users, err := os.AuthuuidUser(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, o := range os {
-		for _, rel := range users {
-			if o.Authuuid != rel.Authuuid {
-				continue
-			}
-
-			rel.R.AuthuuidAuth = o
-
-			o.R.AuthuuidUser = rel
-			break
-		}
-	}
-
-	return nil
-}
-
-func insertAuthAuthuuidUser0(ctx context.Context, exec bob.Executor, user1 *UserSetter, auth0 *Auth) (*User, error) {
-	user1.Authuuid = omit.From(auth0.Authuuid)
-
-	ret, err := Users.Insert(ctx, exec, user1)
-	if err != nil {
-		return ret, fmt.Errorf("insertAuthAuthuuidUser0: %w", err)
-	}
-
-	return ret, nil
-}
-
-func attachAuthAuthuuidUser0(ctx context.Context, exec bob.Executor, count int, user1 *User, auth0 *Auth) (*User, error) {
-	setter := &UserSetter{
-		Authuuid: omit.From(auth0.Authuuid),
-	}
-
-	err := Users.Update(ctx, exec, setter, user1)
-	if err != nil {
-		return nil, fmt.Errorf("attachAuthAuthuuidUser0: %w", err)
-	}
-
-	return user1, nil
-}
-
-func (auth0 *Auth) InsertAuthuuidUser(ctx context.Context, exec bob.Executor, related *UserSetter) error {
-	user1, err := insertAuthAuthuuidUser0(ctx, exec, related, auth0)
-	if err != nil {
-		return err
-	}
-
-	auth0.R.AuthuuidUser = user1
-
-	user1.R.AuthuuidAuth = auth0
-
-	return nil
-}
-
-func (auth0 *Auth) AttachAuthuuidUser(ctx context.Context, exec bob.Executor, user1 *User) error {
-	var err error
-
-	_, err = attachAuthAuthuuidUser0(ctx, exec, 1, user1, auth0)
-	if err != nil {
-		return err
-	}
-
-	auth0.R.AuthuuidUser = user1
-
-	user1.R.AuthuuidAuth = auth0
 
 	return nil
 }
