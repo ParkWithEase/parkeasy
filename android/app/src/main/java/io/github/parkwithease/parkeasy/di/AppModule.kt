@@ -14,8 +14,6 @@ import dagger.hilt.components.SingletonComponent
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.data.local.AuthRepositoryImpl
-import io.github.parkwithease.parkeasy.data.remote.UserRepository
-import io.github.parkwithease.parkeasy.data.remote.UserRepositoryImpl
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -52,11 +50,5 @@ object AppModule {
     @Singleton
     fun provideAuthStore(@ApplicationContext context: Context): AuthRepository {
         return AuthRepositoryImpl(context.dataStore)
-    }
-
-    @Provides
-    @Singleton
-    fun provideUserRepository(client: HttpClient, authStore: AuthRepository): UserRepository {
-        return UserRepositoryImpl(client, authStore)
     }
 }

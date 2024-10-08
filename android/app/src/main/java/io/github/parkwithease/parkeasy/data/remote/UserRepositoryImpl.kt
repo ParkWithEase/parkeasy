@@ -16,12 +16,15 @@ import io.ktor.http.Cookie
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.setCookie
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 
-class UserRepositoryImpl(
+class UserRepositoryImpl
+@Inject
+constructor(
     private val client: HttpClient,
     private val authRepo: AuthRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
