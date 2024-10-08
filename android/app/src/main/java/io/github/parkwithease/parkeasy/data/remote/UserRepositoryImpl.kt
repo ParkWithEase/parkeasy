@@ -26,66 +26,66 @@ class UserRepositoryImpl(
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : UserRepository {
     override suspend fun login(credentials: LoginCredentials): Boolean {
-        return withContext(ioDispatcher) {
-            var success = false
-            val sessionCookie: Cookie?
-            val response =
+        var success = false
+        val sessionCookie: Cookie?
+        val response =
+            withContext(ioDispatcher) {
                 client.post("/auth") {
                     contentType(ContentType.Application.Json)
                     setBody(credentials)
                 }
-            sessionCookie = response.setCookie().firstOrNull()
-            if (sessionCookie != null) {
-                authRepo.set(sessionCookie)
-                success = true
             }
-            Log.d("HTTP", sessionCookie.toString())
-            return@withContext success
+        sessionCookie = response.setCookie().firstOrNull()
+        if (sessionCookie != null) {
+            authRepo.set(sessionCookie)
+            success = true
         }
+        Log.d("HTTP", sessionCookie.toString())
+        return success
     }
 
     override suspend fun register(credentials: RegistrationCredentials): Boolean {
-        return withContext(ioDispatcher) {
-            var success = false
-            val sessionCookie: Cookie?
-            val response =
+        var success = false
+        val sessionCookie: Cookie?
+        val response =
+            withContext(ioDispatcher) {
                 client.post("/user") {
                     contentType(ContentType.Application.Json)
                     setBody(credentials)
                 }
-            sessionCookie = response.setCookie().firstOrNull()
-            if (sessionCookie != null) {
-                authRepo.set(sessionCookie)
-                success = true
             }
-            Log.d("HTTP", sessionCookie.toString())
-            return@withContext success
+        sessionCookie = response.setCookie().firstOrNull()
+        if (sessionCookie != null) {
+            authRepo.set(sessionCookie)
+            success = true
         }
+        Log.d("HTTP", sessionCookie.toString())
+        return success
     }
 
     override suspend fun logout() {
-        withContext(ioDispatcher) {
-            val authCookie = authRepo.getSession()
-            if (authCookie != null) {
-                val response =
+        val authCookie = authRepo.getSession()
+        if (authCookie != null) {
+            val response =
+                withContext(ioDispatcher) {
                     client.delete("/auth") {
                         contentType(ContentType.Application.Json)
                         cookie(authCookie.name, authCookie.value)
                     }
-                authRepo.reset()
-                Log.d("HTTP", response.toString())
-            }
+                }
+            authRepo.reset()
+            Log.d("HTTP", response.toString())
         }
     }
 
     override suspend fun reset(credentials: ResetCredentials): Boolean {
-        return withContext(ioDispatcher) {
-            val response =
+        val response =
+            withContext(ioDispatcher) {
                 client.post("/auth/password:forgot") {
                     contentType(ContentType.Application.Json)
                     setBody(credentials)
                 }
-            return@withContext response.status == HttpStatusCode.OK
-        }
+            }
+        return response.status == HttpStatusCode.OK
     }
 }
