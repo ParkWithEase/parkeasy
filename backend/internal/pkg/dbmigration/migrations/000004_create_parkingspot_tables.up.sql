@@ -1,7 +1,7 @@
 -- Parking spot details
 CREATE TABLE IF NOT EXISTS ParkingSpot (
   ParkingSpotId SERIAL PRIMARY KEY,
-  ParkingSpotUUID UNIQUE NOT NULL,
+  ParkingSpotUUID UUID UNIQUE NOT NULL,
   UserId INTEGER NOT NULL REFERENCES Users(UserID),
   Address TEXT NOT NULL,
   Longitude REAL NOT NULL,

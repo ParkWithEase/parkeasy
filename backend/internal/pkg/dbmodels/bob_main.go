@@ -14,42 +14,18 @@ import (
 
 var TableNames = struct {
 	Auths string
-	Cars  string
-	Users string
 }{
 	Auths: "auth",
-	Cars:  "car",
-	Users: "users",
 }
 
 var ColumnNames = struct {
 	Auths authColumnNames
-	Cars  carColumnNames
-	Users userColumnNames
 }{
 	Auths: authColumnNames{
 		Authid:       "authid",
 		Authuuid:     "authuuid",
 		Email:        "email",
 		Passwordhash: "passwordhash",
-	},
-	Cars: carColumnNames{
-		Carid:        "carid",
-		Userid:       "userid",
-		Caruuid:      "caruuid",
-		Licenseplate: "licenseplate",
-		Make:         "make",
-		Model:        "model",
-		Color:        "color",
-	},
-	Users: userColumnNames{
-		Userid:     "userid",
-		Authuuid:   "authuuid",
-		Useruuid:   "useruuid",
-		Fullname:   "fullname",
-		Email:      "email",
-		Isverified: "isverified",
-		Addedat:    "addedat",
 	},
 }
 
@@ -62,17 +38,11 @@ var (
 
 func Where[Q psql.Filterable]() struct {
 	Auths authWhere[Q]
-	Cars  carWhere[Q]
-	Users userWhere[Q]
 } {
 	return struct {
 		Auths authWhere[Q]
-		Cars  carWhere[Q]
-		Users userWhere[Q]
 	}{
 		Auths: buildAuthWhere[Q](AuthColumns),
-		Cars:  buildCarWhere[Q](CarColumns),
-		Users: buildUserWhere[Q](UserColumns),
 	}
 }
 
@@ -96,11 +66,7 @@ func (j joinSet[Q]) AliasedAs(alias string) joinSet[Q] {
 	}
 }
 
-type joins[Q dialect.Joinable] struct {
-	Auths joinSet[authJoins[Q]]
-	Cars  joinSet[carJoins[Q]]
-	Users joinSet[userJoins[Q]]
-}
+type joins[Q dialect.Joinable] struct{}
 
 func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q](c C, f F) joinSet[Q] {
 	return joinSet[Q]{
@@ -111,11 +77,7 @@ func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q
 }
 
 func getJoins[Q dialect.Joinable]() joins[Q] {
-	return joins[Q]{
-		Auths: buildJoinSet[authJoins[Q]](AuthColumns, buildAuthJoins),
-		Cars:  buildJoinSet[carJoins[Q]](CarColumns, buildCarJoins),
-		Users: buildJoinSet[userJoins[Q]](UserColumns, buildUserJoins),
-	}
+	return joins[Q]{}
 }
 
 type modAs[Q any, C interface{ AliasedAs(string) C }] struct {

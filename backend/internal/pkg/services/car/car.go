@@ -20,26 +20,26 @@ func New(repo car.Repository) *Service {
 	}
 }
 
-func (s *Service) Create(ctx context.Context, userID int64, carModel *models.CarCreationInput) (int64, models.Car, error) {
+func (s *Service) Create(ctx context.Context, userID int64, carModel *models.CarCreationInput) (uuid.UUID, error) {
 	licensePlatePattern := regexp.MustCompile(`^[A-Za-z0-9 ]{2,8}$`)
 	if !licensePlatePattern.MatchString(carModel.LicensePlate) {
-		return 0, models.Car{}, models.ErrInvalidLicensePlate
+		return uuid.Nil, models.ErrInvalidLicensePlate
 	}
 	if carModel.Make == "" {
-		return 0, models.Car{}, models.ErrInvalidMake
+		return uuid.Nil, models.ErrInvalidMake
 	}
 	if carModel.Model == "" {
-		return 0, models.Car{}, models.ErrInvalidModel
+		return uuid.Nil, models.ErrInvalidModel
 	}
 	if carModel.Color == "" {
-		return 0, models.Car{}, models.ErrInvalidColor
+		return uuid.Nil, models.ErrInvalidColor
 	}
 
-	internalID, result, err := s.repo.Create(ctx, userID, carModel)
+	result, err := s.repo.Create(ctx, userID, carModel)
 	if err != nil {
-		return 0, models.Car{}, err
+		return uuid.Nil, nil
 	}
-	return internalID, result.Car, nil
+	return result, nil
 }
 
 func (s *Service) GetByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error) {
