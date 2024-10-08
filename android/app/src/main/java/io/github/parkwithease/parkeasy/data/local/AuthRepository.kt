@@ -1,21 +1,14 @@
 package io.github.parkwithease.parkeasy.data.local
 
 import io.ktor.http.Cookie
+import kotlinx.coroutines.flow.Flow
 
 interface AuthRepository {
-    /**
-     * Gets the session Cookie.
-     *
-     * @return the session Cookie.
-     */
-    suspend fun getSession(): Cookie?
+    /** Flow of the session Cookie. */
+    val sessionFlow: Flow<Cookie>
 
-    /**
-     * Gets the session status.
-     *
-     * @return true if user logged in, false otherwise.
-     */
-    suspend fun getStatus(): Boolean
+    /** Flow of the session status (true if logged in, false otherwise). */
+    val statusFlow: Flow<Boolean>
 
     /**
      * Sets the session Cookie and status to logged in.

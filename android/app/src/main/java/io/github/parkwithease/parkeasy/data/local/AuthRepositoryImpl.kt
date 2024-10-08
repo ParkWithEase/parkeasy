@@ -9,25 +9,20 @@ import io.ktor.http.Cookie
 import io.ktor.http.parseServerSetCookieHeader
 import io.ktor.http.renderSetCookieHeader
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 class AuthRepositoryImpl(private val dataStore: DataStore<Preferences>) : AuthRepository {
     private val session = stringPreferencesKey("session")
     private val status = booleanPreferencesKey("status")
 
-    override suspend fun getSession(): Cookie {
-        val sessionFlow: Flow<String> =
-            dataStore.data.map { preferences -> preferences[session] ?: "" }
-        return if (sessionFlow.first() != "") parseServerSetCookieHeader(sessionFlow.first())
-        else Cookie("session", "")
-    }
+    override val sessionFlow: Flow<Cookie>
+        get() =
+            dataStore.data.map { preferences ->
+                parseServerSetCookieHeader(preferences[session] ?: "")
+            }
 
-    override suspend fun getStatus(): Boolean {
-        val sessionFlow: Flow<Boolean> =
-            dataStore.data.map { preferences -> preferences[status] ?: false }
-        return sessionFlow.first()
-    }
+    override val statusFlow: Flow<Boolean>
+        get() = dataStore.data.map { preferences -> preferences[status] ?: false }
 
     override suspend fun set(cookie: Cookie) {
         dataStore.edit { settings ->

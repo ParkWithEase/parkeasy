@@ -23,7 +23,7 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel<ProfileViewModel>(),
 ) {
-    val loggedIn by viewModel.loggedIn.collectAsState()
+    val loggedIn by viewModel.loggedIn.collectAsState(true)
     val onLogoutEvent: () -> Unit = onLogout
     LaunchedEffect(loggedIn) {
         if (!loggedIn) {

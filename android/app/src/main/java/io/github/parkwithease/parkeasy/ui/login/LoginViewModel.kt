@@ -17,8 +17,7 @@ import kotlinx.coroutines.runBlocking
 @HiltViewModel
 class LoginViewModel
 @Inject
-constructor(private val authRepo: AuthRepository, private val userRepo: UserRepository) :
-    ViewModel() {
+constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : ViewModel() {
     private val _name = MutableStateFlow("")
     val name = _name.asStateFlow()
 
@@ -37,15 +36,10 @@ constructor(private val authRepo: AuthRepository, private val userRepo: UserRepo
     private val _registering = MutableStateFlow(false)
     val registering = _registering.asStateFlow()
 
-    private val _loggedIn = MutableStateFlow(false)
-    val loggedIn = _loggedIn.asStateFlow()
+    val loggedIn = authRepo.statusFlow
 
     private val _message = MutableStateFlow(Event.initial(""))
     val message = _message.asStateFlow()
-
-    init {
-        runBlocking { launch { _loggedIn.value = authRepo.getStatus() } }
-    }
 
     fun onNameChange(input: String) {
         _name.value = input
@@ -68,7 +62,6 @@ constructor(private val authRepo: AuthRepository, private val userRepo: UserRepo
         runBlocking {
             launch {
                 if (userRepo.login(LoginCredentials(_email.value, _password.value))) {
-                    _loggedIn.value = true
                     _message.value = Event("Logged in successfully")
                 } else {
                     _message.value = Event("Error logging in")
@@ -86,7 +79,6 @@ constructor(private val authRepo: AuthRepository, private val userRepo: UserRepo
                             RegistrationCredentials(_name.value, _email.value, _password.value)
                         )
                     ) {
-                        _loggedIn.value = true
                         _message.value = Event("Registered successfully")
                     } else {
                         _message.value = Event("Error registering")

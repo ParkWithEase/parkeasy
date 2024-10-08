@@ -77,7 +77,7 @@ fun LoginScreen(
             viewModel.confirmPassword.collectAsState().value,
             viewModel.matchingPasswords.collectAsState().value,
             viewModel.registering.collectAsState().value,
-            viewModel.loggedIn.collectAsState().value,
+            viewModel.loggedIn.collectAsState(false).value,
         )
     val events =
         LoginEvents(

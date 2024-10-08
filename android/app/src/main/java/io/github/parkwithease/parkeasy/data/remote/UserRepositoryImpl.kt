@@ -18,6 +18,7 @@ import io.ktor.http.contentType
 import io.ktor.http.setCookie
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 
 class UserRepositoryImpl(
@@ -64,7 +65,7 @@ class UserRepositoryImpl(
     }
 
     override suspend fun logout() {
-        val authCookie = authRepo.getSession()
+        val authCookie = authRepo.sessionFlow.firstOrNull()
         if (authCookie != null) {
             val response =
                 withContext(ioDispatcher) {
