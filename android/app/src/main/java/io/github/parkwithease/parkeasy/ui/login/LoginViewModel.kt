@@ -11,7 +11,6 @@ import io.github.parkwithease.parkeasy.model.ResetCredentials
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 enum class LoginMode {
@@ -66,12 +65,10 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
 
     fun onLoginPress() {
         runBlocking {
-            launch {
-                if (userRepo.login(LoginCredentials(_email.value, _password.value))) {
-                    _message.value = Event("Logged in successfully")
-                } else {
-                    _message.value = Event("Error logging in")
-                }
+            if (userRepo.login(LoginCredentials(_email.value, _password.value))) {
+                _message.value = Event("Logged in successfully")
+            } else {
+                _message.value = Event("Error logging in")
             }
         }
     }
@@ -79,16 +76,14 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     fun onRegisterPress() {
         if (_password.value == _confirmPassword.value) {
             runBlocking {
-                launch {
-                    if (
-                        userRepo.register(
-                            RegistrationCredentials(_name.value, _email.value, _password.value)
-                        )
-                    ) {
-                        _message.value = Event("Registered successfully")
-                    } else {
-                        _message.value = Event("Error registering")
-                    }
+                if (
+                    userRepo.register(
+                        RegistrationCredentials(_name.value, _email.value, _password.value)
+                    )
+                ) {
+                    _message.value = Event("Registered successfully")
+                } else {
+                    _message.value = Event("Error registering")
                 }
             }
         } else {
@@ -98,12 +93,10 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
 
     fun onRequestResetPress() {
         runBlocking {
-            launch {
-                if (userRepo.requestReset(ResetCredentials(_email.value))) {
-                    _message.value = Event("Reset email sent\nJk... we're working on it")
-                } else {
-                    _message.value = Event("Error resetting password")
-                }
+            if (userRepo.requestReset(ResetCredentials(_email.value))) {
+                _message.value = Event("Reset email sent\nJk... we're working on it")
+            } else {
+                _message.value = Event("Error resetting password")
             }
         }
     }
