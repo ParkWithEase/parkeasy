@@ -58,7 +58,7 @@ func (m *mockRepo) GetByUUID(ctx context.Context, carID uuid.UUID) (car.Entry, e
 
 // UpdateByUUID implements car.Repository.
 func (m *mockRepo) UpdateByUUID(ctx context.Context, carID uuid.UUID, carModel *models.CarCreationInput) (car.Entry, error) {
-	args := m.Called(ctx, carID)
+	args := m.Called(ctx, carID, carModel)
 	return args.Get(0).(car.Entry), args.Error(1)
 }
 

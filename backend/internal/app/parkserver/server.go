@@ -7,9 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	// "log"
-	// "fmt"
-
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
 	"github.com/stephenafamo/bob"
@@ -23,20 +20,12 @@ import (
 	carRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/car"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/car"
 
-	// parkingSpotRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
-	// "github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/parkingspot"
-
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/rs/cors"
-
-	// "github.com/golang-migrate/migrate/v4"
-	// "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/lib/pq"
 )
 
 type Config struct {
@@ -62,20 +51,14 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	userService := user.NewService(authService, userRepository)
 	userRoute := routes.NewUserRoute(userService, sessionManager)
 
-	// parkingSpotRepo := parkingSpotRepo.New(c.DBPool)
-	// parkingSpotService := parkingspot.NewService(parkingSpotRepo)
-	// parkingSpotRoute := routes.NewParkingSpotRoute(parkingSpotService, sessionManager, authMiddleware)
-
 	bobDB := bob.NewDB(stdlib.OpenDBFromPool(c.DBPool))
 
-
-	carRepo := carRepo.NewPostgres(bobDB)
-	carService := car.New(carRepo)
+	carRepository := carRepo.NewPostgres(bobDB)
+	carService := car.New(carRepository)
 	carRoute := routes.NewCarRoute(carService, sessionManager, authMiddleware)
 
 	huma.AutoRegister(api, authRoute)
 	huma.AutoRegister(api, userRoute)
-	// huma.AutoRegister(api, parkingSpotRoute)
 	huma.AutoRegister(api, carRoute)
 }
 
