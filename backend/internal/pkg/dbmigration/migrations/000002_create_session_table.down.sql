@@ -1,2 +1,2 @@
-DROP INDEX IF EXISTS sessions_expiry_idx;
+DROP INDEX IF EXISTS SessionExpiryIdx;
 DROP TABLE IF EXISTS sessions;

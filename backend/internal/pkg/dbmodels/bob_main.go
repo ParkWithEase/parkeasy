@@ -37,10 +37,9 @@ var ColumnNames = struct {
 		Passwordhash: "passwordhash",
 	},
 	Resettokens: resettokenColumnNames{
-		Tokenid:   "tokenid",
-		Token:     "token",
-		Authuuid:  "authuuid",
-		Createdat: "createdat",
+		Token:    "token",
+		Authuuid: "authuuid",
+		Expiry:   "expiry",
 	},
 	Sessions: sessionColumnNames{
 		Token:  "token",

@@ -25,10 +25,9 @@ import (
 
 // Resettoken is an object representing the database table.
 type Resettoken struct {
-	Tokenid   int32     `db:"tokenid,pk" `
-	Token     string    `db:"token" `
-	Authuuid  uuid.UUID `db:"authuuid" `
-	Createdat time.Time `db:"createdat" `
+	Token    string    `db:"token,pk" `
+	Authuuid uuid.UUID `db:"authuuid" `
+	Expiry   time.Time `db:"expiry" `
 
 	R resettokenR `db:"-" `
 }
@@ -55,18 +54,13 @@ type resettokenR struct {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type ResettokenSetter struct {
-	Tokenid   omit.Val[int32]     `db:"tokenid,pk" `
-	Token     omit.Val[string]    `db:"token" `
-	Authuuid  omit.Val[uuid.UUID] `db:"authuuid" `
-	Createdat omit.Val[time.Time] `db:"createdat" `
+	Token    omit.Val[string]    `db:"token,pk" `
+	Authuuid omit.Val[uuid.UUID] `db:"authuuid" `
+	Expiry   omit.Val[time.Time] `db:"expiry" `
 }
 
 func (s ResettokenSetter) SetColumns() []string {
-	vals := make([]string, 0, 4)
-	if !s.Tokenid.IsUnset() {
-		vals = append(vals, "tokenid")
-	}
-
+	vals := make([]string, 0, 3)
 	if !s.Token.IsUnset() {
 		vals = append(vals, "token")
 	}
@@ -75,52 +69,43 @@ func (s ResettokenSetter) SetColumns() []string {
 		vals = append(vals, "authuuid")
 	}
 
-	if !s.Createdat.IsUnset() {
-		vals = append(vals, "createdat")
+	if !s.Expiry.IsUnset() {
+		vals = append(vals, "expiry")
 	}
 
 	return vals
 }
 
 func (s ResettokenSetter) Overwrite(t *Resettoken) {
-	if !s.Tokenid.IsUnset() {
-		t.Tokenid, _ = s.Tokenid.Get()
-	}
 	if !s.Token.IsUnset() {
 		t.Token, _ = s.Token.Get()
 	}
 	if !s.Authuuid.IsUnset() {
 		t.Authuuid, _ = s.Authuuid.Get()
 	}
-	if !s.Createdat.IsUnset() {
-		t.Createdat, _ = s.Createdat.Get()
+	if !s.Expiry.IsUnset() {
+		t.Expiry, _ = s.Expiry.Get()
 	}
 }
 
 func (s ResettokenSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 4)
-	if s.Tokenid.IsUnset() {
+	vals := make([]bob.Expression, 3)
+	if s.Token.IsUnset() {
 		vals[0] = psql.Raw("DEFAULT")
 	} else {
-		vals[0] = psql.Arg(s.Tokenid)
-	}
-
-	if s.Token.IsUnset() {
-		vals[1] = psql.Raw("DEFAULT")
-	} else {
-		vals[1] = psql.Arg(s.Token)
+		vals[0] = psql.Arg(s.Token)
 	}
 
 	if s.Authuuid.IsUnset() {
-		vals[2] = psql.Raw("DEFAULT")
+		vals[1] = psql.Raw("DEFAULT")
 	} else {
-		vals[2] = psql.Arg(s.Authuuid)
+		vals[1] = psql.Arg(s.Authuuid)
 	}
 
-	if s.Createdat.IsUnset() {
-		vals[3] = psql.Raw("DEFAULT")
+	if s.Expiry.IsUnset() {
+		vals[2] = psql.Raw("DEFAULT")
 	} else {
-		vals[3] = psql.Arg(s.Createdat)
+		vals[2] = psql.Arg(s.Expiry)
 	}
 
 	return im.Values(vals...)
@@ -131,14 +116,7 @@ func (s ResettokenSetter) Apply(q *dialect.UpdateQuery) {
 }
 
 func (s ResettokenSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 4)
-
-	if !s.Tokenid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "tokenid")...),
-			psql.Arg(s.Tokenid),
-		}})
-	}
+	exprs := make([]bob.Expression, 0, 3)
 
 	if !s.Token.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -154,10 +132,10 @@ func (s ResettokenSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
-	if !s.Createdat.IsUnset() {
+	if !s.Expiry.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "createdat")...),
-			psql.Arg(s.Createdat),
+			psql.Quote(append(prefix, "expiry")...),
+			psql.Arg(s.Expiry),
 		}})
 	}
 
@@ -165,20 +143,18 @@ func (s ResettokenSetter) Expressions(prefix ...string) []bob.Expression {
 }
 
 type resettokenColumnNames struct {
-	Tokenid   string
-	Token     string
-	Authuuid  string
-	Createdat string
+	Token    string
+	Authuuid string
+	Expiry   string
 }
 
 var ResettokenColumns = buildResettokenColumns("resettoken")
 
 type resettokenColumns struct {
 	tableAlias string
-	Tokenid    psql.Expression
 	Token      psql.Expression
 	Authuuid   psql.Expression
-	Createdat  psql.Expression
+	Expiry     psql.Expression
 }
 
 func (c resettokenColumns) Alias() string {
@@ -192,18 +168,16 @@ func (resettokenColumns) AliasedAs(alias string) resettokenColumns {
 func buildResettokenColumns(alias string) resettokenColumns {
 	return resettokenColumns{
 		tableAlias: alias,
-		Tokenid:    psql.Quote(alias, "tokenid"),
 		Token:      psql.Quote(alias, "token"),
 		Authuuid:   psql.Quote(alias, "authuuid"),
-		Createdat:  psql.Quote(alias, "createdat"),
+		Expiry:     psql.Quote(alias, "expiry"),
 	}
 }
 
 type resettokenWhere[Q psql.Filterable] struct {
-	Tokenid   psql.WhereMod[Q, int32]
-	Token     psql.WhereMod[Q, string]
-	Authuuid  psql.WhereMod[Q, uuid.UUID]
-	Createdat psql.WhereMod[Q, time.Time]
+	Token    psql.WhereMod[Q, string]
+	Authuuid psql.WhereMod[Q, uuid.UUID]
+	Expiry   psql.WhereMod[Q, time.Time]
 }
 
 func (resettokenWhere[Q]) AliasedAs(alias string) resettokenWhere[Q] {
@@ -212,10 +186,9 @@ func (resettokenWhere[Q]) AliasedAs(alias string) resettokenWhere[Q] {
 
 func buildResettokenWhere[Q psql.Filterable](cols resettokenColumns) resettokenWhere[Q] {
 	return resettokenWhere[Q]{
-		Tokenid:   psql.Where[Q, int32](cols.Tokenid),
-		Token:     psql.Where[Q, string](cols.Token),
-		Authuuid:  psql.Where[Q, uuid.UUID](cols.Authuuid),
-		Createdat: psql.Where[Q, time.Time](cols.Createdat),
+		Token:    psql.Where[Q, string](cols.Token),
+		Authuuid: psql.Where[Q, uuid.UUID](cols.Authuuid),
+		Expiry:   psql.Where[Q, time.Time](cols.Expiry),
 	}
 }
 
@@ -237,32 +210,32 @@ func buildResettokenJoins[Q dialect.Joinable](cols resettokenColumns, typ string
 
 // FindResettoken retrieves a single record by primary key
 // If cols is empty Find will return all columns.
-func FindResettoken(ctx context.Context, exec bob.Executor, TokenidPK int32, cols ...string) (*Resettoken, error) {
+func FindResettoken(ctx context.Context, exec bob.Executor, TokenPK string, cols ...string) (*Resettoken, error) {
 	if len(cols) == 0 {
 		return Resettokens.Query(
 			ctx, exec,
-			SelectWhere.Resettokens.Tokenid.EQ(TokenidPK),
+			SelectWhere.Resettokens.Token.EQ(TokenPK),
 		).One()
 	}
 
 	return Resettokens.Query(
 		ctx, exec,
-		SelectWhere.Resettokens.Tokenid.EQ(TokenidPK),
+		SelectWhere.Resettokens.Token.EQ(TokenPK),
 		sm.Columns(Resettokens.Columns().Only(cols...)),
 	).One()
 }
 
 // ResettokenExists checks the presence of a single record by primary key
-func ResettokenExists(ctx context.Context, exec bob.Executor, TokenidPK int32) (bool, error) {
+func ResettokenExists(ctx context.Context, exec bob.Executor, TokenPK string) (bool, error) {
 	return Resettokens.Query(
 		ctx, exec,
-		SelectWhere.Resettokens.Tokenid.EQ(TokenidPK),
+		SelectWhere.Resettokens.Token.EQ(TokenPK),
 	).Exists()
 }
 
 // PrimaryKeyVals returns the primary key values of the Resettoken
 func (o *Resettoken) PrimaryKeyVals() bob.Expression {
-	return psql.Arg(o.Tokenid)
+	return psql.Arg(o.Token)
 }
 
 // Update uses an executor to update the Resettoken
@@ -279,7 +252,7 @@ func (o *Resettoken) Delete(ctx context.Context, exec bob.Executor) error {
 func (o *Resettoken) Reload(ctx context.Context, exec bob.Executor) error {
 	o2, err := Resettokens.Query(
 		ctx, exec,
-		SelectWhere.Resettokens.Tokenid.EQ(o.Tokenid),
+		SelectWhere.Resettokens.Token.EQ(o.Token),
 	).One()
 	if err != nil {
 		return err
@@ -301,14 +274,14 @@ func (o ResettokenSlice) DeleteAll(ctx context.Context, exec bob.Executor) error
 func (o ResettokenSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	var mods []bob.Mod[*dialect.SelectQuery]
 
-	TokenidPK := make([]int32, len(o))
+	TokenPK := make([]string, len(o))
 
 	for i, o := range o {
-		TokenidPK[i] = o.Tokenid
+		TokenPK[i] = o.Token
 	}
 
 	mods = append(mods,
-		SelectWhere.Resettokens.Tokenid.In(TokenidPK...),
+		SelectWhere.Resettokens.Token.In(TokenPK...),
 	)
 
 	o2, err := Resettokens.Query(ctx, exec, mods...).All()
@@ -318,7 +291,7 @@ func (o ResettokenSlice) ReloadAll(ctx context.Context, exec bob.Executor) error
 
 	for _, old := range o {
 		for _, new := range o2 {
-			if new.Tokenid != old.Tokenid {
+			if new.Token != old.Token {
 				continue
 			}
 			new.R = old.R
