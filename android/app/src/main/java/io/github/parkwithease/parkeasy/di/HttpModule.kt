@@ -1,19 +1,12 @@
 package io.github.parkwithease.parkeasy.di
 
 import android.app.Application
-import android.content.Context
 import android.util.Log
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.github.parkwithease.parkeasy.R
-import io.github.parkwithease.parkeasy.data.local.AuthRepository
-import io.github.parkwithease.parkeasy.data.local.AuthRepositoryImpl
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -26,9 +19,7 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object AppModule {
-    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth")
-
+object HttpModule {
     @Provides
     @Singleton
     fun provideHttpClient(app: Application): HttpClient =
@@ -45,10 +36,4 @@ object AppModule {
                 level = LogLevel.ALL
             }
         }
-
-    @Provides
-    @Singleton
-    fun provideAuthRepository(@ApplicationContext context: Context): AuthRepository {
-        return AuthRepositoryImpl(context.dataStore)
-    }
 }
