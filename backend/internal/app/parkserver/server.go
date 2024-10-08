@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/rs/cors"
+	"github.com/stephenafamo/bob"
 )
 
 type Config struct {
@@ -37,11 +38,11 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	api.UseMiddleware(authMiddleware)
 
 	passwordRepository := resettoken.NewMemoryRepository()
-	authRepository := authRepo.NewPostgres(stdlib.OpenDBFromPool(c.DBPool))
+	authRepository := authRepo.NewPostgres(bob.NewDB(stdlib.OpenDBFromPool(c.DBPool)))
 	authService := auth.NewService(authRepository, passwordRepository)
 	authRoute := routes.NewAuthRoute(authService, sessionManager)
 
-	userRepository := userRepo.NewPostgres(stdlib.OpenDBFromPool(c.DBPool))
+	userRepository := userRepo.NewPostgres(bob.NewDB(stdlib.OpenDBFromPool(c.DBPool)))
 	userService := user.NewService(authService, userRepository)
 	userRoute := routes.NewUserRoute(userService, sessionManager)
 	huma.AutoRegister(api, authRoute)
