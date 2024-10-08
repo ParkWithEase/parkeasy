@@ -9,6 +9,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
@@ -61,7 +62,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideAuthStore(@ApplicationContext context: Context): AuthRepository {
-        return AuthRepositoryImpl(app.applicationContext.dataStore)
+        return AuthRepositoryImpl(context.dataStore)
     }
 
     @Provides
