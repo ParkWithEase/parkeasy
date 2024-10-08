@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
-	"github.com/stephenafamo/bob"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -32,7 +31,7 @@ func TestPostgresIntegration(t *testing.T) {
 	pool, err := pgxpool.New(ctx, connString)
 	require.NoError(t, err, "could not connect to db")
 	t.Cleanup(func() { pool.Close() })
-	db := bob.NewDB(stdlib.OpenDBFromPool(pool))
+	db := stdlib.OpenDBFromPool(pool)
 
 	repo := NewPostgres(db)
 	t.Run("basic add & get", func(t *testing.T) {

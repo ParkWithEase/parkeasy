@@ -15,14 +15,17 @@ import (
 var TableNames = struct {
 	Auths    string
 	Sessions string
+	Users    string
 }{
 	Auths:    "auth",
 	Sessions: "sessions",
+	Users:    "users",
 }
 
 var ColumnNames = struct {
 	Auths    authColumnNames
 	Sessions sessionColumnNames
+	Users    userColumnNames
 }{
 	Auths: authColumnNames{
 		Authid:       "authid",
@@ -34,6 +37,15 @@ var ColumnNames = struct {
 		Token:  "token",
 		Data:   "data",
 		Expiry: "expiry",
+	},
+	Users: userColumnNames{
+		Userid:     "userid",
+		Useruuid:   "useruuid",
+		Authuuid:   "authuuid",
+		Fullname:   "fullname",
+		Email:      "email",
+		Isverified: "isverified",
+		Addedat:    "addedat",
 	},
 }
 
@@ -47,13 +59,16 @@ var (
 func Where[Q psql.Filterable]() struct {
 	Auths    authWhere[Q]
 	Sessions sessionWhere[Q]
+	Users    userWhere[Q]
 } {
 	return struct {
 		Auths    authWhere[Q]
 		Sessions sessionWhere[Q]
+		Users    userWhere[Q]
 	}{
 		Auths:    buildAuthWhere[Q](AuthColumns),
 		Sessions: buildSessionWhere[Q](SessionColumns),
+		Users:    buildUserWhere[Q](UserColumns),
 	}
 }
 
@@ -77,7 +92,10 @@ func (j joinSet[Q]) AliasedAs(alias string) joinSet[Q] {
 	}
 }
 
-type joins[Q dialect.Joinable] struct{}
+type joins[Q dialect.Joinable] struct {
+	Auths joinSet[authJoins[Q]]
+	Users joinSet[userJoins[Q]]
+}
 
 func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q](c C, f F) joinSet[Q] {
 	return joinSet[Q]{
@@ -88,7 +106,10 @@ func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q
 }
 
 func getJoins[Q dialect.Joinable]() joins[Q] {
-	return joins[Q]{}
+	return joins[Q]{
+		Auths: buildJoinSet[authJoins[Q]](AuthColumns, buildAuthJoins),
+		Users: buildJoinSet[userJoins[Q]](UserColumns, buildUserJoins),
+	}
 }
 
 type modAs[Q any, C interface{ AliasedAs(string) C }] struct {
