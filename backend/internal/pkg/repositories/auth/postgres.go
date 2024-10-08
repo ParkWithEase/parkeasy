@@ -13,14 +13,15 @@ import (
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/scan"
 )
 
 type PostgresRepository struct {
-	db bob.DB
+	db *sql.DB
 }
 
-func NewPostgres(db bob.DB) *PostgresRepository {
+func NewPostgres(db *sql.DB) *PostgresRepository {
 	return &PostgresRepository{
 		db: db,
 	}
@@ -28,17 +29,13 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 
 // Create implements Repository.
 func (p *PostgresRepository) Create(ctx context.Context, email string, passwordHash models.HashedPassword) (uuid.UUID, error) {
-	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
+	db := bob.NewDB(p.db)
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return uuid.UUID{}, fmt.Errorf("could not start a transaction: %w", err)
 	}
-
-	// Note that a transaction is pretty suboptimal here, since we only do one query.
-	//
-	// However it's useful to have as an example.
-
 	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
-	inserted, err := dbmodels.Auths.Insert(ctx, tx, &dbmodels.AuthSetter{
+	inserted, err := dbmodels.Auths.Insert(ctx, db, &dbmodels.AuthSetter{
 		Email:        omit.From(email),
 		Passwordhash: omit.From(string(passwordHash)),
 	})
@@ -56,12 +53,13 @@ func (p *PostgresRepository) Create(ctx context.Context, email string, passwordH
 
 // Get implements Repository.
 func (p *PostgresRepository) Get(ctx context.Context, id uuid.UUID) (Identity, error) {
+	db := bob.NewDB(p.db)
 	query := psql.Select(
 		sm.Columns(dbmodels.AuthColumns.Email, dbmodels.AuthColumns.Passwordhash, dbmodels.AuthColumns.Authuuid),
 		sm.From(dbmodels.Auths.Name(ctx)),
 		dbmodels.SelectWhere.Auths.Authuuid.EQ(id),
 	)
-	result, err := bob.One(ctx, p.db, query, scan.StructMapper[dbmodels.Auth]())
+	result, err := bob.One(ctx, db, query, scan.StructMapper[dbmodels.Auth]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrIdentityNotFound
@@ -76,11 +74,42 @@ func (p *PostgresRepository) Get(ctx context.Context, id uuid.UUID) (Identity, e
 }
 
 // GetByEmail implements Repository.
-func (p *PostgresRepository) GetByEmail(_ context.Context, _ string) (Identity, error) {
-	panic("unimplemented")
+func (p *PostgresRepository) GetByEmail(ctx context.Context, email string) (Identity, error) {
+	db := bob.NewDB(p.db)
+	query := psql.Select(
+		sm.Columns(dbmodels.AuthColumns.Email, dbmodels.AuthColumns.Passwordhash, dbmodels.AuthColumns.Authuuid),
+		sm.From(dbmodels.Auths.Name(ctx)),
+		dbmodels.SelectWhere.Auths.Email.EQ(email),
+	)
+	result, err := bob.One(ctx, db, query, scan.StructMapper[dbmodels.Auth]())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = ErrIdentityNotFound
+		}
+		return Identity{}, err
+	}
+	return Identity{
+		Email:        result.Email,
+		PasswordHash: models.HashedPassword(result.Passwordhash),
+		ID:           result.Authuuid,
+	}, err
 }
 
 // UpdatePassword implements Repository.
-func (p *PostgresRepository) UpdatePassword(_ context.Context, _ uuid.UUID, _ models.HashedPassword) error {
-	panic("unimplemented")
+func (p *PostgresRepository) UpdatePassword(ctx context.Context, authID uuid.UUID, newPassword models.HashedPassword) error {
+	db := bob.NewDB(p.db)
+
+	query := psql.Update(
+		um.From(dbmodels.Auths.Name(ctx)),
+		dbmodels.UpdateWhere.Auths.Authuuid.EQ(authID),
+		um.Set(dbmodels.AuthColumns.Passwordhash, psql.Arg(string(newPassword))),
+	)
+
+	//Execute the query
+	_, err := bob.Exec(ctx, db, query)
+	if err != nil {
+		return fmt.Errorf("could not execute update: %v", err)
+	}
+
+	return nil
 }

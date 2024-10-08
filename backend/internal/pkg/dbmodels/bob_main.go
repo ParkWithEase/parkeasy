@@ -13,19 +13,27 @@ import (
 )
 
 var TableNames = struct {
-	Auths string
+	Auths    string
+	Sessions string
 }{
-	Auths: "auth",
+	Auths:    "auth",
+	Sessions: "sessions",
 }
 
 var ColumnNames = struct {
-	Auths authColumnNames
+	Auths    authColumnNames
+	Sessions sessionColumnNames
 }{
 	Auths: authColumnNames{
 		Authid:       "authid",
 		Authuuid:     "authuuid",
 		Email:        "email",
 		Passwordhash: "passwordhash",
+	},
+	Sessions: sessionColumnNames{
+		Token:  "token",
+		Data:   "data",
+		Expiry: "expiry",
 	},
 }
 
@@ -37,12 +45,15 @@ var (
 )
 
 func Where[Q psql.Filterable]() struct {
-	Auths authWhere[Q]
+	Auths    authWhere[Q]
+	Sessions sessionWhere[Q]
 } {
 	return struct {
-		Auths authWhere[Q]
+		Auths    authWhere[Q]
+		Sessions sessionWhere[Q]
 	}{
-		Auths: buildAuthWhere[Q](AuthColumns),
+		Auths:    buildAuthWhere[Q](AuthColumns),
+		Sessions: buildSessionWhere[Q](SessionColumns),
 	}
 }
 
