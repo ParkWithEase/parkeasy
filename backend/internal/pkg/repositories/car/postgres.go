@@ -29,9 +29,9 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 	}
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID64 int64, car *models.CarCreationInput) (uuid.UUID, error) {
+func (p *PostgresRepository) Create(ctx context.Context, userID64 int64, car *models.CarCreationInput) (int64, Entry, error) {
 	if userID64 > math.MaxInt32 || userID64 < 0 {
-		return uuid.Nil, fmt.Errorf("userID out of range: %v", userID64)
+		return -1, Entry{}, fmt.Errorf("userID out of range: %v", userID64)
 	}
 	userID := int32(userID64)
 
@@ -43,9 +43,9 @@ func (p *PostgresRepository) Create(ctx context.Context, userID64 int64, car *mo
 		Color:        omit.From(car.Color),
 	})
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("could not commit transaction: %w", err)
+		return -1, Entry{}, fmt.Errorf("could not commit transaction: %w", err)
 	}
-	return inserted.Caruuid, nil
+	return int64(inserted.Carid), Entry{}, nil
 }
 
 func (p *PostgresRepository) DeleteByUUID(ctx context.Context, carID uuid.UUID) error {
