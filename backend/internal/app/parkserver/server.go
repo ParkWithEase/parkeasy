@@ -13,11 +13,14 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/user"
+	"github.com/alexedwards/scs/pgxstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/rs/cors"
+	"github.com/stephenafamo/bob"
 )
 
 type Config struct {
@@ -30,16 +33,18 @@ type Config struct {
 }
 
 // Register all routes
-func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager) {
+func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager) {
 	authMiddleware := routes.NewSessionMiddleware(api, sessionManager)
 	api.UseMiddleware(authMiddleware)
 
+	db := bob.NewDB(stdlib.OpenDBFromPool(c.DBPool))
+
 	passwordRepository := resettoken.NewMemoryRepository()
-	authRepository := authRepo.NewMemoryRepository()
+	authRepository := authRepo.NewPostgres(db)
 	authService := auth.NewService(authRepository, passwordRepository)
 	authRoute := routes.NewAuthRoute(authService, sessionManager)
 
-	userRepository := userRepo.NewMemoryRepository()
+	userRepository := userRepo.NewPostgres(db)
 	userService := user.NewService(authService, userRepository)
 	userRoute := routes.NewUserRoute(userService, sessionManager)
 	huma.AutoRegister(api, authRoute)
@@ -53,10 +58,10 @@ func (c *Config) NewHumaAPI() huma.API {
 	api := humago.New(router, config)
 	api.OpenAPI().Components.SecuritySchemes = make(map[string]*huma.SecurityScheme)
 	api.OpenAPI().Components.SecuritySchemes[routes.CookieSecuritySchemeName] = &routes.CookieSecurityScheme
-	sessionManager := routes.NewSessionManager(nil)
+	sessionManager := routes.NewSessionManager(pgxstore.New(c.DBPool))
 	sessionManager.Cookie.Secure = !c.Insecure
 
-	RegisterRoutes(api, sessionManager)
+	c.RegisterRoutes(api, sessionManager)
 
 	return api
 }

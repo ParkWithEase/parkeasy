@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS SessionExpiryIdx;
+DROP TABLE IF EXISTS sessions;
