@@ -21,9 +21,7 @@ interface UserRepository {
      */
     suspend fun register(credentials: RegistrationCredentials): Boolean
 
-    /**
-     * Logs the user out.
-     */
+    /** Logs the user out. */
     suspend fun logout()
 
     /**

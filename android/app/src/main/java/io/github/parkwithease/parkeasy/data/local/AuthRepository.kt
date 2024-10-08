@@ -24,8 +24,6 @@ interface AuthRepository {
      */
     suspend fun set(cookie: Cookie)
 
-    /**
-     * Clears the session Cookie and sets session status to logged out.
-     */
+    /** Clears the session Cookie and sets session status to logged out. */
     suspend fun reset()
 }
