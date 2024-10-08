@@ -17,10 +17,10 @@ import (
 )
 
 type PostgresRepository struct {
-	db *sql.DB
+	db bob.DB
 }
 
-func NewPostgres(db *sql.DB) *PostgresRepository {
+func NewPostgres(db bob.DB) *PostgresRepository {
 	return &PostgresRepository{
 		db: db,
 	}
@@ -28,13 +28,17 @@ func NewPostgres(db *sql.DB) *PostgresRepository {
 
 // Create implements Repository.
 func (p *PostgresRepository) Create(ctx context.Context, email string, passwordHash models.HashedPassword) (uuid.UUID, error) {
-	db := bob.NewDB(p.db)
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{})
+	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return uuid.UUID{}, fmt.Errorf("could not start a transaction: %w", err)
 	}
+
+	// Note that a transaction is pretty suboptimal here, since we only do one query.
+	//
+	// However it's useful to have as an example.
+
 	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
-	inserted, err := dbmodels.Auths.Insert(ctx, db, &dbmodels.AuthSetter{
+	inserted, err := dbmodels.Auths.Insert(ctx, tx, &dbmodels.AuthSetter{
 		Email:        omit.From(email),
 		Passwordhash: omit.From(string(passwordHash)),
 	})
@@ -52,13 +56,12 @@ func (p *PostgresRepository) Create(ctx context.Context, email string, passwordH
 
 // Get implements Repository.
 func (p *PostgresRepository) Get(ctx context.Context, id uuid.UUID) (Identity, error) {
-	db := bob.NewDB(p.db)
 	query := psql.Select(
 		sm.Columns(dbmodels.AuthColumns.Email, dbmodels.AuthColumns.Passwordhash, dbmodels.AuthColumns.Authuuid),
 		sm.From(dbmodels.Auths.Name(ctx)),
 		dbmodels.SelectWhere.Auths.Authuuid.EQ(id),
 	)
-	result, err := bob.One(ctx, db, query, scan.StructMapper[dbmodels.Auth]())
+	result, err := bob.One(ctx, p.db, query, scan.StructMapper[dbmodels.Auth]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrIdentityNotFound
