@@ -25,6 +25,7 @@ type Car struct {
 
 // CarCreationInput represents the input for the create and update car operation
 type CarCreationInput struct {
+	UserID uuid.UUID   `json:"user_id" doc:"ID of the user"`
 	CarDetails
 }
 

@@ -30,6 +30,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, car *mode
 		return uuid.UUID{}, fmt.Errorf("could not start a transaction: %v", err)
 	}
 	inserted, err := dbmodels.Cars.Insert(ctx, db, &dbmodels.CarSetter{
+		
 		Licenseplate:       omit.From(car.LicensePlate),
 		Make: 				omit.From(car.Make),
 		Model:				omit.From(car.Model),

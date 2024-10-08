@@ -15,13 +15,13 @@ type CarServicer interface {
 	// Creates a new car attached to `userID`.
 	//
 	// Returns the spot internal ID and the model.
-	Create(ctx context.Context, userID int64, spot *models.CarCreationInput) (uuid.UUID, error)
+	Create(ctx context.Context, userID int64, car *models.CarCreationInput) (uuid.UUID, error)
 	// Get the car with `carID` if `userID` has enough permission to view the resource.
-	GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.Car, error)
+	GetByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error)
 	// Delete the car with `carID` if `userID` owns the resource.
-	DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
+	DeleteByUUID(ctx context.Context, userID int64, carID uuid.UUID) error
 	// Update the car with `carID` if `userID` has enough permission to view the resource.
-	UpdateByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.Car, error)
+	UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error)
 }
 
 // CarRoute represents car-related API routes

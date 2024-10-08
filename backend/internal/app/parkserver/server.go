@@ -2,7 +2,6 @@ package parkserver
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"net"
 	"net/http"
@@ -30,7 +29,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/jackc/pgx/v5/pgxpool"
-	// "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/rs/cors"
 
 	// "github.com/golang-migrate/migrate/v4"
@@ -46,8 +45,6 @@ type Config struct {
 	Insecure bool
 	// Database pool for Postgres connection
 	DBPool *pgxpool.Pool
-
-	DBConn *sql.DB
 }
 
 // Register all routes
@@ -68,7 +65,7 @@ func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager, c *Config)
 	// parkingSpotService := parkingspot.NewService(parkingSpotRepo)
 	// parkingSpotRoute := routes.NewParkingSpotRoute(parkingSpotService, sessionManager, authMiddleware)
 
-	carRepo := carRepo.NewPostgres(c.DBConn)
+	carRepo := carRepo.NewPostgres(stdlib.OpenDBFromPool(c.DBPool))
 	carService := car.NewService(carRepo)
 	carRoute := routes.NewCarRoute(carService, sessionManager, authMiddleware)
 
@@ -76,11 +73,6 @@ func RegisterRoutes(api huma.API, sessionManager *scs.SessionManager, c *Config)
 	huma.AutoRegister(api, userRoute)
 	// huma.AutoRegister(api, parkingSpotRoute)
 	huma.AutoRegister(api, carRoute)
-
-	// // Run migrations
-	// if err := runMigrations(c.DBPool); err != nil {
-	// 	log.Fatalf("Migration failed: %v", err)
-	// }
 }
 
 

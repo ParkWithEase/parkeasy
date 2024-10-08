@@ -8,8 +8,6 @@ import (
 	"syscall"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/app/parkserver"
-	// "github.com/jackc/pgx"
-	// "github.com/jackc/pgx/stdlib"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -24,11 +22,6 @@ var (
 	port      uint16
 	dbURL     string // New flag to get the Postgres connection URL
 )
-
-type ConnPoolConfig struct {
-	ConnString string // Connection string for the PostgreSQL database
-	MaxConns   int32  // Maximum number of connections in the pool
-}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -55,8 +48,6 @@ var rootCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("Unable to connect to the database")
 		}
 		defer pool.Close()
-
-		// db := stdlib.OpenDBFromPool(pool)
 
 
 		config := parkserver.Config{
