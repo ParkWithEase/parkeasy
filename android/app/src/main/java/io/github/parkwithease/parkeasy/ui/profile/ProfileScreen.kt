@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -24,10 +25,10 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel<ProfileViewModel>(),
 ) {
     val loggedIn by viewModel.loggedIn.collectAsState(true)
-    val onLogoutEvent: () -> Unit = onLogout
+    val latestOnLogout by rememberUpdatedState(onLogout)
     LaunchedEffect(loggedIn) {
         if (!loggedIn) {
-            onLogoutEvent()
+            latestOnLogout()
         }
     }
     Scaffold(modifier = modifier, bottomBar = { NavBar() }) { innerPadding ->

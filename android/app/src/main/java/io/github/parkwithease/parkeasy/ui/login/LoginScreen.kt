@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -90,10 +91,10 @@ fun LoginScreen(
             viewModel::onRequestResetPress,
             viewModel::onSwitchModePress,
         )
-    val onLoginEvent: () -> Unit = onLogin
+    val latestOnLogin by rememberUpdatedState(onLogin)
     LaunchedEffect(state.loggedIn) {
         if (state.loggedIn) {
-            onLoginEvent()
+            latestOnLogin()
         }
     }
     LoginScreenInner(state, events, modifier)
