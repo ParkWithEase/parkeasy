@@ -19,6 +19,7 @@ type mockRepo struct {
 const (
 	testOwnerID    = 0
 	testStrangerID = 1
+	testInternalCarID = 0
 )
 
 var ownedTestEntry = car.Entry{
@@ -282,13 +283,17 @@ func TestUpdate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.On("GetByUUID", mock.Anything, uuid.Nil).
+		repo.On("UpdateByUUID", mock.Anything, uuid.Nil, &models.CarCreationInput{
+			CarDetails: sampleDetails,
+		}).
 			Return(car.Entry{}, car.ErrNotFound).Once()
 		srv := New(repo)
 
-		_, err := srv.UpdateByUUID(ctx, testOwnerID, uuid.Nil)
+		_, err := srv.UpdateByUUID(ctx, testOwnerID, uuid.Nil, &models.CarCreationInput{
+			CarDetails: sampleDetails,
+		})
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrCarNotFound)
+			assert.ErrorIs(t, err, car.ErrNotFound)
 		}
 		repo.AssertExpectations(t)
 	})
@@ -296,26 +301,121 @@ func TestUpdate(t *testing.T) {
 	t.Run("owner can update their own cars", func(t *testing.T) {
 		t.Parallel()
 
+		resultCar := models.Car{
+			Details: sampleDetails,
+			ID:      testOwnerCarID,
+		}
+
+		resultEntry := car.Entry{
+			Car: 		resultCar,
+			InternalID: testInternalCarID,
+			OwnerID:    testOwnerID,
+		}
+
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.On("UpdateByUUID", mock.Anything, testOwnerCarID, &models.CarCreationInput{
+			CarDetails: sampleDetails,
+		}).
+			Return(resultEntry, nil).Once()
 		srv := New(repo)
 
-		carResult, err := srv.UpdateByUUID(ctx, testOwnerID, testOwnerCarID)
+		result, err := srv.UpdateByUUID(ctx, testOwnerID, testOwnerCarID, &models.CarCreationInput{
+			CarDetails: sampleDetails,
+		})
 		require.NoError(t, err)
-		assert.Equal(t, ownedTestEntry.Car, carResult)
+
+		expected := models.Car{
+			Details: sampleDetails,
+			ID:      testOwnerCarID,
+		}
+
+		assert.Equal(t, expected, result)
 	})
 
 	t.Run("strangers cannot update other's cars", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.On("UpdateByUUID", mock.Anything, testOwnerCarID, &models.CarCreationInput{
+			CarDetails: sampleDetails,
+		}).
+			Return(car.Entry{}, car.ErrNotFound).Once()
 		srv := New(repo)
 
-		_, err := srv.UpdateByUUID(ctx, testStrangerID, testOwnerCarID)
+		_, err := srv.UpdateByUUID(ctx, testStrangerID, testOwnerCarID, &models.CarCreationInput{
+			CarDetails: sampleDetails,
+		})
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrCarNotFound)
+			assert.ErrorIs(t, err, car.ErrNotFound)
 		}
-		repo.AssertNotCalled(t, "DeleteByUUID")
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("license plate fit check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		srv := New(repo)
+
+		details := sampleDetails
+		details.LicensePlate = "Invalid Plate"
+		_, err := srv.UpdateByUUID(ctx, 0, testOwnerCarID, &models.CarCreationInput{
+			CarDetails: details,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidLicensePlate)
+		}
+		repo.AssertNotCalled(t, "UpdateByUUID")
+	})
+
+	t.Run("non empty make", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		srv := New(repo)
+
+		details := sampleDetails
+		details.Make = ""
+		_, err := srv.UpdateByUUID(ctx, 0, testOwnerCarID, &models.CarCreationInput{
+			CarDetails: details,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidMake)
+		}
+		repo.AssertNotCalled(t, "UpdateByUUID")
+	})
+
+	t.Run("non empty model", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		srv := New(repo)
+
+		details := sampleDetails
+		details.Model = ""
+		_, err := srv.UpdateByUUID(ctx, 0, testOwnerCarID, &models.CarCreationInput{
+			CarDetails: details,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidModel)
+		}
+		repo.AssertNotCalled(t, "UpdateByUUID")
+	})
+
+	t.Run("non empty color", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		srv := New(repo)
+
+		details := sampleDetails
+		details.Color = ""
+		_, err := srv.UpdateByUUID(ctx, 0, testOwnerCarID, &models.CarCreationInput{
+			CarDetails: details,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidColor)
+		}
+		repo.AssertNotCalled(t, "UpdateByUUID")
 	})
 }

@@ -14,14 +14,14 @@ import (
 type CarServicer interface {
 	// Creates a new car attached to `userID`.
 	//
-	// Returns the spot internal ID and the model.
-	Create(ctx context.Context, userID int64, spot *models.CarCreationInput) (int64, models.Car, error)
+	// Returns the car internal ID and the model.
+	Create(ctx context.Context, userID int64, car *models.CarCreationInput) (int64, models.Car, error)
 	// Get the car with `carID` if `userID` has enough permission to view the resource.
-	GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.Car, error)
+	GetByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error)
 	// Delete the car with `carID` if `userID` owns the resource.
-	DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
+	DeleteByUUID(ctx context.Context, userID int64, carID uuid.UUID) error
 	// Update the car with `carID` if `userID` has enough permission to view the resource.
-	UpdateByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.Car, error)
+	UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUID, car *models.CarCreationInput) (models.Car, error)
 }
 
 // CarRoute represents car-related API routes
@@ -175,7 +175,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		Method:  http.MethodPut,
 		Path:    "/cars/{id}",
 		Summary: "Update information about a car",
-		Errors:  []int{http.StatusUnauthorized, http.StatusNotFound},
+		Errors:  []int{http.StatusUnprocessableEntity, http.StatusUnauthorized},
 		Security: []map[string][]string{
 			{
 				CookieSecuritySchemeName: {},
@@ -184,20 +184,39 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		Middlewares: huma.Middlewares{r.userMiddleware},
 	}, func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
+		Body models.CarCreationInput
 	},
 	) (*CarOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		result, err := r.service.UpdateByUUID(ctx, userID, input.ID)
+		result, err := r.service.UpdateByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
-			if errors.Is(err, models.ErrCarNotFound) {
+			switch {
+			case errors.Is(err, models.ErrInvalidLicensePlate):
 				err = &huma.ErrorDetail{
 					Message:  err.Error(),
-					Location: "path.id",
-					Value:    input.ID,
+					Location: "body.license_plate",
+					Value:    input.Body.LicensePlate,
 				}
-				return nil, huma.Error404NotFound("", err)
+			case errors.Is(err, models.ErrInvalidMake):
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "body.make",
+					Value:    input.Body.Make,
+				}
+			case errors.Is(err, models.ErrInvalidModel):
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "body.model",
+					Value:    input.Body.Model,
+				}
+			case errors.Is(err, models.ErrInvalidColor):
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "body.color",
+					Value:    input.Body.Color,
+				}
 			}
-			return nil, huma.Error400BadRequest("", err)
+			return nil, huma.Error422UnprocessableEntity("", err)
 		}
 		return &CarOutput{Body: result}, nil
 	})

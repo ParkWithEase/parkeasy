@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	// "log"
 	"net/http"
 	"testing"
 
@@ -39,8 +40,8 @@ func (m *mockCarService) GetByUUID(ctx context.Context, userID int64, carID uuid
 }
 
 // UpdateByUUID implements CarServicer.
-func (m *mockCarService) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error) {
-	args := m.Called(ctx, userID, carID)
+func (m *mockCarService) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUID, carModel *models.CarCreationInput) (models.Car, error) {
+	args := m.Called(ctx, userID, carID, carModel)
 	return args.Get(0).(models.Car), args.Error(1)
 }
 
@@ -364,6 +365,17 @@ func TestUpdateCar(t *testing.T) {
 	t.Cleanup(cancel)
 	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testUserID)
 
+	testInput := models.CarCreationInput{
+		CarDetails: models.CarDetails{
+			LicensePlate: "HTV 678",
+			Make:         "Honda",
+			Model:        "Civic",
+			Color:        "Blue",
+		},
+	}
+
+	carUUID := uuid.New()
+
 	t.Run("all good", func(t *testing.T) {
 		t.Parallel()
 
@@ -372,46 +384,25 @@ func TestUpdateCar(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		testUUID := uuid.New()
-		updatedCar := models.Car{
-			ID: testUUID,
-			Details: models.CarDetails{
-				LicensePlate: "ABC123",
-				Make:         "Toyota",
-				Model:        "Corolla",
-				Color:        "Red",
-			},
-		}
-
-		srv.On("UpdateByUUID", mock.Anything, testUserID, testUUID).
-			Return(updatedCar, nil).
+		srv.On("UpdateByUUID", mock.Anything, testUserID, carUUID, &testInput).
+			Return(models.Car{Details: testInput.CarDetails, ID: carUUID}, nil).
 			Once()
 
-		// Simulate an update request
-		updateRequest := models.CarCreationInput{
-			CarDetails: models.CarDetails{
-				LicensePlate: "ABC123",
-				Make:         "Toyota",
-				Model:        "Corolla",
-				Color:        "Red",
-			},
-		}
-		reqBody, _ := json.Marshal(updateRequest)
-
-		resp := api.PutCtx(ctx, "/cars/"+testUUID.String(), reqBody)
+		resp := api.PutCtx(ctx, "/cars/"+carUUID.String(), testInput)
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
-
 		respBody, _ := io.ReadAll(resp.Result().Body)
+
 		var car models.Car
 		err := json.Unmarshal(respBody, &car)
 		require.NoError(t, err)
 
-		assert.Equal(t, updatedCar, car)
+		assert.Equal(t, testInput.CarDetails, car.Details)
+		assert.Equal(t, carUUID, car.ID)
 
 		srv.AssertExpectations(t)
 	})
 
-	t.Run("car not found handling", func(t *testing.T) {
+	t.Run("license plate errors", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
@@ -419,34 +410,114 @@ func TestUpdateCar(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		testUUID := uuid.New()
-		srv.On("UpdateByUUID", mock.Anything, testUserID, testUUID).
-			Return(models.Car{}, models.ErrCarNotFound).
+		srv.On("UpdateByUUID", mock.Anything, testUserID, carUUID, &testInput).
+			Return(models.Car{}, models.ErrInvalidLicensePlate).
 			Once()
 
-		// Simulate an update request
-		updateRequest := models.CarCreationInput{
-			CarDetails: models.CarDetails{
-				LicensePlate: "ABC123",
-				Make:         "Toyota",
-				Model:        "Corolla",
-				Color:        "Red",
-			},
-		}
-		reqBody, _ := json.Marshal(updateRequest)
-
-		resp := api.PutCtx(ctx, "/cars/"+testUUID.String(), reqBody)
-		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
-
+		resp := api.PutCtx(ctx, "/cars/"+carUUID.String(), testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 		respBody, _ := io.ReadAll(resp.Result().Body)
+
 		var errModel huma.ErrorModel
 		err := json.Unmarshal(respBody, &errModel)
 		require.NoError(t, err)
-		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Message:  models.ErrCarNotFound.Error(),
-			Location: "path.id",
-			Value:    jsonAnyify(testUUID),
-		})
+
+		testDetail := huma.ErrorDetail{
+			Message:  models.ErrInvalidLicensePlate.Error(),
+			Location: "body.license_plate",
+			Value:    jsonAnyify(testInput.LicensePlate),
+		}
+		assert.Contains(t, errModel.Errors, &testDetail)
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("car make errors", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockCarService)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateByUUID", mock.Anything, testUserID, carUUID, &testInput).
+			Return(models.Car{}, models.ErrInvalidMake).
+			Once()
+
+		resp := api.PutCtx(ctx, "/cars/"+carUUID.String(), testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+		respBody, _ := io.ReadAll(resp.Result().Body)
+
+		var errModel huma.ErrorModel
+		err := json.Unmarshal(respBody, &errModel)
+		require.NoError(t, err)
+
+		testDetail := huma.ErrorDetail{
+			Message:  models.ErrInvalidMake.Error(),
+			Location: "body.make",
+			Value:    jsonAnyify(testInput.Make),
+		}
+		assert.Contains(t, errModel.Errors, &testDetail)
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("car model errors", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockCarService)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateByUUID", mock.Anything, testUserID, carUUID, &testInput).
+			Return(models.Car{}, models.ErrInvalidModel).
+			Once()
+
+		resp := api.PutCtx(ctx, "/cars/"+carUUID.String(), testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+		respBody, _ := io.ReadAll(resp.Result().Body)
+
+		var errModel huma.ErrorModel
+		err := json.Unmarshal(respBody, &errModel)
+		require.NoError(t, err)
+
+		testDetail := huma.ErrorDetail{
+			Message:  models.ErrInvalidModel.Error(),
+			Location: "body.model",
+			Value:    jsonAnyify(testInput.Model),
+		}
+		assert.Contains(t, errModel.Errors, &testDetail)
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("car color errors", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockCarService)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateByUUID", mock.Anything, testUserID, carUUID, &testInput).
+			Return(models.Car{}, models.ErrInvalidColor).
+			Once()
+
+		resp := api.PutCtx(ctx, "/cars/"+carUUID.String(), testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+		respBody, _ := io.ReadAll(resp.Result().Body)
+
+		var errModel huma.ErrorModel
+		err := json.Unmarshal(respBody, &errModel)
+		require.NoError(t, err)
+
+		testDetail := huma.ErrorDetail{
+			Message:  models.ErrInvalidColor.Error(),
+			Location: "body.color",
+			Value:    jsonAnyify(testInput.Color),
+		}
+		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
 	})

@@ -45,7 +45,25 @@ func (p *PostgresRepository) Create(ctx context.Context, userID64 int64, car *mo
 	if err != nil {
 		return -1, Entry{}, fmt.Errorf("could not commit transaction: %w", err)
 	}
-	return int64(inserted.Carid), Entry{}, nil
+
+	details := models.CarDetails{
+		LicensePlate: inserted.Licenseplate,
+		Make:         inserted.Make,
+		Model:        inserted.Model,
+		Color:        inserted.Color,
+	}
+
+	insertedCar := models.Car{
+		Details: details,
+	}
+
+	entry := Entry{
+		Car: 			insertedCar,
+		InternalID: 	int64(inserted.Carid),
+		OwnerID: 		int64(inserted.Userid),
+	}
+
+	return int64(inserted.Carid), entry, nil
 }
 
 func (p *PostgresRepository) DeleteByUUID(ctx context.Context, carID uuid.UUID) error {
@@ -73,13 +91,29 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, carID uuid.UUID, 
 		um.Set(dbmodels.CarColumns.Color, psql.Arg(car.Color)),
 	)
 
-	// Execute the query
-	_, err := bob.Exec(ctx, p.db, query)
+	updated, err := bob.One(ctx, p.db, query, scan.StructMapper[dbmodels.Car]())
 	if err != nil {
 		return Entry{}, fmt.Errorf("could not execute update: %w", err)
 	}
 
-	return Entry{}, nil
+	details := models.CarDetails{
+		LicensePlate: updated.Licenseplate,
+		Make:         updated.Make,
+		Model:        updated.Model,
+		Color:        updated.Color,
+	}
+
+	insertedCar := models.Car{
+		Details: details,
+	}
+
+	entry := Entry{
+		Car: 			insertedCar,
+		InternalID: 	int64(updated.Carid),
+		OwnerID: 		int64(updated.Userid),
+	}
+
+	return entry, nil
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (Entry, error) {

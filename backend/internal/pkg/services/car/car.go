@@ -71,12 +71,23 @@ func (s *Service) DeleteByUUID(ctx context.Context, userID int64, carID uuid.UUI
 	return s.repo.DeleteByUUID(ctx, carID)
 }
 
-func (s *Service) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error) {
-	result, err := s.repo.GetByUUID(ctx, carID)
+func (s *Service) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUID, carModel *models.CarCreationInput) (models.Car, error) {
+	licensePlatePattern := regexp.MustCompile(`^[A-Za-z0-9 ]{2,8}$`)
+	if !licensePlatePattern.MatchString(carModel.LicensePlate) {
+		return models.Car{}, models.ErrInvalidLicensePlate
+	}
+	if carModel.Make == "" {
+		return models.Car{}, models.ErrInvalidMake
+	}
+	if carModel.Model == "" {
+		return models.Car{}, models.ErrInvalidModel
+	}
+	if carModel.Color == "" {
+		return models.Car{}, models.ErrInvalidColor
+	}
+
+	result, err := s.repo.UpdateByUUID(ctx, carID, carModel)
 	if err != nil {
-		if errors.Is(err, car.ErrNotFound) {
-			err = models.ErrCarNotFound
-		}
 		return models.Car{}, err
 	}
 	if result.OwnerID != userID {
