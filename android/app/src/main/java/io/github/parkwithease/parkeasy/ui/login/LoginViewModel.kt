@@ -36,6 +36,9 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     private val _registering = MutableStateFlow(false)
     val registering = _registering.asStateFlow()
 
+    private val _requestingReset = MutableStateFlow(false)
+    val requestingReset = _requestingReset.asStateFlow()
+
     val loggedIn = authRepo.statusFlow
 
     private val _message = MutableStateFlow(Event.initial(""))
@@ -90,10 +93,10 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
         }
     }
 
-    fun onResetPress() {
+    fun onRequestResetPress() {
         runBlocking {
             launch {
-                if (userRepo.requestResetToken(ResetCredentials(_email.value))) {
+                if (userRepo.requestReset(ResetCredentials(_email.value))) {
                     _message.value = Event("Reset email sent\nJk... we're working on it")
                 } else {
                     _message.value = Event("Error resetting password")
@@ -102,7 +105,11 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
         }
     }
 
-    fun onSwitchPress() {
+    fun onSwitchRegisterPress() {
         _registering.value = !_registering.value
+    }
+
+    fun onSwitchRequestResetPress() {
+        _requestingReset.value = !_requestingReset.value
     }
 }

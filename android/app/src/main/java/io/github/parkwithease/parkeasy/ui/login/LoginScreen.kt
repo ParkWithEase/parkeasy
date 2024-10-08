@@ -47,6 +47,7 @@ private data class LoginState(
     val confirmPassword: String,
     val matchingPasswords: Boolean,
     val registering: Boolean,
+    val requestingReset: Boolean,
     val loggedIn: Boolean,
 )
 
@@ -57,8 +58,9 @@ private data class LoginEvents(
     val onConfirmPasswordChange: (String) -> Unit,
     val onLoginPress: () -> Unit,
     val onRegisterPress: () -> Unit,
-    val onResetPress: () -> Unit,
-    val onSwitchPress: () -> Unit,
+    val onRequestResetPress: () -> Unit,
+    val onSwitchRegisterPress: () -> Unit,
+    val onSwitchRequestResetPress: () -> Unit,
 )
 
 @Composable
@@ -77,6 +79,7 @@ fun LoginScreen(
             viewModel.confirmPassword.collectAsState().value,
             viewModel.matchingPasswords.collectAsState().value,
             viewModel.registering.collectAsState().value,
+            viewModel.requestingReset.collectAsState().value,
             viewModel.loggedIn.collectAsState(false).value,
         )
     val events =
@@ -87,8 +90,9 @@ fun LoginScreen(
             viewModel::onConfirmPasswordChange,
             viewModel::onLoginPress,
             viewModel::onRegisterPress,
-            viewModel::onResetPress,
-            viewModel::onSwitchPress,
+            viewModel::onRequestResetPress,
+            viewModel::onSwitchRegisterPress,
+            viewModel::onSwitchRequestResetPress,
         )
     val onLoginEvent: () -> Unit = onLogin
     LaunchedEffect(state.loggedIn) {
@@ -108,8 +112,17 @@ fun LoginScreen(
 @Composable
 private fun PreviewLoginScreenInner() {
     val state =
-        LoginState("", "", "", "", matchingPasswords = false, registering = false, loggedIn = false)
-    val events = LoginEvents({}, {}, {}, {}, {}, {}, {}, {})
+        LoginState(
+            "",
+            "",
+            "",
+            "",
+            matchingPasswords = false,
+            registering = false,
+            requestingReset = false,
+            loggedIn = false,
+        )
+    val events = LoginEvents({}, {}, {}, {}, {}, {}, {}, {}, {})
     ParkEasyTheme { LoginScreenInner(state, events) }
 }
 
@@ -151,34 +164,46 @@ private fun LoginForm(
     ) {
         LoginFields(state, events, Modifier.width(width))
         AnimatedVisibility(!state.registering) {
-            ResetText(
-                stringResource(R.string.forgot_password),
-                events.onResetPress,
+            SwitchRequestResetText(
+                stringResource(
+                    if (state.requestingReset)
+                        (if (state.registering) R.string.return_register else R.string.return_login)
+                    else R.string.forgot_password
+                ),
+                events.onSwitchRequestResetPress,
                 Modifier.width(width),
             )
         }
         LoginButton(
-            stringResource(if (state.registering) R.string.register else R.string.login),
-            if (state.registering) events.onRegisterPress else events.onLoginPress,
+            stringResource(
+                if (!state.requestingReset)
+                    (if (state.registering) R.string.register else R.string.login)
+                else R.string.request_reset
+            ),
+            if (!state.requestingReset)
+                (if (state.registering) events.onRegisterPress else events.onLoginPress)
+            else events.onRequestResetPress,
             Modifier.width(width),
         )
-        SwitchText(
-            stringResource(
-                if (state.registering) R.string.already_registered else R.string.not_registered
-            ),
-            stringResource(
-                if (state.registering) R.string.login_instead else R.string.register_instead
-            ),
-            events.onSwitchPress,
-            Modifier.width(width),
-        )
+        AnimatedVisibility(!state.requestingReset) {
+            SwitchRegisterText(
+                stringResource(
+                    if (state.registering) R.string.already_registered else R.string.not_registered
+                ),
+                stringResource(
+                    if (state.registering) R.string.login_instead else R.string.register_instead
+                ),
+                events.onSwitchRegisterPress,
+                Modifier.width(width),
+            )
+        }
     }
 }
 
 @Composable
 private fun LoginFields(state: LoginState, events: LoginEvents, modifier: Modifier = Modifier) {
     Column(modifier) {
-        AnimatedVisibility(state.registering) {
+        AnimatedVisibility(!state.requestingReset && state.registering) {
             LoginField(
                 state.name,
                 events.onNameChange,
@@ -194,15 +219,17 @@ private fun LoginFields(state: LoginState, events: LoginEvents, modifier: Modifi
             ImageVector.vectorResource(R.drawable.email),
             KeyboardOptions(keyboardType = KeyboardType.Email),
         )
-        LoginField(
-            state.password,
-            events.onPasswordChange,
-            stringResource(R.string.password),
-            ImageVector.vectorResource(R.drawable.password),
-            KeyboardOptions(keyboardType = KeyboardType.Password),
-            visualTransformation = PasswordVisualTransformation(),
-        )
-        AnimatedVisibility(state.registering) {
+        AnimatedVisibility(!state.requestingReset) {
+            LoginField(
+                state.password,
+                events.onPasswordChange,
+                stringResource(R.string.password),
+                ImageVector.vectorResource(R.drawable.password),
+                KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = PasswordVisualTransformation(),
+            )
+        }
+        AnimatedVisibility(!state.requestingReset && state.registering) {
             LoginField(
                 state.confirmPassword,
                 events.onConfirmPasswordChange,
@@ -246,14 +273,18 @@ private fun LoginButton(label: String, onClick: () -> Unit, modifier: Modifier =
 }
 
 @Composable
-private fun ResetText(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun SwitchRequestResetText(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Row(modifier, Arrangement.End) {
         Text(text, Modifier.clickable { onClick() }, color = MaterialTheme.colorScheme.primary)
     }
 }
 
 @Composable
-private fun SwitchText(
+private fun SwitchRegisterText(
     supportingText: String,
     clickableText: String,
     onClick: () -> Unit,

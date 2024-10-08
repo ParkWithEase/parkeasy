@@ -29,5 +29,5 @@ interface UserRepository {
      *
      * @param credentials for the account which the password reset token is for.
      */
-    suspend fun requestResetToken(credentials: ResetCredentials): Boolean
+    suspend fun requestReset(credentials: ResetCredentials): Boolean
 }
