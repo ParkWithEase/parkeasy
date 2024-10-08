@@ -254,13 +254,13 @@ private fun ResetText(text: String, onClick: () -> Unit, modifier: Modifier = Mo
 
 @Composable
 private fun SwitchText(
-    text: String,
+    supportingText: String,
     clickableText: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier, Arrangement.Center) {
-        Text(text, color = MaterialTheme.colorScheme.onSurface)
+        Text(supportingText, color = MaterialTheme.colorScheme.onSurface)
         Text(" ")
         Text(
             clickableText,
