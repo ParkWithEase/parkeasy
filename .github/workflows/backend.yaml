@@ -68,7 +68,7 @@ jobs:
           cache-dependency-path: |
             backend/go.sum
 
-      - run: go test -race -coverprofile=coverage.txt ./...
+      - run: INTEGRATION=1 go test -race -coverprofile=coverage.txt ./...
         working-directory: backend
 
       - uses: codecov/codecov-action@v4

@@ -21,12 +21,12 @@ import (
 )
 
 type Config struct {
+	// Database pool for Postgres connection
+	DBPool *pgxpool.Pool
 	// The address to run the server on
 	Addr string
 	// Whether to run server in insecure mode. This allows cookies to be transferred over plain HTTP.
 	Insecure bool
-	// Database pool for Postgres connection
-	DBPool *pgxpool.Pool
 }
 
 // Register all routes
