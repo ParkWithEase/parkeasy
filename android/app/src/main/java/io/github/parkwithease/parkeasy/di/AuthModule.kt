@@ -9,6 +9,7 @@ import io.github.parkwithease.parkeasy.data.local.AuthRepositoryImpl
 
 @Module
 @InstallIn(SingletonComponent::class)
+@Suppress("Unused")
 interface AuthModule {
     @Binds fun bindAuthRepository(authRepositoryImpl: AuthRepositoryImpl): AuthRepository
 }

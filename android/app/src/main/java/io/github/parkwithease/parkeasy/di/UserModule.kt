@@ -9,6 +9,7 @@ import io.github.parkwithease.parkeasy.data.remote.UserRepositoryImpl
 
 @Module
 @InstallIn(SingletonComponent::class)
+@Suppress("Unused")
 interface UserModule {
     @Binds fun bindUserRepository(userRepositoryImpl: UserRepositoryImpl): UserRepository
 }
