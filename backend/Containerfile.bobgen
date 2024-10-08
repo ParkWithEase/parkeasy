@@ -1,0 +1,7 @@
+FROM docker.io/library/golang:1.23.1
+
+WORKDIR /src
+
+RUN GOBIN=/usr/local/bin go install github.com/stephenafamo/bob/gen/bobgen-psql@latest
+ENTRYPOINT ["bobgen-psql"]
+CMD []
