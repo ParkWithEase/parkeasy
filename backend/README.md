@@ -6,13 +6,12 @@ API server for ParkEasy
 
 Start a local cluster for development
 
+    cp example.env .env
     docker compose -f compose.yaml up --build
 
 The API server is exposed on port `8080`.
 
-Try a simple API request
-
-    curl http://localhost:8080/greeting/world
+The documentation server can then be reached at `http://localhost:8080/docs`
 
 #### Hot code reloading
 
