@@ -49,9 +49,13 @@ type UserTemplate struct {
 }
 
 type userR struct {
+	UseridCar    *userRUseridCarR
 	AuthuuidAuth *userRAuthuuidAuthR
 }
 
+type userRUseridCarR struct {
+	o *CarTemplate
+}
 type userRAuthuuidAuthR struct {
 	o *AuthTemplate
 }
@@ -108,6 +112,13 @@ func (o UserTemplate) toModels(number int) models.UserSlice {
 // setModelRels creates and sets the relationships on *models.User
 // according to the relationships in the template. Nothing is inserted into the db
 func (t UserTemplate) setModelRels(o *models.User) {
+	if t.r.UseridCar != nil {
+		rel := t.r.UseridCar.o.toModel()
+		rel.R.UseridUser = o
+		rel.Userid = o.Userid
+		o.R.UseridCar = rel
+	}
+
 	if t.r.AuthuuidAuth != nil {
 		rel := t.r.AuthuuidAuth.o.toModel()
 		rel.R.AuthuuidUser = o
@@ -199,6 +210,18 @@ func ensureCreatableUser(m *models.UserSetter) {
 func (o *UserTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.User) (context.Context, error) {
 	var err error
 
+	if o.r.UseridCar != nil {
+		var rel0 *models.Car
+		ctx, rel0, err = o.r.UseridCar.o.create(ctx, exec)
+		if err != nil {
+			return ctx, err
+		}
+		err = m.AttachUseridCar(ctx, exec, rel0)
+		if err != nil {
+			return ctx, err
+		}
+	}
+
 	return ctx, err
 }
 
@@ -241,21 +264,21 @@ func (o *UserTemplate) create(ctx context.Context, exec bob.Executor) (context.C
 	opt := o.BuildSetter()
 	ensureCreatableUser(opt)
 
-	var rel0 *models.Auth
+	var rel1 *models.Auth
 	if o.r.AuthuuidAuth == nil {
 		var ok bool
-		rel0, ok = authCtx.Value(ctx)
+		rel1, ok = authCtx.Value(ctx)
 		if !ok {
 			UserMods.WithNewAuthuuidAuth().Apply(o)
 		}
 	}
 	if o.r.AuthuuidAuth != nil {
-		ctx, rel0, err = o.r.AuthuuidAuth.o.create(ctx, exec)
+		ctx, rel1, err = o.r.AuthuuidAuth.o.create(ctx, exec)
 		if err != nil {
 			return ctx, nil, err
 		}
 	}
-	opt.Authuuid = omit.From(rel0.Authuuid)
+	opt.Authuuid = omit.From(rel1.Authuuid)
 
 	m, err := models.Users.Insert(ctx, exec, opt)
 	if err != nil {
@@ -263,7 +286,7 @@ func (o *UserTemplate) create(ctx context.Context, exec bob.Executor) (context.C
 	}
 	ctx = userCtx.WithValue(ctx, m)
 
-	m.R.AuthuuidAuth = rel0
+	m.R.AuthuuidAuth = rel1
 
 	ctx, err = o.insertOptRels(ctx, exec, m)
 	return ctx, m, err
@@ -548,6 +571,28 @@ func (m userMods) RandomAddedat(f *faker.Faker) UserMod {
 		o.Addedat = func() time.Time {
 			return random_time_Time(f)
 		}
+	})
+}
+
+func (m userMods) WithUseridCar(rel *CarTemplate) UserMod {
+	return UserModFunc(func(o *UserTemplate) {
+		o.r.UseridCar = &userRUseridCarR{
+			o: rel,
+		}
+	})
+}
+
+func (m userMods) WithNewUseridCar(mods ...CarMod) UserMod {
+	return UserModFunc(func(o *UserTemplate) {
+		related := o.f.NewCar(mods...)
+
+		m.WithUseridCar(related).Apply(o)
+	})
+}
+
+func (m userMods) WithoutUseridCar() UserMod {
+	return UserModFunc(func(o *UserTemplate) {
+		o.r.UseridCar = nil
 	})
 }
 
