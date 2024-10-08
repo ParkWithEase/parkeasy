@@ -1,0 +1,52 @@
+services:
+  bobgen:
+    build:
+      context: .
+      dockerfile: Containerfile.bobgen
+    command: -c /src/bobgen.yaml
+    depends_on:
+      migrate:
+        required: true
+        condition: service_completed_successfully
+    volumes:
+      - ./go.mod:/src/go.mod:ro
+      - ./go.sum:/src/go.sum:ro
+      - ./bobgen.yaml:/src/bobgen.yaml:ro
+      - ./internal/pkg:/src/internal/pkg
+    environment:
+      PSQL_DSN: postgres://testuser:testpassword@db/testdb?sslmode=disable
+    security_opt:
+      - label=disable
+    networks:
+      - bobgen
+
+  migrate:
+    image: docker.io/migrate/migrate:latest
+    command: -path=/migrations/ -database postgres://testuser:testpassword@db/testdb?sslmode=disable up
+    volumes:
+      - ./internal/pkg/dbmigration/migrations:/migrations:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    security_opt:
+      - label=disable
+    networks:
+      - bobgen
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpassword
+      POSTGRES_DB: testdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d testdb -U testuser"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bobgen
+
+networks:
+  bobgen:
+    driver: bridge
