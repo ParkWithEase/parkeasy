@@ -60,7 +60,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAuthStore(app: Application): AuthRepository {
+    fun provideAuthStore(@ApplicationContext context: Context): AuthRepository {
         return AuthRepositoryImpl(app.applicationContext.dataStore)
     }
 
