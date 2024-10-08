@@ -13,19 +13,22 @@ import (
 )
 
 var TableNames = struct {
-	Auths string
-	Cars  string
-	Users string
+	Auths        string
+	Cars         string
+	Parkingspots string
+	Users        string
 }{
-	Auths: "auth",
-	Cars:  "car",
-	Users: "users",
+	Auths:        "auth",
+	Cars:         "car",
+	Parkingspots: "parkingspot",
+	Users:        "users",
 }
 
 var ColumnNames = struct {
-	Auths authColumnNames
-	Cars  carColumnNames
-	Users userColumnNames
+	Auths        authColumnNames
+	Cars         carColumnNames
+	Parkingspots parkingspotColumnNames
+	Users        userColumnNames
 }{
 	Auths: authColumnNames{
 		Authid:       "authid",
@@ -41,6 +44,21 @@ var ColumnNames = struct {
 		Make:         "make",
 		Model:        "model",
 		Color:        "color",
+	},
+	Parkingspots: parkingspotColumnNames{
+		Parkingspotid:      "parkingspotid",
+		Userid:             "userid",
+		Parkingspotuuid:    "parkingspotuuid",
+		Postalcode:         "postalcode",
+		Countrycode:        "countrycode",
+		City:               "city",
+		Streetaddress:      "streetaddress",
+		Longitude:          "longitude",
+		Latitude:           "latitude",
+		Hasshelter:         "hasshelter",
+		Hasplugin:          "hasplugin",
+		Haschargingstation: "haschargingstation",
+		Ispublic:           "ispublic",
 	},
 	Users: userColumnNames{
 		Userid:     "userid",
@@ -61,18 +79,21 @@ var (
 )
 
 func Where[Q psql.Filterable]() struct {
-	Auths authWhere[Q]
-	Cars  carWhere[Q]
-	Users userWhere[Q]
+	Auths        authWhere[Q]
+	Cars         carWhere[Q]
+	Parkingspots parkingspotWhere[Q]
+	Users        userWhere[Q]
 } {
 	return struct {
-		Auths authWhere[Q]
-		Cars  carWhere[Q]
-		Users userWhere[Q]
+		Auths        authWhere[Q]
+		Cars         carWhere[Q]
+		Parkingspots parkingspotWhere[Q]
+		Users        userWhere[Q]
 	}{
-		Auths: buildAuthWhere[Q](AuthColumns),
-		Cars:  buildCarWhere[Q](CarColumns),
-		Users: buildUserWhere[Q](UserColumns),
+		Auths:        buildAuthWhere[Q](AuthColumns),
+		Cars:         buildCarWhere[Q](CarColumns),
+		Parkingspots: buildParkingspotWhere[Q](ParkingspotColumns),
+		Users:        buildUserWhere[Q](UserColumns),
 	}
 }
 
@@ -97,9 +118,10 @@ func (j joinSet[Q]) AliasedAs(alias string) joinSet[Q] {
 }
 
 type joins[Q dialect.Joinable] struct {
-	Auths joinSet[authJoins[Q]]
-	Cars  joinSet[carJoins[Q]]
-	Users joinSet[userJoins[Q]]
+	Auths        joinSet[authJoins[Q]]
+	Cars         joinSet[carJoins[Q]]
+	Parkingspots joinSet[parkingspotJoins[Q]]
+	Users        joinSet[userJoins[Q]]
 }
 
 func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q](c C, f F) joinSet[Q] {
@@ -112,9 +134,10 @@ func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q
 
 func getJoins[Q dialect.Joinable]() joins[Q] {
 	return joins[Q]{
-		Auths: buildJoinSet[authJoins[Q]](AuthColumns, buildAuthJoins),
-		Cars:  buildJoinSet[carJoins[Q]](CarColumns, buildCarJoins),
-		Users: buildJoinSet[userJoins[Q]](UserColumns, buildUserJoins),
+		Auths:        buildJoinSet[authJoins[Q]](AuthColumns, buildAuthJoins),
+		Cars:         buildJoinSet[carJoins[Q]](CarColumns, buildCarJoins),
+		Parkingspots: buildJoinSet[parkingspotJoins[Q]](ParkingspotColumns, buildParkingspotJoins),
+		Users:        buildJoinSet[userJoins[Q]](UserColumns, buildUserJoins),
 	}
 }
 
