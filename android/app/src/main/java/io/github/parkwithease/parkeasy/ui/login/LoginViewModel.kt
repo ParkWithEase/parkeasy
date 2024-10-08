@@ -14,6 +14,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
+enum class LoginMode {
+    LOGIN,
+    REGISTER,
+    FORGOT,
+}
+
 @HiltViewModel
 class LoginViewModel
 @Inject
@@ -33,11 +39,8 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     private val _matchingPasswords = MutableStateFlow(true)
     val matchingPasswords = _matchingPasswords.asStateFlow()
 
-    private val _registering = MutableStateFlow(false)
-    val registering = _registering.asStateFlow()
-
-    private val _requestingReset = MutableStateFlow(false)
-    val requestingReset = _requestingReset.asStateFlow()
+    private val _loginMode = MutableStateFlow(LoginMode.LOGIN)
+    val loginMode = _loginMode.asStateFlow()
 
     val loggedIn = authRepo.statusFlow
 
@@ -105,11 +108,7 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
         }
     }
 
-    fun onSwitchRegisterPress() {
-        _registering.value = !_registering.value
-    }
-
-    fun onSwitchRequestResetPress() {
-        _requestingReset.value = !_requestingReset.value
+    fun onSwitchModePress(loginMode: LoginMode) {
+        _loginMode.value = loginMode
     }
 }

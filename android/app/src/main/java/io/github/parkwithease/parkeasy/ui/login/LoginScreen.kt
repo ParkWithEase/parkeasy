@@ -46,8 +46,7 @@ private data class LoginState(
     val password: String,
     val confirmPassword: String,
     val matchingPasswords: Boolean,
-    val registering: Boolean,
-    val requestingReset: Boolean,
+    val loginMode: LoginMode,
     val loggedIn: Boolean,
 )
 
@@ -59,8 +58,7 @@ private data class LoginEvents(
     val onLoginPress: () -> Unit,
     val onRegisterPress: () -> Unit,
     val onRequestResetPress: () -> Unit,
-    val onSwitchRegisterPress: () -> Unit,
-    val onSwitchRequestResetPress: () -> Unit,
+    val onSwitchModePress: (LoginMode) -> Unit,
 )
 
 @Composable
@@ -78,8 +76,7 @@ fun LoginScreen(
             viewModel.password.collectAsState().value,
             viewModel.confirmPassword.collectAsState().value,
             viewModel.matchingPasswords.collectAsState().value,
-            viewModel.registering.collectAsState().value,
-            viewModel.requestingReset.collectAsState().value,
+            viewModel.loginMode.collectAsState().value,
             viewModel.loggedIn.collectAsState(false).value,
         )
     val events =
@@ -91,8 +88,7 @@ fun LoginScreen(
             viewModel::onLoginPress,
             viewModel::onRegisterPress,
             viewModel::onRequestResetPress,
-            viewModel::onSwitchRegisterPress,
-            viewModel::onSwitchRequestResetPress,
+            viewModel::onSwitchModePress,
         )
     val onLoginEvent: () -> Unit = onLogin
     LaunchedEffect(state.loggedIn) {
@@ -118,11 +114,10 @@ private fun PreviewLoginScreenInner() {
             "",
             "",
             matchingPasswords = false,
-            registering = false,
-            requestingReset = false,
+            loginMode = LoginMode.REGISTER,
             loggedIn = false,
         )
-    val events = LoginEvents({}, {}, {}, {}, {}, {}, {}, {}, {})
+    val events = LoginEvents({}, {}, {}, {}, {}, {}, {}, {})
     ParkEasyTheme { LoginScreenInner(state, events) }
 }
 
@@ -163,37 +158,44 @@ private fun LoginForm(
         modifier = modifier.fillMaxSize(),
     ) {
         LoginFields(state, events, Modifier.width(width))
-        AnimatedVisibility(!state.registering) {
+        AnimatedVisibility(state.loginMode != LoginMode.REGISTER) {
             SwitchRequestResetText(
                 stringResource(
-                    if (state.requestingReset)
-                        (if (state.registering) R.string.return_register else R.string.return_login)
+                    if (state.loginMode == LoginMode.FORGOT) R.string.return_login
                     else R.string.forgot_password
                 ),
-                events.onSwitchRequestResetPress,
+                if (state.loginMode == LoginMode.FORGOT) LoginMode.LOGIN else LoginMode.FORGOT,
+                events.onSwitchModePress,
                 Modifier.width(width),
             )
         }
         LoginButton(
             stringResource(
-                if (!state.requestingReset)
-                    (if (state.registering) R.string.register else R.string.login)
-                else R.string.request_reset
+                when (state.loginMode) {
+                    LoginMode.LOGIN -> R.string.login
+                    LoginMode.REGISTER -> R.string.register
+                    LoginMode.FORGOT -> R.string.forgot_password
+                }
             ),
-            if (!state.requestingReset)
-                (if (state.registering) events.onRegisterPress else events.onLoginPress)
-            else events.onRequestResetPress,
+            when (state.loginMode) {
+                LoginMode.LOGIN -> events.onLoginPress
+                LoginMode.REGISTER -> events.onRegisterPress
+                LoginMode.FORGOT -> events.onRequestResetPress
+            },
             Modifier.width(width),
         )
-        AnimatedVisibility(!state.requestingReset) {
+        AnimatedVisibility(state.loginMode != LoginMode.FORGOT) {
             SwitchRegisterText(
                 stringResource(
-                    if (state.registering) R.string.already_registered else R.string.not_registered
+                    if (state.loginMode == LoginMode.REGISTER) R.string.already_registered
+                    else R.string.not_registered
                 ),
                 stringResource(
-                    if (state.registering) R.string.login_instead else R.string.register_instead
+                    if (state.loginMode == LoginMode.REGISTER) R.string.login_instead
+                    else R.string.register_instead
                 ),
-                events.onSwitchRegisterPress,
+                if (state.loginMode == LoginMode.REGISTER) LoginMode.LOGIN else LoginMode.REGISTER,
+                events.onSwitchModePress,
                 Modifier.width(width),
             )
         }
@@ -203,7 +205,7 @@ private fun LoginForm(
 @Composable
 private fun LoginFields(state: LoginState, events: LoginEvents, modifier: Modifier = Modifier) {
     Column(modifier) {
-        AnimatedVisibility(!state.requestingReset && state.registering) {
+        AnimatedVisibility(state.loginMode == LoginMode.REGISTER) {
             LoginField(
                 state.name,
                 events.onNameChange,
@@ -219,7 +221,7 @@ private fun LoginFields(state: LoginState, events: LoginEvents, modifier: Modifi
             ImageVector.vectorResource(R.drawable.email),
             KeyboardOptions(keyboardType = KeyboardType.Email),
         )
-        AnimatedVisibility(!state.requestingReset) {
+        AnimatedVisibility(state.loginMode != LoginMode.FORGOT) {
             LoginField(
                 state.password,
                 events.onPasswordChange,
@@ -229,7 +231,7 @@ private fun LoginFields(state: LoginState, events: LoginEvents, modifier: Modifi
                 visualTransformation = PasswordVisualTransformation(),
             )
         }
-        AnimatedVisibility(!state.requestingReset && state.registering) {
+        AnimatedVisibility(state.loginMode == LoginMode.REGISTER) {
             LoginField(
                 state.confirmPassword,
                 events.onConfirmPasswordChange,
@@ -275,11 +277,16 @@ private fun LoginButton(label: String, onClick: () -> Unit, modifier: Modifier =
 @Composable
 private fun SwitchRequestResetText(
     text: String,
-    onClick: () -> Unit,
+    revertMode: LoginMode,
+    onClick: (LoginMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier, Arrangement.End) {
-        Text(text, Modifier.clickable { onClick() }, color = MaterialTheme.colorScheme.primary)
+        Text(
+            text,
+            Modifier.clickable { onClick(revertMode) },
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }
 
@@ -287,7 +294,8 @@ private fun SwitchRequestResetText(
 private fun SwitchRegisterText(
     supportingText: String,
     clickableText: String,
-    onClick: () -> Unit,
+    revertMode: LoginMode,
+    onClick: (LoginMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier, Arrangement.Center) {
@@ -295,7 +303,7 @@ private fun SwitchRegisterText(
         Text(" ")
         Text(
             clickableText,
-            Modifier.clickable { onClick() },
+            Modifier.clickable { onClick(revertMode) },
             color = MaterialTheme.colorScheme.primary,
         )
     }
