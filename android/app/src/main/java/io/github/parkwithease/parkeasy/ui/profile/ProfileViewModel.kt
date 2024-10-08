@@ -13,11 +13,7 @@ class ProfileViewModel
 constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : ViewModel() {
     val loggedIn = authRepo.statusFlow
 
-    private fun logout() {
-        runBlocking { userRepo.logout() }
-    }
-
     fun onLogoutPress() {
-        logout()
+        runBlocking { userRepo.logout() }
     }
 }
