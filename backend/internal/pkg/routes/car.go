@@ -81,7 +81,7 @@ func checkCarFieldErrors(err error, input *models.CarCreationInput) error {
 }
 
 // Registers `/car` routes
-func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundling inflates complexity level
+func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		Method:        http.MethodPost,
 		Path:          "/cars",
@@ -198,10 +198,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		result, err := r.service.UpdateByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
-			errDetail := checkCarFieldErrors(err, &input.Body)
-			if errDetail != nil {
-				return nil, huma.Error422UnprocessableEntity("", errDetail)
-			}
+			err = checkCarFieldErrors(err, &input.Body)
 			switch {
 			case errors.Is(err, models.ErrCarNotFound), errors.Is(err, models.ErrCarOwned):
 				err = &huma.ErrorDetail{
