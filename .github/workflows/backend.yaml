@@ -51,6 +51,28 @@ jobs:
           version: latest
           working-directory: backend
 
+  dbmodel:
+    needs: [changes]
+    if: needs.changes.outputs.exists != 'false'
+
+    name: Backend DB model up-to-date
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: backend
+
+      - run: docker compose -f compose.modelgen.yaml build
+        working-directory: backend
+
+      - uses: nickcharlton/diff-check@v1.0.0
+        with:
+          command: |
+            cd backend
+            docker compose -f compose.modelgen.yaml run --rm bobgen
+            docker compose -f compose.modelgen.yaml down
+
   test:
     needs: [changes]
     if: needs.changes.outputs.exists != 'false'
