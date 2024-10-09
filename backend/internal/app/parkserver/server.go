@@ -30,7 +30,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/rs/cors"
-	"github.com/stephenafamo/bob"
 )
 
 type Config struct {

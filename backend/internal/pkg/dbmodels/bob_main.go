@@ -13,28 +13,58 @@ import (
 )
 
 var TableNames = struct {
-	Auths       string
-	Resettokens string
-	Sessions    string
-	Users       string
+	Auths        string
+	Cars         string
+	Parkingspots string
+	Resettokens  string
+	Sessions     string
+	Users        string
 }{
-	Auths:       "auth",
-	Resettokens: "resettoken",
-	Sessions:    "sessions",
-	Users:       "users",
+	Auths:        "auth",
+	Cars:         "car",
+	Parkingspots: "parkingspot",
+	Resettokens:  "resettoken",
+	Sessions:     "sessions",
+	Users:        "users",
 }
 
 var ColumnNames = struct {
-	Auths       authColumnNames
-	Resettokens resettokenColumnNames
-	Sessions    sessionColumnNames
-	Users       userColumnNames
+	Auths        authColumnNames
+	Cars         carColumnNames
+	Parkingspots parkingspotColumnNames
+	Resettokens  resettokenColumnNames
+	Sessions     sessionColumnNames
+	Users        userColumnNames
 }{
 	Auths: authColumnNames{
 		Authid:       "authid",
 		Authuuid:     "authuuid",
 		Email:        "email",
 		Passwordhash: "passwordhash",
+	},
+	Cars: carColumnNames{
+		Carid:        "carid",
+		Userid:       "userid",
+		Caruuid:      "caruuid",
+		Licenseplate: "licenseplate",
+		Make:         "make",
+		Model:        "model",
+		Color:        "color",
+	},
+	Parkingspots: parkingspotColumnNames{
+		Parkingspotid:      "parkingspotid",
+		Userid:             "userid",
+		Parkingspotuuid:    "parkingspotuuid",
+		Postalcode:         "postalcode",
+		Countrycode:        "countrycode",
+		City:               "city",
+		Streetaddress:      "streetaddress",
+		Longitude:          "longitude",
+		Latitude:           "latitude",
+		Hasshelter:         "hasshelter",
+		Hasplugin:          "hasplugin",
+		Haschargingstation: "haschargingstation",
+		Ispublic:           "ispublic",
 	},
 	Resettokens: resettokenColumnNames{
 		Token:    "token",
@@ -65,21 +95,27 @@ var (
 )
 
 func Where[Q psql.Filterable]() struct {
-	Auths       authWhere[Q]
-	Resettokens resettokenWhere[Q]
-	Sessions    sessionWhere[Q]
-	Users       userWhere[Q]
+	Auths        authWhere[Q]
+	Cars         carWhere[Q]
+	Parkingspots parkingspotWhere[Q]
+	Resettokens  resettokenWhere[Q]
+	Sessions     sessionWhere[Q]
+	Users        userWhere[Q]
 } {
 	return struct {
-		Auths       authWhere[Q]
-		Resettokens resettokenWhere[Q]
-		Sessions    sessionWhere[Q]
-		Users       userWhere[Q]
+		Auths        authWhere[Q]
+		Cars         carWhere[Q]
+		Parkingspots parkingspotWhere[Q]
+		Resettokens  resettokenWhere[Q]
+		Sessions     sessionWhere[Q]
+		Users        userWhere[Q]
 	}{
-		Auths:       buildAuthWhere[Q](AuthColumns),
-		Resettokens: buildResettokenWhere[Q](ResettokenColumns),
-		Sessions:    buildSessionWhere[Q](SessionColumns),
-		Users:       buildUserWhere[Q](UserColumns),
+		Auths:        buildAuthWhere[Q](AuthColumns),
+		Cars:         buildCarWhere[Q](CarColumns),
+		Parkingspots: buildParkingspotWhere[Q](ParkingspotColumns),
+		Resettokens:  buildResettokenWhere[Q](ResettokenColumns),
+		Sessions:     buildSessionWhere[Q](SessionColumns),
+		Users:        buildUserWhere[Q](UserColumns),
 	}
 }
 
@@ -104,9 +140,11 @@ func (j joinSet[Q]) AliasedAs(alias string) joinSet[Q] {
 }
 
 type joins[Q dialect.Joinable] struct {
-	Auths       joinSet[authJoins[Q]]
-	Resettokens joinSet[resettokenJoins[Q]]
-	Users       joinSet[userJoins[Q]]
+	Auths        joinSet[authJoins[Q]]
+	Cars         joinSet[carJoins[Q]]
+	Parkingspots joinSet[parkingspotJoins[Q]]
+	Resettokens  joinSet[resettokenJoins[Q]]
+	Users        joinSet[userJoins[Q]]
 }
 
 func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q](c C, f F) joinSet[Q] {
@@ -119,9 +157,11 @@ func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q
 
 func getJoins[Q dialect.Joinable]() joins[Q] {
 	return joins[Q]{
-		Auths:       buildJoinSet[authJoins[Q]](AuthColumns, buildAuthJoins),
-		Resettokens: buildJoinSet[resettokenJoins[Q]](ResettokenColumns, buildResettokenJoins),
-		Users:       buildJoinSet[userJoins[Q]](UserColumns, buildUserJoins),
+		Auths:        buildJoinSet[authJoins[Q]](AuthColumns, buildAuthJoins),
+		Cars:         buildJoinSet[carJoins[Q]](CarColumns, buildCarJoins),
+		Parkingspots: buildJoinSet[parkingspotJoins[Q]](ParkingspotColumns, buildParkingspotJoins),
+		Resettokens:  buildJoinSet[resettokenJoins[Q]](ResettokenColumns, buildResettokenJoins),
+		Users:        buildJoinSet[userJoins[Q]](UserColumns, buildUserJoins),
 	}
 }
 

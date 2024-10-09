@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"math"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbmodels"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
@@ -29,11 +28,7 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 	}
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID64 int64, car *models.CarCreationInput) (int64, Entry, error) {
-	if userID64 > math.MaxInt32 || userID64 < 0 {
-		return -1, Entry{}, fmt.Errorf("userID out of range: %v", userID64)
-	}
-	userID := int32(userID64)
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, car *models.CarCreationInput) (int64, Entry, error) {
 
 	inserted, err := dbmodels.Cars.Insert(ctx, p.db, &dbmodels.CarSetter{
 		Userid:       omit.From(userID),
@@ -54,7 +49,8 @@ func (p *PostgresRepository) Create(ctx context.Context, userID64 int64, car *mo
 	}
 
 	insertedCar := models.Car{
-		Details: details,
+		Details: 	details,
+		ID:			inserted.Caruuid,
 	}
 
 	entry := Entry{
@@ -83,37 +79,26 @@ func (p *PostgresRepository) DeleteByUUID(ctx context.Context, carID uuid.UUID) 
 
 func (p *PostgresRepository) UpdateByUUID(ctx context.Context, carID uuid.UUID, car *models.CarCreationInput) (Entry, error) {
 	query := psql.Update(
-		um.From(dbmodels.Cars.Name(ctx)),
+		um.Table(dbmodels.Cars.Name(ctx)),
+		um.SetCol(dbmodels.ColumnNames.Cars.Licenseplate).ToArg(car.LicensePlate),
+		um.SetCol(dbmodels.ColumnNames.Cars.Make).ToArg(car.Make),
+		um.SetCol(dbmodels.ColumnNames.Cars.Model).ToArg(car.Model),
+		um.SetCol(dbmodels.ColumnNames.Cars.Color).ToArg(car.Color),
 		dbmodels.UpdateWhere.Cars.Caruuid.EQ(carID),
-		um.Set(dbmodels.CarColumns.Licenseplate, psql.Arg(car.LicensePlate)),
-		um.Set(dbmodels.CarColumns.Make, psql.Arg(car.Make)),
-		um.Set(dbmodels.CarColumns.Model, psql.Arg(car.Model)),
-		um.Set(dbmodels.CarColumns.Color, psql.Arg(car.Color)),
 	)
 
-	updated, err := bob.One(ctx, p.db, query, scan.StructMapper[dbmodels.Car]())
+	result, err := bob.Exec(ctx, p.db, query)
 	if err != nil {
 		return Entry{}, fmt.Errorf("could not execute update: %w", err)
 	}
 
-	details := models.CarDetails{
-		LicensePlate: updated.Licenseplate,
-		Make:         updated.Make,
-		Model:        updated.Model,
-		Color:        updated.Color,
+	rowsAffected, _ := result.RowsAffected()
+
+	if rowsAffected == 0 {
+		return Entry{}, ErrCarNotFound
 	}
 
-	insertedCar := models.Car{
-		Details: details,
-	}
-
-	entry := Entry{
-		Car: 			insertedCar,
-		InternalID: 	int64(updated.Carid),
-		OwnerID: 		int64(updated.Userid),
-	}
-
-	return entry, nil
+	return Entry{}, nil
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (Entry, error) {
@@ -132,7 +117,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (En
 	result, err := bob.One(ctx, p.db, query, scan.StructMapper[dbmodels.Car]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = ErrNotFound
+			err = ErrCarNotFound
 		}
 		return Entry{}, err
 	}
@@ -145,7 +130,8 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (En
 	}
 
 	car := models.Car{
-		Details: details,
+		Details: 	details,
+		ID:			carID,
 	}
 
 	return Entry{
@@ -164,7 +150,7 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, carID uuid.UUID
 	result, err := bob.One(ctx, p.db, query, scan.SingleColumnMapper[int32])
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = ErrNotFound
+			err = ErrCarNotFound
 		}
 		return -1, err
 	}

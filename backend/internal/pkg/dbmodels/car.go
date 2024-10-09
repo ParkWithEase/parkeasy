@@ -24,8 +24,8 @@ import (
 
 // Car is an object representing the database table.
 type Car struct {
-	Carid        int32     `db:"carid,pk" `
-	Userid       int32     `db:"userid" `
+	Carid        int64     `db:"carid,pk" `
+	Userid       int64     `db:"userid" `
 	Caruuid      uuid.UUID `db:"caruuid" `
 	Licenseplate string    `db:"licenseplate" `
 	Make         string    `db:"make" `
@@ -57,8 +57,8 @@ type carR struct {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type CarSetter struct {
-	Carid        omit.Val[int32]     `db:"carid,pk" `
-	Userid       omit.Val[int32]     `db:"userid" `
+	Carid        omit.Val[int64]     `db:"carid,pk" `
+	Userid       omit.Val[int64]     `db:"userid" `
 	Caruuid      omit.Val[uuid.UUID] `db:"caruuid" `
 	Licenseplate omit.Val[string]    `db:"licenseplate" `
 	Make         omit.Val[string]    `db:"make" `
@@ -274,8 +274,8 @@ func buildCarColumns(alias string) carColumns {
 }
 
 type carWhere[Q psql.Filterable] struct {
-	Carid        psql.WhereMod[Q, int32]
-	Userid       psql.WhereMod[Q, int32]
+	Carid        psql.WhereMod[Q, int64]
+	Userid       psql.WhereMod[Q, int64]
 	Caruuid      psql.WhereMod[Q, uuid.UUID]
 	Licenseplate psql.WhereMod[Q, string]
 	Make         psql.WhereMod[Q, string]
@@ -289,8 +289,8 @@ func (carWhere[Q]) AliasedAs(alias string) carWhere[Q] {
 
 func buildCarWhere[Q psql.Filterable](cols carColumns) carWhere[Q] {
 	return carWhere[Q]{
-		Carid:        psql.Where[Q, int32](cols.Carid),
-		Userid:       psql.Where[Q, int32](cols.Userid),
+		Carid:        psql.Where[Q, int64](cols.Carid),
+		Userid:       psql.Where[Q, int64](cols.Userid),
 		Caruuid:      psql.Where[Q, uuid.UUID](cols.Caruuid),
 		Licenseplate: psql.Where[Q, string](cols.Licenseplate),
 		Make:         psql.Where[Q, string](cols.Make),
@@ -317,7 +317,7 @@ func buildCarJoins[Q dialect.Joinable](cols carColumns, typ string) carJoins[Q] 
 
 // FindCar retrieves a single record by primary key
 // If cols is empty Find will return all columns.
-func FindCar(ctx context.Context, exec bob.Executor, CaridPK int32, cols ...string) (*Car, error) {
+func FindCar(ctx context.Context, exec bob.Executor, CaridPK int64, cols ...string) (*Car, error) {
 	if len(cols) == 0 {
 		return Cars.Query(
 			ctx, exec,
@@ -333,7 +333,7 @@ func FindCar(ctx context.Context, exec bob.Executor, CaridPK int32, cols ...stri
 }
 
 // CarExists checks the presence of a single record by primary key
-func CarExists(ctx context.Context, exec bob.Executor, CaridPK int32) (bool, error) {
+func CarExists(ctx context.Context, exec bob.Executor, CaridPK int64) (bool, error) {
 	return Cars.Query(
 		ctx, exec,
 		SelectWhere.Cars.Carid.EQ(CaridPK),
@@ -381,7 +381,7 @@ func (o CarSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
 func (o CarSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	var mods []bob.Mod[*dialect.SelectQuery]
 
-	CaridPK := make([]int32, len(o))
+	CaridPK := make([]int64, len(o))
 
 	for i, o := range o {
 		CaridPK[i] = o.Carid
@@ -462,7 +462,7 @@ func (o *Car) Preload(name string, retrieved any) error {
 		o.R.UseridUser = rel
 
 		if rel != nil {
-			rel.R.UseridCar = o
+			rel.R.UseridCars = CarSlice{o}
 		}
 		return nil
 	default:
@@ -525,7 +525,7 @@ func (o *Car) LoadCarUseridUser(ctx context.Context, exec bob.Executor, mods ...
 		return err
 	}
 
-	related.R.UseridCar = o
+	related.R.UseridCars = CarSlice{o}
 
 	o.R.UseridUser = related
 	return nil
@@ -548,7 +548,7 @@ func (os CarSlice) LoadCarUseridUser(ctx context.Context, exec bob.Executor, mod
 				continue
 			}
 
-			rel.R.UseridCar = o
+			rel.R.UseridCars = append(rel.R.UseridCars, o)
 
 			o.R.UseridUser = rel
 			break
@@ -584,7 +584,7 @@ func (car0 *Car) InsertUseridUser(ctx context.Context, exec bob.Executor, relate
 
 	car0.R.UseridUser = user1
 
-	user1.R.UseridCar = car0
+	user1.R.UseridCars = append(user1.R.UseridCars, car0)
 
 	return nil
 }
@@ -599,7 +599,7 @@ func (car0 *Car) AttachUseridUser(ctx context.Context, exec bob.Executor, user1 
 
 	car0.R.UseridUser = user1
 
-	user1.R.UseridCar = car0
+	user1.R.UseridCars = append(user1.R.UseridCars, car0)
 
 	return nil
 }

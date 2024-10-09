@@ -45,7 +45,7 @@ func (s *Service) Create(ctx context.Context, userID int64, carModel *models.Car
 func (s *Service) GetByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error) {
 	result, err := s.repo.GetByUUID(ctx, carID)
 	if err != nil {
-		if errors.Is(err, car.ErrNotFound) {
+		if errors.Is(err, car.ErrCarNotFound) {
 			err = models.ErrCarNotFound
 		}
 		return models.Car{}, err
@@ -60,7 +60,7 @@ func (s *Service) DeleteByUUID(ctx context.Context, userID int64, carID uuid.UUI
 	result, err := s.repo.GetByUUID(ctx, carID)
 	if err != nil {
 		// It's not an error to delete something that doesn't exist
-		if errors.Is(err, car.ErrNotFound) {
+		if errors.Is(err, car.ErrCarNotFound) {
 			return nil
 		}
 		return err
@@ -89,9 +89,6 @@ func (s *Service) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUI
 	result, err := s.repo.UpdateByUUID(ctx, carID, carModel)
 	if err != nil {
 		return models.Car{}, err
-	}
-	if result.OwnerID != userID {
-		return models.Car{}, models.ErrCarNotFound
 	}
 	return result.Car, nil
 }

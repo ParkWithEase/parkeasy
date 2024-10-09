@@ -1,8 +1,8 @@
 -- Parking spot details
 CREATE TABLE IF NOT EXISTS ParkingSpot (
-  ParkingSpotId SERIAL PRIMARY KEY,
-  UserId INTEGER UNIQUE NOT NULL REFERENCES Users(UserID),
-  ParkingSpotUUID UUID UNIQUE NOT NULL,
+  ParkingSpotId BIGSERIAL PRIMARY KEY,
+  UserId BIGINT NOT NULL REFERENCES Users(UserID),
+  ParkingSpotUUID UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
   PostalCode TEXT NOT NULL, 
   CountryCode TEXT NOT NULL,
   City TEXT NOT NULL,
@@ -15,4 +15,4 @@ CREATE TABLE IF NOT EXISTS ParkingSpot (
   IsPublic BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS ParkingSpotUUIDs ON ParkingSpot(ParkingSpotUUID);
+CREATE UNIQUE INDEX IF NOT EXISTS ParkingSpotUUIDIdx ON ParkingSpot(ParkingSpotUUID);

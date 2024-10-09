@@ -24,8 +24,8 @@ import (
 
 // Parkingspot is an object representing the database table.
 type Parkingspot struct {
-	Parkingspotid      int32     `db:"parkingspotid,pk" `
-	Userid             int32     `db:"userid" `
+	Parkingspotid      int64     `db:"parkingspotid,pk" `
+	Userid             int64     `db:"userid" `
 	Parkingspotuuid    uuid.UUID `db:"parkingspotuuid" `
 	Postalcode         string    `db:"postalcode" `
 	Countrycode        string    `db:"countrycode" `
@@ -63,8 +63,8 @@ type parkingspotR struct {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type ParkingspotSetter struct {
-	Parkingspotid      omit.Val[int32]     `db:"parkingspotid,pk" `
-	Userid             omit.Val[int32]     `db:"userid" `
+	Parkingspotid      omit.Val[int64]     `db:"parkingspotid,pk" `
+	Userid             omit.Val[int64]     `db:"userid" `
 	Parkingspotuuid    omit.Val[uuid.UUID] `db:"parkingspotuuid" `
 	Postalcode         omit.Val[string]    `db:"postalcode" `
 	Countrycode        omit.Val[string]    `db:"countrycode" `
@@ -424,8 +424,8 @@ func buildParkingspotColumns(alias string) parkingspotColumns {
 }
 
 type parkingspotWhere[Q psql.Filterable] struct {
-	Parkingspotid      psql.WhereMod[Q, int32]
-	Userid             psql.WhereMod[Q, int32]
+	Parkingspotid      psql.WhereMod[Q, int64]
+	Userid             psql.WhereMod[Q, int64]
 	Parkingspotuuid    psql.WhereMod[Q, uuid.UUID]
 	Postalcode         psql.WhereMod[Q, string]
 	Countrycode        psql.WhereMod[Q, string]
@@ -445,8 +445,8 @@ func (parkingspotWhere[Q]) AliasedAs(alias string) parkingspotWhere[Q] {
 
 func buildParkingspotWhere[Q psql.Filterable](cols parkingspotColumns) parkingspotWhere[Q] {
 	return parkingspotWhere[Q]{
-		Parkingspotid:      psql.Where[Q, int32](cols.Parkingspotid),
-		Userid:             psql.Where[Q, int32](cols.Userid),
+		Parkingspotid:      psql.Where[Q, int64](cols.Parkingspotid),
+		Userid:             psql.Where[Q, int64](cols.Userid),
 		Parkingspotuuid:    psql.Where[Q, uuid.UUID](cols.Parkingspotuuid),
 		Postalcode:         psql.Where[Q, string](cols.Postalcode),
 		Countrycode:        psql.Where[Q, string](cols.Countrycode),
@@ -479,7 +479,7 @@ func buildParkingspotJoins[Q dialect.Joinable](cols parkingspotColumns, typ stri
 
 // FindParkingspot retrieves a single record by primary key
 // If cols is empty Find will return all columns.
-func FindParkingspot(ctx context.Context, exec bob.Executor, ParkingspotidPK int32, cols ...string) (*Parkingspot, error) {
+func FindParkingspot(ctx context.Context, exec bob.Executor, ParkingspotidPK int64, cols ...string) (*Parkingspot, error) {
 	if len(cols) == 0 {
 		return Parkingspots.Query(
 			ctx, exec,
@@ -495,7 +495,7 @@ func FindParkingspot(ctx context.Context, exec bob.Executor, ParkingspotidPK int
 }
 
 // ParkingspotExists checks the presence of a single record by primary key
-func ParkingspotExists(ctx context.Context, exec bob.Executor, ParkingspotidPK int32) (bool, error) {
+func ParkingspotExists(ctx context.Context, exec bob.Executor, ParkingspotidPK int64) (bool, error) {
 	return Parkingspots.Query(
 		ctx, exec,
 		SelectWhere.Parkingspots.Parkingspotid.EQ(ParkingspotidPK),
@@ -543,7 +543,7 @@ func (o ParkingspotSlice) DeleteAll(ctx context.Context, exec bob.Executor) erro
 func (o ParkingspotSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	var mods []bob.Mod[*dialect.SelectQuery]
 
-	ParkingspotidPK := make([]int32, len(o))
+	ParkingspotidPK := make([]int64, len(o))
 
 	for i, o := range o {
 		ParkingspotidPK[i] = o.Parkingspotid
@@ -624,7 +624,7 @@ func (o *Parkingspot) Preload(name string, retrieved any) error {
 		o.R.UseridUser = rel
 
 		if rel != nil {
-			rel.R.UseridParkingspot = o
+			rel.R.UseridParkingspots = ParkingspotSlice{o}
 		}
 		return nil
 	default:
@@ -687,7 +687,7 @@ func (o *Parkingspot) LoadParkingspotUseridUser(ctx context.Context, exec bob.Ex
 		return err
 	}
 
-	related.R.UseridParkingspot = o
+	related.R.UseridParkingspots = ParkingspotSlice{o}
 
 	o.R.UseridUser = related
 	return nil
@@ -710,7 +710,7 @@ func (os ParkingspotSlice) LoadParkingspotUseridUser(ctx context.Context, exec b
 				continue
 			}
 
-			rel.R.UseridParkingspot = o
+			rel.R.UseridParkingspots = append(rel.R.UseridParkingspots, o)
 
 			o.R.UseridUser = rel
 			break
@@ -746,7 +746,7 @@ func (parkingspot0 *Parkingspot) InsertUseridUser(ctx context.Context, exec bob.
 
 	parkingspot0.R.UseridUser = user1
 
-	user1.R.UseridParkingspot = parkingspot0
+	user1.R.UseridParkingspots = append(user1.R.UseridParkingspots, parkingspot0)
 
 	return nil
 }
@@ -761,7 +761,7 @@ func (parkingspot0 *Parkingspot) AttachUseridUser(ctx context.Context, exec bob.
 
 	parkingspot0.R.UseridUser = user1
 
-	user1.R.UseridParkingspot = parkingspot0
+	user1.R.UseridParkingspots = append(user1.R.UseridParkingspots, parkingspot0)
 
 	return nil
 }

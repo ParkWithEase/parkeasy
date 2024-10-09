@@ -6,6 +6,8 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/testutils"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -16,7 +18,6 @@ import (
 )
 
 func TestPostgresIntegration(t *testing.T) {
-	t.Skip("in progress")
 	t.Parallel()
 
 	testutils.Integration(t)
@@ -37,7 +38,21 @@ func TestPostgresIntegration(t *testing.T) {
 	db := bob.NewDB(stdlib.OpenDBFromPool(pool))
 
 	repo := NewPostgres(db)
+	userRepo := user.NewPostgres(db)
+	authRepo := auth.NewPostgres(db)
 	_ = repo
+
+	profile := models.UserProfile{
+		FullName: "John Wick",
+		Email:    "j.wick@gmail.com",
+	}
+
+	const testEmail = "j.wick@gmail.com"
+	const testPasswordHash = "some hash"
+
+	authUuid, err := authRepo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
+
+	userID, err := userRepo.Create(ctx, authUuid, profile)
 
 	// TODO: Add User Postgres repo and make user so create can function
 
@@ -51,15 +66,13 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		const testUserID = 1
-
 		var sampleLocation = models.ParkingSpotLocation{
 			PostalCode:    "L2E6T2",
 			CountryCode:   "CA",
 			City:          "Niagara Falls",
 			StreetAddress: "6650 Niagara Parkway",
-			Latitude:      43.07923,
-			Longitude:     -79.07887,
+			Latitude:      43.07923126220703,
+			Longitude:     -79.07887268066406,
 		}
 
 		var sampleFeatures = models.ParkingSpotFeatures{
@@ -74,7 +87,7 @@ func TestPostgresIntegration(t *testing.T) {
 		}
 	
 		// Testing create
-		spotID, createEntry, err := repo.Create(ctx, testUserID, &creationInput)
+		spotID, createEntry, err := repo.Create(ctx, userID, &creationInput)
 		require.NoError(t, err)
 		assert.NotEqual(t, -1, spotID)
 		assert.NotEqual(t, uuid.Nil, createEntry.ParkingSpot.ID)
@@ -95,7 +108,7 @@ func TestPostgresIntegration(t *testing.T) {
 		// Testing get owner id
 		ownerID, err := repo.GetOwnerByUUID(ctx, createEntry.ParkingSpot.ID)
 		require.NoError(t, err)
-		assert.Equal(t, testUserID, ownerID)
+		assert.Equal(t, userID, ownerID)
 
 		// Testing delete
 		deleteErr := repo.DeleteByUUID(ctx, createEntry.ParkingSpot.ID)
@@ -105,14 +118,14 @@ func TestPostgresIntegration(t *testing.T) {
 	t.Run("get non-existent", func(t *testing.T) {
 		_, err := repo.GetByUUID(ctx, uuid.Nil)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, ErrNotFound)
+			assert.ErrorIs(t, err, ErrParkingSpotNotFound)
 		}
 	})
 
 	t.Run("get user id non-existent", func(t *testing.T) {
 		_, err := repo.GetOwnerByUUID(ctx, uuid.Nil)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, ErrNotFound)
+			assert.ErrorIs(t, err, ErrParkingSpotNotFound)
 		}
 	})
 }
