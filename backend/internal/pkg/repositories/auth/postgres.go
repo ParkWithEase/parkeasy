@@ -10,6 +10,8 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
@@ -39,7 +41,13 @@ func (p *PostgresRepository) Create(ctx context.Context, email string, passwordH
 		Passwordhash: omit.From(string(passwordHash)),
 	})
 	if err != nil {
-		// TODO: Handle duplicate error
+		// Handle duplicate error
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				err = ErrDuplicateIdentity
+			}
+		}
 		return uuid.UUID{}, err
 	}
 	err = tx.Commit()
@@ -95,15 +103,21 @@ func (p *PostgresRepository) GetByEmail(ctx context.Context, email string) (Iden
 // UpdatePassword implements Repository.
 func (p *PostgresRepository) UpdatePassword(ctx context.Context, authID uuid.UUID, newPassword models.HashedPassword) error {
 	query := psql.Update(
-		um.From(dbmodels.Auths.Name(ctx)),
+		um.Table(dbmodels.Auths.Name(ctx)),
+		um.SetCol(dbmodels.ColumnNames.Auths.Passwordhash).ToArg(string(newPassword)),
 		dbmodels.UpdateWhere.Auths.Authuuid.EQ(authID),
-		um.Set(dbmodels.AuthColumns.Passwordhash, psql.Arg(string(newPassword))),
 	)
 
 	// Execute the query
-	_, err := bob.Exec(ctx, p.db, query)
+	result, err := bob.Exec(ctx, p.db, query)
 	if err != nil {
 		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+
+	if rowsAffected == 0 {
+		return ErrIdentityNotFound
 	}
 
 	return nil

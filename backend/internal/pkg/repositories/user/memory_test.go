@@ -113,8 +113,7 @@ func TestGetProfileByAuth(t *testing.T) {
 
 	t.Run("Get non-existent profile by auth ID", func(t *testing.T) {
 		t.Parallel()
-		randomUUID := uuid.New()
-		_, err := repo.GetProfileByAuth(ctx, randomUUID)
+		_, err := repo.GetProfileByAuth(ctx, uuid.Nil)
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, ErrUnknownID, "Getting a non-existent profile by auth ID should fail")
 		}
