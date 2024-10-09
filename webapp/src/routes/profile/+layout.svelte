@@ -3,7 +3,6 @@
     import Navbar from '$lib/components/navbar.svelte';
     import { goto } from '$app/navigation';
     import { BACKEND_SERVER } from '$lib/constants';
-    import { onMount } from 'svelte';
     import { page } from '$app/stores';
 
     async function logout() {
@@ -21,8 +20,6 @@
             throw new Error('Something went wrong');
         }
     }
-
-
 </script>
 
 <Navbar />
@@ -30,11 +27,27 @@
 <div class="container">
     <div class="sidebar">
         <a href="/profile/user-profile"><img src={userClipart} alt="user" class="logo-small" /></a>
-        <a class="sidebar-link" href="/profile/user-profile" class:active={$page.url.pathname.includes('user-profile')}>User Profile</a>
-        <a class="sidebar-link" href="/profile/booking-history" class:active={$page.url.pathname.includes('booking-history')}>Booking History</a>
-        <a class="sidebar-link" href="/profile/listing-history" class:active={$page.url.pathname.includes('listing-history')}>Listing History</a>
-        <a class="sidebar-link" href="/profile/cars" class:active={$page.url.pathname.includes('cars')}>Preference Cars</a>
-        <a class="logout-link" href='/' on:click={logout}>Logout</a>
+        <a
+            class="sidebar-link"
+            href="/profile/user-profile"
+            class:active={$page.url.pathname.includes('user-profile')}>User Profile</a
+        >
+        <a
+            class="sidebar-link"
+            href="/profile/booking-history"
+            class:active={$page.url.pathname.includes('booking-history')}>Booking History</a
+        >
+        <a
+            class="sidebar-link"
+            href="/profile/listing-history"
+            class:active={$page.url.pathname.includes('listing-history')}>Listing History</a
+        >
+        <a
+            class="sidebar-link"
+            href="/profile/cars"
+            class:active={$page.url.pathname.includes('cars')}>Preference Cars</a
+        >
+        <a class="logout-link" href="/" on:click={logout}>Logout</a>
     </div>
     <div class="info-container">
         <slot></slot>
@@ -87,7 +100,7 @@
     }
 
     a.active {
-        color:#ffffff;
+        color: #ffffff;
         background-color: #32683b;
         transition: 0.3s;
     }

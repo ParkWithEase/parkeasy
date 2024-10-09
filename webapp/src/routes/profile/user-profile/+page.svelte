@@ -2,8 +2,7 @@
     import { goto } from '$app/navigation';
     import { BACKEND_SERVER, INTERNAL_SERVER_ERROR } from '$lib/constants';
     import type { UserProfile } from '$lib/types/user/user';
-    import { onMount } from 'svelte';
-
+    import { SkeletonText } from 'carbon-components-svelte';
     async function getUser(): Promise<UserProfile | null> {
         try {
             const response = await fetch(`${BACKEND_SERVER}/user`, {
@@ -18,40 +17,24 @@
                 goto('/auth/login');
                 return null;
             }
-        } catch (err: unknown) {
+        } catch {
             throw new Error(INTERNAL_SERVER_ERROR);
         }
     }
 
     let promise = getUser();
-
-    async function logout() {
-        try {
-            const response = await fetch(`${BACKEND_SERVER}/auth`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
-            if (response.ok) {
-                goto('/auth/login');
-            } else {
-                throw new Error("Can't log out for some reason");
-            }
-        } catch {
-            throw new Error('Something went wrong');
-        }
-    }
 </script>
 
 {#await promise}
-    <p>waiting...</p>
+    <SkeletonText paragraph lines={2} />
 {:then user}
     {#if user != undefined}
         <div class="container">
             <div>
-                <h1>Name: {user.full_name}</h1>
+                <p>Name: {user.full_name}</p>
             </div>
             <div>
-                <h1>Email: {user.email}</h1>
+                <p>Email: {user.email}</p>
             </div>
         </div>
     {:else}
@@ -68,7 +51,7 @@
         flex-direction: column;
     }
 
-    h1 {
-        text-align: left;
+    p {
+        font-size: 2rem;
     }
 </style>

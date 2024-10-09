@@ -91,33 +91,32 @@
 
     function resetForm(id: string) {
         let form = document.getElementById(id) as HTMLFormElement;
-        if (form == undefined)
-    {
-        return;
-    }
+        if (form == undefined) {
+            return;
+        }
         form.reset();
     }
 </script>
 
 <div class="listing-container">
     {#key carList}
-    {#each carList as car, index}
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-        <div class="car-info-container" on:click={() => selectCarIndex(index)}>
-            <img class="car-image" src={parkingImg} alt="a car" />
-            <div class="car-info">
-                <div>
-                    <p class="car-license-plate">{car.license_plate}</p>
-                </div>
-                <div>
-                    <p class="car-data">Color: {car.color}</p>
-                    <p class="car-data">Model: {car.model}</p>
-                    <p class="car-data">Make: {car.make}</p>
+        {#each carList as car, index}
+            <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+            <div class="car-info-container" on:click={() => selectCarIndex(index)}>
+                <img class="car-image" src={parkingImg} alt="a car" />
+                <div class="car-info">
+                    <div>
+                        <p class="car-license-plate">{car.license_plate}</p>
+                    </div>
+                    <div>
+                        <p class="car-data">Color: {car.color}</p>
+                        <p class="car-data">Model: {car.model}</p>
+                        <p class="car-data">Make: {car.make}</p>
+                    </div>
                 </div>
             </div>
-        </div>
-    {/each}
-{/key}
+        {/each}
+    {/key}
 </div>
 
 <input
