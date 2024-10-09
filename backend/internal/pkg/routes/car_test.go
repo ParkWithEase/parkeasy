@@ -520,4 +520,63 @@ func TestUpdateCar(t *testing.T) {
 
 		srv.AssertExpectations(t)
 	})
+
+	t.Run("not found handling", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockCarService)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		testUUID := uuid.New()
+		srv.On("UpdateByUUID", mock.Anything, mock.Anything, testUUID, &testInput).
+			Return(models.Car{}, models.ErrCarNotFound).
+			Once()
+
+		resp := api.PutCtx(ctx, "/cars/"+testUUID.String(), &testInput)
+		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
+		respBody, _ := io.ReadAll(resp.Result().Body)
+
+		var errModel huma.ErrorModel
+		err := json.Unmarshal(respBody, &errModel)
+		require.NoError(t, err)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Message:  models.ErrCarNotFound.Error(),
+			Location: "path.id",
+			Value:    jsonAnyify(testUUID),
+		})
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("forbidden handling", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockCarService)
+		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+		ctx := context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), int64(0))
+
+		testUUID := uuid.New()
+		srv.On("UpdateByUUID", mock.Anything, mock.Anything, testUUID, &testInput).
+			Return(models.Car{}, models.ErrCarOwned).
+			Once()
+
+		resp := api.PutCtx(ctx, "/cars/"+testUUID.String(), &testInput)
+		assert.Equal(t, http.StatusForbidden, resp.Result().StatusCode)
+		respBody, _ := io.ReadAll(resp.Result().Body)
+
+		var errModel huma.ErrorModel
+		err := json.Unmarshal(respBody, &errModel)
+		require.NoError(t, err)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Message:  models.ErrCarOwned.Error(),
+			Location: "path.id",
+			Value:    jsonAnyify(testUUID),
+		})
+
+		srv.AssertExpectations(t)
+	})
 }

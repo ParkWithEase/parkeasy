@@ -114,7 +114,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (E
 	result, err := bob.One(ctx, p.db, query, scan.StructMapper[dbmodels.Parkingspot]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = ErrParkingSpotNotFound
+			err = ErrNotFound
 		}
 		return Entry{}, err
 	}
@@ -153,13 +153,13 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUI
 		sm.From(dbmodels.Parkingspots.Name(ctx)),
 		dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
 	)
-	result, err := bob.One(ctx, p.db, query, scan.SingleColumnMapper[int32])
+	result, err := bob.One(ctx, p.db, query, scan.SingleColumnMapper[int64])
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = ErrParkingSpotNotFound
+			err = ErrNotFound
 		}
 		return -1, err
 	}
 
-	return int64(result), err
+	return result, err
 }

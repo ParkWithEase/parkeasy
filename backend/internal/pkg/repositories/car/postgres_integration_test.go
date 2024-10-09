@@ -29,9 +29,6 @@ func TestPostgresIntegration(t *testing.T) {
 	t.Cleanup(func() { _ = container.Terminate(ctx) })
 	testutils.RunMigrations(t, connString)
 
-	err := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
-	require.NoError(t, err, "could not snapshot db")
-
 	pool, err := pgxpool.New(ctx, connString)
 	require.NoError(t, err, "could not connect to db")
 	t.Cleanup(func() { pool.Close() })
@@ -40,7 +37,6 @@ func TestPostgresIntegration(t *testing.T) {
 	repo := NewPostgres(db)
 	userRepo := user.NewPostgres(db)
 	authRepo := auth.NewPostgres(db)
-	_ = repo
 
 	profile := models.UserProfile{
 		FullName: "John Wick",
@@ -53,6 +49,10 @@ func TestPostgresIntegration(t *testing.T) {
 	authUUID, _ := authRepo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
 
 	userID, _ := userRepo.Create(ctx, authUUID, profile)
+
+	pool.Reset()
+	snapshotErr := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+	require.NoError(t, snapshotErr, "could not snapshot db")
 
 	t.Run("basic add & get & update & delete", func(t *testing.T) {
 		t.Cleanup(func() {
@@ -125,21 +125,21 @@ func TestPostgresIntegration(t *testing.T) {
 	t.Run("get non-existent", func(t *testing.T) {
 		_, err := repo.GetByUUID(ctx, uuid.Nil)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrCarNotFound)
+			assert.ErrorIs(t, err, ErrNotFound)
 		}
 	})
 
 	t.Run("get user id non-existent", func(t *testing.T) {
 		_, err := repo.GetOwnerByUUID(ctx, uuid.Nil)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrCarNotFound)
+			assert.ErrorIs(t, err, ErrNotFound)
 		}
 	})
 
 	t.Run("update user id non-existent", func(t *testing.T) {
 		_, err := repo.UpdateByUUID(ctx, uuid.Nil, &models.CarCreationInput{})
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrCarNotFound)
+			assert.ErrorIs(t, err, ErrNotFound)
 		}
 	})
 }

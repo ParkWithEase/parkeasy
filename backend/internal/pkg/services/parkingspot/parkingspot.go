@@ -55,13 +55,13 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error) {
 	result, err := s.repo.GetByUUID(ctx, spotID)
 	if err != nil {
-		if errors.Is(err, parkingspot.ErrParkingSpotNotFound) {
-			err = models.ErrParkingSpotNotFound
+		if errors.Is(err, parkingspot.ErrNotFound) {
+			err = parkingspot.ErrNotFound
 		}
 		return models.ParkingSpot{}, err
 	}
 	if result.OwnerID != userID && !result.IsPublic {
-		return models.ParkingSpot{}, models.ErrParkingSpotNotFound
+		return models.ParkingSpot{}, parkingspot.ErrNotFound
 	}
 	return result.ParkingSpot, nil
 }
@@ -70,7 +70,7 @@ func (s *Service) DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UU
 	result, err := s.repo.GetByUUID(ctx, spotID)
 	if err != nil {
 		// It's not an error to delete something that doesn't exist
-		if errors.Is(err, parkingspot.ErrParkingSpotNotFound) {
+		if errors.Is(err, parkingspot.ErrNotFound) {
 			return nil
 		}
 		return err

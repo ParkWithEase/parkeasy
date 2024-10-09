@@ -94,7 +94,7 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, carID uuid.UUID, 
 	rowsAffected, _ := result.RowsAffected()
 
 	if rowsAffected == 0 {
-		return Entry{}, models.ErrCarNotFound
+		return Entry{}, ErrNotFound
 	}
 
 	return Entry{}, nil
@@ -116,7 +116,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (En
 	result, err := bob.One(ctx, p.db, query, scan.StructMapper[dbmodels.Car]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = models.ErrCarNotFound
+			err = ErrNotFound
 		}
 		return Entry{}, err
 	}
@@ -146,13 +146,13 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, carID uuid.UUID
 		sm.From(dbmodels.Cars.Name(ctx)),
 		dbmodels.SelectWhere.Cars.Caruuid.EQ(carID),
 	)
-	result, err := bob.One(ctx, p.db, query, scan.SingleColumnMapper[int32])
+	result, err := bob.One(ctx, p.db, query, scan.SingleColumnMapper[int64])
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = models.ErrCarNotFound
+			err = ErrNotFound
 		}
 		return -1, err
 	}
 
-	return int64(result), err
+	return result, err
 }

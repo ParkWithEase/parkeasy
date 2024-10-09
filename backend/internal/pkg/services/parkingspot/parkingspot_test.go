@@ -50,7 +50,7 @@ func (m *mockRepo) AddGetCalls() *mock.Call {
 		On("GetByUUID", mock.Anything, testPrivateSpotID).
 		Return(privateTestEntry, nil).
 		On("GetByUUID", mock.Anything, mock.Anything).
-		Return(parkingspot.Entry{}, parkingspot.ErrParkingSpotNotFound)
+		Return(parkingspot.Entry{}, parkingspot.ErrNotFound)
 }
 
 // Create implements parkingspot.Repository.
@@ -222,12 +222,12 @@ func TestGet(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.On("GetByUUID", mock.Anything, uuid.Nil).
-			Return(parkingspot.Entry{}, parkingspot.ErrParkingSpotNotFound).Once()
+			Return(parkingspot.Entry{}, parkingspot.ErrNotFound).Once()
 		srv := New(repo)
 
 		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
+			assert.ErrorIs(t, err, parkingspot.ErrNotFound)
 		}
 		repo.AssertExpectations(t)
 	})
@@ -265,7 +265,7 @@ func TestGet(t *testing.T) {
 
 		_, err := srv.GetByUUID(ctx, testNonOwnerID, testPrivateSpotID)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
+			assert.ErrorIs(t, err, parkingspot.ErrNotFound)
 		}
 		repo.AssertCalled(t, "GetByUUID", ctx, testPrivateSpotID)
 	})

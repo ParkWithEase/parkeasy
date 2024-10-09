@@ -191,6 +191,20 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		result, err := r.service.UpdateByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
 			switch {
+			case errors.Is(err, models.ErrCarNotFound):
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "path.id",
+					Value:    input.ID,
+				}
+				return nil, huma.Error404NotFound("", err)
+			case errors.Is(err, models.ErrCarOwned):
+				err = &huma.ErrorDetail{
+					Message:  err.Error(),
+					Location: "path.id",
+					Value:    input.ID,
+				}
+				return nil, huma.Error403Forbidden("", err)
 			case errors.Is(err, models.ErrInvalidLicensePlate):
 				err = &huma.ErrorDetail{
 					Message:  err.Error(),

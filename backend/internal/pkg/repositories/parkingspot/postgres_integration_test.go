@@ -29,9 +29,6 @@ func TestPostgresIntegration(t *testing.T) {
 	t.Cleanup(func() { _ = container.Terminate(ctx) })
 	testutils.RunMigrations(t, connString)
 
-	err := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
-	require.NoError(t, err, "could not snapshot db")
-
 	pool, err := pgxpool.New(ctx, connString)
 	require.NoError(t, err, "could not connect to db")
 	t.Cleanup(func() { pool.Close() })
@@ -40,7 +37,6 @@ func TestPostgresIntegration(t *testing.T) {
 	repo := NewPostgres(db)
 	userRepo := user.NewPostgres(db)
 	authRepo := auth.NewPostgres(db)
-	_ = repo
 
 	profile := models.UserProfile{
 		FullName: "John Wick",
@@ -54,7 +50,9 @@ func TestPostgresIntegration(t *testing.T) {
 
 	userID, _ := userRepo.Create(ctx, authUUID, profile)
 
-	// TODO: Add User Postgres repo and make user so create can function
+	pool.Reset()
+	snapshotErr := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+	require.NoError(t, snapshotErr, "could not snapshot db")
 
 	t.Run("basic add & get & delete", func(t *testing.T) {
 		t.Cleanup(func() {
@@ -118,14 +116,14 @@ func TestPostgresIntegration(t *testing.T) {
 	t.Run("get non-existent", func(t *testing.T) {
 		_, err := repo.GetByUUID(ctx, uuid.Nil)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, ErrParkingSpotNotFound)
+			assert.ErrorIs(t, err, ErrNotFound)
 		}
 	})
 
 	t.Run("get user id non-existent", func(t *testing.T) {
 		_, err := repo.GetOwnerByUUID(ctx, uuid.Nil)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, ErrParkingSpotNotFound)
+			assert.ErrorIs(t, err, ErrNotFound)
 		}
 	})
 }

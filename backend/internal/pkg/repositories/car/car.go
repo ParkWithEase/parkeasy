@@ -2,10 +2,13 @@ package car
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/google/uuid"
 )
+
+var ErrNotFound = errors.New("no parking spot found")
 
 type Entry struct {
 	models.Car
