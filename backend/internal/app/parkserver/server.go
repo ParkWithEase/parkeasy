@@ -52,7 +52,7 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 }
 
 // Creates a new Huma API instance with routes configured
-func (c *Config) NewHumaAPI() huma.API { //nolint: ireturn // this is intentional
+func (c *Config) NewHumaAPI() huma.API {
 	router := http.NewServeMux()
 	config := huma.DefaultConfig("ParkEasy API", "0.0.0")
 	api := humago.New(router, config)
