@@ -18,10 +18,10 @@ component_management:
       paths:
         - android/**
 
-flag_mangement:
+flag_management:
   default_rules:
     carryforward: true
 
 ignore:
   # This is machine-generated, so there's no easy way to test it
-  - backend/internal/pkg/dbmodels
+  - backend/internal/pkg/dbmodels/**/*
