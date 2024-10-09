@@ -265,7 +265,7 @@ func TestGet(t *testing.T) {
 
 		_, err := srv.GetByUUID(ctx, testNonOwnerID, testPrivateSpotID)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, parkingspot.ErrNotFound)
+			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
 		}
 		repo.AssertCalled(t, "GetByUUID", ctx, testPrivateSpotID)
 	})
