@@ -89,16 +89,16 @@ func TestPostgresIntegration(t *testing.T) {
 
 		// Attempt to create another profile with the same auth ID
 		_, err = repo.Create(ctx, authUUID, testProfile)
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, ErrProfileExists, "Creating a duplicate profile should fail")
+		if assert.Error(t, err, "Creating a duplicate profile should fail") {
+			assert.ErrorIs(t, err, ErrProfileExists)
 		}
 	})
 
 	t.Run("test get profile by for non-existent users", func(t *testing.T) {
 		// Retrieve the profile by ID
 		_, err := repo.GetProfileByID(ctx, 0)
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, ErrUnknownID, "getting a non-existent profile should fail")
+		if assert.Error(t, err, "getting a non-existent profile should fail") {
+			assert.ErrorIs(t, err, ErrUnknownID)
 		}
 	})
 
@@ -129,8 +129,8 @@ func TestPostgresIntegration(t *testing.T) {
 
 	t.Run("test get non-existent profile by auth ID", func(t *testing.T) {
 		_, err := repo.GetProfileByAuth(ctx, uuid.Nil)
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, ErrUnknownID, "Getting a non-existent profile by auth ID should fail")
+		if assert.Error(t, err, "Getting a non-existent profile by auth ID should fail") {
+			assert.ErrorIs(t, err, ErrUnknownID)
 		}
 	})
 }
