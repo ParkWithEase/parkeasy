@@ -11,9 +11,7 @@ import (
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
 	"github.com/stephenafamo/bob"
-	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
-	"github.com/stephenafamo/scan"
 )
 
 type PostgresRepository struct {
@@ -137,12 +135,13 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (En
 }
 
 func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, carID uuid.UUID) (int64, error) {
-	query := psql.Select(
-		sm.Columns(dbmodels.CarColumns.Userid),
-		sm.From(dbmodels.Cars.Name(ctx)),
+	result, err := dbmodels.Cars.Query(
+		ctx, p.db,
+		sm.Columns(
+			dbmodels.CarColumns.Userid,
+		),
 		dbmodels.SelectWhere.Cars.Caruuid.EQ(carID),
-	)
-	result, err := bob.One(ctx, p.db, query, scan.SingleColumnMapper[int64])
+	).One()
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
@@ -150,5 +149,5 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, carID uuid.UUID
 		return -1, err
 	}
 
-	return result, err
+	return result.Userid, err
 }

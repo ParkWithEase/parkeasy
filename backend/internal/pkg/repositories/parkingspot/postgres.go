@@ -13,9 +13,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
-	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
-	"github.com/stephenafamo/scan"
 )
 
 type PostgresRepository struct {
@@ -166,12 +164,13 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (E
 }
 
 func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error) {
-	query := psql.Select(
-		sm.Columns(dbmodels.ParkingspotColumns.Userid),
-		sm.From(dbmodels.Parkingspots.Name(ctx)),
+	result, err := dbmodels.Parkingspots.Query(
+		ctx, p.db,
+		sm.Columns(
+			dbmodels.ParkingspotColumns.Userid,
+		),
 		dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
-	)
-	result, err := bob.One(ctx, p.db, query, scan.SingleColumnMapper[int64])
+	).One()
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
@@ -179,5 +178,5 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUI
 		return -1, err
 	}
 
-	return result, err
+	return result.Userid, err
 }
