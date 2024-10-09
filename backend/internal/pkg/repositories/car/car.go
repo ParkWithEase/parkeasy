@@ -2,7 +2,6 @@ package car
 
 import (
 	"context"
-	"errors"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/google/uuid"
@@ -13,8 +12,6 @@ type Entry struct {
 	InternalID int64 // The internal ID of this car
 	OwnerID    int64 // The user id owning this car
 }
-
-var ErrCarNotFound = errors.New("no car found")
 
 type Repository interface {
 	Create(ctx context.Context, userID int64, car *models.CarCreationInput) (int64, Entry, error)

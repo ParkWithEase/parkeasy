@@ -50,9 +50,9 @@ func TestPostgresIntegration(t *testing.T) {
 	const testEmail = "j.wick@gmail.com"
 	const testPasswordHash = "some hash"
 
-	authUuid, err := authRepo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
+	authUUID, _ := authRepo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
 
-	userID, err := userRepo.Create(ctx, authUuid, profile)
+	userID, _ := userRepo.Create(ctx, authUUID, profile)
 
 	// TODO: Add User Postgres repo and make user so create can function
 
@@ -99,8 +99,8 @@ func TestPostgresIntegration(t *testing.T) {
 		assert.Equal(t, sampleLocation.PostalCode, getEntry.ParkingSpot.Location.PostalCode)
 		assert.Equal(t, sampleLocation.City, getEntry.ParkingSpot.Location.City)
 		assert.Equal(t, sampleLocation.StreetAddress, getEntry.ParkingSpot.Location.StreetAddress)
-		assert.Equal(t, sampleLocation.Latitude, getEntry.ParkingSpot.Location.Latitude)
-		assert.Equal(t, sampleLocation.Longitude, getEntry.ParkingSpot.Location.Longitude)
+		assert.InDelta(t, sampleLocation.Latitude, getEntry.ParkingSpot.Location.Latitude, 0)
+		assert.InDelta(t, sampleLocation.Longitude, getEntry.ParkingSpot.Location.Longitude, 0)
 		assert.Equal(t, sampleFeatures.Shelter, getEntry.ParkingSpot.Features.Shelter)
 		assert.Equal(t, sampleFeatures.PlugIn, getEntry.ParkingSpot.Features.PlugIn)
 		assert.Equal(t, sampleFeatures.ChargingStation, getEntry.ParkingSpot.Features.ChargingStation)

@@ -50,7 +50,7 @@ func (m *mockRepo) AddGetCalls() *mock.Call {
 		On("GetByUUID", mock.Anything, testPrivateSpotID).
 		Return(privateTestEntry, nil).
 		On("GetByUUID", mock.Anything, mock.Anything).
-		Return(parkingspot.Entry{}, parkingspot.ErrNotFound)
+		Return(parkingspot.Entry{}, parkingspot.ErrParkingSpotNotFound)
 }
 
 // Create implements parkingspot.Repository.
@@ -222,7 +222,7 @@ func TestGet(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.On("GetByUUID", mock.Anything, uuid.Nil).
-			Return(parkingspot.Entry{}, parkingspot.ErrNotFound).Once()
+			Return(parkingspot.Entry{}, parkingspot.ErrParkingSpotNotFound).Once()
 		srv := New(repo)
 
 		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil)

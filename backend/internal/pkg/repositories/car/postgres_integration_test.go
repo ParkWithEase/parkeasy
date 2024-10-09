@@ -50,9 +50,9 @@ func TestPostgresIntegration(t *testing.T) {
 	const testEmail = "j.wick@gmail.com"
 	const testPasswordHash = "some hash"
 
-	authUuid, err := authRepo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
+	authUUID, _ := authRepo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
 
-	userID, err := userRepo.Create(ctx, authUuid, profile)
+	userID, _ := userRepo.Create(ctx, authUUID, profile)
 
 	t.Run("basic add & get & update & delete", func(t *testing.T) {
 		t.Cleanup(func() {
@@ -125,21 +125,21 @@ func TestPostgresIntegration(t *testing.T) {
 	t.Run("get non-existent", func(t *testing.T) {
 		_, err := repo.GetByUUID(ctx, uuid.Nil)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, ErrCarNotFound)
+			assert.ErrorIs(t, err, models.ErrCarNotFound)
 		}
 	})
 
 	t.Run("get user id non-existent", func(t *testing.T) {
 		_, err := repo.GetOwnerByUUID(ctx, uuid.Nil)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, ErrCarNotFound)
+			assert.ErrorIs(t, err, models.ErrCarNotFound)
 		}
 	})
 
 	t.Run("update user id non-existent", func(t *testing.T) {
 		_, err := repo.UpdateByUUID(ctx, uuid.Nil, &models.CarCreationInput{})
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, ErrCarNotFound)
+			assert.ErrorIs(t, err, models.ErrCarNotFound)
 		}
 	})
 }

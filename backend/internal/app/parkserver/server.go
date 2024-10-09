@@ -30,7 +30,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/rs/cors"
-	"github.com/stephenafamo/bob"
 )
 
 type Config struct {
@@ -58,12 +57,12 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	userService := user.NewService(authService, userRepository)
 	userRoute := routes.NewUserRoute(userService, sessionManager)
 
-	parkingSpotRepo := parkingSpotRepo.NewPostgres(db)
-	parkingSpotService := parkingspot.New(parkingSpotRepo)
+	parkingSpotRepository := parkingSpotRepo.NewPostgres(db)
+	parkingSpotService := parkingspot.New(parkingSpotRepository)
 	parkingSpotRoute := routes.NewParkingSpotRoute(parkingSpotService, sessionManager, authMiddleware)
 
-	carRepo := carRepo.NewPostgres(db)
-	carService := car.New(carRepo)
+	carRepository := carRepo.NewPostgres(db)
+	carService := car.New(carRepository)
 	carRoute := routes.NewCarRoute(carService, sessionManager, authMiddleware)
 
 	huma.AutoRegister(api, authRoute)

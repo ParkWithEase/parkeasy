@@ -75,7 +75,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 	if err != nil {
 		return -1, Entry{}, fmt.Errorf("could not commit transaction: %w", err)
 	}
-	return int64(inserted.Parkingspotid), entry, nil
+	return inserted.Parkingspotid, entry, nil
 }
 
 func (p *PostgresRepository) DeleteByUUID(ctx context.Context, spotID uuid.UUID) error {

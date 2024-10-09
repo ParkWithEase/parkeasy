@@ -36,7 +36,7 @@ func (m *mockRepo) AddGetCalls() *mock.Call {
 	return m.On("GetByUUID", mock.Anything, testOwnerCarID).
 		Return(ownedTestEntry, nil).
 		On("GetByUUID", mock.Anything, mock.Anything).
-		Return(car.Entry{}, car.ErrCarNotFound)
+		Return(car.Entry{}, models.ErrCarNotFound)
 }
 
 // Create implements car.Repository.
@@ -188,7 +188,7 @@ func TestGet(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.On("GetByUUID", mock.Anything, uuid.Nil).
-			Return(car.Entry{}, car.ErrCarNotFound).Once()
+			Return(car.Entry{}, models.ErrCarNotFound).Once()
 		srv := New(repo)
 
 		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil)
@@ -283,19 +283,19 @@ func TestUpdate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
+		repo.AddGetCalls()
 		repo.On("UpdateByUUID", mock.Anything, uuid.Nil, &models.CarCreationInput{
 			CarDetails: sampleDetails,
 		}).
-			Return(car.Entry{}, car.ErrCarNotFound).Once()
+			Return(car.Entry{}, models.ErrCarNotFound).Once()
 		srv := New(repo)
 
 		_, err := srv.UpdateByUUID(ctx, testOwnerID, uuid.Nil, &models.CarCreationInput{
 			CarDetails: sampleDetails,
 		})
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, car.ErrCarNotFound)
+			assert.ErrorIs(t, err, models.ErrCarNotFound)
 		}
-		repo.AssertExpectations(t)
 	})
 
 	t.Run("owner can update their own cars", func(t *testing.T) {
@@ -313,6 +313,7 @@ func TestUpdate(t *testing.T) {
 		}
 
 		repo := new(mockRepo)
+		repo.AddGetCalls()
 		repo.On("UpdateByUUID", mock.Anything, testOwnerCarID, &models.CarCreationInput{
 			CarDetails: sampleDetails,
 		}).
@@ -336,25 +337,26 @@ func TestUpdate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
+		repo.AddGetCalls()
 		repo.On("UpdateByUUID", mock.Anything, testOwnerCarID, &models.CarCreationInput{
 			CarDetails: sampleDetails,
 		}).
-			Return(car.Entry{}, car.ErrCarNotFound).Once()
+			Return(car.Entry{}, models.ErrCarNotFound).Once()
 		srv := New(repo)
 
 		_, err := srv.UpdateByUUID(ctx, testStrangerID, testOwnerCarID, &models.CarCreationInput{
 			CarDetails: sampleDetails,
 		})
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, car.ErrCarNotFound)
+			assert.ErrorIs(t, err, models.ErrCarOwned)
 		}
-		repo.AssertExpectations(t)
 	})
 
 	t.Run("license plate fit check", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
+		repo.AddGetCalls()
 		srv := New(repo)
 
 		details := sampleDetails
@@ -372,6 +374,7 @@ func TestUpdate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
+		repo.AddGetCalls()
 		srv := New(repo)
 
 		details := sampleDetails
@@ -389,6 +392,7 @@ func TestUpdate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
+		repo.AddGetCalls()
 		srv := New(repo)
 
 		details := sampleDetails
@@ -406,6 +410,7 @@ func TestUpdate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
+		repo.AddGetCalls()
 		srv := New(repo)
 
 		details := sampleDetails

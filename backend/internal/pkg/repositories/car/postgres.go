@@ -54,11 +54,11 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, car *mode
 
 	entry := Entry{
 		Car:        insertedCar,
-		InternalID: int64(inserted.Carid),
-		OwnerID:    int64(inserted.Userid),
+		InternalID: inserted.Carid,
+		OwnerID:    inserted.Userid,
 	}
 
-	return int64(inserted.Carid), entry, nil
+	return inserted.Carid, entry, nil
 }
 
 func (p *PostgresRepository) DeleteByUUID(ctx context.Context, carID uuid.UUID) error {
@@ -94,7 +94,7 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, carID uuid.UUID, 
 	rowsAffected, _ := result.RowsAffected()
 
 	if rowsAffected == 0 {
-		return Entry{}, ErrCarNotFound
+		return Entry{}, models.ErrCarNotFound
 	}
 
 	return Entry{}, nil
@@ -116,7 +116,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (En
 	result, err := bob.One(ctx, p.db, query, scan.StructMapper[dbmodels.Car]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = ErrCarNotFound
+			err = models.ErrCarNotFound
 		}
 		return Entry{}, err
 	}
@@ -135,8 +135,8 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (En
 
 	return Entry{
 		Car:        car,
-		InternalID: int64(result.Carid),
-		OwnerID:    int64(result.Userid),
+		InternalID: result.Carid,
+		OwnerID:    result.Userid,
 	}, err
 }
 
@@ -149,7 +149,7 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, carID uuid.UUID
 	result, err := bob.One(ctx, p.db, query, scan.SingleColumnMapper[int32])
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = ErrCarNotFound
+			err = models.ErrCarNotFound
 		}
 		return -1, err
 	}

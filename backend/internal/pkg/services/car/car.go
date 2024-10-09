@@ -45,7 +45,7 @@ func (s *Service) Create(ctx context.Context, userID int64, carModel *models.Car
 func (s *Service) GetByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error) {
 	result, err := s.repo.GetByUUID(ctx, carID)
 	if err != nil {
-		if errors.Is(err, car.ErrCarNotFound) {
+		if errors.Is(err, models.ErrCarNotFound) {
 			err = models.ErrCarNotFound
 		}
 		return models.Car{}, err
@@ -60,7 +60,7 @@ func (s *Service) DeleteByUUID(ctx context.Context, userID int64, carID uuid.UUI
 	result, err := s.repo.GetByUUID(ctx, carID)
 	if err != nil {
 		// It's not an error to delete something that doesn't exist
-		if errors.Is(err, car.ErrCarNotFound) {
+		if errors.Is(err, models.ErrCarNotFound) {
 			return nil
 		}
 		return err
@@ -72,6 +72,16 @@ func (s *Service) DeleteByUUID(ctx context.Context, userID int64, carID uuid.UUI
 }
 
 func (s *Service) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUID, carModel *models.CarCreationInput) (models.Car, error) {
+	getResult, err := s.repo.GetByUUID(ctx, carID)
+	if err != nil {
+		if errors.Is(err, models.ErrCarNotFound) {
+			err = models.ErrCarNotFound
+		}
+		return models.Car{}, err
+	}
+	if getResult.OwnerID != userID {
+		return models.Car{}, models.ErrCarOwned
+	}
 	licensePlatePattern := regexp.MustCompile(`^[A-Za-z0-9 ]{2,8}$`)
 	if !licensePlatePattern.MatchString(carModel.LicensePlate) {
 		return models.Car{}, models.ErrInvalidLicensePlate
