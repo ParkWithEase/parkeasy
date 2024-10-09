@@ -20,7 +20,7 @@ func New(repo car.Repository) *Service {
 	}
 }
 
-func ValidateCarCreationInput(input *models.CarCreationInput) error {
+func validateCarCreationInput(input *models.CarCreationInput) error {
 	licensePlatePattern := regexp.MustCompile(`^[A-Za-z0-9 ]{2,8}$`)
 	if !licensePlatePattern.MatchString(input.LicensePlate) {
 		return models.ErrInvalidLicensePlate
@@ -38,7 +38,7 @@ func ValidateCarCreationInput(input *models.CarCreationInput) error {
 }
 
 func (s *Service) Create(ctx context.Context, userID int64, carModel *models.CarCreationInput) (int64, models.Car, error) {
-	if err := ValidateCarCreationInput(carModel); err != nil {
+	if err := validateCarCreationInput(carModel); err != nil {
 		return 0, models.Car{}, err
 	}
 
@@ -90,7 +90,7 @@ func (s *Service) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUI
 		return models.Car{}, models.ErrCarOwned
 	}
 
-	if err := ValidateCarCreationInput(carModel); err != nil {
+	if err := validateCarCreationInput(carModel); err != nil {
 		return models.Car{}, err
 	}
 

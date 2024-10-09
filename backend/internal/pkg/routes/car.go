@@ -49,7 +49,7 @@ func NewCarRoute(
 	}
 }
 
-func CheckCarFieldErrors(err error, input *models.CarCreationInput) *huma.ErrorDetail {
+func checkCarFieldErrors(err error, input *models.CarCreationInput) error {
 	switch {
 	case errors.Is(err, models.ErrInvalidLicensePlate):
 		return &huma.ErrorDetail{
@@ -76,7 +76,7 @@ func CheckCarFieldErrors(err error, input *models.CarCreationInput) *huma.ErrorD
 			Value:    input.Color,
 		}
 	default:
-		return nil
+		return err
 	}
 }
 
@@ -101,7 +101,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
-			errDetail := CheckCarFieldErrors(err, &input.Body)
+			errDetail := checkCarFieldErrors(err, &input.Body)
 			if errDetail != nil {
 				return nil, huma.Error422UnprocessableEntity("", errDetail)
 			}
@@ -198,7 +198,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		result, err := r.service.UpdateByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
-			errDetail := CheckCarFieldErrors(err, &input.Body)
+			errDetail := checkCarFieldErrors(err, &input.Body)
 			if errDetail != nil {
 				return nil, huma.Error422UnprocessableEntity("", errDetail)
 			}
