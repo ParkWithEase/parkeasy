@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/danielgtaylor/huma/v2"
@@ -16,6 +17,11 @@ type CarServicer interface {
 	//
 	// Returns the car internal ID and the model.
 	Create(ctx context.Context, userID int64, car *models.CarCreationInput) (int64, models.Car, error)
+	// Get at most `count` cars associated with the given `userID`.
+	//
+	// If there are more entries following the result, a non-empty cursor will be returned
+	// which can be passed to the next invocation to get the next entries.
+	GetMany(ctx context.Context, userID int64, count int, after models.Cursor) ([]models.Car, models.Cursor, error)
 	// Get the car with `carID` if `userID` has enough permission to view the resource.
 	GetByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error)
 	// Delete the car with `carID` if `userID` owns the resource.
@@ -34,6 +40,11 @@ type CarRoute struct {
 // CarOutput represents the output of the car retrieval operation
 type CarOutput struct {
 	Body models.Car
+}
+
+type CarListOutput struct {
+	Link []string `header:"Link" doc:"Contains details on getting the next page of resources" example:"</cars?after=gQL>; rel=\"next\""`
+	Body []models.Car
 }
 
 // Returns a new `CarRoute`
@@ -81,7 +92,7 @@ func checkCarFieldErrors(err error, input *models.CarCreationInput) error {
 }
 
 // Registers `/car` routes
-func (r *CarRoute) RegisterCarRoutes(api huma.API) {
+func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // typical for route handlers
 	huma.Register(api, huma.Operation{
 		Method:        http.MethodPost,
 		Path:          "/cars",
@@ -107,6 +118,41 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 			}
 		}
 		return &CarOutput{Body: result}, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		Method:  http.MethodGet,
+		Path:    "/cars",
+		Summary: "Get a list of cars associated to the current users",
+		Errors:  []int{http.StatusUnauthorized},
+		Security: []map[string][]string{
+			{
+				CookieSecuritySchemeName: {},
+			},
+		},
+		Middlewares: huma.Middlewares{r.userMiddleware},
+	}, func(ctx context.Context, input *struct {
+		After models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
+		Count int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of cars that appear per page."`
+	},
+	) (*CarListOutput, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		cars, nextCursor, err := r.service.GetMany(ctx, userID, input.Count, input.After)
+		if err != nil {
+			return nil, huma.Error400BadRequest("", err)
+		}
+
+		result := CarListOutput{Body: cars}
+		if nextCursor != "" {
+			nextURL := url.URL{
+				Path: "/cars",
+				RawQuery: url.Values{
+					"after": []string{string(nextCursor)},
+				}.Encode(),
+			}
+			result.Link = append(result.Link, "<"+nextURL.String()+`>; rel="next"`)
+		}
+		return &result, nil
 	})
 
 	huma.Register(api, huma.Operation{
