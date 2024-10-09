@@ -227,7 +227,7 @@ func TestGet(t *testing.T) {
 
 		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, parkingspot.ErrNotFound)
+			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
 		}
 		repo.AssertExpectations(t)
 	})

@@ -126,4 +126,45 @@ func TestPostgresIntegration(t *testing.T) {
 			assert.ErrorIs(t, err, ErrNotFound)
 		}
 	})
+
+	t.Run("duplicate address creation should fail", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+
+			// clear all idle connections
+			// required since Restore() deletes the current DB
+			pool.Reset()
+		})
+
+		sampleLocation := models.ParkingSpotLocation{
+			PostalCode:    "L2E6T2",
+			CountryCode:   "CA",
+			City:          "Niagara Falls",
+			StreetAddress: "6650 Niagara Parkway",
+			Latitude:      43.07923126220703,
+			Longitude:     -79.07887268066406,
+		}
+
+		sampleFeatures := models.ParkingSpotFeatures{
+			Shelter:         true,
+			PlugIn:          false,
+			ChargingStation: true,
+		}
+
+		creationInput := models.ParkingSpotCreationInput{
+			Location: sampleLocation,
+			Features: sampleFeatures,
+		}
+
+		// Create the first parkingspot
+		_, _, err := repo.Create(ctx, userID, &creationInput)
+		require.NoError(t, err)
+
+		// Attempt to create another parkingspot with same address
+		_, _, dupErr := repo.Create(ctx, userID, &creationInput)
+		if assert.Error(t, dupErr, "Creating a parkingspot with duplicate address should fail") {
+			assert.ErrorIs(t, dupErr, ErrDuplicatedAddress)
+		}
+	})
 }

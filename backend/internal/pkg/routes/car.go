@@ -164,7 +164,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, huma.Error403Forbidden("", err)
+				return nil, huma.Error404NotFound("", err)
 			}
 			return nil, huma.Error400BadRequest("", err)
 		}
@@ -175,7 +175,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		Method:  http.MethodPut,
 		Path:    "/cars/{id}",
 		Summary: "Update information about a car",
-		Errors:  []int{http.StatusUnprocessableEntity, http.StatusUnauthorized},
+		Errors:  []int{http.StatusUnprocessableEntity, http.StatusUnauthorized, http.StatusNotFound},
 		Security: []map[string][]string{
 			{
 				CookieSecuritySchemeName: {},
@@ -204,7 +204,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, huma.Error403Forbidden("", err)
+				return nil, huma.Error404NotFound("", err)
 			case errors.Is(err, models.ErrInvalidLicensePlate):
 				err = &huma.ErrorDetail{
 					Message:  err.Error(),

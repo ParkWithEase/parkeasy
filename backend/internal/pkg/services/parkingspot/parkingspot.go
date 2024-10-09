@@ -56,7 +56,7 @@ func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID)
 	result, err := s.repo.GetByUUID(ctx, spotID)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrNotFound) {
-			err = parkingspot.ErrNotFound
+			err = models.ErrParkingSpotNotFound
 		}
 		return models.ParkingSpot{}, err
 	}

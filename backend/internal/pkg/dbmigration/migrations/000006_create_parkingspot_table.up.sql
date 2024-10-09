@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS ParkingSpot (
   PostalCode TEXT NOT NULL, 
   CountryCode TEXT NOT NULL,
   City TEXT NOT NULL,
-  StreetAddress TEXT NOT NULL,
+  StreetAddress TEXT UNIQUE NOT NULL,
   Longitude REAL NOT NULL,
   Latitude REAL NOT NULL,
   HasShelter BOOLEAN NOT NULL DEFAULT false,

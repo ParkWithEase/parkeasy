@@ -340,7 +340,7 @@ func TestDeleteCar(t *testing.T) {
 			Once()
 
 		resp := api.DeleteCtx(ctx, "/cars/"+testUUID.String())
-		assert.Equal(t, http.StatusForbidden, resp.Result().StatusCode)
+		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
 		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
@@ -565,7 +565,7 @@ func TestUpdateCar(t *testing.T) {
 			Once()
 
 		resp := api.PutCtx(ctx, "/cars/"+testUUID.String(), &testInput)
-		assert.Equal(t, http.StatusForbidden, resp.Result().StatusCode)
+		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
 		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel

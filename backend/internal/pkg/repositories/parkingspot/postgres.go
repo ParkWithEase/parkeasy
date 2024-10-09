@@ -10,6 +10,8 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dm"
@@ -28,6 +30,12 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 }
 
 func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, Entry, error) {
+	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return -1, Entry{}, fmt.Errorf("could not start a transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
+
 	longitude := float32(spot.Location.Longitude)
 	latitude := float32(spot.Location.Latitude)
 
@@ -43,6 +51,21 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		Hasplugin:          omit.From(spot.Features.PlugIn),
 		Haschargingstation: omit.From(spot.Features.ChargingStation),
 	})
+	if err != nil {
+		// Handle duplicate error
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				err = ErrDuplicatedAddress
+			}
+		}
+		return -1, Entry{}, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return -1, Entry{}, fmt.Errorf("could not commit transaction: %w", err)
+	}
 
 	location := models.ParkingSpotLocation{
 		PostalCode:    inserted.Postalcode,
@@ -70,10 +93,6 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		InternalID:  inserted.Parkingspotid,
 		OwnerID:     inserted.Userid,
 		IsPublic:    inserted.Ispublic,
-	}
-
-	if err != nil {
-		return -1, Entry{}, fmt.Errorf("could not commit transaction: %w", err)
 	}
 	return inserted.Parkingspotid, entry, nil
 }
