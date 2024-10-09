@@ -81,17 +81,17 @@ fun LoginScreen(
             viewModel::onRequestResetPress,
         )
     val latestOnLogin by rememberUpdatedState(onLogin)
+    LaunchedEffect(message) {
+        message.getContentIfNotHandled()?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+        }
+    }
     LaunchedEffect(loggedIn) {
         if (loggedIn) {
             latestOnLogin()
         }
     }
     LoginScreenInner(events, modifier)
-    LaunchedEffect(message) {
-        message.getContentIfNotHandled()?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-        }
-    }
 }
 
 @Composable
@@ -136,42 +136,7 @@ private fun LoginForm(events: LoginEvents, width: Dp, modifier: Modifier = Modif
         modifier = modifier.fillMaxSize(),
     ) {
         LoginFields(uiState, uiEvents, width)
-        Button(
-            onClick = {
-                when (loginMode) {
-                    LoginMode.LOGIN -> events.onLoginPress(email, password)
-                    LoginMode.REGISTER ->
-                        events.onRegisterPress(name, email, password, confirmPassword)
-                    LoginMode.FORGOT -> events.onRequestResetPress(email)
-                }
-            },
-            modifier = Modifier.width(width),
-        ) {
-            Text(
-                stringResource(
-                    when (loginMode) {
-                        LoginMode.LOGIN -> R.string.login
-                        LoginMode.REGISTER -> R.string.register
-                        LoginMode.FORGOT -> R.string.forgot_password
-                    }
-                )
-            )
-        }
-        AnimatedVisibility(loginMode != LoginMode.FORGOT) {
-            SwitchRegisterText(
-                stringResource(
-                    if (loginMode == LoginMode.REGISTER) R.string.already_registered
-                    else R.string.not_registered
-                ),
-                stringResource(
-                    if (loginMode == LoginMode.REGISTER) R.string.login_instead
-                    else R.string.register_instead
-                ),
-                if (loginMode == LoginMode.REGISTER) LoginMode.LOGIN else LoginMode.REGISTER,
-                { loginMode = it },
-                Modifier.width(width),
-            )
-        }
+        LoginButtons(uiState, uiEvents, events, width)
     }
 }
 
@@ -182,7 +147,7 @@ private fun LoginFields(
     width: Dp,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier) {
+    Column(modifier.width(width)) {
         AnimatedVisibility(state.loginMode == LoginMode.REGISTER) {
             LoginField(
                 state.name,
@@ -220,14 +185,68 @@ private fun LoginFields(
                 visualTransformation = PasswordVisualTransformation(),
             )
         }
-        AnimatedVisibility(state.loginMode != LoginMode.REGISTER) {
+    }
+}
+
+@Composable
+private fun LoginButtons(
+    uiState: LoginUiState,
+    uiEvents: LoginUiEvents,
+    events: LoginEvents,
+    width: Dp,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
+        AnimatedVisibility(uiState.loginMode != LoginMode.REGISTER) {
             SwitchRequestResetText(
                 stringResource(
-                    if (state.loginMode == LoginMode.FORGOT) R.string.return_login
+                    if (uiState.loginMode == LoginMode.FORGOT) R.string.return_login
                     else R.string.forgot_password
                 ),
-                if (state.loginMode == LoginMode.FORGOT) LoginMode.LOGIN else LoginMode.FORGOT,
-                events.onSwitchMode,
+                if (uiState.loginMode == LoginMode.FORGOT) LoginMode.LOGIN else LoginMode.FORGOT,
+                uiEvents.onSwitchMode,
+                Modifier.width(width),
+            )
+        }
+        Button(
+            onClick = {
+                when (uiState.loginMode) {
+                    LoginMode.LOGIN -> events.onLoginPress(uiState.email, uiState.password)
+                    LoginMode.REGISTER ->
+                        events.onRegisterPress(
+                            uiState.name,
+                            uiState.email,
+                            uiState.password,
+                            uiState.confirmPassword,
+                        )
+                    LoginMode.FORGOT -> events.onRequestResetPress(uiState.email)
+                }
+            },
+            modifier = Modifier.width(width),
+        ) {
+            Text(
+                stringResource(
+                    when (uiState.loginMode) {
+                        LoginMode.LOGIN -> R.string.login
+                        LoginMode.REGISTER -> R.string.register
+                        LoginMode.FORGOT -> R.string.forgot_password
+                    }
+                )
+            )
+        }
+        AnimatedVisibility(uiState.loginMode != LoginMode.FORGOT) {
+            SwitchRegisterText(
+                stringResource(
+                    if (uiState.loginMode == LoginMode.REGISTER) R.string.already_registered
+                    else R.string.not_registered
+                ),
+                stringResource(
+                    if (uiState.loginMode == LoginMode.REGISTER) R.string.login_instead
+                    else R.string.register_instead
+                ),
+                if (uiState.loginMode == LoginMode.REGISTER) LoginMode.LOGIN
+                else LoginMode.REGISTER,
+                uiEvents.onSwitchMode,
                 Modifier.width(width),
             )
         }
