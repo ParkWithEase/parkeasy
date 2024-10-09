@@ -572,7 +572,7 @@ func TestUpdateCar(t *testing.T) {
 		err := json.Unmarshal(respBody, &errModel)
 		require.NoError(t, err)
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Message:  models.ErrCarOwned.Error(),
+			Message:  models.ErrCarNotFound.Error(),
 			Location: "path.id",
 			Value:    jsonAnyify(testUUID),
 		})

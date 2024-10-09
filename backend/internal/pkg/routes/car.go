@@ -49,6 +49,37 @@ func NewCarRoute(
 	}
 }
 
+func CheckCarFieldErrors(err error, input *models.CarCreationInput) *huma.ErrorDetail {
+	switch {
+	case errors.Is(err, models.ErrInvalidLicensePlate):
+		return &huma.ErrorDetail{
+			Message:  err.Error(),
+			Location: "body.license_plate",
+			Value:    input.LicensePlate,
+		}
+	case errors.Is(err, models.ErrInvalidMake):
+		return &huma.ErrorDetail{
+			Message:  err.Error(),
+			Location: "body.make",
+			Value:    input.Make,
+		}
+	case errors.Is(err, models.ErrInvalidModel):
+		return &huma.ErrorDetail{
+			Message:  err.Error(),
+			Location: "body.model",
+			Value:    input.Model,
+		}
+	case errors.Is(err, models.ErrInvalidColor):
+		return &huma.ErrorDetail{
+			Message:  err.Error(),
+			Location: "body.color",
+			Value:    input.Color,
+		}
+	default:
+		return nil
+	}
+}
+
 // Registers `/car` routes
 func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundling inflates complexity level
 	huma.Register(api, huma.Operation{
@@ -70,33 +101,10 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
-			switch {
-			case errors.Is(err, models.ErrInvalidLicensePlate):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "body.license_plate",
-					Value:    input.Body.LicensePlate,
-				}
-			case errors.Is(err, models.ErrInvalidMake):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "body.make",
-					Value:    input.Body.Make,
-				}
-			case errors.Is(err, models.ErrInvalidModel):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "body.model",
-					Value:    input.Body.Model,
-				}
-			case errors.Is(err, models.ErrInvalidColor):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "body.color",
-					Value:    input.Body.Color,
-				}
+			errDetail := CheckCarFieldErrors(err, &input.Body)
+			if errDetail != nil {
+				return nil, huma.Error422UnprocessableEntity("", errDetail)
 			}
-			return nil, huma.Error422UnprocessableEntity("", err)
 		}
 		return &CarOutput{Body: result}, nil
 	})
@@ -190,45 +198,18 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		result, err := r.service.UpdateByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
+			errDetail := CheckCarFieldErrors(err, &input.Body)
+			if errDetail != nil {
+				return nil, huma.Error422UnprocessableEntity("", errDetail)
+			}
 			switch {
-			case errors.Is(err, models.ErrCarNotFound):
+			case errors.Is(err, models.ErrCarNotFound), errors.Is(err, models.ErrCarOwned):
 				err = &huma.ErrorDetail{
-					Message:  err.Error(),
+					Message:  models.ErrCarNotFound.Error(),
 					Location: "path.id",
 					Value:    input.ID,
 				}
 				return nil, huma.Error404NotFound("", err)
-			case errors.Is(err, models.ErrCarOwned):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "path.id",
-					Value:    input.ID,
-				}
-				return nil, huma.Error404NotFound("", err)
-			case errors.Is(err, models.ErrInvalidLicensePlate):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "body.license_plate",
-					Value:    input.Body.LicensePlate,
-				}
-			case errors.Is(err, models.ErrInvalidMake):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "body.make",
-					Value:    input.Body.Make,
-				}
-			case errors.Is(err, models.ErrInvalidModel):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "body.model",
-					Value:    input.Body.Model,
-				}
-			case errors.Is(err, models.ErrInvalidColor):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "body.color",
-					Value:    input.Body.Color,
-				}
 			}
 			return nil, huma.Error422UnprocessableEntity("", err)
 		}

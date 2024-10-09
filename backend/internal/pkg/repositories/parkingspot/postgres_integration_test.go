@@ -17,6 +17,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
+var epsilon = 1e-8 // Acceptable cariance for longitude and latitude
+
 func TestPostgresIntegration(t *testing.T) {
 	t.Parallel()
 
@@ -97,8 +99,8 @@ func TestPostgresIntegration(t *testing.T) {
 		assert.Equal(t, sampleLocation.PostalCode, getEntry.ParkingSpot.Location.PostalCode)
 		assert.Equal(t, sampleLocation.City, getEntry.ParkingSpot.Location.City)
 		assert.Equal(t, sampleLocation.StreetAddress, getEntry.ParkingSpot.Location.StreetAddress)
-		assert.InDelta(t, sampleLocation.Latitude, getEntry.ParkingSpot.Location.Latitude, 0)
-		assert.InDelta(t, sampleLocation.Longitude, getEntry.ParkingSpot.Location.Longitude, 0)
+		assert.InEpsilon(t, sampleLocation.Latitude, getEntry.ParkingSpot.Location.Latitude, epsilon)
+		assert.InEpsilon(t, sampleLocation.Longitude, getEntry.ParkingSpot.Location.Longitude, epsilon)
 		assert.Equal(t, sampleFeatures.Shelter, getEntry.ParkingSpot.Features.Shelter)
 		assert.Equal(t, sampleFeatures.PlugIn, getEntry.ParkingSpot.Features.PlugIn)
 		assert.Equal(t, sampleFeatures.ChargingStation, getEntry.ParkingSpot.Features.ChargingStation)

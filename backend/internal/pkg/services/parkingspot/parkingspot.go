@@ -61,7 +61,7 @@ func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID)
 		return models.ParkingSpot{}, err
 	}
 	if result.OwnerID != userID && !result.IsPublic {
-		return models.ParkingSpot{}, parkingspot.ErrNotFound
+		return models.ParkingSpot{}, models.ErrParkingSpotNotFound
 	}
 	return result.ParkingSpot, nil
 }
