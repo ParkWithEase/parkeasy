@@ -7,8 +7,10 @@ require (
 	github.com/alecthomas/kong v1.2.1
 	github.com/alexedwards/scs/pgxstore v0.0.0-20240316134038-7e11d57e8885
 	github.com/danielgtaylor/huma/v2 v2.22.1
+	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/golang-migrate/migrate/v4 v4.18.1
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
+	github.com/peterhellberg/link v1.2.0
 	github.com/stephenafamo/bob v0.28.1
 	github.com/stephenafamo/scan v0.4.2
 	github.com/testcontainers/testcontainers-go v0.33.0
@@ -75,6 +77,7 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/volatiletech/inflect v0.0.1 // indirect
 	github.com/volatiletech/strmangle v0.0.6 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 // indirect
 	go.opentelemetry.io/otel v1.30.0 // indirect

@@ -11,6 +11,7 @@ import (
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
 	"github.com/stephenafamo/bob"
+	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 )
 
@@ -150,4 +151,48 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, carID uuid.UUID
 	}
 
 	return result.Userid, err
+}
+
+func (p *PostgresRepository) GetMany(ctx context.Context, userID int64, limit int, after omit.Val[Cursor]) ([]Entry, error) {
+	where := dbmodels.SelectWhere.Cars.Userid.EQ(userID)
+	if cursor, ok := after.Get(); ok {
+		where = psql.WhereAnd(where, dbmodels.SelectWhere.Cars.Carid.GT(cursor.ID))
+	}
+
+	entryCursor, err := dbmodels.Cars.Query(
+		ctx, p.db,
+		sm.Columns(dbmodels.Cars.Columns()),
+		sm.OrderBy(dbmodels.CarColumns.Carid),
+		where,
+		sm.Limit(limit),
+	).Cursor()
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []Entry{}, nil
+		}
+		return nil, err
+	}
+	defer entryCursor.Close()
+
+	result := make([]Entry, 0, 8)
+	for entryCursor.Next() {
+		dbCar, err := entryCursor.Get()
+		if err != nil { // if there's an error, just return what we already have
+			break
+		}
+		result = append(result, Entry{
+			Car: models.Car{
+				Details: models.CarDetails{
+					LicensePlate: dbCar.Licenseplate,
+					Make:         dbCar.Make,
+					Model:        dbCar.Model,
+					Color:        dbCar.Color,
+				},
+				ID: dbCar.Caruuid,
+			},
+			InternalID: dbCar.Carid,
+			OwnerID:    dbCar.Userid,
+		})
+	}
+	return result, nil
 }

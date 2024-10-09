@@ -31,7 +31,31 @@ Most API endpoints require authentication.
 To authenticate your request, you will need to provide an authentication token
 via the ` + "`session`" + ` cookie. To get a token, see the
 [/auth](#tag/authentication/POST/auth) endpoint for more information.
+
+### Pagination
+
+When an API response would include many results, the API server will paginate
+and only return a subset of the results.
+
+As an example, ` + "`GET /cars`" + ` will only return 50 cars by default even
+if the current user have 100 cars. This reduce the size of the response, making
+it easier to handle for servers and clients.
+
+When pagination occurs, the ` + "`Link`" + ` header will be populated with
+details on how to get the next page of results. For example:
+
+     GET /cars
+	
+will populate the ` + "`Link`" + ` header like this:
+
+` + "```http" + `
+Link: </cars?after=gQo&count=50>; rel="next"
+` + "```" + `
+
+Currently the API server only provides the relative URL for the next page of
+results.
 `
+
 	result.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		CookieSecuritySchemeName: &CookieSecurityScheme,
 	}
