@@ -134,6 +134,10 @@ func TestPostgresIntegration(t *testing.T) {
 		err = repo.UpdatePassword(ctx, authUUID, models.HashedPassword(newPasswordHash))
 		require.NoError(t, err)
 
+		identity, err := repo.Get(ctx, authUUID)
+		require.NoError(t, err)
+		assert.Equal(t, newPasswordHash, string(identity.PasswordHash))
+
 		updateErr := repo.UpdatePassword(ctx, uuid.Nil, models.HashedPassword(newPasswordHash))
 		if assert.Error(t, updateErr) {
 			assert.ErrorIs(t, updateErr, ErrIdentityNotFound)
