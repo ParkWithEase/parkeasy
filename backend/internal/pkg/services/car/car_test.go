@@ -253,7 +253,9 @@ func TestDelete(t *testing.T) {
 		srv := New(repo)
 
 		err := srv.DeleteByUUID(ctx, testOwnerID, uuid.Nil)
-		require.NoError(t, err)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrCarNotFound)
+		}
 		// NOTE: due to permission checking, we actually don't call Delete on the repo since
 		// the car doesn't exist when queried
 		repo.AssertNotCalled(t, "DeleteByUUID")
