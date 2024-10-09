@@ -24,6 +24,30 @@
             color: 'Blue',
             model: 'Lefton',
             make: 'Rocky'
+        },
+        {
+            license_plate: '78945613',
+            color: 'Blue',
+            model: 'Lefton',
+            make: 'Rocky'
+        },
+        {
+            license_plate: '78945613',
+            color: 'Blue',
+            model: 'Lefton',
+            make: 'Rocky'
+        },
+        {
+            license_plate: '78945613',
+            color: 'Blue',
+            model: 'Lefton',
+            make: 'Rocky'
+        },
+        {
+            license_plate: '78945613',
+            color: 'Blue',
+            model: 'Lefton',
+            make: 'Rocky'
         }
     ];
 
@@ -75,7 +99,8 @@
     }
 </script>
 
-{#key carList}
+<div class="listing-container">
+    {#key carList}
     {#each carList as car, index}
         <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
         <div class="car-info-container" on:click={() => selectCarIndex(index)}>
@@ -93,6 +118,8 @@
         </div>
     {/each}
 {/key}
+</div>
+
 <input
     type="image"
     alt="add car"
@@ -235,5 +262,10 @@
 
     .modal-icon {
         max-width: 2rem;
+    }
+
+    .listing-container {
+        max-height: inherit;
+        overflow-y: scroll;
     }
 </style>

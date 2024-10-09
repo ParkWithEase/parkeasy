@@ -36,7 +36,7 @@
         <a class="sidebar-link" href="/profile/cars" class:active={$page.url.pathname.includes('cars')}>Preference Cars</a>
         <a class="logout-link" href='/' on:click={logout}>Logout</a>
     </div>
-    <div class="listing-container">
+    <div class="info-container">
         <slot></slot>
     </div>
 </div>
@@ -58,7 +58,7 @@
     .sidebar {
         display: flex;
         width: 30%;
-        min-height: 100%;
+        max-height: 70vh;
         flex-direction: column;
         font-size: 1.2rem;
         font-weight: bold;
@@ -98,11 +98,10 @@
         transition: 0.3s;
     }
 
-    .listing-container {
+    .info-container {
         position: relative;
         width: 70%;
-        min-height: 100%;
+        max-height: 70vh;
         background-color: aliceblue;
-        overflow-y: auto;
     }
 </style>
