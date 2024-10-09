@@ -67,7 +67,7 @@ func TestPostgresIntegration(t *testing.T) {
 		testToken := Token("Test Token")
 
 		_, err := repo.Get(ctx, testToken)
-		if assert.Error(t, err, "getting non existant token should fail") {
+		if assert.Error(t, err, "getting non existent token should fail") {
 			assert.ErrorIs(t, err, ErrInvalidToken)
 		}
 	})
@@ -87,12 +87,12 @@ func TestPostgresIntegration(t *testing.T) {
 		err := repo.Create(ctx, authUUID, testToken)
 		require.NoError(t, err)
 
-		//Delete the token
+		// Delete the token
 		err = repo.Delete(ctx, testToken)
 		require.NoError(t, err, "delete an existing token should work")
 
 		_, err = repo.Get(ctx, testToken)
-		if assert.Error(t, err, "getting non existant token should fail") {
+		if assert.Error(t, err, "getting token after deleting it should fail") {
 			assert.ErrorIs(t, err, ErrInvalidToken)
 		}
 	})
