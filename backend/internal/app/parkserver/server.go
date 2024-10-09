@@ -7,12 +7,22 @@ import (
 	"net/http"
 	"time"
 
-	authRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
-	userRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
+	"github.com/stephenafamo/bob"
+
+	authRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
+
+	userRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/user"
+
+	carRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/car"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/car"
+
+	parkingSpotRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/parkingspot"
+
 	"github.com/alexedwards/scs/pgxstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
@@ -20,7 +30,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/rs/cors"
-	"github.com/stephenafamo/bob"
 )
 
 type Config struct {
@@ -47,8 +56,19 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	userRepository := userRepo.NewPostgres(db)
 	userService := user.NewService(authService, userRepository)
 	userRoute := routes.NewUserRoute(userService, sessionManager)
+
+	parkingSpotRepository := parkingSpotRepo.NewPostgres(db)
+	parkingSpotService := parkingspot.New(parkingSpotRepository)
+	parkingSpotRoute := routes.NewParkingSpotRoute(parkingSpotService, sessionManager, authMiddleware)
+
+	carRepository := carRepo.NewPostgres(db)
+	carService := car.New(carRepository)
+	carRoute := routes.NewCarRoute(carService, sessionManager, authMiddleware)
+
 	huma.AutoRegister(api, authRoute)
 	huma.AutoRegister(api, userRoute)
+	huma.AutoRegister(api, parkingSpotRoute)
+	huma.AutoRegister(api, carRoute)
 }
 
 // Creates a new Huma API instance with routes configured

@@ -14,14 +14,14 @@ import (
 type CarServicer interface {
 	// Creates a new car attached to `userID`.
 	//
-	// Returns the spot internal ID and the model.
-	Create(ctx context.Context, userID int64, spot *models.CarCreationInput) (int64, models.Car, error)
+	// Returns the car internal ID and the model.
+	Create(ctx context.Context, userID int64, car *models.CarCreationInput) (int64, models.Car, error)
 	// Get the car with `carID` if `userID` has enough permission to view the resource.
-	GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.Car, error)
+	GetByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error)
 	// Delete the car with `carID` if `userID` owns the resource.
-	DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
+	DeleteByUUID(ctx context.Context, userID int64, carID uuid.UUID) error
 	// Update the car with `carID` if `userID` has enough permission to view the resource.
-	UpdateByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.Car, error)
+	UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUID, car *models.CarCreationInput) (models.Car, error)
 }
 
 // CarRoute represents car-related API routes
@@ -49,8 +49,39 @@ func NewCarRoute(
 	}
 }
 
+func checkCarFieldErrors(err error, input *models.CarCreationInput) error {
+	switch {
+	case errors.Is(err, models.ErrInvalidLicensePlate):
+		return &huma.ErrorDetail{
+			Message:  err.Error(),
+			Location: "body.license_plate",
+			Value:    input.LicensePlate,
+		}
+	case errors.Is(err, models.ErrInvalidMake):
+		return &huma.ErrorDetail{
+			Message:  err.Error(),
+			Location: "body.make",
+			Value:    input.Make,
+		}
+	case errors.Is(err, models.ErrInvalidModel):
+		return &huma.ErrorDetail{
+			Message:  err.Error(),
+			Location: "body.model",
+			Value:    input.Model,
+		}
+	case errors.Is(err, models.ErrInvalidColor):
+		return &huma.ErrorDetail{
+			Message:  err.Error(),
+			Location: "body.color",
+			Value:    input.Color,
+		}
+	default:
+		return err
+	}
+}
+
 // Registers `/car` routes
-func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundling inflates complexity level
+func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 	huma.Register(api, huma.Operation{
 		Method:        http.MethodPost,
 		Path:          "/cars",
@@ -70,33 +101,10 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
-			switch {
-			case errors.Is(err, models.ErrInvalidLicensePlate):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "body.license_plate",
-					Value:    input.Body.LicensePlate,
-				}
-			case errors.Is(err, models.ErrInvalidMake):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "body.make",
-					Value:    input.Body.Make,
-				}
-			case errors.Is(err, models.ErrInvalidModel):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "body.model",
-					Value:    input.Body.Model,
-				}
-			case errors.Is(err, models.ErrInvalidColor):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "body.color",
-					Value:    input.Body.Color,
-				}
+			errDetail := checkCarFieldErrors(err, &input.Body)
+			if errDetail != nil {
+				return nil, huma.Error422UnprocessableEntity("", errDetail)
 			}
-			return nil, huma.Error422UnprocessableEntity("", err)
 		}
 		return &CarOutput{Body: result}, nil
 	})
@@ -164,7 +172,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, huma.Error403Forbidden("", err)
+				return nil, huma.Error404NotFound("", err)
 			}
 			return nil, huma.Error400BadRequest("", err)
 		}
@@ -175,7 +183,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		Method:  http.MethodPut,
 		Path:    "/cars/{id}",
 		Summary: "Update information about a car",
-		Errors:  []int{http.StatusUnauthorized, http.StatusNotFound},
+		Errors:  []int{http.StatusUnprocessableEntity, http.StatusUnauthorized, http.StatusNotFound},
 		Security: []map[string][]string{
 			{
 				CookieSecuritySchemeName: {},
@@ -183,21 +191,24 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		},
 		Middlewares: huma.Middlewares{r.userMiddleware},
 	}, func(ctx context.Context, input *struct {
-		ID uuid.UUID `path:"id"`
+		ID   uuid.UUID `path:"id"`
+		Body models.CarCreationInput
 	},
 	) (*CarOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		result, err := r.service.UpdateByUUID(ctx, userID, input.ID)
+		result, err := r.service.UpdateByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
-			if errors.Is(err, models.ErrCarNotFound) {
+			err = checkCarFieldErrors(err, &input.Body)
+			switch {
+			case errors.Is(err, models.ErrCarNotFound), errors.Is(err, models.ErrCarOwned):
 				err = &huma.ErrorDetail{
-					Message:  err.Error(),
+					Message:  models.ErrCarNotFound.Error(),
 					Location: "path.id",
 					Value:    input.ID,
 				}
 				return nil, huma.Error404NotFound("", err)
 			}
-			return nil, huma.Error400BadRequest("", err)
+			return nil, huma.Error422UnprocessableEntity("", err)
 		}
 		return &CarOutput{Body: result}, nil
 	})

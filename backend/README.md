@@ -27,8 +27,12 @@ In order to get the most out of the library, a model must be generated from the 
 
     # Run this every now and then to update the generator
     docker compose -f compose.modelgen.yaml build
+    # Clean stale runs
+    docker compose -f compose.modelgen.yaml down -v
     # Generate model
     docker compose -f compose.modelgen.yaml run --rm bobgen
+    # Cleanup DB containers
+    docker compose -f compose.modelgen.yaml down -v
 
 ### Tests
 

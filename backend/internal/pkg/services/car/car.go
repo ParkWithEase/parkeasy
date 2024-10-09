@@ -20,19 +20,26 @@ func New(repo car.Repository) *Service {
 	}
 }
 
-func (s *Service) Create(ctx context.Context, userID int64, carModel *models.CarCreationInput) (int64, models.Car, error) {
+func validateCarCreationInput(input *models.CarCreationInput) error {
 	licensePlatePattern := regexp.MustCompile(`^[A-Za-z0-9 ]{2,8}$`)
-	if !licensePlatePattern.MatchString(carModel.LicensePlate) {
-		return 0, models.Car{}, models.ErrInvalidLicensePlate
+	if !licensePlatePattern.MatchString(input.LicensePlate) {
+		return models.ErrInvalidLicensePlate
 	}
-	if carModel.Make == "" {
-		return 0, models.Car{}, models.ErrInvalidMake
+	if input.Make == "" {
+		return models.ErrInvalidMake
 	}
-	if carModel.Model == "" {
-		return 0, models.Car{}, models.ErrInvalidModel
+	if input.Model == "" {
+		return models.ErrInvalidModel
 	}
-	if carModel.Color == "" {
-		return 0, models.Car{}, models.ErrInvalidColor
+	if input.Color == "" {
+		return models.ErrInvalidColor
+	}
+	return nil
+}
+
+func (s *Service) Create(ctx context.Context, userID int64, carModel *models.CarCreationInput) (int64, models.Car, error) {
+	if err := validateCarCreationInput(carModel); err != nil {
+		return 0, models.Car{}, err
 	}
 
 	internalID, result, err := s.repo.Create(ctx, userID, carModel)
@@ -71,16 +78,25 @@ func (s *Service) DeleteByUUID(ctx context.Context, userID int64, carID uuid.UUI
 	return s.repo.DeleteByUUID(ctx, carID)
 }
 
-func (s *Service) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error) {
-	result, err := s.repo.GetByUUID(ctx, carID)
+func (s *Service) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUID, carModel *models.CarCreationInput) (models.Car, error) {
+	getResult, err := s.repo.GetByUUID(ctx, carID)
 	if err != nil {
 		if errors.Is(err, car.ErrNotFound) {
 			err = models.ErrCarNotFound
 		}
 		return models.Car{}, err
 	}
-	if result.OwnerID != userID {
-		return models.Car{}, models.ErrCarNotFound
+	if getResult.OwnerID != userID {
+		return models.Car{}, models.ErrCarOwned
+	}
+
+	if err := validateCarCreationInput(carModel); err != nil {
+		return models.Car{}, err
+	}
+
+	result, err := s.repo.UpdateByUUID(ctx, carID, carModel)
+	if err != nil {
+		return models.Car{}, err
 	}
 	return result.Car, nil
 }
