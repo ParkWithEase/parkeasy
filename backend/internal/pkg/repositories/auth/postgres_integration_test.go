@@ -64,4 +64,79 @@ func TestPostgresIntegration(t *testing.T) {
 			assert.ErrorIs(t, err, ErrIdentityNotFound)
 		}
 	})
+
+	t.Run("test duplicate email", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+
+			// clear all idle connections
+			// required since Restore() deletes the current DB
+			pool.Reset()
+		})
+		const testEmail = "user@example.com"
+		const testPasswordHash = "some hash"
+
+		_, err := repo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
+		require.NoError(t, err)
+
+		_, err = repo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, ErrDuplicateIdentity, "Creating a duplicate identity should fail")
+		}
+	})
+
+	t.Run("test get by email", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+
+			// clear all idle connections
+			// required since Restore() deletes the current DB
+			pool.Reset()
+		})
+		const testEmail = "user@example.com"
+		const testPasswordHash = "some hash"
+
+		_, err := repo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
+		require.NoError(t, err)
+
+		identity, err := repo.GetByEmail(ctx, testEmail)
+		require.NoError(t, err)
+		assert.Equal(t, testEmail, identity.Email)
+		assert.Equal(t, testPasswordHash, string(identity.PasswordHash))
+
+		const nonExistantEmail = "test@test.com"
+
+		_, err = repo.GetByEmail(ctx, nonExistantEmail)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, ErrIdentityNotFound)
+		}
+	})
+
+	t.Run("test update password", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+
+			// clear all idle connections
+			// required since Restore() deletes the current DB
+			pool.Reset()
+		})
+		const testEmail = "user@example.com"
+		const testPasswordHash = "some hash"
+		const newPasswordHash = "new hash"
+
+		authUUID, err := repo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
+		require.NoError(t, err)
+		assert.NotEqual(t, uuid.Nil, authUUID)
+
+		err = repo.UpdatePassword(ctx, authUUID, models.HashedPassword(newPasswordHash))
+		require.NoError(t, err)
+
+		updateErr := repo.UpdatePassword(ctx, uuid.Nil, models.HashedPassword(newPasswordHash))
+		if assert.Error(t, updateErr) {
+			assert.ErrorIs(t, updateErr, ErrIdentityNotFound)
+		}
+	})
 }

@@ -104,12 +104,9 @@ func (p *PostgresRepository) GetByEmail(ctx context.Context, email string) (Iden
 func (p *PostgresRepository) UpdatePassword(ctx context.Context, authID uuid.UUID, newPassword models.HashedPassword) error {
 	query := psql.Update(
 		um.Table(dbmodels.Auths.Name(ctx)),
-		um.SetCol(dbmodels.AuthColumns.Passwordhash.String()).ToArg(string(newPassword)),
+		um.SetCol(dbmodels.ColumnNames.Auths.Passwordhash).ToArg(string(newPassword)),
 		dbmodels.UpdateWhere.Auths.Authuuid.EQ(authID),
 	)
-
-	q, _, _ := query.Build()
-	fmt.Println(q)
 
 	// Execute the query
 	result, err := bob.Exec(ctx, p.db, query)

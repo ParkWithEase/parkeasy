@@ -10,6 +10,8 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
@@ -38,6 +40,13 @@ func (p *PostgresRepository) Create(ctx context.Context, id uuid.UUID, profile m
 		Authuuid: omit.From(id),
 	})
 	if err != nil {
+		// Handle duplicate error
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				err = ErrProfileExists
+			}
+		}
 		return 0, err
 	}
 	err = tx.Commit()

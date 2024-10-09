@@ -133,9 +133,8 @@ func TestUpdatePassword(t *testing.T) {
 
 	t.Run("Update password for non-existent identity", func(t *testing.T) {
 		t.Parallel()
-		randomID := uuid.New()
 		newPassword := models.HashedPassword("newhashedpassword")
-		err := repo.UpdatePassword(ctx, randomID, newPassword)
+		err := repo.UpdatePassword(ctx, uuid.Nil, newPassword)
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, ErrIdentityNotFound, "Updating the password of a non-existent identity should fail")
 		}
