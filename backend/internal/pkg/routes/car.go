@@ -183,7 +183,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // bundlin
 		},
 		Middlewares: huma.Middlewares{r.userMiddleware},
 	}, func(ctx context.Context, input *struct {
-		ID uuid.UUID `path:"id"`
+		ID   uuid.UUID `path:"id"`
 		Body models.CarCreationInput
 	},
 	) (*CarOutput, error) {

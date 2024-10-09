@@ -64,14 +64,14 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		var sampleDetails = models.CarDetails{
+		sampleDetails := models.CarDetails{
 			LicensePlate: "HTV 678",
 			Make:         "Honda",
 			Model:        "Civic",
 			Color:        "Blue",
 		}
 
-		var creationInput = models.CarCreationInput{
+		creationInput := models.CarCreationInput{
 			CarDetails: sampleDetails,
 		}
 
@@ -94,15 +94,15 @@ func TestPostgresIntegration(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, userID, ownerID)
 
-		//Testing update
-		var updateDetails = models.CarDetails{
+		// Testing update
+		updateDetails := models.CarDetails{
 			LicensePlate: "ABC 123",
 			Make:         "Toyota",
 			Model:        "Corolla",
 			Color:        "Red",
 		}
 
-		var updateInput = models.CarCreationInput{
+		updateInput := models.CarCreationInput{
 			CarDetails: updateDetails,
 		}
 

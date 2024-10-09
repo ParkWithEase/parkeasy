@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/testutils"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/testutils"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -60,13 +60,13 @@ func TestPostgresIntegration(t *testing.T) {
 		t.Cleanup(func() {
 			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
 			require.NoError(t, err, "could not restore db")
-	
+
 			// clear all idle connections
 			// required since Restore() deletes the current DB
 			pool.Reset()
 		})
 
-		var sampleLocation = models.ParkingSpotLocation{
+		sampleLocation := models.ParkingSpotLocation{
 			PostalCode:    "L2E6T2",
 			CountryCode:   "CA",
 			City:          "Niagara Falls",
@@ -75,23 +75,23 @@ func TestPostgresIntegration(t *testing.T) {
 			Longitude:     -79.07887268066406,
 		}
 
-		var sampleFeatures = models.ParkingSpotFeatures{
-			Shelter:    		true,
-			PlugIn:   			false,
-			ChargingStation:    true,
+		sampleFeatures := models.ParkingSpotFeatures{
+			Shelter:         true,
+			PlugIn:          false,
+			ChargingStation: true,
 		}
 
-		var creationInput = models.ParkingSpotCreationInput{
+		creationInput := models.ParkingSpotCreationInput{
 			Location: sampleLocation,
 			Features: sampleFeatures,
 		}
-	
+
 		// Testing create
 		spotID, createEntry, err := repo.Create(ctx, userID, &creationInput)
 		require.NoError(t, err)
 		assert.NotEqual(t, -1, spotID)
 		assert.NotEqual(t, uuid.Nil, createEntry.ParkingSpot.ID)
-	
+
 		// Testing get spot
 		getEntry, err := repo.GetByUUID(ctx, createEntry.ParkingSpot.ID)
 		require.NoError(t, err)
@@ -114,7 +114,7 @@ func TestPostgresIntegration(t *testing.T) {
 		deleteErr := repo.DeleteByUUID(ctx, createEntry.ParkingSpot.ID)
 		require.NoError(t, deleteErr)
 	})
-	
+
 	t.Run("get non-existent", func(t *testing.T) {
 		_, err := repo.GetByUUID(ctx, uuid.Nil)
 		if assert.Error(t, err) {

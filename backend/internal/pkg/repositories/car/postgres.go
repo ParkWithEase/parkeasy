@@ -29,7 +29,6 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 }
 
 func (p *PostgresRepository) Create(ctx context.Context, userID int64, car *models.CarCreationInput) (int64, Entry, error) {
-
 	inserted, err := dbmodels.Cars.Insert(ctx, p.db, &dbmodels.CarSetter{
 		Userid:       omit.From(userID),
 		Licenseplate: omit.From(car.LicensePlate),
@@ -49,14 +48,14 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, car *mode
 	}
 
 	insertedCar := models.Car{
-		Details: 	details,
-		ID:			inserted.Caruuid,
+		Details: details,
+		ID:      inserted.Caruuid,
 	}
 
 	entry := Entry{
-		Car: 			insertedCar,
-		InternalID: 	int64(inserted.Carid),
-		OwnerID: 		int64(inserted.Userid),
+		Car:        insertedCar,
+		InternalID: int64(inserted.Carid),
+		OwnerID:    int64(inserted.Userid),
 	}
 
 	return int64(inserted.Carid), entry, nil
@@ -130,8 +129,8 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (En
 	}
 
 	car := models.Car{
-		Details: 	details,
-		ID:			carID,
+		Details: details,
+		ID:      carID,
 	}
 
 	return Entry{

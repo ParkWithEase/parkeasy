@@ -17,8 +17,8 @@ type mockRepo struct {
 }
 
 const (
-	testOwnerID    = 0
-	testStrangerID = 1
+	testOwnerID       = 0
+	testStrangerID    = 1
 	testInternalCarID = 0
 )
 
@@ -307,7 +307,7 @@ func TestUpdate(t *testing.T) {
 		}
 
 		resultEntry := car.Entry{
-			Car: 		resultCar,
+			Car:        resultCar,
 			InternalID: testInternalCarID,
 			OwnerID:    testOwnerID,
 		}

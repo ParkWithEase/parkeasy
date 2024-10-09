@@ -16,8 +16,8 @@ type Entry struct {
 }
 
 var (
-	ErrDuplicatedAddress = errors.New("address already exist in the database")
-	ErrParkingSpotNotFound          = errors.New("no parking spot found")
+	ErrDuplicatedAddress   = errors.New("address already exist in the database")
+	ErrParkingSpotNotFound = errors.New("no parking spot found")
 )
 
 type Repository interface {
