@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS ResetToken (
+    Token TEXT PRIMARY KEY,
+    AuthUUID UUID UNIQUE NOT NULL REFERENCES Auth(AuthUUID),
+    Expiry TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX TokenExpiryIdx ON sessions (Expiry);

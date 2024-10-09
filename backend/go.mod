@@ -4,6 +4,7 @@ go 1.23.1
 
 require (
 	github.com/aarondl/opt v0.0.0-20230114172057-b91f370c41f0
+	github.com/alexedwards/scs/pgxstore v0.0.0-20240316134038-7e11d57e8885
 	github.com/danielgtaylor/huma/v2 v2.22.1
 	github.com/golang-migrate/migrate/v4 v4.18.1
 	github.com/stephenafamo/bob v0.28.1
@@ -69,7 +70,6 @@ require (
 	github.com/andskur/argon2-hashing v0.1.3
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/golang/mock v1.6.0 // indirect
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

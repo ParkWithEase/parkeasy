@@ -25,7 +25,7 @@ import (
 
 // User is an object representing the database table.
 type User struct {
-	Userid     int32     `db:"userid,pk" `
+	Userid     int64     `db:"userid,pk" `
 	Useruuid   uuid.UUID `db:"useruuid" `
 	Authuuid   uuid.UUID `db:"authuuid" `
 	Fullname   string    `db:"fullname" `
@@ -51,16 +51,14 @@ type UsersStmt = bob.QueryStmt[*User, UserSlice]
 
 // userR is where relationships are stored.
 type userR struct {
-	UseridCar         *Car         // car.car_userid_fkey
-	UseridParkingspot *Parkingspot // parkingspot.parkingspot_userid_fkey
-	AuthuuidAuth      *Auth        // users.users_authuuid_fkey
+	AuthuuidAuth *Auth // users.users_authuuid_fkey
 }
 
 // UserSetter is used for insert/upsert/update operations
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type UserSetter struct {
-	Userid     omit.Val[int32]     `db:"userid,pk" `
+	Userid     omit.Val[int64]     `db:"userid,pk" `
 	Useruuid   omit.Val[uuid.UUID] `db:"useruuid" `
 	Authuuid   omit.Val[uuid.UUID] `db:"authuuid" `
 	Fullname   omit.Val[string]    `db:"fullname" `
@@ -277,7 +275,7 @@ func buildUserColumns(alias string) userColumns {
 }
 
 type userWhere[Q psql.Filterable] struct {
-	Userid     psql.WhereMod[Q, int32]
+	Userid     psql.WhereMod[Q, int64]
 	Useruuid   psql.WhereMod[Q, uuid.UUID]
 	Authuuid   psql.WhereMod[Q, uuid.UUID]
 	Fullname   psql.WhereMod[Q, string]
@@ -292,7 +290,7 @@ func (userWhere[Q]) AliasedAs(alias string) userWhere[Q] {
 
 func buildUserWhere[Q psql.Filterable](cols userColumns) userWhere[Q] {
 	return userWhere[Q]{
-		Userid:     psql.Where[Q, int32](cols.Userid),
+		Userid:     psql.Where[Q, int64](cols.Userid),
 		Useruuid:   psql.Where[Q, uuid.UUID](cols.Useruuid),
 		Authuuid:   psql.Where[Q, uuid.UUID](cols.Authuuid),
 		Fullname:   psql.Where[Q, string](cols.Fullname),
@@ -303,10 +301,8 @@ func buildUserWhere[Q psql.Filterable](cols userColumns) userWhere[Q] {
 }
 
 type userJoins[Q dialect.Joinable] struct {
-	typ               string
-	UseridCar         func(context.Context) modAs[Q, carColumns]
-	UseridParkingspot func(context.Context) modAs[Q, parkingspotColumns]
-	AuthuuidAuth      func(context.Context) modAs[Q, authColumns]
+	typ          string
+	AuthuuidAuth func(context.Context) modAs[Q, authColumns]
 }
 
 func (j userJoins[Q]) aliasedAs(alias string) userJoins[Q] {
@@ -315,16 +311,14 @@ func (j userJoins[Q]) aliasedAs(alias string) userJoins[Q] {
 
 func buildUserJoins[Q dialect.Joinable](cols userColumns, typ string) userJoins[Q] {
 	return userJoins[Q]{
-		typ:               typ,
-		UseridCar:         usersJoinUseridCar[Q](cols, typ),
-		UseridParkingspot: usersJoinUseridParkingspot[Q](cols, typ),
-		AuthuuidAuth:      usersJoinAuthuuidAuth[Q](cols, typ),
+		typ:          typ,
+		AuthuuidAuth: usersJoinAuthuuidAuth[Q](cols, typ),
 	}
 }
 
 // FindUser retrieves a single record by primary key
 // If cols is empty Find will return all columns.
-func FindUser(ctx context.Context, exec bob.Executor, UseridPK int32, cols ...string) (*User, error) {
+func FindUser(ctx context.Context, exec bob.Executor, UseridPK int64, cols ...string) (*User, error) {
 	if len(cols) == 0 {
 		return Users.Query(
 			ctx, exec,
@@ -340,7 +334,7 @@ func FindUser(ctx context.Context, exec bob.Executor, UseridPK int32, cols ...st
 }
 
 // UserExists checks the presence of a single record by primary key
-func UserExists(ctx context.Context, exec bob.Executor, UseridPK int32) (bool, error) {
+func UserExists(ctx context.Context, exec bob.Executor, UseridPK int64) (bool, error) {
 	return Users.Query(
 		ctx, exec,
 		SelectWhere.Users.Userid.EQ(UseridPK),
@@ -388,7 +382,7 @@ func (o UserSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
 func (o UserSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	var mods []bob.Mod[*dialect.SelectQuery]
 
-	UseridPK := make([]int32, len(o))
+	UseridPK := make([]int64, len(o))
 
 	for i, o := range o {
 		UseridPK[i] = o.Userid
@@ -417,44 +411,6 @@ func (o UserSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	return nil
 }
 
-func usersJoinUseridCar[Q dialect.Joinable](from userColumns, typ string) func(context.Context) modAs[Q, carColumns] {
-	return func(ctx context.Context) modAs[Q, carColumns] {
-		return modAs[Q, carColumns]{
-			c: CarColumns,
-			f: func(to carColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Cars.Name(ctx).As(to.Alias())).On(
-						to.Userid.EQ(from.Userid),
-					))
-				}
-
-				return mods
-			},
-		}
-	}
-}
-
-func usersJoinUseridParkingspot[Q dialect.Joinable](from userColumns, typ string) func(context.Context) modAs[Q, parkingspotColumns] {
-	return func(ctx context.Context) modAs[Q, parkingspotColumns] {
-		return modAs[Q, parkingspotColumns]{
-			c: ParkingspotColumns,
-			f: func(to parkingspotColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Parkingspots.Name(ctx).As(to.Alias())).On(
-						to.Userid.EQ(from.Userid),
-					))
-				}
-
-				return mods
-			},
-		}
-	}
-}
-
 func usersJoinAuthuuidAuth[Q dialect.Joinable](from userColumns, typ string) func(context.Context) modAs[Q, authColumns] {
 	return func(ctx context.Context) modAs[Q, authColumns] {
 		return modAs[Q, authColumns]{
@@ -472,42 +428,6 @@ func usersJoinAuthuuidAuth[Q dialect.Joinable](from userColumns, typ string) fun
 			},
 		}
 	}
-}
-
-// UseridCar starts a query for related objects on car
-func (o *User) UseridCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
-	return Cars.Query(ctx, exec, append(mods,
-		sm.Where(CarColumns.Userid.EQ(psql.Arg(o.Userid))),
-	)...)
-}
-
-func (os UserSlice) UseridCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
-	PKArgs := make([]bob.Expression, len(os))
-	for i, o := range os {
-		PKArgs[i] = psql.ArgGroup(o.Userid)
-	}
-
-	return Cars.Query(ctx, exec, append(mods,
-		sm.Where(psql.Group(CarColumns.Userid).In(PKArgs...)),
-	)...)
-}
-
-// UseridParkingspot starts a query for related objects on parkingspot
-func (o *User) UseridParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
-	return Parkingspots.Query(ctx, exec, append(mods,
-		sm.Where(ParkingspotColumns.Userid.EQ(psql.Arg(o.Userid))),
-	)...)
-}
-
-func (os UserSlice) UseridParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
-	PKArgs := make([]bob.Expression, len(os))
-	for i, o := range os {
-		PKArgs[i] = psql.ArgGroup(o.Userid)
-	}
-
-	return Parkingspots.Query(ctx, exec, append(mods,
-		sm.Where(psql.Group(ParkingspotColumns.Userid).In(PKArgs...)),
-	)...)
 }
 
 // AuthuuidAuth starts a query for related objects on auth
@@ -534,30 +454,6 @@ func (o *User) Preload(name string, retrieved any) error {
 	}
 
 	switch name {
-	case "UseridCar":
-		rel, ok := retrieved.(*Car)
-		if !ok {
-			return fmt.Errorf("user cannot load %T as %q", retrieved, name)
-		}
-
-		o.R.UseridCar = rel
-
-		if rel != nil {
-			rel.R.UseridUser = o
-		}
-		return nil
-	case "UseridParkingspot":
-		rel, ok := retrieved.(*Parkingspot)
-		if !ok {
-			return fmt.Errorf("user cannot load %T as %q", retrieved, name)
-		}
-
-		o.R.UseridParkingspot = rel
-
-		if rel != nil {
-			rel.R.UseridUser = o
-		}
-		return nil
 	case "AuthuuidAuth":
 		rel, ok := retrieved.(*Auth)
 		if !ok {
@@ -573,182 +469,6 @@ func (o *User) Preload(name string, retrieved any) error {
 	default:
 		return fmt.Errorf("user has no relationship %q", name)
 	}
-}
-
-func PreloadUserUseridCar(opts ...psql.PreloadOption) psql.Preloader {
-	return psql.Preload[*Car, CarSlice](orm.Relationship{
-		Name: "UseridCar",
-		Sides: []orm.RelSide{
-			{
-				From: "users",
-				To:   TableNames.Cars,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Cars.Name(ctx)
-				},
-				FromColumns: []string{
-					ColumnNames.Users.Userid,
-				},
-				ToColumns: []string{
-					ColumnNames.Cars.Userid,
-				},
-			},
-		},
-	}, Cars.Columns().Names(), opts...)
-}
-
-func ThenLoadUserUseridCar(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
-	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
-		loader, isLoader := retrieved.(interface {
-			LoadUserUseridCar(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
-		})
-		if !isLoader {
-			return fmt.Errorf("object %T cannot load UserUseridCar", retrieved)
-		}
-
-		err := loader.LoadUserUseridCar(ctx, exec, queryMods...)
-
-		// Don't cause an issue due to missing relationships
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil
-		}
-
-		return err
-	})
-}
-
-// LoadUserUseridCar loads the user's UseridCar into the .R struct
-func (o *User) LoadUserUseridCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if o == nil {
-		return nil
-	}
-
-	// Reset the relationship
-	o.R.UseridCar = nil
-
-	related, err := o.UseridCar(ctx, exec, mods...).One()
-	if err != nil {
-		return err
-	}
-
-	related.R.UseridUser = o
-
-	o.R.UseridCar = related
-	return nil
-}
-
-// LoadUserUseridCar loads the user's UseridCar into the .R struct
-func (os UserSlice) LoadUserUseridCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if len(os) == 0 {
-		return nil
-	}
-
-	cars, err := os.UseridCar(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, o := range os {
-		for _, rel := range cars {
-			if o.Userid != rel.Userid {
-				continue
-			}
-
-			rel.R.UseridUser = o
-
-			o.R.UseridCar = rel
-			break
-		}
-	}
-
-	return nil
-}
-
-func PreloadUserUseridParkingspot(opts ...psql.PreloadOption) psql.Preloader {
-	return psql.Preload[*Parkingspot, ParkingspotSlice](orm.Relationship{
-		Name: "UseridParkingspot",
-		Sides: []orm.RelSide{
-			{
-				From: "users",
-				To:   TableNames.Parkingspots,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Parkingspots.Name(ctx)
-				},
-				FromColumns: []string{
-					ColumnNames.Users.Userid,
-				},
-				ToColumns: []string{
-					ColumnNames.Parkingspots.Userid,
-				},
-			},
-		},
-	}, Parkingspots.Columns().Names(), opts...)
-}
-
-func ThenLoadUserUseridParkingspot(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
-	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
-		loader, isLoader := retrieved.(interface {
-			LoadUserUseridParkingspot(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
-		})
-		if !isLoader {
-			return fmt.Errorf("object %T cannot load UserUseridParkingspot", retrieved)
-		}
-
-		err := loader.LoadUserUseridParkingspot(ctx, exec, queryMods...)
-
-		// Don't cause an issue due to missing relationships
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil
-		}
-
-		return err
-	})
-}
-
-// LoadUserUseridParkingspot loads the user's UseridParkingspot into the .R struct
-func (o *User) LoadUserUseridParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if o == nil {
-		return nil
-	}
-
-	// Reset the relationship
-	o.R.UseridParkingspot = nil
-
-	related, err := o.UseridParkingspot(ctx, exec, mods...).One()
-	if err != nil {
-		return err
-	}
-
-	related.R.UseridUser = o
-
-	o.R.UseridParkingspot = related
-	return nil
-}
-
-// LoadUserUseridParkingspot loads the user's UseridParkingspot into the .R struct
-func (os UserSlice) LoadUserUseridParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if len(os) == 0 {
-		return nil
-	}
-
-	parkingspots, err := os.UseridParkingspot(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, o := range os {
-		for _, rel := range parkingspots {
-			if o.Userid != rel.Userid {
-				continue
-			}
-
-			rel.R.UseridUser = o
-
-			o.R.UseridParkingspot = rel
-			break
-		}
-	}
-
-	return nil
 }
 
 func PreloadUserAuthuuidAuth(opts ...psql.PreloadOption) psql.Preloader {
@@ -835,110 +555,6 @@ func (os UserSlice) LoadUserAuthuuidAuth(ctx context.Context, exec bob.Executor,
 			break
 		}
 	}
-
-	return nil
-}
-
-func insertUserUseridCar0(ctx context.Context, exec bob.Executor, car1 *CarSetter, user0 *User) (*Car, error) {
-	car1.Userid = omit.From(user0.Userid)
-
-	ret, err := Cars.Insert(ctx, exec, car1)
-	if err != nil {
-		return ret, fmt.Errorf("insertUserUseridCar0: %w", err)
-	}
-
-	return ret, nil
-}
-
-func attachUserUseridCar0(ctx context.Context, exec bob.Executor, count int, car1 *Car, user0 *User) (*Car, error) {
-	setter := &CarSetter{
-		Userid: omit.From(user0.Userid),
-	}
-
-	err := Cars.Update(ctx, exec, setter, car1)
-	if err != nil {
-		return nil, fmt.Errorf("attachUserUseridCar0: %w", err)
-	}
-
-	return car1, nil
-}
-
-func (user0 *User) InsertUseridCar(ctx context.Context, exec bob.Executor, related *CarSetter) error {
-	car1, err := insertUserUseridCar0(ctx, exec, related, user0)
-	if err != nil {
-		return err
-	}
-
-	user0.R.UseridCar = car1
-
-	car1.R.UseridUser = user0
-
-	return nil
-}
-
-func (user0 *User) AttachUseridCar(ctx context.Context, exec bob.Executor, car1 *Car) error {
-	var err error
-
-	_, err = attachUserUseridCar0(ctx, exec, 1, car1, user0)
-	if err != nil {
-		return err
-	}
-
-	user0.R.UseridCar = car1
-
-	car1.R.UseridUser = user0
-
-	return nil
-}
-
-func insertUserUseridParkingspot0(ctx context.Context, exec bob.Executor, parkingspot1 *ParkingspotSetter, user0 *User) (*Parkingspot, error) {
-	parkingspot1.Userid = omit.From(user0.Userid)
-
-	ret, err := Parkingspots.Insert(ctx, exec, parkingspot1)
-	if err != nil {
-		return ret, fmt.Errorf("insertUserUseridParkingspot0: %w", err)
-	}
-
-	return ret, nil
-}
-
-func attachUserUseridParkingspot0(ctx context.Context, exec bob.Executor, count int, parkingspot1 *Parkingspot, user0 *User) (*Parkingspot, error) {
-	setter := &ParkingspotSetter{
-		Userid: omit.From(user0.Userid),
-	}
-
-	err := Parkingspots.Update(ctx, exec, setter, parkingspot1)
-	if err != nil {
-		return nil, fmt.Errorf("attachUserUseridParkingspot0: %w", err)
-	}
-
-	return parkingspot1, nil
-}
-
-func (user0 *User) InsertUseridParkingspot(ctx context.Context, exec bob.Executor, related *ParkingspotSetter) error {
-	parkingspot1, err := insertUserUseridParkingspot0(ctx, exec, related, user0)
-	if err != nil {
-		return err
-	}
-
-	user0.R.UseridParkingspot = parkingspot1
-
-	parkingspot1.R.UseridUser = user0
-
-	return nil
-}
-
-func (user0 *User) AttachUseridParkingspot(ctx context.Context, exec bob.Executor, parkingspot1 *Parkingspot) error {
-	var err error
-
-	_, err = attachUserUseridParkingspot0(ctx, exec, 1, parkingspot1, user0)
-	if err != nil {
-		return err
-	}
-
-	user0.R.UseridParkingspot = parkingspot1
-
-	parkingspot1.R.UseridUser = user0
 
 	return nil
 }

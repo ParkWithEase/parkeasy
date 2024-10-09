@@ -23,12 +23,14 @@ import (
 	parkingSpotRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/parkingspot"
 
+	"github.com/alexedwards/scs/pgxstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/rs/cors"
+	"github.com/stephenafamo/bob"
 )
 
 type Config struct {
@@ -45,22 +47,22 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	authMiddleware := routes.NewSessionMiddleware(api, sessionManager)
 	api.UseMiddleware(authMiddleware)
 
-	bobDB := bob.NewDB(stdlib.OpenDBFromPool(c.DBPool))
+	db := bob.NewDB(stdlib.OpenDBFromPool(c.DBPool))
 
 	passwordRepository := resettoken.NewMemoryRepository()
-	authRepository := authRepo.NewMemoryRepository()
+	authRepository := authRepo.NewPostgres(db)
 	authService := auth.NewService(authRepository, passwordRepository)
 	authRoute := routes.NewAuthRoute(authService, sessionManager)
 
-	userRepository := userRepo.NewMemoryRepository()
+	userRepository := userRepo.NewPostgres(db)
 	userService := user.NewService(authService, userRepository)
 	userRoute := routes.NewUserRoute(userService, sessionManager)
 
-	parkingSpotRepo := parkingSpotRepo.NewPostgres(bobDB)
+	parkingSpotRepo := parkingSpotRepo.NewPostgres(db)
 	parkingSpotService := parkingspot.New(parkingSpotRepo)
 	parkingSpotRoute := routes.NewParkingSpotRoute(parkingSpotService, sessionManager, authMiddleware)
 
-	carRepo := carRepo.NewPostgres(bobDB)
+	carRepo := carRepo.NewPostgres(db)
 	carService := car.New(carRepo)
 	carRoute := routes.NewCarRoute(carService, sessionManager, authMiddleware)
 
@@ -71,13 +73,13 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 }
 
 // Creates a new Huma API instance with routes configured
-func (c *Config) NewHumaAPI() huma.API { //nolint: ireturn // this is intentional
+func (c *Config) NewHumaAPI() huma.API {
 	router := http.NewServeMux()
 	config := huma.DefaultConfig("ParkEasy API", "0.0.0")
 	api := humago.New(router, config)
 	api.OpenAPI().Components.SecuritySchemes = make(map[string]*huma.SecurityScheme)
 	api.OpenAPI().Components.SecuritySchemes[routes.CookieSecuritySchemeName] = &routes.CookieSecurityScheme
-	sessionManager := routes.NewSessionManager(nil)
+	sessionManager := routes.NewSessionManager(pgxstore.New(c.DBPool))
 	sessionManager.Cookie.Secure = !c.Insecure
 
 	c.RegisterRoutes(api, sessionManager)
