@@ -26,7 +26,7 @@ func (c *Config) RunMigrations() error {
 	}
 
 	err = m.Up()
-	if err != nil {
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("error running migrations: %w", err)
 	}
 
