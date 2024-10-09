@@ -12,9 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
-	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
-	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/scan"
 )
 
@@ -62,36 +60,35 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, car *mode
 }
 
 func (p *PostgresRepository) DeleteByUUID(ctx context.Context, carID uuid.UUID) error {
-	query := psql.Delete(
-		dm.From(dbmodels.Cars.Name(ctx)),
+	rowsAffected, err := dbmodels.Cars.DeleteQ(
+		ctx, p.db,
 		dbmodels.DeleteWhere.Cars.Caruuid.EQ(carID),
-	)
-
-	// Execute the query
-	_, err := bob.Exec(ctx, p.db, query)
+	).Exec()
 	if err != nil {
 		return fmt.Errorf("could not execute delete: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return ErrNotFound
 	}
 
 	return nil
 }
 
 func (p *PostgresRepository) UpdateByUUID(ctx context.Context, carID uuid.UUID, car *models.CarCreationInput) (Entry, error) {
-	query := psql.Update(
-		um.Table(dbmodels.Cars.Name(ctx)),
-		um.SetCol(dbmodels.ColumnNames.Cars.Licenseplate).ToArg(car.LicensePlate),
-		um.SetCol(dbmodels.ColumnNames.Cars.Make).ToArg(car.Make),
-		um.SetCol(dbmodels.ColumnNames.Cars.Model).ToArg(car.Model),
-		um.SetCol(dbmodels.ColumnNames.Cars.Color).ToArg(car.Color),
+	rowsAffected, err := dbmodels.Cars.UpdateQ(
+		ctx, p.db,
 		dbmodels.UpdateWhere.Cars.Caruuid.EQ(carID),
-	)
-
-	result, err := bob.Exec(ctx, p.db, query)
+		&dbmodels.CarSetter{
+			Licenseplate: omit.From(car.LicensePlate),
+			Make:         omit.From(car.Make),
+			Model:        omit.From(car.Model),
+			Color:        omit.From(car.Color),
+		},
+	).Exec()
 	if err != nil {
 		return Entry{}, fmt.Errorf("could not execute update: %w", err)
 	}
-
-	rowsAffected, _ := result.RowsAffected()
 
 	if rowsAffected == 0 {
 		return Entry{}, ErrNotFound
@@ -101,7 +98,8 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, carID uuid.UUID, 
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (Entry, error) {
-	query := psql.Select(
+	result, err := dbmodels.Cars.Query(
+		ctx, p.db,
 		sm.Columns(
 			dbmodels.CarColumns.Licenseplate,
 			dbmodels.CarColumns.Make,
@@ -110,10 +108,8 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (En
 			dbmodels.CarColumns.Carid,
 			dbmodels.CarColumns.Userid,
 		),
-		sm.From(dbmodels.Cars.Name(ctx)),
 		dbmodels.SelectWhere.Cars.Caruuid.EQ(carID),
-	)
-	result, err := bob.One(ctx, p.db, query, scan.StructMapper[dbmodels.Car]())
+	).One()
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound

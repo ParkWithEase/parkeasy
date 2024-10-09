@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
-	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 	"github.com/stephenafamo/scan"
 )
@@ -98,22 +97,24 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 }
 
 func (p *PostgresRepository) DeleteByUUID(ctx context.Context, spotID uuid.UUID) error {
-	query := psql.Delete(
-		dm.From(dbmodels.Parkingspots.Name(ctx)),
+	rowsAffected, err := dbmodels.Parkingspots.DeleteQ(
+		ctx, p.db,
 		dbmodels.DeleteWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
-	)
-
-	// Execute the query
-	_, err := bob.Exec(ctx, p.db, query)
+	).Exec()
 	if err != nil {
 		return fmt.Errorf("could not execute delete: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return ErrNotFound
 	}
 
 	return nil
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error) {
-	query := psql.Select(
+	result, err := dbmodels.Parkingspots.Query(
+		ctx, p.db,
 		sm.Columns(
 			dbmodels.ParkingspotColumns.Postalcode,
 			dbmodels.ParkingspotColumns.Countrycode,
@@ -127,10 +128,8 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (E
 			dbmodels.ParkingspotColumns.Parkingspotid,
 			dbmodels.ParkingspotColumns.Userid,
 		),
-		sm.From(dbmodels.Parkingspots.Name(ctx)),
 		dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
-	)
-	result, err := bob.One(ctx, p.db, query, scan.StructMapper[dbmodels.Parkingspot]())
+	).One()
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
