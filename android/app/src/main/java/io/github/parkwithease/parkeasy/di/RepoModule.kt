@@ -14,5 +14,6 @@ import io.github.parkwithease.parkeasy.data.remote.UserRepositoryImpl
 @Suppress("Unused")
 interface RepoModule {
     @Binds fun bindAuthRepository(authRepositoryImpl: AuthRepositoryImpl): AuthRepository
+
     @Binds fun bindUserRepository(userRepositoryImpl: UserRepositoryImpl): UserRepository
 }
