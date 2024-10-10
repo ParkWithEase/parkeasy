@@ -31,6 +31,15 @@ type SessionDataGetter interface {
 	Get(ctx context.Context, key string) any
 }
 
+type SessionDataPutter interface {
+	Put(ctx context.Context, key string, data any)
+}
+
+type SessionDataGetterPutter interface {
+	SessionDataGetter
+	SessionDataPutter
+}
+
 // Headers to commit into the result
 type SessionHeaderOutput struct {
 	SetCookie    []string `header:"Set-Cookie"`

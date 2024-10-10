@@ -1,5 +1,6 @@
 services:
   parkserver:
+    image: localhost/parkserver
     build:
       context: .
       dockerfile: ./Containerfile
@@ -26,7 +27,7 @@ services:
     volumes:
       - database:/var/lib/postgres/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d testdb -U testuser"]
+      test: ["CMD-SHELL", "pg_isready -d ${DB_NAME} -U ${DB_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5

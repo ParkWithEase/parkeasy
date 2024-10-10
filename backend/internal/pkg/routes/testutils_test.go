@@ -3,8 +3,6 @@ package routes
 import (
 	"context"
 	"encoding/json"
-
-	"github.com/danielgtaylor/huma/v2"
 )
 
 type (
@@ -16,10 +14,6 @@ type (
 // Get implements SessionDataGetter
 func (fakeSessionDataGetter) Get(ctx context.Context, key string) any {
 	return ctx.Value(fakeSessionDataKey(key))
-}
-
-func fakeUserMiddleware(ctx huma.Context, next func(huma.Context)) {
-	next(ctx)
 }
 
 func jsonAnyify(v any) any {

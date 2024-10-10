@@ -31,15 +31,10 @@ func TestSessionMiddleware(t *testing.T) {
 		return &result, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	huma.Register(api, *withAuth(&huma.Operation{
 		Method: http.MethodGet,
 		Path:   "/session",
-		Security: []map[string][]string{
-			{
-				CookieSecuritySchemeName: {},
-			},
-		},
-	}, func(_ context.Context, _ *struct{}) (*struct{}, error) {
+	}), func(_ context.Context, _ *struct{}) (*struct{}, error) {
 		return nil, nil //nolint: nilnil // this endpoint does nothing
 	})
 
