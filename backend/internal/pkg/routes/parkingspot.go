@@ -23,9 +23,8 @@ type ParkingSpotServicer interface {
 }
 
 type ParkingSpotRoute struct {
-	service        ParkingSpotServicer
-	sessionGetter  SessionDataGetter
-	userMiddleware func(huma.Context, func(huma.Context))
+	service       ParkingSpotServicer
+	sessionGetter SessionDataGetter
 }
 
 type ParkingSpotOutput struct {
@@ -36,30 +35,22 @@ type ParkingSpotOutput struct {
 func NewParkingSpotRoute(
 	service ParkingSpotServicer,
 	sessionGetter SessionDataGetter,
-	userMiddleware func(huma.Context, func(huma.Context)),
 ) *ParkingSpotRoute {
 	return &ParkingSpotRoute{
-		service:        service,
-		sessionGetter:  sessionGetter,
-		userMiddleware: userMiddleware,
+		service:       service,
+		sessionGetter: sessionGetter,
 	}
 }
 
 // Registers `/spots` routes
 func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: cyclop // bundling inflates complexity level
-	huma.Register(api, huma.Operation{
+	huma.Register(api, *withUserID(&huma.Operation{
 		Method:        http.MethodPost,
 		Path:          "/spots",
 		Summary:       "Create a new parking spot",
 		DefaultStatus: http.StatusCreated,
-		Errors:        []int{http.StatusUnprocessableEntity, http.StatusUnauthorized},
-		Security: []map[string][]string{
-			{
-				CookieSecuritySchemeName: {},
-			},
-		},
-		Middlewares: huma.Middlewares{r.userMiddleware},
-	}, func(ctx context.Context, input *struct {
+		Errors:        []int{http.StatusUnprocessableEntity},
+	}), func(ctx context.Context, input *struct {
 		Body models.ParkingSpotCreationInput
 	},
 	) (*ParkingSpotOutput, error) {
@@ -103,18 +94,12 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: c
 		return &ParkingSpotOutput{Body: result}, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	huma.Register(api, *withUserID(&huma.Operation{
 		Method:  http.MethodGet,
 		Path:    "/spots/{id}",
 		Summary: "Get information about a parking spot",
-		Errors:  []int{http.StatusUnauthorized, http.StatusNotFound},
-		Security: []map[string][]string{
-			{
-				CookieSecuritySchemeName: {},
-			},
-		},
-		Middlewares: huma.Middlewares{r.userMiddleware},
-	}, func(ctx context.Context, input *struct {
+		Errors:  []int{http.StatusNotFound, http.StatusBadRequest},
+	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
 	) (*ParkingSpotOutput, error) {
@@ -134,18 +119,12 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: c
 		return &ParkingSpotOutput{Body: result}, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	huma.Register(api, *withUserID(&huma.Operation{
 		Method:  http.MethodDelete,
 		Path:    "/spots/{id}",
 		Summary: "Delete the specified parking spot",
-		Errors:  []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
-		Security: []map[string][]string{
-			{
-				CookieSecuritySchemeName: {},
-			},
-		},
-		Middlewares: huma.Middlewares{r.userMiddleware},
-	}, func(ctx context.Context, input *struct {
+		Errors:  []int{http.StatusForbidden, http.StatusNotFound, http.StatusBadRequest},
+	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
 	) (*struct{}, error) {
