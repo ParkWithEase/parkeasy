@@ -1,18 +1,100 @@
 package models
 
-// Errors meant to be sent to clients
+import (
+	"fmt"
+	"net/url"
+	"time"
+)
+
+const errorAuthority = "parkwithease.github.io"
+
+var (
+	CodeInvalidCredentials = NewUserErrorCode("invalid-credentials", "2024-10-13")
+	CodePasswordLength     = NewUserErrorCode("password-length", "2024-10-13")
+)
+
+// Error code for clients.
+type UserErrorCode struct {
+	date time.Time
+	code string
+}
+
+// Errors meant to be sent to clients.
 //
 // This allows the router to automatically filter server errors and prevent them
 // from reaching clients.
 type UserFacingError struct {
-	msg string
+	code *UserErrorCode
+	msg  string
 }
 
+// Creates a new UserErrorCode.
+//
+// `code` should be an URL-safe string that describes the error. This is meant
+// for clients to parse in order to identify the exact error. Must not be empty.
+//
+// `date` specifies the date in which this error was defined.
+//
+// Panics if any preconditions are not met.
+func NewUserErrorCode(code, date string) UserErrorCode {
+	if code == "" {
+		panic("empty error code")
+	}
+	d, err := time.Parse(time.DateOnly, date)
+	if err != nil {
+		panic(fmt.Errorf("invalid date %v: %w", date, err))
+	}
+	return UserErrorCode{
+		code: code,
+		date: d,
+	}
+}
+
+// Returns the error code
+func (c *UserErrorCode) Code() string {
+	return c.code
+}
+
+// Returns the error date
+func (c *UserErrorCode) Date() time.Time {
+	return c.date
+}
+
+// Returns an URI that uniquely identifies the error
+func (c *UserErrorCode) TypeURI() string {
+	uri := &url.URL{
+		Scheme: "tag",
+		Opaque: fmt.Sprintf("%v,%v:problem:%v",
+			errorAuthority, c.date.Format(time.DateOnly), c.code),
+	}
+	return uri.String()
+}
+
+// Creates an UserFacingError with the specified error code
+func (c *UserErrorCode) WithMsg(msg string) error {
+	return &UserFacingError{
+		code: c,
+		msg:  msg,
+	}
+}
+
+// Create a new UserFacingError.
+//
+// Deprecated: `UserErrorCode.WithMsg()` should be used instead.
 func NewUserFacingError(msg string) error {
-	return &UserFacingError{msg}
+	return &UserFacingError{
+		msg: msg,
+	}
 }
 
 // Implements the `error` protocol
 func (e *UserFacingError) Error() string {
 	return e.msg
+}
+
+// Returns an URI that uniquely identifies the error.
+//
+// Might be nil.
+func (e *UserFacingError) Code() *UserErrorCode {
+	return e.code
 }

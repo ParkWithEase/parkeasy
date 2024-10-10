@@ -23,8 +23,9 @@ func TestInternalError(t *testing.T) {
 		return nil, huma.Error400BadRequest("", errors.New(internalMsg))
 	})
 
+	errCode := models.NewUserErrorCode("ok", "2024-10-13")
 	huma.Get(api, "/visible-error", func(context.Context, *struct{}) (*struct{}, error) {
-		return nil, huma.Error400BadRequest("", models.NewUserFacingError("it's ok"))
+		return nil, huma.Error400BadRequest("", errCode.WithMsg("it's ok"))
 	})
 
 	resp := api.Get("/error")

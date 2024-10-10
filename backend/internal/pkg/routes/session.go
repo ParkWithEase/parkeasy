@@ -42,8 +42,8 @@ type SessionDataGetterPutter interface {
 
 // Headers to commit into the result
 type SessionHeaderOutput struct {
-	SetCookie    []string `header:"Set-Cookie"`
-	CacheControl []string `header:"Cache-Control"`
+	SetCookie    []string `header:"Set-Cookie" example:"session=session_token; HttpOnly; Secure"`
+	CacheControl []string `header:"Cache-Control" example:"no-cache=\"Set-Cookie\""`
 }
 
 // Returns a session manager configured for use with this package.

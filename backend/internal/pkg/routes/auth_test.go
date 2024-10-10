@@ -39,7 +39,7 @@ func TestAuthRoutes(t *testing.T) {
 		Email:    testEmail,
 		Password: testPassword,
 	})
-	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
+	assert.Equal(t, http.StatusCreated, resp.Result().StatusCode)
 	require.Len(t, resp.Result().Cookies(), 1, "a session token should be set")
 	cookie := *resp.Result().Cookies()[0]
 	cookie = http.Cookie{
@@ -98,7 +98,7 @@ func TestPasswordUpdateRoutes(t *testing.T) {
 		Email:    testEmail,
 		Password: testPassword,
 	})
-	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
+	assert.Equal(t, http.StatusCreated, resp.Result().StatusCode)
 	require.Len(t, resp.Result().Cookies(), 1, "a session token should be set")
 	cookie := *resp.Result().Cookies()[0]
 	cookie = http.Cookie{
@@ -112,14 +112,29 @@ func TestPasswordUpdateRoutes(t *testing.T) {
 		OldPassword: testPassword,
 		NewPassword: "1",
 	}, "Cookie:"+cookie.String())
-	assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+	var errModel huma.ErrorModel
+	err = json.NewDecoder(resp.Result().Body).Decode(&errModel)
+	require.NoError(t, err)
+	assert.Equal(t, models.CodePasswordLength.TypeURI(), errModel.Type)
+	assert.Len(t, errModel.Errors, 1)
+	assert.Equal(t, "body.new_password", errModel.Errors[0].Location)
+	assert.Equal(t, "1", errModel.Errors[0].Value)
 
 	// Should fail when using a wrong old password
 	resp = api.Put("/auth/password", models.PasswordUpdateInput{
 		OldPassword: "wrong-old-password",
 		NewPassword: "Another",
 	}, "Cookie:"+cookie.String())
-	assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+	err = json.NewDecoder(resp.Result().Body).Decode(&errModel)
+	require.NoError(t, err)
+	assert.Equal(t, models.CodeInvalidCredentials.TypeURI(), errModel.Type)
+	assert.Len(t, errModel.Errors, 1)
+	assert.Equal(t, "body.old_password", errModel.Errors[0].Location)
+	assert.Equal(t, "wrong-old-password", errModel.Errors[0].Value)
 
 	// Success if using a normal password
 	resp = api.Put("/auth/password", models.PasswordUpdateInput{
@@ -137,7 +152,7 @@ func TestPasswordUpdateRoutes(t *testing.T) {
 		Email:    testEmail,
 		Password: newPassword,
 	})
-	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
+	assert.Equal(t, http.StatusCreated, resp.Result().StatusCode)
 }
 
 func TestPasswordReset(t *testing.T) {
@@ -162,13 +177,13 @@ func TestPasswordReset(t *testing.T) {
 	resp := api.Post("/auth/password:forgot", models.PasswordResetTokenRequest{
 		Email: "invalid@example.com",
 	})
-	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+	assert.Equal(t, http.StatusAccepted, resp.Result().StatusCode)
 
 	// Request Token
 	resp = api.Post("/auth/password:forgot", models.PasswordResetTokenRequest{
 		Email: testEmail,
 	})
-	assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+	assert.Equal(t, http.StatusAccepted, resp.Result().StatusCode)
 	var data map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&data)
 	require.NoError(t, err)
@@ -179,7 +194,15 @@ func TestPasswordReset(t *testing.T) {
 	resetInput.PasswordResetToken = "invalidtoken"
 	// Reset password with the wrong token
 	resp = api.Post("/auth/password:reset", resetInput)
-	assert.Equal(t, http.StatusBadRequest, resp.Result().StatusCode)
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+	var errModel huma.ErrorModel
+	err = json.NewDecoder(resp.Result().Body).Decode(&errModel)
+	require.NoError(t, err)
+	assert.Equal(t, models.CodeInvalidCredentials.TypeURI(), errModel.Type)
+	assert.Len(t, errModel.Errors, 1)
+	assert.Equal(t, "body.password_token", errModel.Errors[0].Location)
+	assert.Equal(t, "invalidtoken", errModel.Errors[0].Value)
 
 	// Reset password with the right token
 	resetInput.PasswordResetToken = token
@@ -191,6 +214,6 @@ func TestPasswordReset(t *testing.T) {
 		Email:    testEmail,
 		Password: newPassword,
 	})
-	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
+	assert.Equal(t, http.StatusCreated, resp.Result().StatusCode)
 	require.Len(t, resp.Result().Cookies(), 1, "a session token should be set")
 }
