@@ -58,7 +58,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -85,7 +85,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -130,7 +130,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -160,7 +160,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -175,7 +175,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -204,7 +204,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -233,7 +233,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -270,7 +270,7 @@ func TestGetParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -296,7 +296,7 @@ func TestGetParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -334,7 +334,7 @@ func TestDeleteParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -353,7 +353,7 @@ func TestDeleteParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -382,7 +382,7 @@ func TestDeleteParkingSpot(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 		ctx := context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), int64(0))

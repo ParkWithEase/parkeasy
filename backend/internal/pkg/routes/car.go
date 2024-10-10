@@ -26,9 +26,8 @@ type CarServicer interface {
 
 // CarRoute represents car-related API routes
 type CarRoute struct {
-	service        CarServicer
-	sessionGetter  SessionDataGetter
-	userMiddleware func(huma.Context, func(huma.Context))
+	service       CarServicer
+	sessionGetter SessionDataGetter
 }
 
 // CarOutput represents the output of the car retrieval operation
@@ -40,12 +39,10 @@ type CarOutput struct {
 func NewCarRoute(
 	service CarServicer,
 	sessionGetter SessionDataGetter,
-	userMiddleware func(huma.Context, func(huma.Context)),
 ) *CarRoute {
 	return &CarRoute{
-		service:        service,
-		sessionGetter:  sessionGetter,
-		userMiddleware: userMiddleware,
+		service:       service,
+		sessionGetter: sessionGetter,
 	}
 }
 
@@ -82,45 +79,31 @@ func checkCarFieldErrors(err error, input *models.CarCreationInput) error {
 
 // Registers `/car` routes
 func (r *CarRoute) RegisterCarRoutes(api huma.API) {
-	huma.Register(api, huma.Operation{
+	huma.Register(api, *withUserID(&huma.Operation{
 		Method:        http.MethodPost,
 		Path:          "/cars",
 		Summary:       "Create a new car",
 		DefaultStatus: http.StatusCreated,
-		Errors:        []int{http.StatusUnprocessableEntity, http.StatusUnauthorized},
-		Security: []map[string][]string{
-			{
-				CookieSecuritySchemeName: {},
-			},
-		},
-		Middlewares: huma.Middlewares{r.userMiddleware},
-	}, func(ctx context.Context, input *struct {
+		Errors:        []int{http.StatusUnprocessableEntity},
+	}), func(ctx context.Context, input *struct {
 		Body models.CarCreationInput
 	},
 	) (*CarOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
-			errDetail := checkCarFieldErrors(err, &input.Body)
-			if errDetail != nil {
-				return nil, huma.Error422UnprocessableEntity("", errDetail)
-			}
+			err = checkCarFieldErrors(err, &input.Body)
+			return nil, huma.Error422UnprocessableEntity("", err)
 		}
 		return &CarOutput{Body: result}, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	huma.Register(api, *withUserID(&huma.Operation{
 		Method:  http.MethodGet,
 		Path:    "/cars/{id}",
 		Summary: "Get information about a car",
-		Errors:  []int{http.StatusUnauthorized, http.StatusNotFound},
-		Security: []map[string][]string{
-			{
-				CookieSecuritySchemeName: {},
-			},
-		},
-		Middlewares: huma.Middlewares{r.userMiddleware},
-	}, func(ctx context.Context, input *struct {
+		Errors:  []int{http.StatusNotFound, http.StatusBadRequest},
+	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
 	) (*CarOutput, error) {
@@ -140,18 +123,12 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 		return &CarOutput{Body: result}, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	huma.Register(api, *withUserID(&huma.Operation{
 		Method:  http.MethodDelete,
 		Path:    "/cars/{id}",
 		Summary: "Delete the specified car",
-		Errors:  []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound},
-		Security: []map[string][]string{
-			{
-				CookieSecuritySchemeName: {},
-			},
-		},
-		Middlewares: huma.Middlewares{r.userMiddleware},
-	}, func(ctx context.Context, input *struct {
+		Errors:  []int{http.StatusForbidden, http.StatusNotFound, http.StatusBadRequest},
+	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
 	) (*struct{}, error) {
@@ -172,33 +149,26 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, huma.Error404NotFound("", err)
+				return nil, huma.Error403Forbidden("", err)
 			}
 			return nil, huma.Error400BadRequest("", err)
 		}
 		return nil, nil //nolint: nilnil // this route returns nothing on success
 	})
 
-	huma.Register(api, huma.Operation{
+	huma.Register(api, *withUserID(&huma.Operation{
 		Method:  http.MethodPut,
 		Path:    "/cars/{id}",
 		Summary: "Update information about a car",
-		Errors:  []int{http.StatusUnprocessableEntity, http.StatusUnauthorized, http.StatusNotFound},
-		Security: []map[string][]string{
-			{
-				CookieSecuritySchemeName: {},
-			},
-		},
-		Middlewares: huma.Middlewares{r.userMiddleware},
-	}, func(ctx context.Context, input *struct {
-		ID   uuid.UUID `path:"id"`
+		Errors:  []int{http.StatusUnprocessableEntity, http.StatusNotFound},
+	}), func(ctx context.Context, input *struct {
 		Body models.CarCreationInput
+		ID   uuid.UUID `path:"id"`
 	},
 	) (*CarOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		result, err := r.service.UpdateByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
-			err = checkCarFieldErrors(err, &input.Body)
 			switch {
 			case errors.Is(err, models.ErrCarNotFound), errors.Is(err, models.ErrCarOwned):
 				err = &huma.ErrorDetail{
@@ -208,6 +178,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 				}
 				return nil, huma.Error404NotFound("", err)
 			}
+			err = checkCarFieldErrors(err, &input.Body)
 			return nil, huma.Error422UnprocessableEntity("", err)
 		}
 		return &CarOutput{Body: result}, nil

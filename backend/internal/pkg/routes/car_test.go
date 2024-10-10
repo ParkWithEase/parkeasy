@@ -65,7 +65,7 @@ func TestCreateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -92,7 +92,7 @@ func TestCreateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -122,7 +122,7 @@ func TestCreateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -151,7 +151,7 @@ func TestCreateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -180,7 +180,7 @@ func TestCreateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -217,7 +217,7 @@ func TestGetCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -243,7 +243,7 @@ func TestGetCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -281,7 +281,7 @@ func TestDeleteCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -300,7 +300,7 @@ func TestDeleteCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -329,7 +329,7 @@ func TestDeleteCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 		ctx := context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), int64(0))
@@ -340,7 +340,7 @@ func TestDeleteCar(t *testing.T) {
 			Once()
 
 		resp := api.DeleteCtx(ctx, "/cars/"+testUUID.String())
-		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
+		assert.Equal(t, http.StatusForbidden, resp.Result().StatusCode)
 		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
@@ -379,7 +379,7 @@ func TestUpdateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -405,7 +405,7 @@ func TestUpdateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -435,7 +435,7 @@ func TestUpdateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -465,7 +465,7 @@ func TestUpdateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -495,7 +495,7 @@ func TestUpdateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -525,7 +525,7 @@ func TestUpdateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
@@ -554,7 +554,7 @@ func TestUpdateCar(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{}, fakeUserMiddleware)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 		ctx := context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), int64(0))
