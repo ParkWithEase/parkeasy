@@ -32,6 +32,12 @@ func (m *mockCarService) DeleteByUUID(ctx context.Context, userID int64, carID u
 	return args.Error(0)
 }
 
+// GetMany implements CarServicer.
+func (m *mockCarService) GetMany(ctx context.Context, userID int64, count int, after models.Cursor) ([]models.Car, models.Cursor, error) {
+	args := m.Called(ctx, userID, count, after)
+	return args.Get(0).([]models.Car), args.Get(1).(models.Cursor), args.Error(2)
+}
+
 // GetByUUID implements CarServicer.
 func (m *mockCarService) GetByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error) {
 	args := m.Called(ctx, userID, carID)
