@@ -1,0 +1,53 @@
+# Meeting Minute September 20th
+
+## Attendance
+
+Khuc Nguyen (Tano)
+Hieu Le  
+Jason Zhu  
+Edwin Duong  
+Hritik Punj  
+Harkeerat Mayall
+
+## Agenda
+
+1. Domain object
+2. Add non-functional feature
+3. Go through architecture diagram again after meeting with TA
+4. API
+
+## Discussion
+
+1. Got roasted during the meeting, all good advice though.
+2. Change SQlite to Postgres
+3. TA mentioned PWA, does that fit our project requirement? Need to ask Rob
+4. Add non-functional feature:
+   1. login/signup
+   2. authentication using session token. (not JWT because this https://ianlondon.github.io/posts/dont-use-jwts-for-sessions/)
+   3. Password reset with token
+5. The current way to represent a listing is not efficient because it doesn't work well with time slot. We can do better
+6. Github is setup (Kudos to Hieu)
+7. What API do we need:  
+   GET/POST/UPDATE/DELETE for parking spot `/spots`  
+   POST/GET/UPDATE for user `/user`  
+   GET/POST/UPDATE/DELETE for cars list per user `/users/{id}/cars`  
+   GET/POST for booking `/spots/booking` (yse, booking is a noun)
+   GET/POST/UPDATE/DELETE for listing `/spots/listing`
+8. Bidding should only keep the highest bidder with no fall back
+
+## Action Item
+
+1. Hritik: confirm whether PWA is valid with Rob
+2. Update architecture diagram
+3. Edwin to design android app
+4. Tano and Harkeerat to look at Go
+5. Jason to update Table syntax to Postgres
+6. Think of a better way to handle listing per time slot
+7. Think more about bidding
+
+## Progress Tracking
+
+Github is setup  
+Github issues created  
+WIP database tables  
+WIP API

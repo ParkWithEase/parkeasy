@@ -1,0 +1,36 @@
+# Meeting Minute September 27nd
+
+## Attendance
+
+Khuc Nguyen (Tano)
+Hieu Le  
+Jason Zhu  
+Edwin Duong  
+Hritik Punj  
+Harkeerat Mayall
+
+## Agenda
+
+1. Code together session, try to get some stuff done.
+2. Initial webapp and android design go through.
+3. Quick status update on issue
+
+## Discussion
+
+1. Postgres database is setup and can be turn on with backend container
+2. Authentication and password reset endpoint is finished
+3. Android app is still being developed
+4. Some progress on Webapp design on Figma
+
+## Action Item
+
+1. Harkeerat to design webapp in Figma.
+2. Edwin to design android app in Figma.
+3. Everyone looks at github for their current issue (dev task)
+
+## Progress Tracking
+
+`/auth`, `/user` endpoints done  
+WIP Webapp design  
+WIP Android app design
+WIP `/spots` endpoints

@@ -1,0 +1,42 @@
+# Meeting Minute September 22nd
+
+## Attendance
+
+Khuc Nguyen (Tano)
+Hieu Le  
+Jason Zhu  
+Edwin Duong  
+Hritik Punj  
+Harkeerat Mayall
+
+## Agenda
+
+1. Iron Domain object
+2. Branching Strategy
+3. Authentication explaination
+4. more API
+5. Assign issues to everyone
+
+## Discussion
+
+1. listing is represented as a list of time segment, each time segment is 30 minutes.
+2. We use a trunk branching strategy. Branch from main, make small branch, commit often, merge often. Squash commits before merging
+3. API is good to go for the time being.
+4. authentication explaination:  
+   Authentication is a middle ware. The server doesn't care how it is implemented, just need to know if some one is in fact authenticated. User try to request server, if that is a protected route, server will redirect them to `/auth` endpoint if there is no or invalid session token in the cookie.
+5. No need to have different column for forAuction Boolean, we have a view to calculate that
+6. Issue assigned, see git
+
+## Action Item
+
+1. Harkeerat to design webapp in Figma. Prioritize Login, Signup page
+2. Edwin to design android app in Figma. Prioritize Login, Signup page
+3. Jason to work with Postgres
+4. Hritik, Hieu and Tano to ramp up Go and Huma (Hieu has experience with Go)
+
+## Progress Tracking
+
+API finalized for now (automatically documented by Huma)  
+WIP Webapp design  
+WIP Android app design  
+WIP `/auth`, `/user` endpoints
