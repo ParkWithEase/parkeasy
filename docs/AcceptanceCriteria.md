@@ -275,4 +275,4 @@ Steps:
 5. Press the "my profile" button
 *Expected: "Robert Guderian" and "robg@cs.umanitoba.ca" are displayed*
 6. Press the "Logout" button
-*Expected: Website redirects to a the login page"
+*Expected: Website redirects to a different page"
