@@ -14,4 +14,4 @@ See our [project proposal](/docs/ProjectProposal.md).
 
 ### Meeting Minute
 
-Please see our meeting minute [here](/docs/MeetingMinutes/).
+Please see our meeting minute [here](https://github.com/ParkWithEase/parkeasy/wiki/_Sidebar.Meeting).
