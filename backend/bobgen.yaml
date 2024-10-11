@@ -1,8 +1,0 @@
-no_factory: true
-
-psql:
-  uuid_pkg: google
-  output: internal/pkg/dbmodels
-  pkgname: dbmodels
-  except:
-    schema_migrations:

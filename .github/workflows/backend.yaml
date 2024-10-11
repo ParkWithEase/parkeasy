@@ -63,15 +63,11 @@ jobs:
         with:
           sparse-checkout: backend
 
-      - run: docker compose -f compose.modelgen.yaml build
-        working-directory: backend
-
       - uses: nickcharlton/diff-check@v1.0.0
         with:
           command: |
             cd backend
-            docker compose -f compose.modelgen.yaml run --rm bobgen
-            docker compose -f compose.modelgen.yaml down
+            go run ./tools/modelgen -v
 
   test:
     needs: [changes]

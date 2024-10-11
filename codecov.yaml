@@ -3,12 +3,23 @@ component_management:
     statuses:
       - type: project
         target: auto
+      - type: patch
+        target: auto
 
   individual_components:
     - component_id: mod_backend
       name: Backend
       paths:
         - backend/**
+        - "!backend/tools/**"
+    # Tools don't have to be logged in
+    - component_id: mod_backend_tools
+      name: Backend build tools
+      paths:
+        - backend/tools/**
+      statuses:
+        - type: project
+          target: 0%
     - component_id: mod_webapp
       name: Web Application
       paths:
@@ -25,3 +36,13 @@ flag_management:
 ignore:
   # This is machine-generated, so there's no easy way to test it
   - backend/internal/pkg/dbmodels/**/*
+
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+
+    patch:
+      default:
+        informational: true
