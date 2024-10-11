@@ -1,5 +1,5 @@
 # ParkEasy Manual Tests
-These manual tests should be run before every release of the Calculator app.
+These manual tests should be run before every release of the ParkEasy app.
 
 ## ParkEasy Smoke Tests
 
