@@ -256,7 +256,7 @@ Steps:
 ### Log In, Sign Up, Log Out
 
 **Test 1**
-1. Open Firefox, navigate to "http://localhost:5173/auth/login"
+1. Open your browser of choice, navigate to "http://localhost:5173/auth/login"
 2. Press the "Create one" link
 3. Select the "First Name" text field, input "Robert"
 4. Select the "Last Name" text field, input "Guderian"
@@ -267,7 +267,7 @@ Steps:
 *Expected: "Account created successfully" is displayed*
 
 **Test 2**
-1. Open Firefox, navigate to "http://localhost:5173/auth/login"
+1. Open your browser of choice, navigate to "http://localhost:5173/auth/login"
 2. Select the "Email" text field, input "robg@cs.umanitoba.ca"
 3. Select the "Password" text field, input "password"
 4. Press the "Login" button
