@@ -11,7 +11,7 @@ Start a local cluster for development
 
 The API server is exposed on port `8080`.
 
-The documentation server can then be reached at `http://localhost:8080/docs`
+The API documentation server can then be reached at `http://localhost:8080/docs`
 
 #### Hot code reloading
 
