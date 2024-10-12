@@ -13,5 +13,17 @@ See our [project proposal](/docs/ProjectProposal.md).
 - [`android/`](android/): The ParkEasy Android application
 
 ### Meeting Minute
+Please see our meeting minutes [here](https://github.com/ParkWithEase/parkeasy/wiki/_Sidebar.Meeting).
 
-Please see our meeting minute [here](https://github.com/ParkWithEase/parkeasy/wiki/_Sidebar.Meeting).
+### Sequence Diagram
+Please see our Sequence Diagram [here](https://github.com/ParkWithEase/parkeasy/wiki/Sequence-Digram)
+
+### API Documentation
+We use OpenAPI for API documentation. See [`backend/`](backend/) for how to run documentation server
+
+### Worksheet 1
+Please see our worksheet 1 [here](https://hackmd.io/Kf38U5BqRQqd_U4S4NSSug)
+
+### CI/CD
+Please see our workflow for CI/CD [here](https://github.com/ParkWithEase/parkeasy/actions) 
+
