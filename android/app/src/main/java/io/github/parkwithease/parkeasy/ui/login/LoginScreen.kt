@@ -104,7 +104,7 @@ private fun LoginScreenInner(events: LoginEvents, modifier: Modifier = Modifier)
                 modifier = Modifier.weight(1f).fillMaxSize(),
             ) {
                 Image(
-                    painter = painterResource(R.drawable.outlined_stacked),
+                    painter = painterResource(R.drawable.logo_stacked_outlined),
                     contentDescription = stringResource(R.string.logo),
                     modifier = Modifier.size(280.dp),
                 )
