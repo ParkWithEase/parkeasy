@@ -1,9 +1,9 @@
 package models
 
 var (
-	ErrAuthEmailExists     = NewUserFacingError("user with given email already exists")
+	ErrAuthEmailExists     = CodeDuplicate.WithMsg("user with given email already exists")
 	ErrAuthEmailOrPassword = CodeInvalidCredentials.WithMsg("invalid email or password")
-	ErrRegInvalidEmail     = NewUserFacingError("email is invalid")
+	ErrRegInvalidEmail     = CodeInvalidEmail.WithMsg("email is invalid")
 	ErrRegPasswordLength   = CodePasswordLength.WithMsg("password is too long or too short")
 	ErrResetTokenInvalid   = CodeInvalidCredentials.WithMsg("password reset token invalid")
 )

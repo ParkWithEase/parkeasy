@@ -2,6 +2,7 @@ package routes
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
@@ -23,6 +24,11 @@ type UserProfileOutput struct {
 	Body models.UserProfile
 }
 
+var UserTag = huma.Tag{
+	Name:        "User",
+	Description: "Operations for handling user profiles.",
+}
+
 // Creates a new authentication route
 //
 // Note: `sessionManager` should be installed as a global middleware. See NewSessionMiddleware for more details.
@@ -33,22 +39,27 @@ func NewUserRoute(service *user.Service, sessionManager *scs.SessionManager) *Us
 	}
 }
 
+func (r *UserRoute) RegisterUserTag(api huma.API) {
+	api.OpenAPI().Tags = append(api.OpenAPI().Tags, &UserTag)
+}
+
 // Registers the `/user` routes with Huma
 func (r *UserRoute) RegisterUser(api huma.API) {
 	huma.Register(api, huma.Operation{
+		OperationID: "create-user",
 		Method:      http.MethodPost,
 		Path:        "/user",
 		Summary:     "Create a new user",
 		Description: "Create a new user. The existing session, if any, will be invalidated regardless of whether this operation succeeds.",
+		Tags:        []string{UserTag.Name},
 		Responses: map[string]*huma.Response{
-			"204": {
+			"201": {
 				Description: "New user created successfully.\n\n" +
 					"A new session for this user is returned in the cookie named `session`.",
 			},
-			"400": {
-				Description: "User could not be created.",
-			},
 		},
+		DefaultStatus: http.StatusCreated,
+		Errors:        []int{http.StatusUnprocessableEntity},
 	}, func(ctx context.Context, input *struct {
 		Body models.UserCreationInput
 	},
@@ -56,36 +67,53 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 		// Destroy the current session if one exists
 		err := r.sessionManager.Destroy(ctx)
 		if err != nil {
-			return nil, huma.Error500InternalServerError("", err)
+			return nil, NewHumaError(http.StatusInternalServerError, err)
 		}
 		// Generates cookies for the invalidation
 		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return nil, huma.Error500InternalServerError("", err)
+			return nil, NewHumaError(http.StatusInternalServerError, err)
 		}
 
 		userID, authID, err := r.service.Create(ctx, input.Body.UserProfile, input.Body.Password)
 		if err != nil {
-			return &result, huma.Error400BadRequest("", err)
+			var detail error
+			switch {
+			case errors.Is(err, models.ErrRegInvalidEmail), errors.Is(err, models.ErrAuthEmailExists):
+				detail = &huma.ErrorDetail{
+					Location: "body.email",
+					Value:    input.Body.Email,
+				}
+			case errors.Is(err, models.ErrRegPasswordLength):
+				detail = &huma.ErrorDetail{
+					Location: "body.password",
+					Value:    input.Body.Password,
+				}
+			}
+			return &result, NewHumaError(http.StatusUnprocessableEntity, err, detail)
 		}
 		r.sessionManager.Put(ctx, SessionKeyAuthID, authID)
 		r.sessionManager.Put(ctx, SessionKeyUserID, userID)
 
 		result, err = CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return &result, huma.Error500InternalServerError("", err)
+			return &result, NewHumaError(http.StatusUnprocessableEntity, err)
 		}
 		return &result, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
-		Method:  http.MethodGet,
-		Path:    "/user",
-		Summary: "Get the current user information",
+		OperationID: "get-current-user",
+		Method:      http.MethodGet,
+		Path:        "/user",
+		Summary:     "Get the current user information",
+		Tags:        []string{UserTag.Name},
+		Errors:      []int{http.StatusNotFound},
 	}), func(ctx context.Context, _ *struct{}) (*UserProfileOutput, error) {
-		result, _, err := LoadUserFromContext(ctx, r.service, r.sessionManager)
+		userID := r.sessionManager.Get(ctx, SessionKeyUserID).(int64)
+		result, err := r.service.GetProfileByID(ctx, userID)
 		if err != nil {
-			return nil, err
+			return nil, NewHumaError(http.StatusNotFound, err)
 		}
 
 		return &UserProfileOutput{
@@ -119,27 +147,4 @@ func NewUserIDMiddleware(api huma.API, srv user.Service, session SessionDataGett
 
 		next(ctx)
 	}
-}
-
-// Load the current user ID from a connection context.
-//
-// Returns the profile and its internal ID.
-// Returns a huma error if either the session is unauthenticated or no user profiles are associated with this user.
-func LoadUserFromContext(ctx context.Context, userSrv *user.Service, sessionManager *scs.SessionManager) (models.UserProfile, int64, error) {
-	var result models.UserProfile
-	var err error
-	profileID, ok := sessionManager.Get(ctx, SessionKeyUserID).(int64)
-	if !ok {
-		result, profileID, err = userSrv.GetProfileByAuth(ctx, sessionManager.Get(ctx, SessionKeyAuthID).(uuid.UUID))
-		if err != nil {
-			return models.UserProfile{}, 0, huma.Error404NotFound("", err)
-		}
-		sessionManager.Put(ctx, SessionKeyUserID, profileID)
-	} else {
-		result, err = userSrv.GetProfileByID(ctx, profileID)
-		if err != nil {
-			return models.UserProfile{}, 0, huma.Error404NotFound("", err)
-		}
-	}
-	return result, profileID, nil
 }
