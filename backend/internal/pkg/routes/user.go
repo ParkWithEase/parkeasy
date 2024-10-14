@@ -11,6 +11,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const wantUserID = "want_userid"
+
 // Represents auth API routes
 type UserRoute struct {
 	service        *user.Service
@@ -76,16 +78,11 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 		return &result, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	huma.Register(api, *withUserID(&huma.Operation{
 		Method:  http.MethodGet,
 		Path:    "/user",
 		Summary: "Get the current user information",
-		Security: []map[string][]string{
-			{
-				CookieSecuritySchemeName: {},
-			},
-		},
-	}, func(ctx context.Context, _ *struct{}) (*UserProfileOutput, error) {
+	}), func(ctx context.Context, _ *struct{}) (*UserProfileOutput, error) {
 		result, _, err := LoadUserFromContext(ctx, r.service, r.sessionManager)
 		if err != nil {
 			return nil, err
@@ -100,22 +97,24 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 // Returns a middleware that loads the active user ID into context if exists
 //
 // Session handler should be installed before this middleware
-func (r *UserRoute) CreateUserIDMiddleware(api huma.API) func(huma.Context, func(huma.Context)) {
+func NewUserIDMiddleware(api huma.API, srv user.Service, session SessionDataGetterPutter) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
-		_, ok := r.sessionManager.Get(ctx.Context(), SessionKeyUserID).(int64)
-		if !ok {
-			authID, ok := r.sessionManager.Get(ctx.Context(), SessionKeyAuthID).(uuid.UUID)
+		if _, ok := ctx.Operation().Metadata[wantUserID]; ok {
+			_, ok := session.Get(ctx.Context(), SessionKeyUserID).(int64)
 			if !ok {
-				_ = huma.WriteErr(api, ctx, http.StatusUnauthorized, "")
-				return
-			}
+				authID, ok := session.Get(ctx.Context(), SessionKeyAuthID).(uuid.UUID)
+				if !ok {
+					_ = huma.WriteErr(api, ctx, http.StatusUnauthorized, "")
+					return
+				}
 
-			_, profileID, err := r.service.GetProfileByAuth(ctx.Context(), authID)
-			if err != nil {
-				_ = huma.WriteErr(api, ctx, http.StatusNotFound, "", err)
-				return
+				_, profileID, err := srv.GetProfileByAuth(ctx.Context(), authID)
+				if err != nil {
+					_ = huma.WriteErr(api, ctx, http.StatusNotFound, "", err)
+					return
+				}
+				session.Put(ctx.Context(), SessionKeyUserID, profileID)
 			}
-			r.sessionManager.Put(ctx.Context(), SessionKeyUserID, profileID)
 		}
 
 		next(ctx)

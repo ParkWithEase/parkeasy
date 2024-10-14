@@ -83,7 +83,7 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 		return &result, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	huma.Register(api, *withAuth(&huma.Operation{
 		Method:      http.MethodPatch,
 		Path:        "/auth",
 		Summary:     "Refresh the current session",
@@ -94,12 +94,7 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 					"The session ID is returned in a cookie named `session`. This cookie must be included in subsequent requests.",
 			},
 		},
-		Security: []map[string][]string{
-			{
-				CookieSecuritySchemeName: {},
-			},
-		},
-	}, func(ctx context.Context, _ *struct{}) (*SessionHeaderOutput, error) {
+	}), func(ctx context.Context, _ *struct{}) (*SessionHeaderOutput, error) {
 		err := r.sessionManager.RenewToken(ctx)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("", err)
@@ -135,7 +130,7 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 
 // Register Password update and reset to huma
 func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
-	huma.Register(api, huma.Operation{
+	huma.Register(api, *withAuth(&huma.Operation{
 		Method:  http.MethodPut,
 		Path:    "/auth/password",
 		Summary: "User change their password",
@@ -144,12 +139,7 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 				Description: "User password updated successfully.",
 			},
 		},
-		Security: []map[string][]string{
-			{
-				CookieSecuritySchemeName: {},
-			},
-		},
-	}, func(ctx context.Context, input *struct {
+	}), func(ctx context.Context, input *struct {
 		Body models.PasswordUpdateInput
 	},
 	) (*struct{}, error) {
