@@ -52,7 +52,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotTag(api huma.API) {
 }
 
 // Registers `/spots` routes
-func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: cyclop // bundling inflates complexity level
+func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	huma.Register(api, *withUserID(&huma.Operation{
 		OperationID:   "create-parking-spot",
 		Method:        http.MethodPost,
@@ -150,6 +150,6 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: c
 			}
 			return nil, NewHumaError(http.StatusUnprocessableEntity, err)
 		}
-		return nil, nil //nolint: nilnil // this route returns nothing on success
+		return nil, nil
 	})
 }
