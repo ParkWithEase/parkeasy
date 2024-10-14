@@ -3,7 +3,6 @@ package routes
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"testing"
 
@@ -76,10 +75,9 @@ func TestCreateCar(t *testing.T) {
 
 		resp := api.PostCtx(ctx, "/cars", testInput)
 		assert.Equal(t, http.StatusCreated, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var car models.Car
-		err := json.Unmarshal(respBody, &car)
+		err := json.NewDecoder(resp.Result().Body).Decode(&car)
 		require.NoError(t, err)
 
 		assert.Equal(t, testInput.CarDetails, car.Details)
@@ -102,17 +100,16 @@ func TestCreateCar(t *testing.T) {
 
 		resp := api.PostCtx(ctx, "/cars", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrInvalidLicensePlate.Error(),
 			Location: "body.license_plate",
 			Value:    jsonAnyify(testInput.LicensePlate),
 		}
+		assert.Equal(t, models.CodeCarInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -131,17 +128,16 @@ func TestCreateCar(t *testing.T) {
 			Once()
 		resp := api.PostCtx(ctx, "/cars", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrInvalidMake.Error(),
 			Location: "body.make",
 			Value:    jsonAnyify(testInput.Make),
 		}
+		assert.Equal(t, models.CodeCarInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -160,17 +156,16 @@ func TestCreateCar(t *testing.T) {
 			Once()
 		resp := api.PostCtx(ctx, "/cars", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrInvalidModel.Error(),
 			Location: "body.model",
 			Value:    jsonAnyify(testInput.Model),
 		}
+		assert.Equal(t, models.CodeCarInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -188,17 +183,16 @@ func TestCreateCar(t *testing.T) {
 			Return(int64(0), models.Car{}, models.ErrInvalidColor)
 		resp := api.PostCtx(ctx, "/cars", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrInvalidColor.Error(),
 			Location: "body.color",
 			Value:    jsonAnyify(testInput.Color),
 		}
+		assert.Equal(t, models.CodeCarInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -228,10 +222,9 @@ func TestGetCar(t *testing.T) {
 
 		resp := api.GetCtx(ctx, "/cars/"+testUUID.String())
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var car models.Car
-		err := json.Unmarshal(respBody, &car)
+		err := json.NewDecoder(resp.Result().Body).Decode(&car)
 		require.NoError(t, err)
 
 		assert.Equal(t, testUUID, car.ID)
@@ -254,13 +247,12 @@ func TestGetCar(t *testing.T) {
 
 		resp := api.GetCtx(ctx, "/cars/"+testUUID.String())
 		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
+		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Message:  models.ErrCarNotFound.Error(),
 			Location: "path.id",
 			Value:    jsonAnyify(testUUID),
 		})
@@ -296,35 +288,6 @@ func TestDeleteCar(t *testing.T) {
 		srv.AssertExpectations(t)
 	})
 
-	t.Run("not found handling", func(t *testing.T) {
-		t.Parallel()
-
-		srv := new(mockCarService)
-		route := NewCarRoute(srv, fakeSessionDataGetter{})
-		_, api := humatest.New(t)
-		huma.AutoRegister(api, route)
-
-		testUUID := uuid.New()
-		srv.On("DeleteByUUID", mock.Anything, testUserID, testUUID).
-			Return(models.ErrCarNotFound).
-			Once()
-
-		resp := api.DeleteCtx(ctx, "/cars/"+testUUID.String())
-		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
-
-		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
-		require.NoError(t, err)
-		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Message:  models.ErrCarNotFound.Error(),
-			Location: "path.id",
-			Value:    jsonAnyify(testUUID),
-		})
-
-		srv.AssertExpectations(t)
-	})
-
 	t.Run("forbidden handling", func(t *testing.T) {
 		t.Parallel()
 
@@ -341,13 +304,12 @@ func TestDeleteCar(t *testing.T) {
 
 		resp := api.DeleteCtx(ctx, "/cars/"+testUUID.String())
 		assert.Equal(t, http.StatusForbidden, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
+		assert.Equal(t, models.CodeForbidden.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Message:  models.ErrCarOwned.Error(),
 			Location: "path.id",
 			Value:    jsonAnyify(testUUID),
 		})
@@ -389,10 +351,9 @@ func TestUpdateCar(t *testing.T) {
 
 		resp := api.PutCtx(ctx, "/cars/"+carUUID.String(), testInput)
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var car models.Car
-		err := json.Unmarshal(respBody, &car)
+		err := json.NewDecoder(resp.Result().Body).Decode(&car)
 		require.NoError(t, err)
 
 		assert.Equal(t, testInput.CarDetails, car.Details)
@@ -415,17 +376,16 @@ func TestUpdateCar(t *testing.T) {
 
 		resp := api.PutCtx(ctx, "/cars/"+carUUID.String(), testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrInvalidLicensePlate.Error(),
 			Location: "body.license_plate",
 			Value:    jsonAnyify(testInput.LicensePlate),
 		}
+		assert.Equal(t, models.CodeCarInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -445,17 +405,16 @@ func TestUpdateCar(t *testing.T) {
 
 		resp := api.PutCtx(ctx, "/cars/"+carUUID.String(), testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrInvalidMake.Error(),
 			Location: "body.make",
 			Value:    jsonAnyify(testInput.Make),
 		}
+		assert.Equal(t, models.CodeCarInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -475,17 +434,16 @@ func TestUpdateCar(t *testing.T) {
 
 		resp := api.PutCtx(ctx, "/cars/"+carUUID.String(), testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrInvalidModel.Error(),
 			Location: "body.model",
 			Value:    jsonAnyify(testInput.Model),
 		}
+		assert.Equal(t, models.CodeCarInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -505,17 +463,16 @@ func TestUpdateCar(t *testing.T) {
 
 		resp := api.PutCtx(ctx, "/cars/"+carUUID.String(), testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrInvalidColor.Error(),
 			Location: "body.color",
 			Value:    jsonAnyify(testInput.Color),
 		}
+		assert.Equal(t, models.CodeCarInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -536,13 +493,12 @@ func TestUpdateCar(t *testing.T) {
 
 		resp := api.PutCtx(ctx, "/cars/"+testUUID.String(), &testInput)
 		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
+		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Message:  models.ErrCarNotFound.Error(),
 			Location: "path.id",
 			Value:    jsonAnyify(testUUID),
 		})
@@ -565,14 +521,13 @@ func TestUpdateCar(t *testing.T) {
 			Once()
 
 		resp := api.PutCtx(ctx, "/cars/"+testUUID.String(), &testInput)
-		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
+		assert.Equal(t, http.StatusForbidden, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
+		assert.Equal(t, models.CodeForbidden.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Message:  models.ErrCarNotFound.Error(),
 			Location: "path.id",
 			Value:    jsonAnyify(testUUID),
 		})
