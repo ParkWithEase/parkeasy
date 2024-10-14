@@ -73,6 +73,11 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 func (c *Config) NewHumaAPI() huma.API {
 	router := http.NewServeMux()
 	config := routes.NewHumaConfig()
+
+	// Swap /docs handler for Scalar
+	config.DocsPath = ""
+	router.HandleFunc("/docs", handleDocs)
+
 	api := humago.New(router, config)
 	sessionManager := routes.NewSessionManager(pgxstore.New(c.DBPool))
 	sessionManager.Cookie.Secure = !c.Insecure
