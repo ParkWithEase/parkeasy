@@ -1,11 +1,11 @@
 services:
-  parkserver-air:
+  # Override with air version of parkserver
+  parkserver:
+    image: localhost/parkserver-air
     build:
       context: .
       dockerfile: ./Containerfile.air
-    ports:
-      - 8080:8080 # API
     volumes:
       - ./:/src # Mount codebase to /src
     security_opt:
-      - "label=disable"
+      - label=disable

@@ -15,9 +15,13 @@ The API documentation server can then be reached at `http://localhost:8080/docs`
 
 #### Hot code reloading
 
-Hot code reloading is provided by [Air](https://github.com/air-verse/air) and can be run via
+Hot code reloading is provided by [Air] and can be run via
 
-    docker compose -f compose.air.yaml up --build
+    docker compose -f compose.yaml -f compose.air.yaml up --build
+
+[Air] would then react automatically upon changes in the source code and reloads the server automatically, allowing for a quick feedback loop.
+
+[Air]: https://github.com/air-verse/air
 
 ### DB model
 
