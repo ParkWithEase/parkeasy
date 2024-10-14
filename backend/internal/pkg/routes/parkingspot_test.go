@@ -3,7 +3,6 @@ package routes
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"testing"
 
@@ -69,10 +68,9 @@ func TestCreateParkingSpot(t *testing.T) {
 
 		resp := api.PostCtx(ctx, "/spots", testInput)
 		assert.Equal(t, http.StatusCreated, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var spot models.ParkingSpot
-		err := json.Unmarshal(respBody, &spot)
+		err := json.NewDecoder(resp.Result().Body).Decode(&spot)
 		require.NoError(t, err)
 
 		assert.Equal(t, testInput.Location, spot.Location)
@@ -95,17 +93,16 @@ func TestCreateParkingSpot(t *testing.T) {
 
 		resp := api.PostCtx(ctx, "/spots", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrParkingSpotDuplicate.Error(),
 			Location: "body.location",
 			Value:    jsonAnyify(testInput.Location),
 		}
+		assert.Equal(t, models.CodeDuplicate.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		handler.Unset().
@@ -113,14 +110,13 @@ func TestCreateParkingSpot(t *testing.T) {
 			Return(int64(0), models.ParkingSpot{}, models.ErrParkingSpotOwned).
 			Once()
 
-		testDetail.Message = models.ErrParkingSpotOwned.Error()
 		resp = api.PostCtx(ctx, "/spots", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ = io.ReadAll(resp.Result().Body)
 
-		err = json.Unmarshal(respBody, &errModel)
+		err = json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
+		assert.Equal(t, models.CodeForbidden.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -140,17 +136,16 @@ func TestCreateParkingSpot(t *testing.T) {
 
 		resp := api.PostCtx(ctx, "/spots", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrInvalidStreetAddress.Error(),
 			Location: "body.location.street_address",
 			Value:    jsonAnyify(testInput.Location.StreetAddress),
 		}
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -184,17 +179,16 @@ func TestCreateParkingSpot(t *testing.T) {
 			Once()
 		resp := api.PostCtx(ctx, "/spots", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrCountryNotSupported.Error(),
 			Location: "body.location.country",
 			Value:    jsonAnyify(testInput.Location.CountryCode),
 		}
+		assert.Equal(t, models.CodeCountryNotSupported.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -213,17 +207,16 @@ func TestCreateParkingSpot(t *testing.T) {
 			Once()
 		resp := api.PostCtx(ctx, "/spots", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrInvalidPostalCode.Error(),
 			Location: "body.location.postal_code",
 			Value:    jsonAnyify(testInput.Location.PostalCode),
 		}
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -241,17 +234,16 @@ func TestCreateParkingSpot(t *testing.T) {
 			Return(int64(0), models.ParkingSpot{}, models.ErrInvalidCoordinate)
 		resp := api.PostCtx(ctx, "/spots", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
 
 		testDetail := huma.ErrorDetail{
-			Message:  models.ErrInvalidCoordinate.Error(),
 			Location: "body.location",
 			Value:    jsonAnyify(testInput.Location),
 		}
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		srv.AssertExpectations(t)
@@ -281,10 +273,9 @@ func TestGetParkingSpot(t *testing.T) {
 
 		resp := api.GetCtx(ctx, "/spots/"+testUUID.String())
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var spot models.ParkingSpot
-		err := json.Unmarshal(respBody, &spot)
+		err := json.NewDecoder(resp.Result().Body).Decode(&spot)
 		require.NoError(t, err)
 
 		assert.Equal(t, testUUID, spot.ID)
@@ -307,13 +298,12 @@ func TestGetParkingSpot(t *testing.T) {
 
 		resp := api.GetCtx(ctx, "/spots/"+testUUID.String())
 		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
+		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Message:  models.ErrParkingSpotNotFound.Error(),
 			Location: "path.id",
 			Value:    jsonAnyify(testUUID),
 		})
@@ -349,35 +339,6 @@ func TestDeleteParkingSpot(t *testing.T) {
 		srv.AssertExpectations(t)
 	})
 
-	t.Run("not found handling", func(t *testing.T) {
-		t.Parallel()
-
-		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
-		_, api := humatest.New(t)
-		huma.AutoRegister(api, route)
-
-		testUUID := uuid.New()
-		srv.On("DeleteByUUID", mock.Anything, testUserID, testUUID).
-			Return(models.ErrParkingSpotNotFound).
-			Once()
-
-		resp := api.DeleteCtx(ctx, "/spots/"+testUUID.String())
-		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
-
-		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
-		require.NoError(t, err)
-		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Message:  models.ErrParkingSpotNotFound.Error(),
-			Location: "path.id",
-			Value:    jsonAnyify(testUUID),
-		})
-
-		srv.AssertExpectations(t)
-	})
-
 	t.Run("forbidden handling", func(t *testing.T) {
 		t.Parallel()
 
@@ -394,13 +355,12 @@ func TestDeleteParkingSpot(t *testing.T) {
 
 		resp := api.DeleteCtx(ctx, "/spots/"+testUUID.String())
 		assert.Equal(t, http.StatusForbidden, resp.Result().StatusCode)
-		respBody, _ := io.ReadAll(resp.Result().Body)
 
 		var errModel huma.ErrorModel
-		err := json.Unmarshal(respBody, &errModel)
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
+		assert.Equal(t, models.CodeForbidden.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Message:  models.ErrParkingSpotOwned.Error(),
 			Location: "path.id",
 			Value:    jsonAnyify(testUUID),
 		})

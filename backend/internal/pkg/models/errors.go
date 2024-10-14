@@ -9,13 +9,15 @@ import (
 const errorAuthority = "parkwithease.github.io"
 
 var (
-	CodeInvalidCredentials = NewUserErrorCode("invalid-credentials", "2024-10-13")
-	CodePasswordLength     = NewUserErrorCode("password-length", "2024-10-13")
-	CodeInvalidEmail       = NewUserErrorCode("invalid-email", "2024-10-13")
-	CodeDuplicate          = NewUserErrorCode("duplicate-entity", "2024-10-13")
-	CodeNotFound           = NewUserErrorCode("not-found", "2024-10-13")
-	CodeForbidden          = NewUserErrorCode("forbidden", "2024-10-13")
-	CodeCarInvalid         = NewUserErrorCode("car-invalid", "2024-10-13")
+	CodeInvalidCredentials  = NewUserErrorCode("invalid-credentials", "2024-10-13")
+	CodePasswordLength      = NewUserErrorCode("password-length", "2024-10-13")
+	CodeInvalidEmail        = NewUserErrorCode("invalid-email", "2024-10-13")
+	CodeDuplicate           = NewUserErrorCode("duplicate-entity", "2024-10-13")
+	CodeNotFound            = NewUserErrorCode("not-found", "2024-10-13")
+	CodeForbidden           = NewUserErrorCode("forbidden", "2024-10-13")
+	CodeCarInvalid          = NewUserErrorCode("car-invalid", "2024-10-13")
+	CodeSpotInvalid         = NewUserErrorCode("spot-invalid", "2024-10-13")
+	CodeCountryNotSupported = NewUserErrorCode("country-not-supported", "2024-10-13")
 )
 
 // Error code for clients.
