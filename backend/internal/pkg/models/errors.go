@@ -18,6 +18,7 @@ var (
 	CodeCarInvalid          = NewUserErrorCode("car-invalid", "2024-10-13")
 	CodeSpotInvalid         = NewUserErrorCode("spot-invalid", "2024-10-13")
 	CodeCountryNotSupported = NewUserErrorCode("country-not-supported", "2024-10-13")
+	CodeNoProfile           = NewUserErrorCode("no-profile", "2024-10-13")
 )
 
 // Error code for clients.
@@ -82,15 +83,6 @@ func (c *UserErrorCode) WithMsg(msg string) error {
 	return &UserFacingError{
 		code: c,
 		msg:  msg,
-	}
-}
-
-// Create a new UserFacingError.
-//
-// Deprecated: `UserErrorCode.WithMsg()` should be used instead.
-func NewUserFacingError(msg string) error {
-	return &UserFacingError{
-		msg: msg,
 	}
 }
 

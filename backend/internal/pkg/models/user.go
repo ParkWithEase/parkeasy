@@ -1,6 +1,6 @@
 package models
 
-var ErrNoProfile = NewUserFacingError("no profile exists for this user")
+var ErrNoProfile = CodeNoProfile.WithMsg("no profile exists for this user")
 
 type UserProfile struct {
 	// The full name of an user
