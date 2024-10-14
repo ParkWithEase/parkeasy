@@ -181,7 +181,7 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 			}
 			return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
 		}
-		return nil, nil //nolint: nilnil // there are no response for this operation
+		return nil, nil
 	})
 
 	huma.Register(api, huma.Operation{
@@ -203,7 +203,6 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 
 		resp := &TokenMessage{}
 		if err != nil {
-			//lint:ignore nilerr // Force return success even if there is an error
 			return resp, nil
 		}
 
@@ -245,6 +244,6 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 			}
 			return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
 		}
-		return nil, nil //nolint: nilnil // there are no response for this operation
+		return nil, nil
 	})
 }

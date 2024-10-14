@@ -3,7 +3,6 @@ linters:
     - asasalint
     - asciicheck
     - bodyclose
-    - cyclop
     - dogsled
     - durationcheck
     - errname
@@ -19,15 +18,11 @@ linters:
     - goimports
     - gosec
     - inamedparam
-    - inamedparam
     - intrange
     - ireturn
     - makezero
     - mirror
     - misspell
-    - nakedret
-    - nilerr
-    - nilnil
     - noctx
     - nolintlint
     - perfsprint
@@ -56,9 +51,6 @@ linters-settings:
     disabled-tags:
       - experimental
 
-  nakedret:
-    max-func-lines: 1
-
   tagliatelle:
     case:
       rules:
@@ -74,6 +66,48 @@ linters-settings:
       # no concrete types are exposed for huma.API
       - github.com\/danielgtaylor\/huma\/v2\.API
 
+  revive:
+    ignore-generated-header: true
+    severity: warning
+    confidence: 0.8
+    rules:
+      - name: atomic
+        severity: error
+      - name: bare-return
+        severity: error
+      - name: call-to-gc
+      - name: cyclomatic
+        severity: warning
+        arguments: [10]
+      - name: cognitive-complexity
+        severity: warning
+        arguments: [15]
+      - name: defer
+        severity: error
+      - name: early-return
+      - name: flag-parameter
+      - name: get-return
+      - name: identical-branches
+      - name: if-return
+      - name: indent-error-flow
+      - name: import-shadowing
+      # Catch mutation bugs
+      - name: modifies-parameter
+      - name: modifies-value-receiver
+      # Typical range gotchas
+      - name: range-val-in-closure
+      - name: range-val-address
+      - name: string-of-int
+      - name: superfluous-else
+      - name: unconditional-recursion
+      - name: unexported-naming
+      - name: unnecessary-stmt
+      - name: waitgroup-by-value
+
+  govet:
+    enable:
+      - fieldalignment # Useful to reduce memory usage
+
 issues:
   exclude-rules:
     - path: '(.+)_test\.go'
@@ -82,6 +116,12 @@ issues:
     - path: '(.+)_integration_test\.go'
       linters:
         - tparallel # Many integration tests requires serialization
+
+    # Exempt route registration from complexity checks as they are typically
+    # multiple routes bundled in one function.
+    - text: 'function \(.*Route\)\.Register.* has (cognitive|cyclomatic) complexity'
+      linters:
+        - revive
 
   exclude-files:
     - internal/pkg/dbmodels
