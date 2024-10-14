@@ -269,9 +269,8 @@ func TestDelete(t *testing.T) {
 		srv := New(repo)
 
 		err := srv.DeleteByUUID(ctx, testStrangerID, testOwnerCarID)
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrCarOwned)
-		}
+		// We don't error but no deletion is done
+		require.NoError(t, err)
 		repo.AssertNotCalled(t, "DeleteByUUID")
 	})
 }
@@ -350,7 +349,7 @@ func TestUpdate(t *testing.T) {
 			CarDetails: sampleDetails,
 		})
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrCarOwned)
+			assert.ErrorIs(t, err, models.ErrCarNotFound)
 		}
 	})
 

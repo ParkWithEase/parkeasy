@@ -73,7 +73,8 @@ func (s *Service) DeleteByUUID(ctx context.Context, userID int64, carID uuid.UUI
 		return err
 	}
 	if result.OwnerID != userID {
-		return models.ErrCarOwned
+		// Acts as if not found to prevent leaking existence information
+		return nil
 	}
 	return s.repo.DeleteByUUID(ctx, carID)
 }
@@ -87,7 +88,8 @@ func (s *Service) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUI
 		return models.Car{}, err
 	}
 	if getResult.OwnerID != userID {
-		return models.Car{}, models.ErrCarOwned
+		// Yields not found to prevent leaking existence information
+		return models.Car{}, models.ErrCarNotFound
 	}
 
 	if err := validateCarCreationInput(carModel); err != nil {

@@ -31,6 +31,11 @@ type ParkingSpotOutput struct {
 	Body models.ParkingSpot
 }
 
+var ParkingSpotTag = huma.Tag{
+	Name:        "Parking spot",
+	Description: "Operations for handling parking spots.",
+}
+
 // Returns a new `ParkingSpotRoute`
 func NewParkingSpotRoute(
 	service ParkingSpotServicer,
@@ -42,12 +47,18 @@ func NewParkingSpotRoute(
 	}
 }
 
+func (r *ParkingSpotRoute) RegisterParkingSpotTag(api huma.API) {
+	api.OpenAPI().Tags = append(api.OpenAPI().Tags, &ParkingSpotTag)
+}
+
 // Registers `/spots` routes
 func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: cyclop // bundling inflates complexity level
 	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID:   "create-parking-spot",
 		Method:        http.MethodPost,
 		Path:          "/spots",
 		Summary:       "Create a new parking spot",
+		Tags:          []string{ParkingSpotTag.Name},
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusUnprocessableEntity},
 	}), func(ctx context.Context, input *struct {
@@ -57,48 +68,46 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: c
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
+			var detail error
 			switch {
 			case errors.Is(err, models.ErrParkingSpotDuplicate), errors.Is(err, models.ErrParkingSpotOwned):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
+				detail = &huma.ErrorDetail{
 					Location: "body.location",
 					Value:    input.Body.Location,
 				}
 			case errors.Is(err, models.ErrInvalidStreetAddress):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
+				detail = &huma.ErrorDetail{
 					Location: "body.location.street_address",
 					Value:    input.Body.Location.StreetAddress,
 				}
 			case errors.Is(err, models.ErrCountryNotSupported):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
+				detail = &huma.ErrorDetail{
 					Location: "body.location.country",
 					Value:    input.Body.Location.CountryCode,
 				}
 			case errors.Is(err, models.ErrInvalidPostalCode):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
+				detail = &huma.ErrorDetail{
 					Location: "body.location.postal_code",
 					Value:    input.Body.Location.PostalCode,
 				}
 			case errors.Is(err, models.ErrInvalidCoordinate):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
+				detail = &huma.ErrorDetail{
 					Location: "body.location",
 					Value:    input.Body.Location,
 				}
 			}
-			return nil, huma.Error422UnprocessableEntity("", err)
+			return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
 		}
 		return &ParkingSpotOutput{Body: result}, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
-		Method:  http.MethodGet,
-		Path:    "/spots/{id}",
-		Summary: "Get information about a parking spot",
-		Errors:  []int{http.StatusNotFound, http.StatusBadRequest},
+		OperationID: "get-parking-spot",
+		Method:      http.MethodGet,
+		Path:        "/spots/{id}",
+		Summary:     "Get information about a parking spot",
+		Tags:        []string{ParkingSpotTag.Name},
+		Errors:      []int{http.StatusNotFound},
 	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
@@ -107,23 +116,24 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: c
 		result, err := r.service.GetByUUID(ctx, userID, input.ID)
 		if err != nil {
 			if errors.Is(err, models.ErrParkingSpotNotFound) {
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
+				detail := &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, huma.Error404NotFound("", err)
+				return nil, NewHumaError(http.StatusNotFound, err, detail)
 			}
-			return nil, huma.Error400BadRequest("", err)
+			return nil, NewHumaError(http.StatusUnprocessableEntity, err)
 		}
 		return &ParkingSpotOutput{Body: result}, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
-		Method:  http.MethodDelete,
-		Path:    "/spots/{id}",
-		Summary: "Delete the specified parking spot",
-		Errors:  []int{http.StatusForbidden, http.StatusNotFound, http.StatusBadRequest},
+		OperationID: "delete-parking-spot",
+		Method:      http.MethodDelete,
+		Path:        "/spots/{id}",
+		Summary:     "Delete the specified parking spot",
+		Tags:        []string{ParkingSpotTag.Name},
+		Errors:      []int{http.StatusForbidden},
 	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
@@ -131,23 +141,14 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: c
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		err := r.service.DeleteByUUID(ctx, userID, input.ID)
 		if err != nil {
-			switch {
-			case errors.Is(err, models.ErrParkingSpotNotFound):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
+			if errors.Is(err, models.ErrParkingSpotOwned) {
+				detail := &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, huma.Error404NotFound("", err)
-			case errors.Is(err, models.ErrParkingSpotOwned):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "path.id",
-					Value:    input.ID,
-				}
-				return nil, huma.Error403Forbidden("", err)
+				return nil, NewHumaError(http.StatusForbidden, err, detail)
 			}
-			return nil, huma.Error400BadRequest("", err)
+			return nil, NewHumaError(http.StatusUnprocessableEntity, err)
 		}
 		return nil, nil //nolint: nilnil // this route returns nothing on success
 	})

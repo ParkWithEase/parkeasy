@@ -44,7 +44,7 @@ func TestUserRoutes(t *testing.T) {
 		},
 		Password: testPassword,
 	})
-	assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
+	assert.Equal(t, http.StatusCreated, resp.Result().StatusCode)
 	require.Len(t, resp.Result().Cookies(), 1, "a session token should be set after user creation")
 	cookie := *resp.Result().Cookies()[0]
 	cookie = http.Cookie{
@@ -77,5 +77,10 @@ func TestUserRoutes(t *testing.T) {
 		},
 		Password: testPassword,
 	})
-	assert.Equal(t, http.StatusBadRequest, response.Result().StatusCode, "user creation should fail as user account already exists")
+	assert.Equal(t, http.StatusUnprocessableEntity, response.Result().StatusCode, "user creation should fail as user account already exists")
+
+	var errModel huma.ErrorModel
+	err = json.NewDecoder(response.Result().Body).Decode(&errModel)
+	require.NoError(t, err)
+	assert.Equal(t, models.CodeDuplicate.TypeURI(), errModel.Type)
 }

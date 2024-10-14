@@ -3,12 +3,12 @@ package models
 import "github.com/google/uuid"
 
 var (
-	ErrCarOwned            = NewUserFacingError("car is owned by an another user")
-	ErrCarNotFound         = NewUserFacingError("this car does not exist")
-	ErrInvalidLicensePlate = NewUserFacingError("the specified license plate is invalid")
-	ErrInvalidMake         = NewUserFacingError("the specified car make is invalid")
-	ErrInvalidModel        = NewUserFacingError("the specified car model is invalid")
-	ErrInvalidColor        = NewUserFacingError("the specified color is invalid")
+	ErrCarOwned            = CodeForbidden.WithMsg("car is owned by an another user")
+	ErrCarNotFound         = CodeNotFound.WithMsg("this car does not exist")
+	ErrInvalidLicensePlate = CodeCarInvalid.WithMsg("the specified license plate is invalid")
+	ErrInvalidMake         = CodeCarInvalid.WithMsg("the specified car make is invalid")
+	ErrInvalidModel        = CodeCarInvalid.WithMsg("the specified car model is invalid")
+	ErrInvalidColor        = CodeCarInvalid.WithMsg("the specified color is invalid")
 )
 
 type CarDetails struct {

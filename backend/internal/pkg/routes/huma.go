@@ -11,13 +11,27 @@ import (
 
 const (
 	APIName    = "ParkEasy API"
-	APIVersion = "0.0.0"
+	APIVersion = "2024-10-13"
 )
 
 // Creates a new Huma configuration with settings required to support all routes.
 func NewHumaConfig() huma.Config {
 	result := huma.DefaultConfig(APIName, APIVersion)
+	result.Info.Title = "ParkEasy API"
+	result.Info.Description = `
+This is the backbone of the ParkEasy application. Many of these APIs are still
+under construction and might exhibit backwards-incompatible changes.
 
+## Getting started
+
+### Authentication
+
+Most API endpoints require authentication.
+
+To authenticate your request, you will need to provide an authentication token
+via the ` + "`session`" + ` cookie. To get a token, see the
+[/auth](#tag/authentication/POST/auth) endpoint for more information.
+`
 	result.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		CookieSecuritySchemeName: &CookieSecurityScheme,
 	}

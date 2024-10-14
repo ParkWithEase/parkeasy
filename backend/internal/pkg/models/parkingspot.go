@@ -3,13 +3,13 @@ package models
 import "github.com/google/uuid"
 
 var (
-	ErrParkingSpotOwned     = NewUserFacingError("parking spot is owned by an another user")
-	ErrParkingSpotNotFound  = NewUserFacingError("this parking spot does not exist")
-	ErrParkingSpotDuplicate = NewUserFacingError("parking spot already exists")
-	ErrCountryNotSupported  = NewUserFacingError("the specified country is not supported")
-	ErrInvalidPostalCode    = NewUserFacingError("the specified postal code is invalid")
-	ErrInvalidStreetAddress = NewUserFacingError("the specified street address is invalid")
-	ErrInvalidCoordinate    = NewUserFacingError("the specified coordinate is invalid")
+	ErrParkingSpotOwned     = CodeForbidden.WithMsg("parking spot is owned by an another user")
+	ErrParkingSpotNotFound  = CodeNotFound.WithMsg("this parking spot does not exist")
+	ErrParkingSpotDuplicate = CodeDuplicate.WithMsg("parking spot already exists")
+	ErrCountryNotSupported  = CodeCountryNotSupported.WithMsg("the specified country is not supported")
+	ErrInvalidPostalCode    = CodeSpotInvalid.WithMsg("the specified postal code is invalid")
+	ErrInvalidStreetAddress = CodeSpotInvalid.WithMsg("the specified street address is invalid")
+	ErrInvalidCoordinate    = CodeSpotInvalid.WithMsg("the specified coordinate is invalid")
 )
 
 type ParkingSpotLocation struct {

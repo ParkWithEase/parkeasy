@@ -35,6 +35,11 @@ type CarOutput struct {
 	Body models.Car
 }
 
+var CarTag = huma.Tag{
+	Name:        "Car",
+	Description: "Operations for handling cars.",
+}
+
 // Returns a new `CarRoute`
 func NewCarRoute(
 	service CarServicer,
@@ -46,43 +51,18 @@ func NewCarRoute(
 	}
 }
 
-func checkCarFieldErrors(err error, input *models.CarCreationInput) error {
-	switch {
-	case errors.Is(err, models.ErrInvalidLicensePlate):
-		return &huma.ErrorDetail{
-			Message:  err.Error(),
-			Location: "body.license_plate",
-			Value:    input.LicensePlate,
-		}
-	case errors.Is(err, models.ErrInvalidMake):
-		return &huma.ErrorDetail{
-			Message:  err.Error(),
-			Location: "body.make",
-			Value:    input.Make,
-		}
-	case errors.Is(err, models.ErrInvalidModel):
-		return &huma.ErrorDetail{
-			Message:  err.Error(),
-			Location: "body.model",
-			Value:    input.Model,
-		}
-	case errors.Is(err, models.ErrInvalidColor):
-		return &huma.ErrorDetail{
-			Message:  err.Error(),
-			Location: "body.color",
-			Value:    input.Color,
-		}
-	default:
-		return err
-	}
+func (r *CarRoute) RegisterCarTag(api huma.API) {
+	api.OpenAPI().Tags = append(api.OpenAPI().Tags, &CarTag)
 }
 
 // Registers `/car` routes
-func (r *CarRoute) RegisterCarRoutes(api huma.API) {
+func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // routes are complicated
 	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID:   "create-car",
 		Method:        http.MethodPost,
 		Path:          "/cars",
 		Summary:       "Create a new car",
+		Tags:          []string{CarTag.Name},
 		DefaultStatus: http.StatusCreated,
 		Errors:        []int{http.StatusUnprocessableEntity},
 	}), func(ctx context.Context, input *struct {
@@ -92,17 +72,19 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
-			err = checkCarFieldErrors(err, &input.Body)
-			return nil, huma.Error422UnprocessableEntity("", err)
+			detail := describeCarInputError(err, &input.Body)
+			return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
 		}
 		return &CarOutput{Body: result}, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
-		Method:  http.MethodGet,
-		Path:    "/cars/{id}",
-		Summary: "Get information about a car",
-		Errors:  []int{http.StatusNotFound, http.StatusBadRequest},
+		OperationID: "get-car",
+		Method:      http.MethodGet,
+		Path:        "/cars/{id}",
+		Summary:     "Get information about a car",
+		Tags:        []string{CarTag.Name},
+		Errors:      []int{http.StatusNotFound},
 	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
@@ -111,23 +93,24 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 		result, err := r.service.GetByUUID(ctx, userID, input.ID)
 		if err != nil {
 			if errors.Is(err, models.ErrCarNotFound) {
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
+				detail := &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, huma.Error404NotFound("", err)
+				return nil, NewHumaError(http.StatusNotFound, err, detail)
 			}
-			return nil, huma.Error400BadRequest("", err)
+			return nil, NewHumaError(http.StatusUnprocessableEntity, err)
 		}
 		return &CarOutput{Body: result}, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
-		Method:  http.MethodDelete,
-		Path:    "/cars/{id}",
-		Summary: "Delete the specified car",
-		Errors:  []int{http.StatusForbidden, http.StatusNotFound, http.StatusBadRequest},
+		OperationID: "delete-car",
+		Method:      http.MethodDelete,
+		Path:        "/cars/{id}",
+		Summary:     "Delete the specified car",
+		Tags:        []string{CarTag.Name},
+		Errors:      []int{http.StatusForbidden},
 	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
@@ -136,31 +119,26 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 		err := r.service.DeleteByUUID(ctx, userID, input.ID)
 		if err != nil {
 			switch {
-			case errors.Is(err, models.ErrCarNotFound):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
-					Location: "path.id",
-					Value:    input.ID,
-				}
-				return nil, huma.Error404NotFound("", err)
 			case errors.Is(err, models.ErrCarOwned):
-				err = &huma.ErrorDetail{
-					Message:  err.Error(),
+				detail := &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, huma.Error403Forbidden("", err)
+				return nil, NewHumaError(http.StatusForbidden, err, detail)
+			default:
+				return nil, NewHumaError(http.StatusUnprocessableEntity, err)
 			}
-			return nil, huma.Error400BadRequest("", err)
 		}
 		return nil, nil //nolint: nilnil // this route returns nothing on success
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
-		Method:  http.MethodPut,
-		Path:    "/cars/{id}",
-		Summary: "Update information about a car",
-		Errors:  []int{http.StatusUnprocessableEntity, http.StatusNotFound},
+		OperationID: "update-car",
+		Method:      http.MethodPut,
+		Path:        "/cars/{id}",
+		Summary:     "Update information about a car",
+		Tags:        []string{CarTag.Name},
+		Errors:      []int{http.StatusUnprocessableEntity, http.StatusNotFound},
 	}), func(ctx context.Context, input *struct {
 		Body models.CarCreationInput
 		ID   uuid.UUID `path:"id"`
@@ -169,18 +147,54 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		result, err := r.service.UpdateByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
+			detail := describeCarInputError(err, &input.Body)
 			switch {
-			case errors.Is(err, models.ErrCarNotFound), errors.Is(err, models.ErrCarOwned):
-				err = &huma.ErrorDetail{
-					Message:  models.ErrCarNotFound.Error(),
+			case errors.Is(err, models.ErrCarNotFound):
+				detail = &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, huma.Error404NotFound("", err)
+				return nil, NewHumaError(http.StatusNotFound, err, detail)
+			case errors.Is(err, models.ErrCarOwned):
+				detail = &huma.ErrorDetail{
+					Location: "path.id",
+					Value:    input.ID,
+				}
+				return nil, NewHumaError(http.StatusForbidden, err, detail)
+			default:
+				return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
 			}
-			err = checkCarFieldErrors(err, &input.Body)
-			return nil, huma.Error422UnprocessableEntity("", err)
 		}
 		return &CarOutput{Body: result}, nil
 	})
+}
+
+// Returns a huma.ErrorDetail describing the error in input
+//
+// Returns nil if there are no description for the error
+func describeCarInputError(err error, input *models.CarCreationInput) error {
+	switch {
+	case errors.Is(err, models.ErrInvalidLicensePlate):
+		return &huma.ErrorDetail{
+			Location: "body.license_plate",
+			Value:    input.LicensePlate,
+		}
+	case errors.Is(err, models.ErrInvalidMake):
+		return &huma.ErrorDetail{
+			Location: "body.make",
+			Value:    input.Make,
+		}
+	case errors.Is(err, models.ErrInvalidModel):
+		return &huma.ErrorDetail{
+			Location: "body.model",
+			Value:    input.Model,
+		}
+	case errors.Is(err, models.ErrInvalidColor):
+		return &huma.ErrorDetail{
+			Location: "body.color",
+			Value:    input.Color,
+		}
+	default:
+		return nil
+	}
 }
