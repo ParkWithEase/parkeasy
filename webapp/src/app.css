@@ -162,4 +162,3 @@ button:focus:not(:focus-visible) {
 :global(bx--form--fluid.fluidForm.bx--form) {
     border: 2px solid black;
 }
-
