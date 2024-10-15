@@ -67,12 +67,12 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 		// Destroy the current session if one exists
 		err := r.sessionManager.Destroy(ctx)
 		if err != nil {
-			return nil, NewHumaError(http.StatusInternalServerError, err)
+			return nil, NewHumaError(ctx, http.StatusInternalServerError, err)
 		}
 		// Generates cookies for the invalidation
 		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return nil, NewHumaError(http.StatusInternalServerError, err)
+			return nil, NewHumaError(ctx, http.StatusInternalServerError, err)
 		}
 
 		userID, authID, err := r.service.Create(ctx, input.Body.UserProfile, input.Body.Password)
@@ -90,14 +90,14 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 					Value:    input.Body.Password,
 				}
 			}
-			return &result, NewHumaError(http.StatusUnprocessableEntity, err, detail)
+			return &result, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 		r.sessionManager.Put(ctx, SessionKeyAuthID, authID)
 		r.sessionManager.Put(ctx, SessionKeyUserID, userID)
 
 		result, err = CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return &result, NewHumaError(http.StatusUnprocessableEntity, err)
+			return &result, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
 		return &result, nil
 	})
@@ -113,7 +113,7 @@ func (r *UserRoute) RegisterUser(api huma.API) {
 		userID := r.sessionManager.Get(ctx, SessionKeyUserID).(int64)
 		result, err := r.service.GetProfileByID(ctx, userID)
 		if err != nil {
-			return nil, NewHumaError(http.StatusNotFound, err)
+			return nil, NewHumaError(ctx, http.StatusNotFound, err)
 		}
 
 		return &UserProfileOutput{
