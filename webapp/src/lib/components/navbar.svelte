@@ -5,10 +5,10 @@
 <svelte:window />
 <nav class="navbar">
     <a href="/#"><img src={logo} alt="parkeasy-logo" class="text-logo" /></a>
-    <a class="nav-link" href="/profile/user-profile">book a spot</a>
-    <a class="nav-link" href="/profile/user-profile">list your spot</a>
-    <a class="nav-link" href="/profile/user-profile">my profile</a>
-    <a class="nav-link" href="/">about us</a>
+    <a class="nav-link" href="/app/profile/user-profile">book a spot</a>
+    <a class="nav-link" href="/app/profile/user-profile">list your spot</a>
+    <a class="nav-link" href="/app/profile/user-profile">my profile</a>
+    <a class="nav-link" href="/app/">about us</a>
 </nav>
 
 <style>

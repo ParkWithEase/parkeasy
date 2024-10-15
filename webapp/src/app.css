@@ -21,9 +21,7 @@ body {
     font-family: Fredoka, sans-serif;
     margin: 0;
     background-attachment: fixed;
-    background-color: var(--color-bg-1);
     background-size: 100vw 100vh;
-    background-image: url('$lib/images/background.png');
 }
 
 h1,
@@ -164,3 +162,4 @@ button:focus:not(:focus-visible) {
 :global(bx--form--fluid.fluidForm.bx--form) {
     border: 2px solid black;
 }
+

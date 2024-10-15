@@ -22,7 +22,7 @@
                 body: JSON.stringify({ email: email, password: password })
             });
             if (response.ok) {
-                goto('/');
+                goto('/app/');
             } else {
                 loginFail = true;
             }
