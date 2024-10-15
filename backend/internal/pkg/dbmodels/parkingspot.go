@@ -56,7 +56,8 @@ type ParkingspotsStmt = bob.QueryStmt[*Parkingspot, ParkingspotSlice]
 
 // parkingspotR is where relationships are stored.
 type parkingspotR struct {
-	UseridUser *User // parkingspot.parkingspot_userid_fkey
+	ParkingspotidListings ListingSlice // listing.listing_parkingspotid_fkey
+	UseridUser            *User        // parkingspot.parkingspot_userid_fkey
 }
 
 // ParkingspotSetter is used for insert/upsert/update operations
@@ -462,8 +463,9 @@ func buildParkingspotWhere[Q psql.Filterable](cols parkingspotColumns) parkingsp
 }
 
 type parkingspotJoins[Q dialect.Joinable] struct {
-	typ        string
-	UseridUser func(context.Context) modAs[Q, userColumns]
+	typ                   string
+	ParkingspotidListings func(context.Context) modAs[Q, listingColumns]
+	UseridUser            func(context.Context) modAs[Q, userColumns]
 }
 
 func (j parkingspotJoins[Q]) aliasedAs(alias string) parkingspotJoins[Q] {
@@ -472,8 +474,9 @@ func (j parkingspotJoins[Q]) aliasedAs(alias string) parkingspotJoins[Q] {
 
 func buildParkingspotJoins[Q dialect.Joinable](cols parkingspotColumns, typ string) parkingspotJoins[Q] {
 	return parkingspotJoins[Q]{
-		typ:        typ,
-		UseridUser: parkingspotsJoinUseridUser[Q](cols, typ),
+		typ:                   typ,
+		ParkingspotidListings: parkingspotsJoinParkingspotidListings[Q](cols, typ),
+		UseridUser:            parkingspotsJoinUseridUser[Q](cols, typ),
 	}
 }
 
@@ -572,6 +575,25 @@ func (o ParkingspotSlice) ReloadAll(ctx context.Context, exec bob.Executor) erro
 	return nil
 }
 
+func parkingspotsJoinParkingspotidListings[Q dialect.Joinable](from parkingspotColumns, typ string) func(context.Context) modAs[Q, listingColumns] {
+	return func(ctx context.Context) modAs[Q, listingColumns] {
+		return modAs[Q, listingColumns]{
+			c: ListingColumns,
+			f: func(to listingColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Listings.Name(ctx).As(to.Alias())).On(
+						to.Parkingspotid.EQ(from.Parkingspotid),
+					))
+				}
+
+				return mods
+			},
+		}
+	}
+}
+
 func parkingspotsJoinUseridUser[Q dialect.Joinable](from parkingspotColumns, typ string) func(context.Context) modAs[Q, userColumns] {
 	return func(ctx context.Context) modAs[Q, userColumns] {
 		return modAs[Q, userColumns]{
@@ -589,6 +611,24 @@ func parkingspotsJoinUseridUser[Q dialect.Joinable](from parkingspotColumns, typ
 			},
 		}
 	}
+}
+
+// ParkingspotidListings starts a query for related objects on listing
+func (o *Parkingspot) ParkingspotidListings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ListingsQuery {
+	return Listings.Query(ctx, exec, append(mods,
+		sm.Where(ListingColumns.Parkingspotid.EQ(psql.Arg(o.Parkingspotid))),
+	)...)
+}
+
+func (os ParkingspotSlice) ParkingspotidListings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ListingsQuery {
+	PKArgs := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgs[i] = psql.ArgGroup(o.Parkingspotid)
+	}
+
+	return Listings.Query(ctx, exec, append(mods,
+		sm.Where(psql.Group(ListingColumns.Parkingspotid).In(PKArgs...)),
+	)...)
 }
 
 // UseridUser starts a query for related objects on users
@@ -615,6 +655,20 @@ func (o *Parkingspot) Preload(name string, retrieved any) error {
 	}
 
 	switch name {
+	case "ParkingspotidListings":
+		rels, ok := retrieved.(ListingSlice)
+		if !ok {
+			return fmt.Errorf("parkingspot cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.ParkingspotidListings = rels
+
+		for _, rel := range rels {
+			if rel != nil {
+				rel.R.ParkingspotidParkingspot = o
+			}
+		}
+		return nil
 	case "UseridUser":
 		rel, ok := retrieved.(*User)
 		if !ok {
@@ -630,6 +684,78 @@ func (o *Parkingspot) Preload(name string, retrieved any) error {
 	default:
 		return fmt.Errorf("parkingspot has no relationship %q", name)
 	}
+}
+
+func ThenLoadParkingspotParkingspotidListings(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
+	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+		loader, isLoader := retrieved.(interface {
+			LoadParkingspotParkingspotidListings(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+		})
+		if !isLoader {
+			return fmt.Errorf("object %T cannot load ParkingspotParkingspotidListings", retrieved)
+		}
+
+		err := loader.LoadParkingspotParkingspotidListings(ctx, exec, queryMods...)
+
+		// Don't cause an issue due to missing relationships
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+
+		return err
+	})
+}
+
+// LoadParkingspotParkingspotidListings loads the parkingspot's ParkingspotidListings into the .R struct
+func (o *Parkingspot) LoadParkingspotParkingspotidListings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.ParkingspotidListings = nil
+
+	related, err := o.ParkingspotidListings(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, rel := range related {
+		rel.R.ParkingspotidParkingspot = o
+	}
+
+	o.R.ParkingspotidListings = related
+	return nil
+}
+
+// LoadParkingspotParkingspotidListings loads the parkingspot's ParkingspotidListings into the .R struct
+func (os ParkingspotSlice) LoadParkingspotParkingspotidListings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	listings, err := os.ParkingspotidListings(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		o.R.ParkingspotidListings = nil
+	}
+
+	for _, o := range os {
+		for _, rel := range listings {
+			if o.Parkingspotid != rel.Parkingspotid {
+				continue
+			}
+
+			rel.R.ParkingspotidParkingspot = o
+
+			o.R.ParkingspotidListings = append(o.R.ParkingspotidListings, rel)
+		}
+	}
+
+	return nil
 }
 
 func PreloadParkingspotUseridUser(opts ...psql.PreloadOption) psql.Preloader {
@@ -715,6 +841,72 @@ func (os ParkingspotSlice) LoadParkingspotUseridUser(ctx context.Context, exec b
 			o.R.UseridUser = rel
 			break
 		}
+	}
+
+	return nil
+}
+
+func insertParkingspotParkingspotidListings0(ctx context.Context, exec bob.Executor, listings1 []*ListingSetter, parkingspot0 *Parkingspot) (ListingSlice, error) {
+	for i := range listings1 {
+		listings1[i].Parkingspotid = omit.From(parkingspot0.Parkingspotid)
+	}
+
+	ret, err := Listings.InsertMany(ctx, exec, listings1...)
+	if err != nil {
+		return ret, fmt.Errorf("insertParkingspotParkingspotidListings0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachParkingspotParkingspotidListings0(ctx context.Context, exec bob.Executor, count int, listings1 ListingSlice, parkingspot0 *Parkingspot) (ListingSlice, error) {
+	setter := &ListingSetter{
+		Parkingspotid: omit.From(parkingspot0.Parkingspotid),
+	}
+
+	err := Listings.Update(ctx, exec, setter, listings1...)
+	if err != nil {
+		return nil, fmt.Errorf("attachParkingspotParkingspotidListings0: %w", err)
+	}
+
+	return listings1, nil
+}
+
+func (parkingspot0 *Parkingspot) InsertParkingspotidListings(ctx context.Context, exec bob.Executor, related ...*ListingSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	listings1, err := insertParkingspotParkingspotidListings0(ctx, exec, related, parkingspot0)
+	if err != nil {
+		return err
+	}
+
+	parkingspot0.R.ParkingspotidListings = append(parkingspot0.R.ParkingspotidListings, listings1...)
+
+	for _, rel := range listings1 {
+		rel.R.ParkingspotidParkingspot = parkingspot0
+	}
+	return nil
+}
+
+func (parkingspot0 *Parkingspot) AttachParkingspotidListings(ctx context.Context, exec bob.Executor, related ...*Listing) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	listings1 := ListingSlice(related)
+
+	_, err = attachParkingspotParkingspotidListings0(ctx, exec, len(related), listings1, parkingspot0)
+	if err != nil {
+		return err
+	}
+
+	parkingspot0.R.ParkingspotidListings = append(parkingspot0.R.ParkingspotidListings, listings1...)
+
+	for _, rel := range related {
+		rel.R.ParkingspotidParkingspot = parkingspot0
 	}
 
 	return nil

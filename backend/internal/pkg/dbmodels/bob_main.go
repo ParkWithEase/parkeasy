@@ -14,26 +14,35 @@ import (
 
 var TableNames = struct {
 	Auths        string
+	Bookings     string
 	Cars         string
+	Listings     string
 	Parkingspots string
 	Resettokens  string
 	Sessions     string
+	Timeunits    string
 	Users        string
 }{
 	Auths:        "auth",
+	Bookings:     "booking",
 	Cars:         "car",
+	Listings:     "listing",
 	Parkingspots: "parkingspot",
 	Resettokens:  "resettoken",
 	Sessions:     "sessions",
+	Timeunits:    "timeunit",
 	Users:        "users",
 }
 
 var ColumnNames = struct {
 	Auths        authColumnNames
+	Bookings     bookingColumnNames
 	Cars         carColumnNames
+	Listings     listingColumnNames
 	Parkingspots parkingspotColumnNames
 	Resettokens  resettokenColumnNames
 	Sessions     sessionColumnNames
+	Timeunits    timeunitColumnNames
 	Users        userColumnNames
 }{
 	Auths: authColumnNames{
@@ -41,6 +50,12 @@ var ColumnNames = struct {
 		Authuuid:     "authuuid",
 		Email:        "email",
 		Passwordhash: "passwordhash",
+	},
+	Bookings: bookingColumnNames{
+		Bookingid:   "bookingid",
+		Buyeruserid: "buyeruserid",
+		Bookinguuid: "bookinguuid",
+		Paidamount:  "paidamount",
 	},
 	Cars: carColumnNames{
 		Carid:        "carid",
@@ -50,6 +65,13 @@ var ColumnNames = struct {
 		Make:         "make",
 		Model:        "model",
 		Color:        "color",
+	},
+	Listings: listingColumnNames{
+		Listingid:     "listingid",
+		Parkingspotid: "parkingspotid",
+		Listinguuid:   "listinguuid",
+		Priceperhour:  "priceperhour",
+		Isactive:      "isactive",
 	},
 	Parkingspots: parkingspotColumnNames{
 		Parkingspotid:      "parkingspotid",
@@ -76,6 +98,12 @@ var ColumnNames = struct {
 		Data:   "data",
 		Expiry: "expiry",
 	},
+	Timeunits: timeunitColumnNames{
+		Unitnum:   "unitnum",
+		Date:      "date",
+		Listingid: "listingid",
+		Bookingid: "bookingid",
+	},
 	Users: userColumnNames{
 		Userid:     "userid",
 		Useruuid:   "useruuid",
@@ -96,25 +124,34 @@ var (
 
 func Where[Q psql.Filterable]() struct {
 	Auths        authWhere[Q]
+	Bookings     bookingWhere[Q]
 	Cars         carWhere[Q]
+	Listings     listingWhere[Q]
 	Parkingspots parkingspotWhere[Q]
 	Resettokens  resettokenWhere[Q]
 	Sessions     sessionWhere[Q]
+	Timeunits    timeunitWhere[Q]
 	Users        userWhere[Q]
 } {
 	return struct {
 		Auths        authWhere[Q]
+		Bookings     bookingWhere[Q]
 		Cars         carWhere[Q]
+		Listings     listingWhere[Q]
 		Parkingspots parkingspotWhere[Q]
 		Resettokens  resettokenWhere[Q]
 		Sessions     sessionWhere[Q]
+		Timeunits    timeunitWhere[Q]
 		Users        userWhere[Q]
 	}{
 		Auths:        buildAuthWhere[Q](AuthColumns),
+		Bookings:     buildBookingWhere[Q](BookingColumns),
 		Cars:         buildCarWhere[Q](CarColumns),
+		Listings:     buildListingWhere[Q](ListingColumns),
 		Parkingspots: buildParkingspotWhere[Q](ParkingspotColumns),
 		Resettokens:  buildResettokenWhere[Q](ResettokenColumns),
 		Sessions:     buildSessionWhere[Q](SessionColumns),
+		Timeunits:    buildTimeunitWhere[Q](TimeunitColumns),
 		Users:        buildUserWhere[Q](UserColumns),
 	}
 }
@@ -141,9 +178,12 @@ func (j joinSet[Q]) AliasedAs(alias string) joinSet[Q] {
 
 type joins[Q dialect.Joinable] struct {
 	Auths        joinSet[authJoins[Q]]
+	Bookings     joinSet[bookingJoins[Q]]
 	Cars         joinSet[carJoins[Q]]
+	Listings     joinSet[listingJoins[Q]]
 	Parkingspots joinSet[parkingspotJoins[Q]]
 	Resettokens  joinSet[resettokenJoins[Q]]
+	Timeunits    joinSet[timeunitJoins[Q]]
 	Users        joinSet[userJoins[Q]]
 }
 
@@ -158,9 +198,12 @@ func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q
 func getJoins[Q dialect.Joinable]() joins[Q] {
 	return joins[Q]{
 		Auths:        buildJoinSet[authJoins[Q]](AuthColumns, buildAuthJoins),
+		Bookings:     buildJoinSet[bookingJoins[Q]](BookingColumns, buildBookingJoins),
 		Cars:         buildJoinSet[carJoins[Q]](CarColumns, buildCarJoins),
+		Listings:     buildJoinSet[listingJoins[Q]](ListingColumns, buildListingJoins),
 		Parkingspots: buildJoinSet[parkingspotJoins[Q]](ParkingspotColumns, buildParkingspotJoins),
 		Resettokens:  buildJoinSet[resettokenJoins[Q]](ResettokenColumns, buildResettokenJoins),
+		Timeunits:    buildJoinSet[timeunitJoins[Q]](TimeunitColumns, buildTimeunitJoins),
 		Users:        buildJoinSet[userJoins[Q]](UserColumns, buildUserJoins),
 	}
 }

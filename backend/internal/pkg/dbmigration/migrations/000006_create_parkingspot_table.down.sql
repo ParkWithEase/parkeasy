@@ -1,2 +1,3 @@
 DROP INDEX IF EXISTS ParkingSpotUUIDIdx;
+DROP INDEX IF EXISTS ParkingSpotCoordinateIdx;
 DROP TABLE IF EXISTS ParkingSpot;
