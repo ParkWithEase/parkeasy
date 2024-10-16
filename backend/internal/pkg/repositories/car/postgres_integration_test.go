@@ -79,10 +79,10 @@ func TestPostgresIntegration(t *testing.T) {
 		carID, createEntry, err := repo.Create(ctx, userID, &creationInput)
 		require.NoError(t, err)
 		assert.NotEqual(t, -1, carID)
-		assert.NotEqual(t, uuid.Nil, createEntry.Car.ID)
+		assert.NotEqual(t, uuid.Nil, createEntry.ID)
 
 		// Testing get car
-		getEntry, err := repo.GetByUUID(ctx, createEntry.Car.ID)
+		getEntry, err := repo.GetByUUID(ctx, createEntry.ID)
 		require.NoError(t, err)
 		assert.Equal(t, sampleDetails.LicensePlate, getEntry.Details.LicensePlate)
 		assert.Equal(t, sampleDetails.Make, getEntry.Details.Make)
@@ -90,7 +90,7 @@ func TestPostgresIntegration(t *testing.T) {
 		assert.Equal(t, sampleDetails.Color, getEntry.Details.Color)
 
 		// Testing get owner id
-		ownerID, err := repo.GetOwnerByUUID(ctx, createEntry.Car.ID)
+		ownerID, err := repo.GetOwnerByUUID(ctx, createEntry.ID)
 		require.NoError(t, err)
 		assert.Equal(t, userID, ownerID)
 
@@ -106,20 +106,24 @@ func TestPostgresIntegration(t *testing.T) {
 			CarDetails: updateDetails,
 		}
 
-		// Testing get car
-		getUpdateEntry, err := repo.GetByUUID(ctx, createEntry.Car.ID)
-		require.NoError(t, err)
-		assert.Equal(t, sampleDetails.LicensePlate, getUpdateEntry.Details.LicensePlate)
-		assert.Equal(t, sampleDetails.Make, getUpdateEntry.Details.Make)
-		assert.Equal(t, sampleDetails.Model, getUpdateEntry.Details.Model)
-		assert.Equal(t, sampleDetails.Color, getUpdateEntry.Details.Color)
-
-		_, updateErr := repo.UpdateByUUID(ctx, createEntry.Car.ID, &updateInput)
+		// Testing update car
+		updatedEntry, updateErr := repo.UpdateByUUID(ctx, createEntry.ID, &updateInput)
 		require.NoError(t, updateErr)
+		assert.Equal(t, createEntry.ID, updatedEntry.ID)
+		assert.Equal(t, updateDetails.LicensePlate, updatedEntry.Details.LicensePlate)
+		assert.Equal(t, updateDetails.Make, updatedEntry.Details.Make)
+		assert.Equal(t, updateDetails.Model, updatedEntry.Details.Model)
+		assert.Equal(t, updateDetails.Color, updatedEntry.Details.Color)
 
 		// Testing delete
-		deleteErr := repo.DeleteByUUID(ctx, createEntry.Car.ID)
+		deleteErr := repo.DeleteByUUID(ctx, createEntry.ID)
 		require.NoError(t, deleteErr)
+
+		// Make sure that it is deleted
+		_, err = repo.GetByUUID(ctx, createEntry.ID)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, ErrNotFound)
+		}
 	})
 
 	t.Run("get non-existent", func(t *testing.T) {

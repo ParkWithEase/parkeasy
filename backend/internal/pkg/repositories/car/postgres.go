@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/bob/dialect/psql/um"
 )
 
 type PostgresRepository struct {
@@ -74,7 +75,7 @@ func (p *PostgresRepository) DeleteByUUID(ctx context.Context, carID uuid.UUID) 
 }
 
 func (p *PostgresRepository) UpdateByUUID(ctx context.Context, carID uuid.UUID, car *models.CarCreationInput) (Entry, error) {
-	rowsAffected, err := dbmodels.Cars.UpdateQ(
+	result, err := dbmodels.Cars.UpdateQ(
 		ctx, p.db,
 		dbmodels.UpdateWhere.Cars.Caruuid.EQ(carID),
 		&dbmodels.CarSetter{
@@ -83,16 +84,30 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, carID uuid.UUID, 
 			Model:        omit.From(car.Model),
 			Color:        omit.From(car.Color),
 		},
-	).Exec()
+		um.Returning(dbmodels.Cars.Columns()),
+	).One()
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Entry{}, ErrNotFound
+		}
 		return Entry{}, fmt.Errorf("could not execute update: %w", err)
 	}
 
-	if rowsAffected == 0 {
-		return Entry{}, ErrNotFound
+	details := models.CarDetails{
+		LicensePlate: result.Licenseplate,
+		Make:         result.Make,
+		Model:        result.Model,
+		Color:        result.Color,
 	}
 
-	return Entry{}, nil
+	return Entry{
+		Car: models.Car{
+			Details: details,
+			ID:      carID,
+		},
+		InternalID: result.Carid,
+		OwnerID:    result.Userid,
+	}, err
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (Entry, error) {
