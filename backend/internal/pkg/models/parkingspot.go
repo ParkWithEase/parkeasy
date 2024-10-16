@@ -34,7 +34,7 @@ type ParkingSpotFeatures struct {
 // TimeSlot represents a single day and multiple time slots
 type TimeSlot struct {
 	Date  time.Time `json:"date" format:"date" doc:"The date of the availability period"`
-	Slots []int32   `json:"slots" doc:"Array of time slots during the day"`
+	Units []int16   `json:"slots" doc:"Array of time units during the day"`
 }
 
 type ParkingSpot struct {
@@ -52,5 +52,5 @@ type Listing struct {
 type ParkingSpotCreationInput struct {
 	Location     ParkingSpotLocation `json:"location"`
 	Features     ParkingSpotFeatures `json:"features,omitempty"`
-	Availability []TimeSlot          `json:"availability, omitempty"`
+	Availability []TimeSlot          `json:"availability,omitempty"`
 }

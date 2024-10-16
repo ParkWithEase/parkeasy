@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var ErrNotFound = errors.New("no parking spot found")
+var ErrNotFound = errors.New("no car found")
 
 type Entry struct {
 	models.Car
