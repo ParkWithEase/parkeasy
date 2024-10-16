@@ -56,7 +56,7 @@ func (r *CarRoute) RegisterCarTag(api huma.API) {
 }
 
 // Registers `/car` routes
-func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // routes are complicated
+func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 	huma.Register(api, *withUserID(&huma.Operation{
 		OperationID:   "create-car",
 		Method:        http.MethodPost,
@@ -129,7 +129,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) { //nolint: cyclop // routes 
 				return nil, NewHumaError(http.StatusUnprocessableEntity, err)
 			}
 		}
-		return nil, nil //nolint: nilnil // this route returns nothing on success
+		return nil, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
