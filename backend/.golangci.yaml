@@ -108,6 +108,15 @@ linters-settings:
     enable:
       - fieldalignment # Useful to reduce memory usage
 
+  gosec:
+    excludes:
+      # Disable file permission checks. These are way too restrictive and would
+      # only allow creating files that can be accessed by only the creator.
+      - G301
+      - G302
+      - G306
+      - G307
+
 issues:
   exclude-rules:
     - path: '(.+)_test\.go'
