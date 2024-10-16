@@ -8,6 +8,7 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/testutils"
+	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -145,5 +146,94 @@ func TestPostgresIntegration(t *testing.T) {
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, ErrNotFound)
 		}
+	})
+
+	t.Run("get many cars", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+
+			// clear all idle connections
+			// required since Restore() deletes the current DB
+			pool.Reset()
+		})
+
+		sampleDetails := []models.CarDetails{
+			{
+				LicensePlate: "HTV 670",
+				Make:         "Honda",
+				Model:        "Civic",
+				Color:        "Blue",
+			},
+			{
+				LicensePlate: "HTV 671",
+				Make:         "Honda",
+				Model:        "Civic",
+				Color:        "Blue",
+			},
+			{
+				LicensePlate: "HTV 672",
+				Make:         "Honda",
+				Model:        "Civic",
+				Color:        "Blue",
+			},
+			{
+				LicensePlate: "HTV 673",
+				Make:         "Honda",
+				Model:        "Civic",
+				Color:        "Blue",
+			},
+			{
+				LicensePlate: "HTV 674",
+				Make:         "Honda",
+				Model:        "Civic",
+				Color:        "Blue",
+			},
+		}
+
+		// Populate data
+		for _, car := range sampleDetails {
+			_, _, err := repo.Create(ctx, userID, &models.CarCreationInput{CarDetails: car})
+			require.NoError(t, err)
+		}
+
+		t.Run("simple paginate", func(t *testing.T) {
+			t.Parallel()
+
+			var cursor omit.Val[Cursor]
+			idx := 0
+			for ; idx < len(sampleDetails); idx += 2 {
+				entries, err := repo.GetMany(ctx, userID, 2, cursor)
+				require.NoError(t, err)
+				if assert.LessOrEqual(t, 1, len(entries), "expecting at least one entry") {
+					cursor = omit.From(Cursor{
+						ID: entries[len(entries)-1].InternalID,
+					})
+				}
+
+				for eidx, entry := range entries {
+					detailsIdx := idx + eidx
+					if detailsIdx < len(sampleDetails) {
+						assert.Equal(t, sampleDetails[detailsIdx], entry.Details)
+					}
+				}
+			}
+		})
+
+		t.Run("cursor too far", func(t *testing.T) {
+			t.Parallel()
+
+			entries, err := repo.GetMany(ctx, userID, 100, omit.From(Cursor{ID: 10000000}))
+			require.NoError(t, err)
+			assert.Empty(t, entries)
+		})
+
+		t.Run("non-existent user", func(t *testing.T) {
+			t.Parallel()
+
+			entries, err := repo.GetMany(ctx, userID+100, 100, omit.Val[Cursor]{})
+			require.NoError(t, err)
+			assert.Empty(t, entries)
+		})
 	})
 }
