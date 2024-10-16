@@ -85,7 +85,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
 			detail := describeCarInputError(err, &input.Body)
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 		return &CarOutput{Body: result}, nil
 	})
@@ -104,7 +104,7 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		cars, nextCursor, err := r.service.GetMany(ctx, userID, input.Count, input.After)
 		if err != nil {
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
 
 		result := CarListOutput{Body: cars}
@@ -140,9 +140,9 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(http.StatusNotFound, err, detail)
+				return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
 			}
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
 		return &CarOutput{Body: result}, nil
 	})
@@ -167,9 +167,9 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(http.StatusForbidden, err, detail)
+				return nil, NewHumaError(ctx, http.StatusForbidden, err, detail)
 			default:
-				return nil, NewHumaError(http.StatusUnprocessableEntity, err)
+				return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 			}
 		}
 		return nil, nil
@@ -197,15 +197,15 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(http.StatusNotFound, err, detail)
+				return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
 			case errors.Is(err, models.ErrCarOwned):
 				detail = &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(http.StatusForbidden, err, detail)
+				return nil, NewHumaError(ctx, http.StatusForbidden, err, detail)
 			default:
-				return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
+				return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 			}
 		}
 		return &CarOutput{Body: result}, nil

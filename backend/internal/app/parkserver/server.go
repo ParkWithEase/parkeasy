@@ -99,7 +99,6 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 	defer wg.Wait()
 
 	api := c.NewHumaAPI()
-	huma.NewError = routes.NewErrorFiltered
 
 	srv := http.Server{
 		Addr:              c.Addr,
@@ -107,6 +106,8 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 		Handler:           api.Adapter(),
 		ReadHeaderTimeout: 2 * time.Second,
 	}
+
+	srv.Handler = LogMiddleware(srv.Handler)
 
 	if c.Insecure {
 		corsMiddleware := cors.New(cors.Options{

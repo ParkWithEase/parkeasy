@@ -9,7 +9,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 )
 
 // OpenAPI cookie security scheme for the API
@@ -69,6 +69,11 @@ func NewSessionMiddleware(api huma.API, manager *scs.SessionManager) func(huma.C
 		if err == nil {
 			token = cookie.Value
 		}
+
+		log := zerolog.Ctx(ctx.Context()).
+			With().
+			Str("component", "session_middleware").
+			Logger()
 
 		newCtx, err := manager.Load(ctx.Context(), token)
 		if err != nil {
