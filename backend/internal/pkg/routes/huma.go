@@ -82,6 +82,15 @@ func withAuth(op *huma.Operation) *huma.Operation {
 	return op
 }
 
+// Skip session middleware for this operation
+func skipSession(op *huma.Operation) *huma.Operation {
+	if op.Metadata == nil {
+		op.Metadata = make(map[string]any, 8)
+	}
+	op.Metadata[skipSessionMiddleware] = true
+	return op
+}
+
 // Add user profile requirement to an operation
 func withUserID(op *huma.Operation) *huma.Operation {
 	result := withAuth(op)

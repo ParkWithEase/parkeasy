@@ -14,6 +14,7 @@ import (
 
 	authRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/health"
 
 	userRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/user"
@@ -63,11 +64,15 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	carService := car.New(carRepository)
 	carRoute := routes.NewCarRoute(carService, sessionManager)
 
+	healthService := health.New(c.DBPool)
+	healthRoute := routes.NewHealthRoute(healthService)
+
 	routes.UseHumaMiddlewares(api, sessionManager, userService)
 	huma.AutoRegister(api, authRoute)
 	huma.AutoRegister(api, userRoute)
 	huma.AutoRegister(api, parkingSpotRoute)
 	huma.AutoRegister(api, carRoute)
+	huma.AutoRegister(api, healthRoute)
 }
 
 // Creates a new Huma API instance with routes configured
