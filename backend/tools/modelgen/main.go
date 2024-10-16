@@ -19,7 +19,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-const PostgresContainer = "docker.io/library/postgres:16"
+const PostgresContainer = "docker.io/postgis/postgis:16-3.4"
 
 type CLI struct {
 	OutDir  string `short:"o" help:"Set output directory." placeholder:"DIR" default:"internal/pkg/dbmodels"`

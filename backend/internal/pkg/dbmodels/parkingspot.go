@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aarondl/opt/null"
 	"github.com/aarondl/opt/omit"
+	"github.com/aarondl/opt/omitnull"
 	"github.com/google/uuid"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
@@ -24,19 +26,19 @@ import (
 
 // Parkingspot is an object representing the database table.
 type Parkingspot struct {
-	Parkingspotid      int64     `db:"parkingspotid,pk" `
-	Userid             int64     `db:"userid" `
-	Parkingspotuuid    uuid.UUID `db:"parkingspotuuid" `
-	Postalcode         string    `db:"postalcode" `
-	Countrycode        string    `db:"countrycode" `
-	City               string    `db:"city" `
-	Streetaddress      string    `db:"streetaddress" `
-	Longitude          float32   `db:"longitude" `
-	Latitude           float32   `db:"latitude" `
-	Hasshelter         bool      `db:"hasshelter" `
-	Hasplugin          bool      `db:"hasplugin" `
-	Haschargingstation bool      `db:"haschargingstation" `
-	Ispublic           bool      `db:"ispublic" `
+	Parkingspotid      int64            `db:"parkingspotid,pk" `
+	Userid             int64            `db:"userid" `
+	Parkingspotuuid    uuid.UUID        `db:"parkingspotuuid" `
+	Postalcode         string           `db:"postalcode" `
+	Countrycode        string           `db:"countrycode" `
+	City               string           `db:"city" `
+	Streetaddress      string           `db:"streetaddress" `
+	Longitude          float32          `db:"longitude" `
+	Latitude           float32          `db:"latitude" `
+	Coordinates        null.Val[string] `db:"coordinates" `
+	Hasshelter         bool             `db:"hasshelter" `
+	Hasplugin          bool             `db:"hasplugin" `
+	Haschargingstation bool             `db:"haschargingstation" `
 
 	R parkingspotR `db:"-" `
 }
@@ -64,19 +66,19 @@ type parkingspotR struct {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type ParkingspotSetter struct {
-	Parkingspotid      omit.Val[int64]     `db:"parkingspotid,pk" `
-	Userid             omit.Val[int64]     `db:"userid" `
-	Parkingspotuuid    omit.Val[uuid.UUID] `db:"parkingspotuuid" `
-	Postalcode         omit.Val[string]    `db:"postalcode" `
-	Countrycode        omit.Val[string]    `db:"countrycode" `
-	City               omit.Val[string]    `db:"city" `
-	Streetaddress      omit.Val[string]    `db:"streetaddress" `
-	Longitude          omit.Val[float32]   `db:"longitude" `
-	Latitude           omit.Val[float32]   `db:"latitude" `
-	Hasshelter         omit.Val[bool]      `db:"hasshelter" `
-	Hasplugin          omit.Val[bool]      `db:"hasplugin" `
-	Haschargingstation omit.Val[bool]      `db:"haschargingstation" `
-	Ispublic           omit.Val[bool]      `db:"ispublic" `
+	Parkingspotid      omit.Val[int64]      `db:"parkingspotid,pk" `
+	Userid             omit.Val[int64]      `db:"userid" `
+	Parkingspotuuid    omit.Val[uuid.UUID]  `db:"parkingspotuuid" `
+	Postalcode         omit.Val[string]     `db:"postalcode" `
+	Countrycode        omit.Val[string]     `db:"countrycode" `
+	City               omit.Val[string]     `db:"city" `
+	Streetaddress      omit.Val[string]     `db:"streetaddress" `
+	Longitude          omit.Val[float32]    `db:"longitude" `
+	Latitude           omit.Val[float32]    `db:"latitude" `
+	Coordinates        omitnull.Val[string] `db:"coordinates" `
+	Hasshelter         omit.Val[bool]       `db:"hasshelter" `
+	Hasplugin          omit.Val[bool]       `db:"hasplugin" `
+	Haschargingstation omit.Val[bool]       `db:"haschargingstation" `
 }
 
 func (s ParkingspotSetter) SetColumns() []string {
@@ -117,6 +119,10 @@ func (s ParkingspotSetter) SetColumns() []string {
 		vals = append(vals, "latitude")
 	}
 
+	if !s.Coordinates.IsUnset() {
+		vals = append(vals, "coordinates")
+	}
+
 	if !s.Hasshelter.IsUnset() {
 		vals = append(vals, "hasshelter")
 	}
@@ -127,10 +133,6 @@ func (s ParkingspotSetter) SetColumns() []string {
 
 	if !s.Haschargingstation.IsUnset() {
 		vals = append(vals, "haschargingstation")
-	}
-
-	if !s.Ispublic.IsUnset() {
-		vals = append(vals, "ispublic")
 	}
 
 	return vals
@@ -164,6 +166,9 @@ func (s ParkingspotSetter) Overwrite(t *Parkingspot) {
 	if !s.Latitude.IsUnset() {
 		t.Latitude, _ = s.Latitude.Get()
 	}
+	if !s.Coordinates.IsUnset() {
+		t.Coordinates, _ = s.Coordinates.GetNull()
+	}
 	if !s.Hasshelter.IsUnset() {
 		t.Hasshelter, _ = s.Hasshelter.Get()
 	}
@@ -172,9 +177,6 @@ func (s ParkingspotSetter) Overwrite(t *Parkingspot) {
 	}
 	if !s.Haschargingstation.IsUnset() {
 		t.Haschargingstation, _ = s.Haschargingstation.Get()
-	}
-	if !s.Ispublic.IsUnset() {
-		t.Ispublic, _ = s.Ispublic.Get()
 	}
 }
 
@@ -234,28 +236,28 @@ func (s ParkingspotSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
 		vals[8] = psql.Arg(s.Latitude)
 	}
 
-	if s.Hasshelter.IsUnset() {
+	if s.Coordinates.IsUnset() {
 		vals[9] = psql.Raw("DEFAULT")
 	} else {
-		vals[9] = psql.Arg(s.Hasshelter)
+		vals[9] = psql.Arg(s.Coordinates)
+	}
+
+	if s.Hasshelter.IsUnset() {
+		vals[10] = psql.Raw("DEFAULT")
+	} else {
+		vals[10] = psql.Arg(s.Hasshelter)
 	}
 
 	if s.Hasplugin.IsUnset() {
-		vals[10] = psql.Raw("DEFAULT")
+		vals[11] = psql.Raw("DEFAULT")
 	} else {
-		vals[10] = psql.Arg(s.Hasplugin)
+		vals[11] = psql.Arg(s.Hasplugin)
 	}
 
 	if s.Haschargingstation.IsUnset() {
-		vals[11] = psql.Raw("DEFAULT")
-	} else {
-		vals[11] = psql.Arg(s.Haschargingstation)
-	}
-
-	if s.Ispublic.IsUnset() {
 		vals[12] = psql.Raw("DEFAULT")
 	} else {
-		vals[12] = psql.Arg(s.Ispublic)
+		vals[12] = psql.Arg(s.Haschargingstation)
 	}
 
 	return im.Values(vals...)
@@ -331,6 +333,13 @@ func (s ParkingspotSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if !s.Coordinates.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "coordinates")...),
+			psql.Arg(s.Coordinates),
+		}})
+	}
+
 	if !s.Hasshelter.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			psql.Quote(append(prefix, "hasshelter")...),
@@ -352,13 +361,6 @@ func (s ParkingspotSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
-	if !s.Ispublic.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "ispublic")...),
-			psql.Arg(s.Ispublic),
-		}})
-	}
-
 	return exprs
 }
 
@@ -372,10 +374,10 @@ type parkingspotColumnNames struct {
 	Streetaddress      string
 	Longitude          string
 	Latitude           string
+	Coordinates        string
 	Hasshelter         string
 	Hasplugin          string
 	Haschargingstation string
-	Ispublic           string
 }
 
 var ParkingspotColumns = buildParkingspotColumns("parkingspot")
@@ -391,10 +393,10 @@ type parkingspotColumns struct {
 	Streetaddress      psql.Expression
 	Longitude          psql.Expression
 	Latitude           psql.Expression
+	Coordinates        psql.Expression
 	Hasshelter         psql.Expression
 	Hasplugin          psql.Expression
 	Haschargingstation psql.Expression
-	Ispublic           psql.Expression
 }
 
 func (c parkingspotColumns) Alias() string {
@@ -417,10 +419,10 @@ func buildParkingspotColumns(alias string) parkingspotColumns {
 		Streetaddress:      psql.Quote(alias, "streetaddress"),
 		Longitude:          psql.Quote(alias, "longitude"),
 		Latitude:           psql.Quote(alias, "latitude"),
+		Coordinates:        psql.Quote(alias, "coordinates"),
 		Hasshelter:         psql.Quote(alias, "hasshelter"),
 		Hasplugin:          psql.Quote(alias, "hasplugin"),
 		Haschargingstation: psql.Quote(alias, "haschargingstation"),
-		Ispublic:           psql.Quote(alias, "ispublic"),
 	}
 }
 
@@ -434,10 +436,10 @@ type parkingspotWhere[Q psql.Filterable] struct {
 	Streetaddress      psql.WhereMod[Q, string]
 	Longitude          psql.WhereMod[Q, float32]
 	Latitude           psql.WhereMod[Q, float32]
+	Coordinates        psql.WhereNullMod[Q, string]
 	Hasshelter         psql.WhereMod[Q, bool]
 	Hasplugin          psql.WhereMod[Q, bool]
 	Haschargingstation psql.WhereMod[Q, bool]
-	Ispublic           psql.WhereMod[Q, bool]
 }
 
 func (parkingspotWhere[Q]) AliasedAs(alias string) parkingspotWhere[Q] {
@@ -455,10 +457,10 @@ func buildParkingspotWhere[Q psql.Filterable](cols parkingspotColumns) parkingsp
 		Streetaddress:      psql.Where[Q, string](cols.Streetaddress),
 		Longitude:          psql.Where[Q, float32](cols.Longitude),
 		Latitude:           psql.Where[Q, float32](cols.Latitude),
+		Coordinates:        psql.WhereNull[Q, string](cols.Coordinates),
 		Hasshelter:         psql.Where[Q, bool](cols.Hasshelter),
 		Hasplugin:          psql.Where[Q, bool](cols.Hasplugin),
 		Haschargingstation: psql.Where[Q, bool](cols.Haschargingstation),
-		Ispublic:           psql.Where[Q, bool](cols.Ispublic),
 	}
 }
 

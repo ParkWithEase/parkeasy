@@ -9,11 +9,11 @@ CREATE TABLE IF NOT EXISTS ParkingSpot (
   StreetAddress TEXT UNIQUE NOT NULL,
   Longitude REAL NOT NULL,
   Latitude REAL NOT NULL,
+  coordinates GEOGRAPHY(Point, 4326),
   HasShelter BOOLEAN NOT NULL DEFAULT false,
   HasPlugIn BOOLEAN NOT NULL DEFAULT false,
-  HasChargingStation BOOLEAN NOT NULL DEFAULT false,
-  IsPublic BOOLEAN NOT NULL DEFAULT false
+  HasChargingStation BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS ParkingSpotUUIDIdx ON ParkingSpot(ParkingSpotUUID);
-CREATE UNIQUE INDEX IF NOT EXISTS ParkingSpotCoordinateIdx ON ParkingSpot(Longitude, Latitude);
+CREATE UNIQUE INDEX IF NOT EXISTS ParkingSpotCoordinateIdx ON ParkingSpot(coordinates);
