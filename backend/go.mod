@@ -11,6 +11,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.18.1
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/peterhellberg/link v1.2.0
+	github.com/sourcegraph/conc v0.3.0
 	github.com/stephenafamo/bob v0.28.1
 	github.com/stephenafamo/scan v0.4.2
 	github.com/testcontainers/testcontainers-go v0.33.0
