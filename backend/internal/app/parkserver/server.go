@@ -9,6 +9,7 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
+	"github.com/sourcegraph/conc"
 	"github.com/stephenafamo/bob"
 
 	authRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
@@ -91,6 +92,12 @@ func (c *Config) NewHumaAPI() huma.API {
 //
 // If `ctx` is cancelled, the server will shutdown gracefully and no error will be returned.
 func (c *Config) ListenAndServe(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var wg conc.WaitGroup
+	defer wg.Wait()
+
 	api := c.NewHumaAPI()
 	huma.NewError = routes.NewErrorFiltered
 
@@ -122,11 +129,14 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 		srv.Handler = corsMiddleware.Handler(srv.Handler)
 	}
 
-	go func() {
+	wg.Go(func() {
 		<-ctx.Done()
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
 		// Ignore shutdown errors, not that we can do anything about them
-		_ = srv.Shutdown(context.Background())
-	}()
+		_ = srv.Shutdown(shutdownCtx)
+	})
 
 	err := srv.ListenAndServe()
 	// ServerClosed just meant that the server has shutdown

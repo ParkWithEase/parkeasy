@@ -2,13 +2,20 @@ package car
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"regexp"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/car"
+	"github.com/aarondl/opt/omit"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
+
+// Largest number of entries returned per request
+const MaximumCount = 1000
 
 type Service struct {
 	repo car.Repository
@@ -47,6 +54,39 @@ func (s *Service) Create(ctx context.Context, userID int64, carModel *models.Car
 		return 0, models.Car{}, err
 	}
 	return internalID, result.Car, nil
+}
+
+func (s *Service) GetMany(ctx context.Context, userID int64, count int, after models.Cursor) (cars []models.Car, next models.Cursor, err error) {
+	if count <= 0 {
+		return []models.Car{}, "", nil
+	}
+
+	cursor := decodeCursor(after)
+	count = min(count, MaximumCount)
+	carEntries, err := s.repo.GetMany(ctx, userID, count+1, cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(carEntries) > count {
+		carEntries = carEntries[:len(carEntries)-1]
+
+		next, err = encodeCursor(car.Cursor{
+			ID: carEntries[len(carEntries)-1].InternalID,
+		})
+		// This is an issue, but not enough to abort the request
+		if err != nil {
+			log.Err(err).
+				Int64("userid", userID).
+				Int64("carid", carEntries[len(carEntries)-2].InternalID).
+				Msg("could not encode next cursor")
+		}
+	}
+
+	result := make([]models.Car, 0, len(carEntries))
+	for _, entry := range carEntries {
+		result = append(result, entry.Car)
+	}
+	return result, next, nil
 }
 
 func (s *Service) GetByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error) {
@@ -101,4 +141,28 @@ func (s *Service) UpdateByUUID(ctx context.Context, userID int64, carID uuid.UUI
 		return models.Car{}, err
 	}
 	return result.Car, nil
+}
+
+func decodeCursor(cursor models.Cursor) omit.Val[car.Cursor] {
+	raw, err := base64.RawURLEncoding.DecodeString(string(cursor))
+	if err != nil {
+		return omit.Val[car.Cursor]{}
+	}
+
+	var result car.Cursor
+	err = cbor.Unmarshal(raw, &result)
+	if err != nil {
+		return omit.Val[car.Cursor]{}
+	}
+
+	return omit.From(result)
+}
+
+func encodeCursor(cursor car.Cursor) (models.Cursor, error) {
+	raw, err := cbor.Marshal(cursor)
+	if err != nil {
+		return "", err
+	}
+
+	return models.Cursor(base64.RawURLEncoding.EncodeToString(raw)), nil
 }

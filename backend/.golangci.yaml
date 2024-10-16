@@ -108,6 +108,15 @@ linters-settings:
     enable:
       - fieldalignment # Useful to reduce memory usage
 
+  gosec:
+    excludes:
+      # Disable file permission checks. These are way too restrictive and would
+      # only allow creating files that can be accessed by only the creator.
+      - G301
+      - G302
+      - G306
+      - G307
+
 issues:
   exclude-rules:
     - path: '(.+)_test\.go'
@@ -120,6 +129,12 @@ issues:
     # Exempt route registration from complexity checks as they are typically
     # multiple routes bundled in one function.
     - text: 'function \(.*Route\)\.Register.* has (cognitive|cyclomatic) complexity'
+      linters:
+        - revive
+
+    # Exempt integration tests from complexity checks as they will be huge due to
+    # having multiple levels of subtests.
+    - text: "function Test.*Integration has (cognitive|cyclomatic) complexity"
       linters:
         - revive
 
