@@ -1,6 +1,10 @@
 package models
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 var (
 	ErrParkingSpotOwned     = CodeForbidden.WithMsg("parking spot is owned by an another user")
@@ -27,13 +31,26 @@ type ParkingSpotFeatures struct {
 	ChargingStation bool `json:"charging_station,omitempty" doc:"Whether parking spot has an EV charging station"`
 }
 
+// TimeSlot represents a single day and multiple time slots
+type TimeSlot struct {
+	Date  time.Time `json:"date" format:"date" doc:"The date of the availability period"`
+	Slots []int32   `json:"slots" doc:"Array of time slots during the day"`
+}
+
 type ParkingSpot struct {
 	Location ParkingSpotLocation `json:"location"`
 	Features ParkingSpotFeatures `json:"features,omitempty"`
 	ID       uuid.UUID           `json:"id" doc:"ID of this resource"`
 }
 
+type Listing struct {
+	Spot         ParkingSpot `json:"spot" doc:"parking spot information"`
+	Availability []TimeSlot  `json:"availability" doc:"Array of available time slots"`
+	PricePerHour float64     `json:"price per hour" doc:"price per hour"`
+}
+
 type ParkingSpotCreationInput struct {
-	Location ParkingSpotLocation `json:"location"`
-	Features ParkingSpotFeatures `json:"features,omitempty"`
+	Location     ParkingSpotLocation `json:"location"`
+	Features     ParkingSpotFeatures `json:"features,omitempty"`
+	Availability []TimeSlot          `json:"availability, omitempty"`
 }
