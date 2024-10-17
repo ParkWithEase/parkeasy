@@ -35,7 +35,7 @@ func TestSessionMiddleware(t *testing.T) {
 		Method: http.MethodGet,
 		Path:   "/session",
 	}), func(_ context.Context, _ *struct{}) (*struct{}, error) {
-		return nil, nil //nolint: nilnil // this endpoint does nothing
+		return nil, nil
 	})
 
 	resp := api.Get("/session")

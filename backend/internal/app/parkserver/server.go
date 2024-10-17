@@ -9,10 +9,12 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
+	"github.com/sourcegraph/conc"
 	"github.com/stephenafamo/bob"
 
 	authRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/auth"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/health"
 
 	userRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/user"
@@ -62,11 +64,15 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	carService := car.New(carRepository)
 	carRoute := routes.NewCarRoute(carService, sessionManager)
 
+	healthService := health.New(c.DBPool)
+	healthRoute := routes.NewHealthRoute(healthService)
+
 	routes.UseHumaMiddlewares(api, sessionManager, userService)
 	huma.AutoRegister(api, authRoute)
 	huma.AutoRegister(api, userRoute)
 	huma.AutoRegister(api, parkingSpotRoute)
 	huma.AutoRegister(api, carRoute)
+	huma.AutoRegister(api, healthRoute)
 }
 
 // Creates a new Huma API instance with routes configured
@@ -91,8 +97,13 @@ func (c *Config) NewHumaAPI() huma.API {
 //
 // If `ctx` is cancelled, the server will shutdown gracefully and no error will be returned.
 func (c *Config) ListenAndServe(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var wg conc.WaitGroup
+	defer wg.Wait()
+
 	api := c.NewHumaAPI()
-	huma.NewError = routes.NewErrorFiltered
 
 	srv := http.Server{
 		Addr:              c.Addr,
@@ -100,6 +111,8 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 		Handler:           api.Adapter(),
 		ReadHeaderTimeout: 2 * time.Second,
 	}
+
+	srv.Handler = LogMiddleware(srv.Handler)
 
 	if c.Insecure {
 		corsMiddleware := cors.New(cors.Options{
@@ -122,11 +135,14 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 		srv.Handler = corsMiddleware.Handler(srv.Handler)
 	}
 
-	go func() {
+	wg.Go(func() {
 		<-ctx.Done()
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
 		// Ignore shutdown errors, not that we can do anything about them
-		_ = srv.Shutdown(context.Background())
-	}()
+		_ = srv.Shutdown(shutdownCtx)
+	})
 
 	err := srv.ListenAndServe()
 	// ServerClosed just meant that the server has shutdown

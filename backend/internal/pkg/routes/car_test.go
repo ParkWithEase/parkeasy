@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
+	"github.com/peterhellberg/link"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -29,6 +31,12 @@ func (m *mockCarService) Create(ctx context.Context, userID int64, car *models.C
 func (m *mockCarService) DeleteByUUID(ctx context.Context, userID int64, carID uuid.UUID) error {
 	args := m.Called(ctx, userID, carID)
 	return args.Error(0)
+}
+
+// GetMany implements CarServicer.
+func (m *mockCarService) GetMany(ctx context.Context, userID int64, count int, after models.Cursor) ([]models.Car, models.Cursor, error) {
+	args := m.Called(ctx, userID, count, after)
+	return args.Get(0).([]models.Car), args.Get(1).(models.Cursor), args.Error(2)
 }
 
 // GetByUUID implements CarServicer.
@@ -256,6 +264,125 @@ func TestGetCar(t *testing.T) {
 			Location: "path.id",
 			Value:    jsonAnyify(testUUID),
 		})
+
+		srv.AssertExpectations(t)
+	})
+}
+
+func TestGetManyCar(t *testing.T) {
+	t.Parallel()
+
+	const testUserID = int64(0)
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testUserID)
+
+	t.Run("basic get", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockCarService)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		testUUID := uuid.New()
+		srv.On("GetMany", mock.Anything, testUserID, 50, models.Cursor("")).
+			Return([]models.Car{{ID: testUUID}}, models.Cursor(""), nil).
+			Once()
+
+		resp := api.GetCtx(ctx, "/cars")
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+
+		var car []models.Car
+		err := json.NewDecoder(resp.Result().Body).Decode(&car)
+		require.NoError(t, err)
+		if assert.Len(t, car, 1) {
+			assert.Equal(t, testUUID, car[0].ID)
+		}
+		links := link.ParseResponse(resp.Result())
+		if len(links) > 0 {
+			_, ok := links["next"]
+			assert.False(t, ok, "no links with rel=next should be sent without next cursor")
+		}
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("empty is fine", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockCarService)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("GetMany", mock.Anything, testUserID, 50, models.Cursor("")).
+			Return([]models.Car{}, models.Cursor(""), nil).
+			Once()
+
+		resp := api.GetCtx(ctx, "/cars")
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+
+		var car []models.Car
+		err := json.NewDecoder(resp.Result().Body).Decode(&car)
+		require.NoError(t, err)
+		assert.Empty(t, car)
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("paginating cursor is forwarded", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockCarService)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		const testCursor = models.Cursor("cursor")
+		srv.On("GetMany", mock.Anything, testUserID, 50, testCursor).
+			Return([]models.Car{}, models.Cursor(""), nil).
+			Once()
+
+		resp := api.GetCtx(ctx, "/cars?after="+string(testCursor))
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+
+		var car []models.Car
+		err := json.NewDecoder(resp.Result().Body).Decode(&car)
+		require.NoError(t, err)
+		assert.Empty(t, car)
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("paginating header is set", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockCarService)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		testUUID := uuid.New()
+		srv.On("GetMany", mock.Anything, testUserID, 1, models.Cursor("")).
+			Return([]models.Car{{ID: testUUID}}, models.Cursor("cursor"), nil).
+			Once()
+
+		resp := api.GetCtx(ctx, "/cars?count=1")
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+		links := link.ParseResponse(resp.Result())
+		if assert.NotEmpty(t, links) {
+			nextLinks, ok := links["next"]
+			if assert.True(t, ok, "there should be links with rel=next") {
+				nextURL, err := url.Parse(nextLinks.URI)
+				require.NoError(t, err)
+				assert.Equal(t, "/cars", nextURL.Path)
+				queries, err := url.ParseQuery(nextURL.RawQuery)
+				require.NoError(t, err)
+				assert.Equal(t, "1", queries.Get("count"))
+				assert.Equal(t, "cursor", queries.Get("after"))
+			}
+		}
 
 		srv.AssertExpectations(t)
 	})

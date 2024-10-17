@@ -26,26 +26,28 @@
 
 <div class="container">
     <div class="sidebar">
-        <a href="/profile/user-profile"><img src={userClipart} alt="user" class="logo-small" /></a>
+        <a href="/app/profile/user-profile"
+            ><img src={userClipart} alt="user" class="logo-small" /></a
+        >
         <a
             class="sidebar-link"
-            href="/profile/user-profile"
+            href="/app/profile/user-profile"
             class:active={$page.url.pathname.includes('user-profile')}>User Profile</a
         >
         <a
             class="sidebar-link"
-            href="/profile/booking-history"
+            href="/app/profile/booking-history"
             class:active={$page.url.pathname.includes('booking-history')}>Booking History</a
         >
         <a
             class="sidebar-link"
-            href="/profile/listing-history"
-            class:active={$page.url.pathname.includes('listing-history')}>Listing History</a
+            href="/app/profile/leasing-history"
+            class:active={$page.url.pathname.includes('leasing-history')}>Listing History</a
         >
         <a
             class="sidebar-link"
-            href="/profile/cars"
-            class:active={$page.url.pathname.includes('cars')}>Preference Cars</a
+            href="/app/profile/preference-spots"
+            class:active={$page.url.pathname.includes('preference-spots')}>Preference Cars</a
         >
         <a class="logout-link" href="/" on:click={logout}>Logout</a>
     </div>

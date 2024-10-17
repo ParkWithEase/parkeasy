@@ -11,6 +11,11 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "/parkserver", "check-health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     environment:
       INSECURE: true
     networks:

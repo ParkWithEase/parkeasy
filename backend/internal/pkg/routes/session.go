@@ -9,7 +9,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 )
 
 // OpenAPI cookie security scheme for the API
@@ -46,6 +46,8 @@ type SessionHeaderOutput struct {
 	CacheControl []string `header:"Cache-Control" example:"no-cache=\"Set-Cookie\""`
 }
 
+const skipSessionMiddleware = "skip_session"
+
 // Returns a session manager configured for use with this package.
 //
 // `store` can be nil, in which case the default memory store is used.
@@ -64,11 +66,21 @@ func NewSessionManager(store scs.Store) *scs.SessionManager {
 // Returns a middleware to be attached to `api`.
 func NewSessionMiddleware(api huma.API, manager *scs.SessionManager) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
+		if isSessionSkipped(ctx.Operation()) {
+			next(ctx)
+			return
+		}
+
 		var token string
 		cookie, err := huma.ReadCookie(ctx, manager.Cookie.Name)
 		if err == nil {
 			token = cookie.Value
 		}
+
+		log := zerolog.Ctx(ctx.Context()).
+			With().
+			Str("component", "session_middleware").
+			Logger()
 
 		newCtx, err := manager.Load(ctx.Context(), token)
 		if err != nil {
@@ -146,4 +158,13 @@ func isCookieAuthorizationRequired(op *huma.Operation) bool {
 		}
 	}
 	return false
+}
+
+func isSessionSkipped(op *huma.Operation) bool {
+	if op == nil {
+		return false
+	}
+
+	_, ok := op.Metadata[skipSessionMiddleware]
+	return ok
 }

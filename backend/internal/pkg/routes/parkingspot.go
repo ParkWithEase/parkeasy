@@ -52,7 +52,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotTag(api huma.API) {
 }
 
 // Registers `/spots` routes
-func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: cyclop // bundling inflates complexity level
+func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	huma.Register(api, *withUserID(&huma.Operation{
 		OperationID:   "create-parking-spot",
 		Method:        http.MethodPost,
@@ -96,7 +96,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: c
 					Value:    input.Body.Location,
 				}
 			}
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 		return &ParkingSpotOutput{Body: result}, nil
 	})
@@ -120,9 +120,9 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: c
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(http.StatusNotFound, err, detail)
+				return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
 			}
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
 		return &ParkingSpotOutput{Body: result}, nil
 	})
@@ -146,10 +146,10 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) { //nolint: c
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(http.StatusForbidden, err, detail)
+				return nil, NewHumaError(ctx, http.StatusForbidden, err, detail)
 			}
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
-		return nil, nil //nolint: nilnil // this route returns nothing on success
+		return nil, nil
 	})
 }
