@@ -90,12 +90,12 @@ func (p *PostgresRepository) GetByListingID(ctx context.Context, listingID int64
 			dbmodels.TimeunitColumns.Unitnum,
 		),
 		dbmodels.SelectWhere.Timeunits.Listingid.EQ(listingID),
+		sm.OrderBy(dbmodels.TimeunitColumns.Date),
+		sm.OrderBy(dbmodels.TimeunitColumns.Unitnum),
 	).All()
 
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			err = ErrNotFound
-		}
+	if (err != nil && errors.Is(err, sql.ErrNoRows)) || len(result) == 0 {
+		err = ErrNotFound
 		return Entry{}, err
 	}
 
