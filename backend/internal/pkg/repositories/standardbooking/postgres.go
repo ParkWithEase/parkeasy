@@ -13,7 +13,9 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
+	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/scan"
 	// "github.com/stephenafamo/bob/dialect/psql"
 )
 
@@ -46,7 +48,6 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, listingID
 		Endunitnum:   omit.From(booking.EndUnitNum),
 		Date:         omit.From(booking.Date),
 	})
-
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
@@ -87,39 +88,20 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, listingID
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID) (Entry, error) {
-	result, err := dbmodels.Standardbookings.Query(
-		ctx, p.db,
+	type Result struct {
+		Stdbook dbmodels.Standardbooking
+		Booking dbmodels.Booking
+	}
+	query := psql.Select(
+		sm.From(dbmodels.Standardbookings.Name(ctx)),
 		sm.Columns(
-			dbmodels.StandardbookingColumns.Startunitnum,
-			dbmodels.StandardbookingColumns.Endunitnum,
-			dbmodels.StandardbookingColumns.Date,
-			dbmodels.BookingColumns.Paidamount,
-			dbmodels.StandardbookingColumns.Bookingid,
-			dbmodels.BookingColumns.Bookingid,
-			dbmodels.BookingColumns.Buyeruserid,
-			dbmodels.StandardbookingColumns.Listingid,
+			dbmodels.Standardbookings.Columns().WithPrefix("stdbook."),
+			dbmodels.Bookings.Columns().WithPrefix("booking."),
 		),
 		dbmodels.SelectJoins.Standardbookings.InnerJoin.BookingidBooking(ctx),
 		dbmodels.SelectWhere.Standardbookings.Standardbookinguuid.EQ(bookingID),
-	).One()
-
-	// query := dbmodels.Standardbookings.Query(
-	// 	ctx, p.db,
-	// 	sm.Columns(
-	// 		dbmodels.StandardbookingColumns.Startunitnum,
-	// 		dbmodels.StandardbookingColumns.Endunitnum,
-	// 		dbmodels.StandardbookingColumns.Date,
-	// 		dbmodels.BookingColumns.Paidamount,
-	// 		dbmodels.StandardbookingColumns.Bookingid,
-	// 		dbmodels.BookingColumns.Bookingid,
-	// 		dbmodels.BookingColumns.Buyeruserid,
-	// 		dbmodels.StandardbookingColumns.Listingid,
-	// 	),
-	// 	sm.InnerJoin(
-	// 		psql.On(dbmodels.StandardbookingColumns.Bookingid.EQ(dbmodels.BookingColumns.Bookingid)),
-	// 	),
-	// )
-
+	)
+	result, err := bob.One(ctx, p.db, query, scan.StructMapper[Result]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
@@ -128,23 +110,23 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	}
 
 	details := models.StandardBookingDetails{
-		StartUnitNum: result.Startunitnum,
-		EndUnitNum:   result.Endunitnum,
-		Date:         result.Date,
-		PaidAmount:   result.R.BookingidBooking.Paidamount,
+		StartUnitNum: result.Stdbook.Startunitnum,
+		EndUnitNum:   result.Stdbook.Endunitnum,
+		Date:         result.Stdbook.Date,
+		PaidAmount:   result.Booking.Paidamount,
 	}
 
 	standardBooking := models.StandardBooking{
 		Details: details,
-		ID:      result.Standardbookinguuid,
+		ID:      result.Stdbook.Standardbookinguuid,
 	}
 
 	entry := Entry{
 		StandardBooking: standardBooking,
-		InternalID:      result.Bookingid,
-		BookingID:       result.Bookingid,
-		OwnerID:         result.R.BookingidBooking.Buyeruserid,
-		ListingID:       result.Listingid,
+		InternalID:      result.Stdbook.Bookingid,
+		BookingID:       result.Stdbook.Bookingid,
+		OwnerID:         result.Booking.Buyeruserid,
+		ListingID:       result.Stdbook.Listingid,
 	}
 
 	return entry, nil
