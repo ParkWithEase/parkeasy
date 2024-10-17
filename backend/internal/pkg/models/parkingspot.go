@@ -51,12 +51,12 @@ type Listing struct {
 }
 
 type ParkingSpotCreationInput struct {
-	Location     ParkingSpotLocation `json:"location"`
-	Features     ParkingSpotFeatures `json:"features,omitempty"`
-	Availability []TimeSlot          `json:"availability,omitempty"`
+	Location ParkingSpotLocation `json:"location"`
+	Features ParkingSpotFeatures `json:"features,omitempty"`
 }
 
 type ListingCreationInput struct {
-	PricePerHour float32 `json:"price_per_hour" doc:"price per hour"`
-	MakePublic   bool    `json:"make_public" doc:"if the listing is supposed to be public"`
+	PricePerHour float32    `json:"price_per_hour" doc:"price per hour"`
+	MakePublic   bool       `json:"make_public" doc:"if the listing is supposed to be public"`
+	Availability []TimeSlot `json:"availability,omitempty"`
 }
