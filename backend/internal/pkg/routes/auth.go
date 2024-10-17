@@ -75,17 +75,17 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 		// Destroy the current session if one exists
 		err := r.sessionManager.Destroy(ctx)
 		if err != nil {
-			return nil, NewHumaError(http.StatusInternalServerError, err)
+			return nil, NewHumaError(ctx, http.StatusInternalServerError, err)
 		}
 		// Generates cookies for the invalidation
 		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return nil, NewHumaError(http.StatusInternalServerError, err)
+			return nil, NewHumaError(ctx, http.StatusInternalServerError, err)
 		}
 
 		authID, err := r.service.Authenticate(ctx, input.Body.Email, input.Body.Password)
 		if err != nil {
-			return &result, NewHumaError(http.StatusUnauthorized, err)
+			return &result, NewHumaError(ctx, http.StatusUnauthorized, err)
 		}
 
 		r.sessionManager.Put(ctx, SessionKeyPersist, input.Body.Persist)
@@ -93,7 +93,7 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 
 		result, err = CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return &result, NewHumaError(http.StatusInternalServerError, err)
+			return &result, NewHumaError(ctx, http.StatusInternalServerError, err)
 		}
 		return &result, nil
 	})
@@ -120,11 +120,11 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 	}), func(ctx context.Context, _ *struct{}) (*SessionHeaderOutput, error) {
 		err := r.sessionManager.RenewToken(ctx)
 		if err != nil {
-			return nil, NewHumaError(http.StatusInternalServerError, err)
+			return nil, NewHumaError(ctx, http.StatusInternalServerError, err)
 		}
 		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return nil, NewHumaError(http.StatusInternalServerError, err)
+			return nil, NewHumaError(ctx, http.StatusInternalServerError, err)
 		}
 		return &result, nil
 	})
@@ -139,11 +139,11 @@ func (r *AuthRoute) RegisterAuth(api huma.API) {
 	}, func(ctx context.Context, _ *struct{}) (*SessionHeaderOutput, error) {
 		err := r.sessionManager.Destroy(ctx)
 		if err != nil {
-			return nil, NewHumaError(http.StatusInternalServerError, err)
+			return nil, NewHumaError(ctx, http.StatusInternalServerError, err)
 		}
 		result, err := CommitSession(ctx, r.sessionManager)
 		if err != nil {
-			return nil, NewHumaError(http.StatusInternalServerError, err)
+			return nil, NewHumaError(ctx, http.StatusInternalServerError, err)
 		}
 		return &result, nil
 	})
@@ -179,7 +179,7 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 					Value:    input.Body.NewPassword,
 				}
 			}
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 		return nil, nil
 	})
@@ -242,7 +242,7 @@ func (r *AuthRoute) RegisterPasswordUpdate(api huma.API) {
 					Value:    input.Body.NewPassword,
 				}
 			}
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 		return nil, nil
 	})

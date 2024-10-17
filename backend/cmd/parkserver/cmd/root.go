@@ -24,8 +24,9 @@ func (g *Globals) ConfigureZerolog(log *zerolog.Logger) zerolog.Logger {
 }
 
 type RootCmd struct {
-	OpenAPI OpenAPICmd `cmd:"" name:"openapi" help:"Dump OpenAPI schema."`
-	Serve   ServeCmd   `cmd:"" default:"withargs" help:"Run API server."`
+	OpenAPI     OpenAPICmd     `cmd:"" name:"openapi" help:"Dump OpenAPI schema."`
+	Serve       ServeCmd       `cmd:"" default:"withargs" help:"Run API server."`
+	CheckHealth CheckHealthCmd `cmd:"" help:"Check API server health."`
 	Globals
 }
 
