@@ -78,7 +78,7 @@ func (s *ServeCmd) Run(ctx context.Context, l *zerolog.Logger, globals *Globals)
 	config := parkserver.Config{
 		DBPool:   pool,
 		Addr:     net.JoinHostPort("", strconv.Itoa(int(s.Port))),
-		Insecure: false,
+		Insecure: s.Insecure,
 	}
 
 	log.Info().Msg("running migrations")
@@ -87,6 +87,9 @@ func (s *ServeCmd) Run(ctx context.Context, l *zerolog.Logger, globals *Globals)
 		return fmt.Errorf("error running migrations: %w", err)
 	}
 
+	if config.Insecure {
+		log.Warn().Msg("running in insecure mode")
+	}
 	log.Info().Uint16("port", s.Port).Msg("server started")
 	err = config.ListenAndServe(ctx)
 	if err != nil {
