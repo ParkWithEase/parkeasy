@@ -60,7 +60,7 @@ func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID)
 		}
 		return models.ParkingSpot{}, err
 	}
-	if result.OwnerID != userID && !result.IsPublic {
+	if result.OwnerID != userID {
 		return models.ParkingSpot{}, models.ErrParkingSpotNotFound
 	}
 	return result.ParkingSpot, nil
@@ -76,10 +76,6 @@ func (s *Service) DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UU
 		return err
 	}
 	if result.OwnerID != userID {
-		// Spots owned by an another user but not public should act like a missing spot
-		if !result.IsPublic {
-			return nil
-		}
 		return models.ErrParkingSpotOwned
 	}
 	return s.repo.DeleteByUUID(ctx, spotID)
