@@ -10,3 +10,4 @@ CREATE TABLE IF NOT EXISTS StandardBooking (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS StandardBookingUUIDIdx ON StandardBooking(StandardBookingUUID);
+CREATE UNIQUE INDEX IF NOT EXISTS StandardBookingDetailsIdx ON StandardBooking(ListingId, StartUnitNum, EndUnitNum, Date);

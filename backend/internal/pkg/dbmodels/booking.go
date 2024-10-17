@@ -26,7 +26,7 @@ import (
 type Booking struct {
 	Bookingid   int64   `db:"bookingid,pk" `
 	Buyeruserid int64   `db:"buyeruserid" `
-	Paidamount  float32 `db:"paidamount" `
+	Paidamount  float64 `db:"paidamount" `
 
 	R bookingR `db:"-" `
 }
@@ -57,7 +57,7 @@ type bookingR struct {
 type BookingSetter struct {
 	Bookingid   omit.Val[int64]   `db:"bookingid,pk" `
 	Buyeruserid omit.Val[int64]   `db:"buyeruserid" `
-	Paidamount  omit.Val[float32] `db:"paidamount" `
+	Paidamount  omit.Val[float64] `db:"paidamount" `
 }
 
 func (s BookingSetter) SetColumns() []string {
@@ -178,7 +178,7 @@ func buildBookingColumns(alias string) bookingColumns {
 type bookingWhere[Q psql.Filterable] struct {
 	Bookingid   psql.WhereMod[Q, int64]
 	Buyeruserid psql.WhereMod[Q, int64]
-	Paidamount  psql.WhereMod[Q, float32]
+	Paidamount  psql.WhereMod[Q, float64]
 }
 
 func (bookingWhere[Q]) AliasedAs(alias string) bookingWhere[Q] {
@@ -189,7 +189,7 @@ func buildBookingWhere[Q psql.Filterable](cols bookingColumns) bookingWhere[Q] {
 	return bookingWhere[Q]{
 		Bookingid:   psql.Where[Q, int64](cols.Bookingid),
 		Buyeruserid: psql.Where[Q, int64](cols.Buyeruserid),
-		Paidamount:  psql.Where[Q, float32](cols.Paidamount),
+		Paidamount:  psql.Where[Q, float64](cols.Paidamount),
 	}
 }
 

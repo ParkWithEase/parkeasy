@@ -3,14 +3,15 @@ package standardbooking
 import (
 	"context"
 	"errors"
-	"go/constant"
 
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
-	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 )
 
-var ErrNotFound = errors.New("no standard booking found")
+var (
+	ErrDuplicatedStandardBooking = errors.New("standard booking already exist in the database")
+	ErrNotFound = errors.New("no standard booking found")
+)
 
 type Entry struct {
 	models.StandardBooking
@@ -21,8 +22,8 @@ type Entry struct {
 }
 
 type Repository interface {
-	Create(ctx context.Context, userID int64, listingID int64, booking models.StandardBookingCreationInput) (Entry, err)
-	GetByUUID(ctx context.Context, bookingID uuid.UUID) (Entry, err)
+	Create(ctx context.Context, userID int64, listingID int64, booking models.StandardBookingCreationInput) (Entry, error)
+	GetByUUID(ctx context.Context, bookingID uuid.UUID) (Entry, error)
 }
 
 
