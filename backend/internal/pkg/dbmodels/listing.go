@@ -50,8 +50,7 @@ type ListingsStmt = bob.QueryStmt[*Listing, ListingSlice]
 
 // listingR is where relationships are stored.
 type listingR struct {
-	ParkingspotidParkingspot *Parkingspot  // listing.listing_parkingspotid_fkey
-	ListingidTimeunits       TimeunitSlice // timeunit.timeunit_listingid_fkey
+	ParkingspotidParkingspot *Parkingspot // listing.listing_parkingspotid_fkey
 }
 
 // ListingSetter is used for insert/upsert/update operations
@@ -251,7 +250,6 @@ func buildListingWhere[Q psql.Filterable](cols listingColumns) listingWhere[Q] {
 type listingJoins[Q dialect.Joinable] struct {
 	typ                      string
 	ParkingspotidParkingspot func(context.Context) modAs[Q, parkingspotColumns]
-	ListingidTimeunits       func(context.Context) modAs[Q, timeunitColumns]
 }
 
 func (j listingJoins[Q]) aliasedAs(alias string) listingJoins[Q] {
@@ -262,7 +260,6 @@ func buildListingJoins[Q dialect.Joinable](cols listingColumns, typ string) list
 	return listingJoins[Q]{
 		typ:                      typ,
 		ParkingspotidParkingspot: listingsJoinParkingspotidParkingspot[Q](cols, typ),
-		ListingidTimeunits:       listingsJoinListingidTimeunits[Q](cols, typ),
 	}
 }
 
@@ -380,25 +377,6 @@ func listingsJoinParkingspotidParkingspot[Q dialect.Joinable](from listingColumn
 	}
 }
 
-func listingsJoinListingidTimeunits[Q dialect.Joinable](from listingColumns, typ string) func(context.Context) modAs[Q, timeunitColumns] {
-	return func(ctx context.Context) modAs[Q, timeunitColumns] {
-		return modAs[Q, timeunitColumns]{
-			c: TimeunitColumns,
-			f: func(to timeunitColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Timeunits.Name(ctx).As(to.Alias())).On(
-						to.Listingid.EQ(from.Listingid),
-					))
-				}
-
-				return mods
-			},
-		}
-	}
-}
-
 // ParkingspotidParkingspot starts a query for related objects on parkingspot
 func (o *Listing) ParkingspotidParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
 	return Parkingspots.Query(ctx, exec, append(mods,
@@ -414,24 +392,6 @@ func (os ListingSlice) ParkingspotidParkingspot(ctx context.Context, exec bob.Ex
 
 	return Parkingspots.Query(ctx, exec, append(mods,
 		sm.Where(psql.Group(ParkingspotColumns.Parkingspotid).In(PKArgs...)),
-	)...)
-}
-
-// ListingidTimeunits starts a query for related objects on timeunit
-func (o *Listing) ListingidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
-	return Timeunits.Query(ctx, exec, append(mods,
-		sm.Where(TimeunitColumns.Listingid.EQ(psql.Arg(o.Listingid))),
-	)...)
-}
-
-func (os ListingSlice) ListingidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
-	PKArgs := make([]bob.Expression, len(os))
-	for i, o := range os {
-		PKArgs[i] = psql.ArgGroup(o.Listingid)
-	}
-
-	return Timeunits.Query(ctx, exec, append(mods,
-		sm.Where(psql.Group(TimeunitColumns.Listingid).In(PKArgs...)),
 	)...)
 }
 
@@ -451,20 +411,6 @@ func (o *Listing) Preload(name string, retrieved any) error {
 
 		if rel != nil {
 			rel.R.ParkingspotidListings = ListingSlice{o}
-		}
-		return nil
-	case "ListingidTimeunits":
-		rels, ok := retrieved.(TimeunitSlice)
-		if !ok {
-			return fmt.Errorf("listing cannot load %T as %q", retrieved, name)
-		}
-
-		o.R.ListingidTimeunits = rels
-
-		for _, rel := range rels {
-			if rel != nil {
-				rel.R.ListingidListing = o
-			}
 		}
 		return nil
 	default:
@@ -560,78 +506,6 @@ func (os ListingSlice) LoadListingParkingspotidParkingspot(ctx context.Context, 
 	return nil
 }
 
-func ThenLoadListingListingidTimeunits(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
-	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
-		loader, isLoader := retrieved.(interface {
-			LoadListingListingidTimeunits(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
-		})
-		if !isLoader {
-			return fmt.Errorf("object %T cannot load ListingListingidTimeunits", retrieved)
-		}
-
-		err := loader.LoadListingListingidTimeunits(ctx, exec, queryMods...)
-
-		// Don't cause an issue due to missing relationships
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil
-		}
-
-		return err
-	})
-}
-
-// LoadListingListingidTimeunits loads the listing's ListingidTimeunits into the .R struct
-func (o *Listing) LoadListingListingidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if o == nil {
-		return nil
-	}
-
-	// Reset the relationship
-	o.R.ListingidTimeunits = nil
-
-	related, err := o.ListingidTimeunits(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, rel := range related {
-		rel.R.ListingidListing = o
-	}
-
-	o.R.ListingidTimeunits = related
-	return nil
-}
-
-// LoadListingListingidTimeunits loads the listing's ListingidTimeunits into the .R struct
-func (os ListingSlice) LoadListingListingidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if len(os) == 0 {
-		return nil
-	}
-
-	timeunits, err := os.ListingidTimeunits(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, o := range os {
-		o.R.ListingidTimeunits = nil
-	}
-
-	for _, o := range os {
-		for _, rel := range timeunits {
-			if o.Listingid != rel.Listingid {
-				continue
-			}
-
-			rel.R.ListingidListing = o
-
-			o.R.ListingidTimeunits = append(o.R.ListingidTimeunits, rel)
-		}
-	}
-
-	return nil
-}
-
 func attachListingParkingspotidParkingspot0(ctx context.Context, exec bob.Executor, count int, listing0 *Listing, parkingspot1 *Parkingspot) (*Listing, error) {
 	setter := &ListingSetter{
 		Parkingspotid: omit.From(parkingspot1.Parkingspotid),
@@ -674,72 +548,6 @@ func (listing0 *Listing) AttachParkingspotidParkingspot(ctx context.Context, exe
 	listing0.R.ParkingspotidParkingspot = parkingspot1
 
 	parkingspot1.R.ParkingspotidListings = append(parkingspot1.R.ParkingspotidListings, listing0)
-
-	return nil
-}
-
-func insertListingListingidTimeunits0(ctx context.Context, exec bob.Executor, timeunits1 []*TimeunitSetter, listing0 *Listing) (TimeunitSlice, error) {
-	for i := range timeunits1 {
-		timeunits1[i].Listingid = omit.From(listing0.Listingid)
-	}
-
-	ret, err := Timeunits.InsertMany(ctx, exec, timeunits1...)
-	if err != nil {
-		return ret, fmt.Errorf("insertListingListingidTimeunits0: %w", err)
-	}
-
-	return ret, nil
-}
-
-func attachListingListingidTimeunits0(ctx context.Context, exec bob.Executor, count int, timeunits1 TimeunitSlice, listing0 *Listing) (TimeunitSlice, error) {
-	setter := &TimeunitSetter{
-		Listingid: omit.From(listing0.Listingid),
-	}
-
-	err := Timeunits.Update(ctx, exec, setter, timeunits1...)
-	if err != nil {
-		return nil, fmt.Errorf("attachListingListingidTimeunits0: %w", err)
-	}
-
-	return timeunits1, nil
-}
-
-func (listing0 *Listing) InsertListingidTimeunits(ctx context.Context, exec bob.Executor, related ...*TimeunitSetter) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	timeunits1, err := insertListingListingidTimeunits0(ctx, exec, related, listing0)
-	if err != nil {
-		return err
-	}
-
-	listing0.R.ListingidTimeunits = append(listing0.R.ListingidTimeunits, timeunits1...)
-
-	for _, rel := range timeunits1 {
-		rel.R.ListingidListing = listing0
-	}
-	return nil
-}
-
-func (listing0 *Listing) AttachListingidTimeunits(ctx context.Context, exec bob.Executor, related ...*Timeunit) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-	timeunits1 := TimeunitSlice(related)
-
-	_, err = attachListingListingidTimeunits0(ctx, exec, len(related), timeunits1, listing0)
-	if err != nil {
-		return err
-	}
-
-	listing0.R.ListingidTimeunits = append(listing0.R.ListingidTimeunits, timeunits1...)
-
-	for _, rel := range related {
-		rel.R.ListingidListing = listing0
-	}
 
 	return nil
 }

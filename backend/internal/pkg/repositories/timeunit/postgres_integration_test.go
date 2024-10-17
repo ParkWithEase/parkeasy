@@ -87,7 +87,7 @@ func TestPostgresIntegration(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("duplicate address creation should fail", func(t *testing.T) {
+	t.Run("duplicate time unit creation should fail", func(t *testing.T) {
 
 		t.Cleanup(func() {
 			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))

@@ -50,7 +50,6 @@ type TimeunitsStmt = bob.QueryStmt[*Timeunit, TimeunitSlice]
 // timeunitR is where relationships are stored.
 type timeunitR struct {
 	BookingidBooking *Booking // timeunit.timeunit_bookingid_fkey
-	ListingidListing *Listing // timeunit.timeunit_listingid_fkey
 }
 
 // TimeunitSetter is used for insert/upsert/update operations
@@ -224,7 +223,6 @@ func buildTimeunitWhere[Q psql.Filterable](cols timeunitColumns) timeunitWhere[Q
 type timeunitJoins[Q dialect.Joinable] struct {
 	typ              string
 	BookingidBooking func(context.Context) modAs[Q, bookingColumns]
-	ListingidListing func(context.Context) modAs[Q, listingColumns]
 }
 
 func (j timeunitJoins[Q]) aliasedAs(alias string) timeunitJoins[Q] {
@@ -235,7 +233,6 @@ func buildTimeunitJoins[Q dialect.Joinable](cols timeunitColumns, typ string) ti
 	return timeunitJoins[Q]{
 		typ:              typ,
 		BookingidBooking: timeunitsJoinBookingidBooking[Q](cols, typ),
-		ListingidListing: timeunitsJoinListingidListing[Q](cols, typ),
 	}
 }
 
@@ -377,25 +374,6 @@ func timeunitsJoinBookingidBooking[Q dialect.Joinable](from timeunitColumns, typ
 	}
 }
 
-func timeunitsJoinListingidListing[Q dialect.Joinable](from timeunitColumns, typ string) func(context.Context) modAs[Q, listingColumns] {
-	return func(ctx context.Context) modAs[Q, listingColumns] {
-		return modAs[Q, listingColumns]{
-			c: ListingColumns,
-			f: func(to listingColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Listings.Name(ctx).As(to.Alias())).On(
-						to.Listingid.EQ(from.Listingid),
-					))
-				}
-
-				return mods
-			},
-		}
-	}
-}
-
 // BookingidBooking starts a query for related objects on booking
 func (o *Timeunit) BookingidBooking(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
 	return Bookings.Query(ctx, exec, append(mods,
@@ -411,24 +389,6 @@ func (os TimeunitSlice) BookingidBooking(ctx context.Context, exec bob.Executor,
 
 	return Bookings.Query(ctx, exec, append(mods,
 		sm.Where(psql.Group(BookingColumns.Bookingid).In(PKArgs...)),
-	)...)
-}
-
-// ListingidListing starts a query for related objects on listing
-func (o *Timeunit) ListingidListing(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ListingsQuery {
-	return Listings.Query(ctx, exec, append(mods,
-		sm.Where(ListingColumns.Listingid.EQ(psql.Arg(o.Listingid))),
-	)...)
-}
-
-func (os TimeunitSlice) ListingidListing(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ListingsQuery {
-	PKArgs := make([]bob.Expression, len(os))
-	for i, o := range os {
-		PKArgs[i] = psql.ArgGroup(o.Listingid)
-	}
-
-	return Listings.Query(ctx, exec, append(mods,
-		sm.Where(psql.Group(ListingColumns.Listingid).In(PKArgs...)),
 	)...)
 }
 
@@ -448,18 +408,6 @@ func (o *Timeunit) Preload(name string, retrieved any) error {
 
 		if rel != nil {
 			rel.R.BookingidTimeunits = TimeunitSlice{o}
-		}
-		return nil
-	case "ListingidListing":
-		rel, ok := retrieved.(*Listing)
-		if !ok {
-			return fmt.Errorf("timeunit cannot load %T as %q", retrieved, name)
-		}
-
-		o.R.ListingidListing = rel
-
-		if rel != nil {
-			rel.R.ListingidTimeunits = TimeunitSlice{o}
 		}
 		return nil
 	default:
@@ -555,94 +503,6 @@ func (os TimeunitSlice) LoadTimeunitBookingidBooking(ctx context.Context, exec b
 	return nil
 }
 
-func PreloadTimeunitListingidListing(opts ...psql.PreloadOption) psql.Preloader {
-	return psql.Preload[*Listing, ListingSlice](orm.Relationship{
-		Name: "ListingidListing",
-		Sides: []orm.RelSide{
-			{
-				From: "timeunit",
-				To:   TableNames.Listings,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Listings.Name(ctx)
-				},
-				FromColumns: []string{
-					ColumnNames.Timeunits.Listingid,
-				},
-				ToColumns: []string{
-					ColumnNames.Listings.Listingid,
-				},
-			},
-		},
-	}, Listings.Columns().Names(), opts...)
-}
-
-func ThenLoadTimeunitListingidListing(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
-	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
-		loader, isLoader := retrieved.(interface {
-			LoadTimeunitListingidListing(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
-		})
-		if !isLoader {
-			return fmt.Errorf("object %T cannot load TimeunitListingidListing", retrieved)
-		}
-
-		err := loader.LoadTimeunitListingidListing(ctx, exec, queryMods...)
-
-		// Don't cause an issue due to missing relationships
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil
-		}
-
-		return err
-	})
-}
-
-// LoadTimeunitListingidListing loads the timeunit's ListingidListing into the .R struct
-func (o *Timeunit) LoadTimeunitListingidListing(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if o == nil {
-		return nil
-	}
-
-	// Reset the relationship
-	o.R.ListingidListing = nil
-
-	related, err := o.ListingidListing(ctx, exec, mods...).One()
-	if err != nil {
-		return err
-	}
-
-	related.R.ListingidTimeunits = TimeunitSlice{o}
-
-	o.R.ListingidListing = related
-	return nil
-}
-
-// LoadTimeunitListingidListing loads the timeunit's ListingidListing into the .R struct
-func (os TimeunitSlice) LoadTimeunitListingidListing(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if len(os) == 0 {
-		return nil
-	}
-
-	listings, err := os.ListingidListing(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, o := range os {
-		for _, rel := range listings {
-			if o.Listingid != rel.Listingid {
-				continue
-			}
-
-			rel.R.ListingidTimeunits = append(rel.R.ListingidTimeunits, o)
-
-			o.R.ListingidListing = rel
-			break
-		}
-	}
-
-	return nil
-}
-
 func attachTimeunitBookingidBooking0(ctx context.Context, exec bob.Executor, count int, timeunit0 *Timeunit, booking1 *Booking) (*Timeunit, error) {
 	setter := &TimeunitSetter{
 		Bookingid: omitnull.From(booking1.Bookingid),
@@ -685,52 +545,6 @@ func (timeunit0 *Timeunit) AttachBookingidBooking(ctx context.Context, exec bob.
 	timeunit0.R.BookingidBooking = booking1
 
 	booking1.R.BookingidTimeunits = append(booking1.R.BookingidTimeunits, timeunit0)
-
-	return nil
-}
-
-func attachTimeunitListingidListing0(ctx context.Context, exec bob.Executor, count int, timeunit0 *Timeunit, listing1 *Listing) (*Timeunit, error) {
-	setter := &TimeunitSetter{
-		Listingid: omit.From(listing1.Listingid),
-	}
-
-	err := Timeunits.Update(ctx, exec, setter, timeunit0)
-	if err != nil {
-		return nil, fmt.Errorf("attachTimeunitListingidListing0: %w", err)
-	}
-
-	return timeunit0, nil
-}
-
-func (timeunit0 *Timeunit) InsertListingidListing(ctx context.Context, exec bob.Executor, related *ListingSetter) error {
-	listing1, err := Listings.Insert(ctx, exec, related)
-	if err != nil {
-		return fmt.Errorf("inserting related objects: %w", err)
-	}
-
-	_, err = attachTimeunitListingidListing0(ctx, exec, 1, timeunit0, listing1)
-	if err != nil {
-		return err
-	}
-
-	timeunit0.R.ListingidListing = listing1
-
-	listing1.R.ListingidTimeunits = append(listing1.R.ListingidTimeunits, timeunit0)
-
-	return nil
-}
-
-func (timeunit0 *Timeunit) AttachListingidListing(ctx context.Context, exec bob.Executor, listing1 *Listing) error {
-	var err error
-
-	_, err = attachTimeunitListingidListing0(ctx, exec, 1, timeunit0, listing1)
-	if err != nil {
-		return err
-	}
-
-	timeunit0.R.ListingidListing = listing1
-
-	listing1.R.ListingidTimeunits = append(listing1.R.ListingidTimeunits, timeunit0)
 
 	return nil
 }

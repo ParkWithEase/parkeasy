@@ -11,7 +11,6 @@ import (
 
 	"github.com/aarondl/opt/omit"
 	"github.com/aarondl/opt/omitnull"
-	"github.com/google/uuid"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
@@ -25,10 +24,9 @@ import (
 
 // Booking is an object representing the database table.
 type Booking struct {
-	Bookingid   int64     `db:"bookingid,pk" `
-	Buyeruserid int64     `db:"buyeruserid" `
-	Bookinguuid uuid.UUID `db:"bookinguuid" `
-	Paidamount  float32   `db:"paidamount" `
+	Bookingid   int64   `db:"bookingid,pk" `
+	Buyeruserid int64   `db:"buyeruserid" `
+	Paidamount  float32 `db:"paidamount" `
 
 	R bookingR `db:"-" `
 }
@@ -48,32 +46,28 @@ type BookingsStmt = bob.QueryStmt[*Booking, BookingSlice]
 
 // bookingR is where relationships are stored.
 type bookingR struct {
-	BuyeruseridUser    *User         // booking.booking_buyeruserid_fkey
-	BookingidTimeunits TimeunitSlice // timeunit.timeunit_bookingid_fkey
+	BuyeruseridUser           *User                // booking.booking_buyeruserid_fkey
+	BookingidStandardbookings StandardbookingSlice // standardbooking.standardbooking_bookingid_fkey
+	BookingidTimeunits        TimeunitSlice        // timeunit.timeunit_bookingid_fkey
 }
 
 // BookingSetter is used for insert/upsert/update operations
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type BookingSetter struct {
-	Bookingid   omit.Val[int64]     `db:"bookingid,pk" `
-	Buyeruserid omit.Val[int64]     `db:"buyeruserid" `
-	Bookinguuid omit.Val[uuid.UUID] `db:"bookinguuid" `
-	Paidamount  omit.Val[float32]   `db:"paidamount" `
+	Bookingid   omit.Val[int64]   `db:"bookingid,pk" `
+	Buyeruserid omit.Val[int64]   `db:"buyeruserid" `
+	Paidamount  omit.Val[float32] `db:"paidamount" `
 }
 
 func (s BookingSetter) SetColumns() []string {
-	vals := make([]string, 0, 4)
+	vals := make([]string, 0, 3)
 	if !s.Bookingid.IsUnset() {
 		vals = append(vals, "bookingid")
 	}
 
 	if !s.Buyeruserid.IsUnset() {
 		vals = append(vals, "buyeruserid")
-	}
-
-	if !s.Bookinguuid.IsUnset() {
-		vals = append(vals, "bookinguuid")
 	}
 
 	if !s.Paidamount.IsUnset() {
@@ -90,16 +84,13 @@ func (s BookingSetter) Overwrite(t *Booking) {
 	if !s.Buyeruserid.IsUnset() {
 		t.Buyeruserid, _ = s.Buyeruserid.Get()
 	}
-	if !s.Bookinguuid.IsUnset() {
-		t.Bookinguuid, _ = s.Bookinguuid.Get()
-	}
 	if !s.Paidamount.IsUnset() {
 		t.Paidamount, _ = s.Paidamount.Get()
 	}
 }
 
 func (s BookingSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 4)
+	vals := make([]bob.Expression, 3)
 	if s.Bookingid.IsUnset() {
 		vals[0] = psql.Raw("DEFAULT")
 	} else {
@@ -112,16 +103,10 @@ func (s BookingSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
 		vals[1] = psql.Arg(s.Buyeruserid)
 	}
 
-	if s.Bookinguuid.IsUnset() {
+	if s.Paidamount.IsUnset() {
 		vals[2] = psql.Raw("DEFAULT")
 	} else {
-		vals[2] = psql.Arg(s.Bookinguuid)
-	}
-
-	if s.Paidamount.IsUnset() {
-		vals[3] = psql.Raw("DEFAULT")
-	} else {
-		vals[3] = psql.Arg(s.Paidamount)
+		vals[2] = psql.Arg(s.Paidamount)
 	}
 
 	return im.Values(vals...)
@@ -132,7 +117,7 @@ func (s BookingSetter) Apply(q *dialect.UpdateQuery) {
 }
 
 func (s BookingSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 4)
+	exprs := make([]bob.Expression, 0, 3)
 
 	if !s.Bookingid.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -145,13 +130,6 @@ func (s BookingSetter) Expressions(prefix ...string) []bob.Expression {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			psql.Quote(append(prefix, "buyeruserid")...),
 			psql.Arg(s.Buyeruserid),
-		}})
-	}
-
-	if !s.Bookinguuid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "bookinguuid")...),
-			psql.Arg(s.Bookinguuid),
 		}})
 	}
 
@@ -168,7 +146,6 @@ func (s BookingSetter) Expressions(prefix ...string) []bob.Expression {
 type bookingColumnNames struct {
 	Bookingid   string
 	Buyeruserid string
-	Bookinguuid string
 	Paidamount  string
 }
 
@@ -178,7 +155,6 @@ type bookingColumns struct {
 	tableAlias  string
 	Bookingid   psql.Expression
 	Buyeruserid psql.Expression
-	Bookinguuid psql.Expression
 	Paidamount  psql.Expression
 }
 
@@ -195,7 +171,6 @@ func buildBookingColumns(alias string) bookingColumns {
 		tableAlias:  alias,
 		Bookingid:   psql.Quote(alias, "bookingid"),
 		Buyeruserid: psql.Quote(alias, "buyeruserid"),
-		Bookinguuid: psql.Quote(alias, "bookinguuid"),
 		Paidamount:  psql.Quote(alias, "paidamount"),
 	}
 }
@@ -203,7 +178,6 @@ func buildBookingColumns(alias string) bookingColumns {
 type bookingWhere[Q psql.Filterable] struct {
 	Bookingid   psql.WhereMod[Q, int64]
 	Buyeruserid psql.WhereMod[Q, int64]
-	Bookinguuid psql.WhereMod[Q, uuid.UUID]
 	Paidamount  psql.WhereMod[Q, float32]
 }
 
@@ -215,15 +189,15 @@ func buildBookingWhere[Q psql.Filterable](cols bookingColumns) bookingWhere[Q] {
 	return bookingWhere[Q]{
 		Bookingid:   psql.Where[Q, int64](cols.Bookingid),
 		Buyeruserid: psql.Where[Q, int64](cols.Buyeruserid),
-		Bookinguuid: psql.Where[Q, uuid.UUID](cols.Bookinguuid),
 		Paidamount:  psql.Where[Q, float32](cols.Paidamount),
 	}
 }
 
 type bookingJoins[Q dialect.Joinable] struct {
-	typ                string
-	BuyeruseridUser    func(context.Context) modAs[Q, userColumns]
-	BookingidTimeunits func(context.Context) modAs[Q, timeunitColumns]
+	typ                       string
+	BuyeruseridUser           func(context.Context) modAs[Q, userColumns]
+	BookingidStandardbookings func(context.Context) modAs[Q, standardbookingColumns]
+	BookingidTimeunits        func(context.Context) modAs[Q, timeunitColumns]
 }
 
 func (j bookingJoins[Q]) aliasedAs(alias string) bookingJoins[Q] {
@@ -232,9 +206,10 @@ func (j bookingJoins[Q]) aliasedAs(alias string) bookingJoins[Q] {
 
 func buildBookingJoins[Q dialect.Joinable](cols bookingColumns, typ string) bookingJoins[Q] {
 	return bookingJoins[Q]{
-		typ:                typ,
-		BuyeruseridUser:    bookingsJoinBuyeruseridUser[Q](cols, typ),
-		BookingidTimeunits: bookingsJoinBookingidTimeunits[Q](cols, typ),
+		typ:                       typ,
+		BuyeruseridUser:           bookingsJoinBuyeruseridUser[Q](cols, typ),
+		BookingidStandardbookings: bookingsJoinBookingidStandardbookings[Q](cols, typ),
+		BookingidTimeunits:        bookingsJoinBookingidTimeunits[Q](cols, typ),
 	}
 }
 
@@ -352,6 +327,25 @@ func bookingsJoinBuyeruseridUser[Q dialect.Joinable](from bookingColumns, typ st
 	}
 }
 
+func bookingsJoinBookingidStandardbookings[Q dialect.Joinable](from bookingColumns, typ string) func(context.Context) modAs[Q, standardbookingColumns] {
+	return func(ctx context.Context) modAs[Q, standardbookingColumns] {
+		return modAs[Q, standardbookingColumns]{
+			c: StandardbookingColumns,
+			f: func(to standardbookingColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Standardbookings.Name(ctx).As(to.Alias())).On(
+						to.Bookingid.EQ(from.Bookingid),
+					))
+				}
+
+				return mods
+			},
+		}
+	}
+}
+
 func bookingsJoinBookingidTimeunits[Q dialect.Joinable](from bookingColumns, typ string) func(context.Context) modAs[Q, timeunitColumns] {
 	return func(ctx context.Context) modAs[Q, timeunitColumns] {
 		return modAs[Q, timeunitColumns]{
@@ -389,6 +383,24 @@ func (os BookingSlice) BuyeruseridUser(ctx context.Context, exec bob.Executor, m
 	)...)
 }
 
+// BookingidStandardbookings starts a query for related objects on standardbooking
+func (o *Booking) BookingidStandardbookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) StandardbookingsQuery {
+	return Standardbookings.Query(ctx, exec, append(mods,
+		sm.Where(StandardbookingColumns.Bookingid.EQ(psql.Arg(o.Bookingid))),
+	)...)
+}
+
+func (os BookingSlice) BookingidStandardbookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) StandardbookingsQuery {
+	PKArgs := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgs[i] = psql.ArgGroup(o.Bookingid)
+	}
+
+	return Standardbookings.Query(ctx, exec, append(mods,
+		sm.Where(psql.Group(StandardbookingColumns.Bookingid).In(PKArgs...)),
+	)...)
+}
+
 // BookingidTimeunits starts a query for related objects on timeunit
 func (o *Booking) BookingidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
 	return Timeunits.Query(ctx, exec, append(mods,
@@ -423,6 +435,20 @@ func (o *Booking) Preload(name string, retrieved any) error {
 
 		if rel != nil {
 			rel.R.BuyeruseridBookings = BookingSlice{o}
+		}
+		return nil
+	case "BookingidStandardbookings":
+		rels, ok := retrieved.(StandardbookingSlice)
+		if !ok {
+			return fmt.Errorf("booking cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.BookingidStandardbookings = rels
+
+		for _, rel := range rels {
+			if rel != nil {
+				rel.R.BookingidBooking = o
+			}
 		}
 		return nil
 	case "BookingidTimeunits":
@@ -526,6 +552,78 @@ func (os BookingSlice) LoadBookingBuyeruseridUser(ctx context.Context, exec bob.
 
 			o.R.BuyeruseridUser = rel
 			break
+		}
+	}
+
+	return nil
+}
+
+func ThenLoadBookingBookingidStandardbookings(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
+	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+		loader, isLoader := retrieved.(interface {
+			LoadBookingBookingidStandardbookings(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+		})
+		if !isLoader {
+			return fmt.Errorf("object %T cannot load BookingBookingidStandardbookings", retrieved)
+		}
+
+		err := loader.LoadBookingBookingidStandardbookings(ctx, exec, queryMods...)
+
+		// Don't cause an issue due to missing relationships
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+
+		return err
+	})
+}
+
+// LoadBookingBookingidStandardbookings loads the booking's BookingidStandardbookings into the .R struct
+func (o *Booking) LoadBookingBookingidStandardbookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.BookingidStandardbookings = nil
+
+	related, err := o.BookingidStandardbookings(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, rel := range related {
+		rel.R.BookingidBooking = o
+	}
+
+	o.R.BookingidStandardbookings = related
+	return nil
+}
+
+// LoadBookingBookingidStandardbookings loads the booking's BookingidStandardbookings into the .R struct
+func (os BookingSlice) LoadBookingBookingidStandardbookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	standardbookings, err := os.BookingidStandardbookings(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		o.R.BookingidStandardbookings = nil
+	}
+
+	for _, o := range os {
+		for _, rel := range standardbookings {
+			if o.Bookingid != rel.Bookingid {
+				continue
+			}
+
+			rel.R.BookingidBooking = o
+
+			o.R.BookingidStandardbookings = append(o.R.BookingidStandardbookings, rel)
 		}
 	}
 
@@ -646,6 +744,72 @@ func (booking0 *Booking) AttachBuyeruseridUser(ctx context.Context, exec bob.Exe
 	booking0.R.BuyeruseridUser = user1
 
 	user1.R.BuyeruseridBookings = append(user1.R.BuyeruseridBookings, booking0)
+
+	return nil
+}
+
+func insertBookingBookingidStandardbookings0(ctx context.Context, exec bob.Executor, standardbookings1 []*StandardbookingSetter, booking0 *Booking) (StandardbookingSlice, error) {
+	for i := range standardbookings1 {
+		standardbookings1[i].Bookingid = omit.From(booking0.Bookingid)
+	}
+
+	ret, err := Standardbookings.InsertMany(ctx, exec, standardbookings1...)
+	if err != nil {
+		return ret, fmt.Errorf("insertBookingBookingidStandardbookings0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachBookingBookingidStandardbookings0(ctx context.Context, exec bob.Executor, count int, standardbookings1 StandardbookingSlice, booking0 *Booking) (StandardbookingSlice, error) {
+	setter := &StandardbookingSetter{
+		Bookingid: omit.From(booking0.Bookingid),
+	}
+
+	err := Standardbookings.Update(ctx, exec, setter, standardbookings1...)
+	if err != nil {
+		return nil, fmt.Errorf("attachBookingBookingidStandardbookings0: %w", err)
+	}
+
+	return standardbookings1, nil
+}
+
+func (booking0 *Booking) InsertBookingidStandardbookings(ctx context.Context, exec bob.Executor, related ...*StandardbookingSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	standardbookings1, err := insertBookingBookingidStandardbookings0(ctx, exec, related, booking0)
+	if err != nil {
+		return err
+	}
+
+	booking0.R.BookingidStandardbookings = append(booking0.R.BookingidStandardbookings, standardbookings1...)
+
+	for _, rel := range standardbookings1 {
+		rel.R.BookingidBooking = booking0
+	}
+	return nil
+}
+
+func (booking0 *Booking) AttachBookingidStandardbookings(ctx context.Context, exec bob.Executor, related ...*Standardbooking) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	standardbookings1 := StandardbookingSlice(related)
+
+	_, err = attachBookingBookingidStandardbookings0(ctx, exec, len(related), standardbookings1, booking0)
+	if err != nil {
+		return err
+	}
+
+	booking0.R.BookingidStandardbookings = append(booking0.R.BookingidStandardbookings, standardbookings1...)
+
+	for _, rel := range related {
+		rel.R.BookingidBooking = booking0
+	}
 
 	return nil
 }
