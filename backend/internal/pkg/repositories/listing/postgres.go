@@ -10,7 +10,6 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/aarondl/opt/omit"
 	"github.com/aarondl/opt/omitnull"
-	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
@@ -64,6 +63,6 @@ func (p *PostgresRepository) Create(ctx context.Context, parkingSpotID int64, li
 	return inserted.Parkingspotid, entry, nil
 }
 
-func (p *PostgresRepository) GetByUUID(ctx context.Context, listingID uuid.UUID) (Entry, error) {
+// func (p *PostgresRepository) GetByUUID(ctx context.Context, listingID uuid.UUID) (Entry, error) {
 
-}
+// }

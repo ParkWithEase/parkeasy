@@ -47,11 +47,16 @@ type Listing struct {
 	Spot         ParkingSpot `json:"spot" doc:"parking spot information"`
 	Availability []TimeSlot  `json:"availability" doc:"Array of available time slots"`
 	ID           uuid.UUID   `json:"id" doc:"ID of this resource"`
-	PricePerHour float32     `json:"price per hour" doc:"price per hour"`
+	PricePerHour float32     `json:"price_per_hour" doc:"price per hour"`
 }
 
 type ParkingSpotCreationInput struct {
 	Location     ParkingSpotLocation `json:"location"`
 	Features     ParkingSpotFeatures `json:"features,omitempty"`
 	Availability []TimeSlot          `json:"availability,omitempty"`
+}
+
+type ListingCreationInput struct {
+	PricePerHour float32 `json:"price_per_hour" doc:"price per hour"`
+	MakePublic   bool    `json:"make_public" doc:"if the listing is supposed to be public"`
 }
