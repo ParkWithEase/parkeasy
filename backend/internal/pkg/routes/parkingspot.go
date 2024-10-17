@@ -96,7 +96,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 					Value:    input.Body.Location,
 				}
 			}
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 		return &ParkingSpotOutput{Body: result}, nil
 	})
@@ -120,9 +120,9 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(http.StatusNotFound, err, detail)
+				return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
 			}
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
 		return &ParkingSpotOutput{Body: result}, nil
 	})
@@ -146,9 +146,9 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(http.StatusForbidden, err, detail)
+				return nil, NewHumaError(ctx, http.StatusForbidden, err, detail)
 			}
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
 		return nil, nil
 	})

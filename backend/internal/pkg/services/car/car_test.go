@@ -6,6 +6,7 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/car"
+	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -49,6 +50,12 @@ func (m *mockRepo) Create(ctx context.Context, userID int64, carModel *models.Ca
 func (m *mockRepo) DeleteByUUID(ctx context.Context, carID uuid.UUID) error {
 	args := m.Called(ctx, carID)
 	return args.Error(0)
+}
+
+// GetMany implements car.Repository.
+func (m *mockRepo) GetMany(ctx context.Context, userID int64, limit int, after omit.Val[car.Cursor]) ([]car.Entry, error) {
+	args := m.Called(ctx, userID, limit, after)
+	return args.Get(0).([]car.Entry), args.Error(1)
 }
 
 // GetByUUID implements car.Repository.
@@ -222,6 +229,100 @@ func TestGet(t *testing.T) {
 			assert.ErrorIs(t, err, models.ErrCarNotFound)
 		}
 		repo.AssertNotCalled(t, "GetByUUID")
+	})
+}
+
+func TestGetMany(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	t.Run("simple request with no next", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.On("GetMany", mock.Anything, int64(testOwnerID), 3, omit.Val[car.Cursor]{}).
+			Return([]car.Entry{{
+				Car:        models.Car{Details: sampleDetails},
+				InternalID: testInternalCarID,
+				OwnerID:    testOwnerID,
+			}}, nil).
+			Once()
+		srv := New(repo)
+
+		cars, nextCursor, err := srv.GetMany(ctx, testOwnerID, 2, "")
+		require.NoError(t, err)
+		assert.Empty(t, nextCursor)
+		if assert.Len(t, cars, 1) {
+			assert.Equal(t, models.Car{Details: sampleDetails}, cars[0])
+		}
+
+		repo.AssertExpectations(t)
+	})
+
+	sampleCars := []models.Car{
+		{Details: sampleDetails, ID: uuid.New()},
+		{Details: sampleDetails, ID: uuid.New()},
+		{Details: sampleDetails, ID: uuid.New()},
+	}
+	sampleEntries := make([]car.Entry, 0, len(sampleCars))
+	for idx, sampleCar := range sampleCars {
+		sampleEntries = append(sampleEntries, car.Entry{
+			Car:        sampleCar,
+			InternalID: int64(idx),
+			OwnerID:    testOwnerID,
+		})
+	}
+
+	t.Run("request with next cursor", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.On("GetMany", mock.Anything, int64(testOwnerID), 3, omit.Val[car.Cursor]{}).
+			Return(sampleEntries, nil).
+			Once()
+		srv := New(repo)
+
+		cars, nextCursor, err := srv.GetMany(ctx, testOwnerID, 2, "")
+		require.NoError(t, err)
+		assert.NotEmpty(t, nextCursor)
+		if assert.Len(t, cars, 2) {
+			assert.Equal(t, sampleCars[:len(sampleCars)-1], cars)
+		}
+
+		repo.On("GetMany", mock.Anything, int64(testOwnerID), 3,
+			omit.From(car.Cursor{
+				ID: sampleEntries[len(sampleEntries)-2].InternalID,
+			})).
+			Return(sampleEntries[len(sampleEntries)-1:], nil).
+			Once()
+		cars, nextCursor, err = srv.GetMany(ctx, testOwnerID, 2, nextCursor)
+		require.NoError(t, err)
+		assert.Empty(t, nextCursor)
+		if assert.Len(t, cars, 1) {
+			assert.Equal(t, sampleCars[len(sampleCars)-1], cars[0])
+		}
+
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("request with invalid cursor", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.On("GetMany", mock.Anything, int64(testOwnerID), 3, omit.Val[car.Cursor]{}).
+			Return(sampleEntries, nil).
+			Once()
+		srv := New(repo)
+
+		cars, nextCursor, err := srv.GetMany(ctx, testOwnerID, 2, "some wrong data")
+		require.NoError(t, err)
+		assert.NotEmpty(t, nextCursor)
+		if assert.Len(t, cars, 2) {
+			assert.Equal(t, sampleCars[:len(sampleCars)-1], cars)
+		}
+
+		repo.AssertExpectations(t)
 	})
 }
 

@@ -19,6 +19,7 @@ var (
 	CodeSpotInvalid         = NewUserErrorCode("spot-invalid", "2024-10-13")
 	CodeCountryNotSupported = NewUserErrorCode("country-not-supported", "2024-10-13")
 	CodeNoProfile           = NewUserErrorCode("no-profile", "2024-10-13")
+	CodeUnhealthy           = NewUserErrorCode("unhealthy", "2024-10-14")
 )
 
 // Error code for clients.

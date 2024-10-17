@@ -7,5 +7,7 @@ services:
       dockerfile: ./Containerfile.air
     volumes:
       - ./:/src # Mount codebase to /src
+    healthcheck:
+      disable: true # Can't healthcheck something that's hot-reloaded
     security_opt:
       - label=disable

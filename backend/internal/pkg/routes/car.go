@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/danielgtaylor/huma/v2"
@@ -16,6 +18,11 @@ type CarServicer interface {
 	//
 	// Returns the car internal ID and the model.
 	Create(ctx context.Context, userID int64, car *models.CarCreationInput) (int64, models.Car, error)
+	// Get at most `count` cars associated with the given `userID`.
+	//
+	// If there are more entries following the result, a non-empty cursor will be returned
+	// which can be passed to the next invocation to get the next entries.
+	GetMany(ctx context.Context, userID int64, count int, after models.Cursor) ([]models.Car, models.Cursor, error)
 	// Get the car with `carID` if `userID` has enough permission to view the resource.
 	GetByUUID(ctx context.Context, userID int64, carID uuid.UUID) (models.Car, error)
 	// Delete the car with `carID` if `userID` owns the resource.
@@ -33,6 +40,11 @@ type CarRoute struct {
 // CarOutput represents the output of the car retrieval operation
 type CarOutput struct {
 	Body models.Car
+}
+
+type CarListOutput struct {
+	Link []string `header:"Link" doc:"Contains details on getting the next page of resources" example:"</cars?after=gQL>; rel=\"next\""`
+	Body []models.Car
 }
 
 var CarTag = huma.Tag{
@@ -73,9 +85,40 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
 			detail := describeCarInputError(err, &input.Body)
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 		return &CarOutput{Body: result}, nil
+	})
+
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID: "list-cars",
+		Method:      http.MethodGet,
+		Path:        "/cars",
+		Summary:     "Get cars associated to the current user",
+		Tags:        []string{CarTag.Name},
+	}), func(ctx context.Context, input *struct {
+		After models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
+		Count int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of cars that appear per page."`
+	},
+	) (*CarListOutput, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		cars, nextCursor, err := r.service.GetMany(ctx, userID, input.Count, input.After)
+		if err != nil {
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
+		}
+
+		result := CarListOutput{Body: cars}
+		if nextCursor != "" {
+			nextURL := url.URL{
+				Path: "/cars",
+				RawQuery: url.Values{
+					"count": []string{strconv.Itoa(input.Count)},
+					"after": []string{string(nextCursor)},
+				}.Encode(),
+			}
+			result.Link = append(result.Link, "<"+nextURL.String()+`>; rel="next"`)
+		}
+		return &result, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
@@ -97,9 +140,9 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(http.StatusNotFound, err, detail)
+				return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
 			}
-			return nil, NewHumaError(http.StatusUnprocessableEntity, err)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
 		return &CarOutput{Body: result}, nil
 	})
@@ -124,9 +167,9 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(http.StatusForbidden, err, detail)
+				return nil, NewHumaError(ctx, http.StatusForbidden, err, detail)
 			default:
-				return nil, NewHumaError(http.StatusUnprocessableEntity, err)
+				return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 			}
 		}
 		return nil, nil
@@ -154,15 +197,15 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(http.StatusNotFound, err, detail)
+				return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
 			case errors.Is(err, models.ErrCarOwned):
 				detail = &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(http.StatusForbidden, err, detail)
+				return nil, NewHumaError(ctx, http.StatusForbidden, err, detail)
 			default:
-				return nil, NewHumaError(http.StatusUnprocessableEntity, err, detail)
+				return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 			}
 		}
 		return &CarOutput{Body: result}, nil
