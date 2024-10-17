@@ -12,7 +12,6 @@ type Entry struct {
 	models.ParkingSpot
 	InternalID int64 // The internal ID of this spot
 	OwnerID    int64 // The user id owning this spot
-	IsPublic   bool  // Whether this spot is publicized (ie. have an active listing)
 }
 
 var (

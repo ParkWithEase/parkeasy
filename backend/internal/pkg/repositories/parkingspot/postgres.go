@@ -89,7 +89,6 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		ParkingSpot: parkingspot,
 		InternalID:  inserted.Parkingspotid,
 		OwnerID:     inserted.Userid,
-		IsPublic:    inserted.Ispublic,
 	}
 	return inserted.Parkingspotid, entry, nil
 }
