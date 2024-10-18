@@ -131,6 +131,7 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 				return true
 			},
 			AllowCredentials: true,
+			ExposedHeaders:   []string{"Link"},
 		})
 		srv.Handler = corsMiddleware.Handler(srv.Handler)
 	}
