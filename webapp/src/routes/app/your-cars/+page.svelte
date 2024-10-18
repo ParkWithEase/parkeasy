@@ -9,6 +9,9 @@
     import { BACKEND_SERVER } from '$lib/constants';
 
     import { getErrorMessage } from '$lib/utils/error-handler';
+    import { intersectionObserver } from '@sveu/browser';
+
+    const regex = /[?&]after=([^&?]+)/;
 
     let isViewEditModalOpen: boolean = false;
     let isEditModalOpen: boolean = false;
@@ -16,22 +19,56 @@
     let selectedCarID: string;
     let selectedCarInfo: Car;
     let errorMessage: string;
-    let responses = [
-        {
-            details: {
-                license_plate: '1234565',
-                color: 'Red',
-                model: 'nuddole',
-                make: 'ferrari'
-            },
-            id: '123'
-        }
-    ];
+    let afterToken: string = '';
+    let canLoadMore: boolean = true;
+    let loadLock: boolean = false;
+    let target: HTMLElement | null = null;
+    let root: HTMLElement | null = null;
+
+    let data = [];
 
     function selectCarIndex(index: string, CarInfo: Car) {
         isViewEditModalOpen = true;
         selectedCarID = index;
         selectedCarInfo = CarInfo;
+    }
+    root = this;
+
+    $: target,
+        intersectionObserver(
+            target,
+            ([{ isIntersecting }]) => {
+                if (canLoadMore && !loadLock && isIntersecting) {
+                    loadLock = true;
+                    getPage();
+                }
+            },
+            { root }
+        );
+
+    export async function getPage() {
+        const response = await fetch(`${BACKEND_SERVER}/cars?after=${afterToken}&count=5`, {
+            credentials: 'include'
+        });
+        try {
+            if (response.ok) {
+                data = [...data, ...(await response.json())];
+
+                if (response.headers.get('link') != null) {
+                    let param = response.headers.get('link')?.match(regex);
+                    afterToken = param != null ? param[1] : '';
+                } else {
+                    canLoadMore = false;
+                    afterToken = '';
+                }
+                loadLock = false;
+            } else {
+                const errorDetails = await response.json();
+                errorMessage = getErrorMessage(errorDetails);
+            }
+        } catch (err) {
+            errorMessage = 'Something wrong happen ' + err;
+        }
     }
 
     export async function handleCreate(event: Event) {
@@ -57,7 +94,7 @@
                 const new_car = await response.json();
 
                 //temporary code to see update
-                responses = [...responses, { details: new_car.details, id: new_car.id }];
+                data = [...data, { details: new_car.details, id: new_car.id }];
                 errorMessage = '';
             } else {
                 const errorDetails = await response.json();
@@ -80,6 +117,9 @@
                 if (response.ok) {
                     errorMessage = '';
                     isViewEditModalOpen = false;
+                    data = data.filter(function (item) {
+                        return item.id !== selectedCarID;
+                    });
                 } else {
                     const errorDetails = await response.json();
                     errorMessage = getErrorMessage(errorDetails);
@@ -118,7 +158,7 @@
                 selectedCarInfo.color = formData.get('color') as string;
                 selectedCarInfo.model = formData.get('model') as string;
                 selectedCarInfo.make = formData.get('make') as string;
-                responses = [...responses];
+                data = [...data];
             } else {
                 isEditModalOpen = true;
                 const errorDetails = await response.json();
@@ -134,16 +174,26 @@
     <InlineNotification title="Error:" bind:subtitle={errorMessage} />
 {/if}
 
-<Button style="margin: 1rem;" icon={Add} on:click={() => (isAddModalOpen = true)}>New Car</Button>
+<div class="button-container" style="">
+    <Button style="margin: 1rem;" icon={Add} on:click={() => (isAddModalOpen = true)}
+        >New Car</Button
+    >
+</div>
 
-{#key responses}
-    {#each responses as car}
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-        <div on:click={() => selectCarIndex(car.id, car.details)}>
-            <CarDisplay car={car.details}></CarDisplay>
-        </div>
-    {/each}
-{/key}
+<div>
+    {#key data}
+        {#each data as car}
+            <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+            <div on:click={() => selectCarIndex(car.id, car.details)}>
+                <CarDisplay car={car.details}></CarDisplay>
+            </div>
+        {/each}
+    {/key}
+
+    {#if canLoadMore}
+        <div bind:this={target}>Loading...</div>
+    {/if}
+</div>
 
 <CarViewEditModal
     bind:openState={isViewEditModalOpen}
@@ -153,3 +203,11 @@
     on:delete={handleDelete}
 />
 <CarAddModal bind:openState={isAddModalOpen} on:submit={handleCreate} />
+
+<style>
+    .button-container {
+        position: sticky;
+        top: 0;
+        background: white;
+    }
+</style>

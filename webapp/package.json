@@ -49,6 +49,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@sveu/browser": "^1.0.1",
     "carbon-icons-svelte": "^12.12.0",
     "svelte-maplibre": "^0.9.14"
   }
