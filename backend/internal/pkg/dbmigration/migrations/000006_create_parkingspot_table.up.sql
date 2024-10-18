@@ -6,10 +6,10 @@ CREATE TABLE IF NOT EXISTS ParkingSpot (
   PostalCode TEXT NOT NULL, 
   CountryCode TEXT NOT NULL,
   City TEXT NOT NULL,
-  StreetAddress TEXT UNIQUE NOT NULL,
+  StreetAddress TEXT NOT NULL,
   Longitude REAL NOT NULL,
   Latitude REAL NOT NULL,
-  coordinates GEOGRAPHY(Point, 4326),
+  coordinates GEOGRAPHY(Point, 4326) NOT NULL,
   HasShelter BOOLEAN NOT NULL DEFAULT false,
   HasPlugIn BOOLEAN NOT NULL DEFAULT false,
   HasChargingStation BOOLEAN NOT NULL DEFAULT false
