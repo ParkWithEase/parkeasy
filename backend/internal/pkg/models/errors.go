@@ -20,6 +20,9 @@ var (
 	CodeCountryNotSupported = NewUserErrorCode("country-not-supported", "2024-10-13")
 	CodeNoProfile           = NewUserErrorCode("no-profile", "2024-10-13")
 	CodeUnhealthy           = NewUserErrorCode("unhealthy", "2024-10-14")
+	CodeInvalidUnitNums		= NewUserErrorCode("invalid-time", "2024-10-17")
+	CodeInvalidPaidAmount	= NewUserErrorCode("invalid-paid-amount", "2024-10-17")
+	CodeInvalidDate			= NewUserErrorCode("invalid-date", "2024-10-17")
 )
 
 // Error code for clients.

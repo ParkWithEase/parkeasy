@@ -81,7 +81,7 @@ func TestPostgresIntegration(t *testing.T) {
 		}
 
 		// Testing create
-		createEntry, err := repo.Create(ctx, userID, sampleListingId, sampleInput)
+		createEntry, err := repo.Create(ctx, userID, sampleListingId, &sampleInput)
 		require.NoError(t, err)
 		assert.Equal(t, sampleDetails, createEntry.StandardBooking.Details)
 		assert.NotEqual(t, uuid.Nil, createEntry.StandardBooking.ID)
@@ -94,12 +94,12 @@ func TestPostgresIntegration(t *testing.T) {
 		getEntry, err := repo.GetByUUID(ctx, createEntry.StandardBooking.ID)
 		require.NoError(t, err)
 
-		// assert.Equal(t, sampleDetails, getEntry.StandardBooking.Details)
+		assert.Equal(t, sampleDetails, getEntry.StandardBooking.Details)
 		assert.Equal(t, createEntry.StandardBooking.ID, getEntry.StandardBooking.ID)
-		// assert.NotEqual(t, -1, getEntry.InternalID)
-		// assert.NotEqual(t, -1, getEntry.BookingID)
-		// assert.Equal(t, userID, getEntry.OwnerID)
-		// assert.Equal(t, sampleListingId, getEntry.ListingID)
+		assert.NotEqual(t, -1, getEntry.InternalID)
+		assert.NotEqual(t, -1, getEntry.BookingID)
+		assert.Equal(t, userID, getEntry.OwnerID)
+		assert.Equal(t, sampleListingId, getEntry.ListingID)
 	})
 
 	t.Run("get non-existent", func(t *testing.T) {
@@ -133,11 +133,11 @@ func TestPostgresIntegration(t *testing.T) {
 		}
 
 		// Create the first booking
-		_, err := repo.Create(ctx, userID, sampleListingId, sampleInput)
+		_, err := repo.Create(ctx, userID, sampleListingId, &sampleInput)
 		require.NoError(t, err)
 
 		// Attempt to create another booking with the same details
-		_, err = repo.Create(ctx, userID, sampleListingId, sampleInput)
+		_, err = repo.Create(ctx, userID, sampleListingId, &sampleInput)
 		if assert.Error(t, err, "Creating a booking with duplicate details should fail") {
 			assert.ErrorIs(t, err, ErrDuplicatedStandardBooking)
 		}

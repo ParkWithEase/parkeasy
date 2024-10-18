@@ -7,8 +7,14 @@ import (
 )
 
 var (
-	ErrStandardBookingOwned            = CodeForbidden.WithMsg("StandardBooking is owned by an another user")
-	ErrStandardBookingNotFound         = CodeNotFound.WithMsg("this StandardBooking does not exist")
+	ErrStandardBookingOwned		= CodeForbidden.WithMsg("standard booking is owned by an another user")
+	ErrStandardBookingNotFound	= CodeNotFound.WithMsg("this standard booking does not exist")
+	ErrStandardBookingDuplicate	= CodeDuplicate.WithMsg("standard booking already exists")
+	ErrInvalidDate				= CodeInvalidDate.WithMsg("the specified date is invalid")								
+	ErrInvalidStartUnitNum		= CodeInvalidUnitNums.WithMsg("the specified start time is invalid")
+	ErrInvalidEndUnitNum		= CodeInvalidUnitNums.WithMsg("the specified end time is invalid")
+	ErrInvalidUnitNums			= CodeInvalidUnitNums.WithMsg("the specified start amd end time is invalid")
+	ErrInvalidPaidAmount		= CodeInvalidPaidAmount.WithMsg("the specified paid amount is invalid")
 )
 
 type StandardBooking struct {

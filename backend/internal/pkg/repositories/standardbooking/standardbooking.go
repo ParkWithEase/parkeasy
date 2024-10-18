@@ -22,7 +22,7 @@ type Entry struct {
 }
 
 type Repository interface {
-	Create(ctx context.Context, userID int64, listingID int64, booking models.StandardBookingCreationInput) (Entry, error)
+	Create(ctx context.Context, userID int64, listingID int64, booking *models.StandardBookingCreationInput) (Entry, error)
 	GetByUUID(ctx context.Context, bookingID uuid.UUID) (Entry, error)
 }
 

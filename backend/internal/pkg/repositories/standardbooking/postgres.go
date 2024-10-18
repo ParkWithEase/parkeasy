@@ -16,7 +16,6 @@ import (
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 	"github.com/stephenafamo/scan"
-	// "github.com/stephenafamo/bob/dialect/psql"
 )
 
 type PostgresRepository struct {
@@ -29,7 +28,7 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 	}
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, listingID int64, booking models.StandardBookingCreationInput) (Entry, error) {
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, listingID int64, booking *models.StandardBookingCreationInput) (Entry, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return Entry{}, fmt.Errorf("could not start a transaction: %w", err)
