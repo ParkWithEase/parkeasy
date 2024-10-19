@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.navbar
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
@@ -26,20 +27,24 @@ fun NavBar(
     val items = listOf("List", "Map", "Profile")
     val selectedIcons = listOf(Icons.Filled.Menu, Icons.Filled.Place, Icons.Filled.Person)
     val unselectedIcons = listOf(Icons.Outlined.Menu, Icons.Outlined.Place, Icons.Outlined.Person)
+    val loggedIn by viewModel.loggedIn.collectAsState(false)
 
-    NavigationBar(modifier) {
-        items.forEachIndexed { index, item ->
-            NavigationBarItem(
-                icon = {
-                    Icon(
-                        if (selectedItem == index) selectedIcons[index] else unselectedIcons[index],
-                        contentDescription = item,
-                    )
-                },
-                label = { Text(item) },
-                selected = selectedItem == index,
-                onClick = { viewModel.onClick(index) },
-            )
+    AnimatedVisibility(loggedIn) {
+        NavigationBar(modifier) {
+            items.forEachIndexed { index, item ->
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            if (selectedItem == index) selectedIcons[index]
+                            else unselectedIcons[index],
+                            contentDescription = item,
+                        )
+                    },
+                    label = { Text(item) },
+                    selected = selectedItem == index,
+                    onClick = { viewModel.onClick(index) },
+                )
+            }
         }
     }
 }
