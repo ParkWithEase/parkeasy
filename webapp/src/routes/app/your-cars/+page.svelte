@@ -1,7 +1,6 @@
 <script lang="ts">
     import type { PageData } from './$types';
     import type { Car } from '$lib/types/car/car';
-    import { InlineNotification } from 'carbon-components-svelte';
     import CarDisplay from '$lib/components/car-component/car-display.svelte';
     import CarAddModal from '$lib/components/car-component/car-add-modal.svelte';
     import CarViewEditModal from '$lib/components/car-component/car-view-edit-modal.svelte';
@@ -33,36 +32,15 @@
 
     let loadLock = false;
 
-    // $: if (intersecting) {
-    //     if (canLoadMore && !loadLock) {
-    //         loadLock = true;
-    //         data.paging.next().then(({ value: { data: cars, hasNext } }) => {
-    //             if (cars) {
-    //                 data.cars = [...data.cars, ...cars];
-    //             }
-    //             canLoadMore = !!hasNext;
-    //             loadLock = false;
-    //         });
-    //     }
-    // }
-
-    // $: console.log(intersecting);
-    function intersect(event: Event) {
-        console.log(event.detail.isIntersecting);
-        while (intersecting == event.detail.isIntersecting && canLoadMore && !loadLock) {
-            console.log('intersection: ' + intersecting);
-            console.log('event: ' + event.detail.isIntersecting);
-            loadLock = true;
-            data.paging.next().then(({ value: { data: cars, hasNext } }) => {
-                if (cars) {
-                    data.cars = [...data.cars, ...cars];
-                }
-                canLoadMore = !!hasNext;
-                loadLock = false;
-            });
-            console.log('intersection: ' + intersecting);
-            console.log('event: ' + event.detail.isIntersecting);
-        }
+    $: while (intersecting && canLoadMore && !loadLock) {
+        loadLock = true;
+        data.paging.next().then(({ value: { data: cars, hasNext } }) => {
+            if (cars) {
+                data.cars = [...data.cars, ...cars];
+            }
+            canLoadMore = !!hasNext;
+            loadLock = false;
+        });
     }
 
     function handleCreate(event: Event) {
@@ -175,15 +153,12 @@
             </div>
         {/each}
     {/key}
-
-    <IntersectionObserver
-        element={loadTrigger}
-        on:intersect={(e) => intersect(e)}
-        bind:intersecting
-    >
-        <div bind:this={loadTrigger}>Loading...</div>
-    </IntersectionObserver>
 </div>
+<IntersectionObserver element={loadTrigger} bind:intersecting>
+    {#if canLoadMore}
+        <div bind:this={loadTrigger}>Loading...</div>
+    {/if}
+</IntersectionObserver>
 
 <CarViewEditModal
     bind:openState={isViewEditModalOpen}
