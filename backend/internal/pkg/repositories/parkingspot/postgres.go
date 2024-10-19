@@ -8,12 +8,11 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbmodels"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
-	"github.com/stephenafamo/bob/dialect/psql"
-	"github.com/stephenafamo/bob/dialect/psql/im"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 )
 
@@ -37,34 +36,18 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 	longitude := float32(spot.Location.Longitude)
 	latitude := float32(spot.Location.Latitude)
 
-	inserted, err := dbmodels.Parkingspots.InsertQ(ctx, p.db,
-		im.Columns(
-			dbmodels.ParkingspotColumns.Userid,
-			dbmodels.ParkingspotColumns.Postalcode,
-			dbmodels.ParkingspotColumns.Countrycode,
-			dbmodels.ParkingspotColumns.City,
-			dbmodels.ParkingspotColumns.Streetaddress,
-			dbmodels.ParkingspotColumns.Longitude,
-			dbmodels.ParkingspotColumns.Latitude,
-			dbmodels.ParkingspotColumns.Coordinates,
-			dbmodels.ParkingspotColumns.Hasshelter,
-			dbmodels.ParkingspotColumns.Hasplugin,
-			dbmodels.ParkingspotColumns.Haschargingstation,
-		),
-		im.Values(
-			psql.Arg(userID),
-			psql.Arg(spot.Location.PostalCode),
-			psql.Arg(spot.Location.CountryCode),
-			psql.Arg(spot.Location.City),
-			psql.Arg(spot.Location.StreetAddress),
-			psql.Arg(longitude),
-			psql.Arg(latitude),
-			psql.Arg(psql.F("ST_SetSRID", psql.F("ST_MakePoint", psql.Arg(longitude, latitude)), 4326)),
-			psql.Arg(spot.Features.Shelter),
-			psql.Arg(spot.Features.PlugIn),
-			psql.Arg(spot.Features.ChargingStation),
-		),
-	).One()
+	inserted, err := dbmodels.Parkingspots.Insert(ctx, p.db, &dbmodels.ParkingspotSetter{
+		Userid:             omit.From(userID),
+		Postalcode:         omit.From(spot.Location.PostalCode),
+		Countrycode:        omit.From(spot.Location.CountryCode),
+		City:               omit.From(spot.Location.City),
+		Streetaddress:      omit.From(spot.Location.StreetAddress),
+		Longitude:          omit.From(longitude),
+		Latitude:           omit.From(latitude),
+		Hasshelter:         omit.From(spot.Features.Shelter),
+		Hasplugin:          omit.From(spot.Features.PlugIn),
+		Haschargingstation: omit.From(spot.Features.ChargingStation),
+	})
 
 	if err != nil {
 		// Handle duplicate error
