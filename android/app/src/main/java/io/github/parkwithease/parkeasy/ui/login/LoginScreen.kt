@@ -49,6 +49,7 @@ private data class LoginUiState(
     val password: String,
     val confirmPassword: String,
     val loginMode: LoginMode,
+    val formEnabled: Boolean,
 )
 
 private data class LoginUiEvents(
@@ -74,6 +75,7 @@ fun LoginScreen(
     val context = LocalContext.current
     val message by viewModel.message.collectAsState()
     val loggedIn by viewModel.loggedIn.collectAsState(false)
+    val formEnabled by viewModel.formEnabled.collectAsState()
     val events =
         LoginEvents(
             viewModel::onLoginPress,
@@ -91,11 +93,15 @@ fun LoginScreen(
             latestOnLogin()
         }
     }
-    LoginScreenInner(events, modifier)
+    LoginScreenInner(formEnabled, events, modifier)
 }
 
 @Composable
-private fun LoginScreenInner(events: LoginEvents, modifier: Modifier = Modifier) {
+private fun LoginScreenInner(
+    formEnabled: Boolean,
+    events: LoginEvents,
+    modifier: Modifier = Modifier,
+) {
     Surface(modifier) {
         Column {
             Row(
@@ -109,19 +115,26 @@ private fun LoginScreenInner(events: LoginEvents, modifier: Modifier = Modifier)
                     modifier = Modifier.size(280.dp),
                 )
             }
-            Row(modifier = Modifier.weight(1f).fillMaxSize()) { LoginForm(events, 280.dp) }
+            Row(modifier = Modifier.weight(1f).fillMaxSize()) {
+                LoginForm(formEnabled, events, 280.dp)
+            }
         }
     }
 }
 
 @Composable
-private fun LoginForm(events: LoginEvents, width: Dp, modifier: Modifier = Modifier) {
+private fun LoginForm(
+    formEnabled: Boolean,
+    events: LoginEvents,
+    width: Dp,
+    modifier: Modifier = Modifier,
+) {
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var confirmPassword by rememberSaveable { mutableStateOf("") }
     var loginMode by rememberSaveable { mutableStateOf(LoginMode.LOGIN) }
-    val uiState = LoginUiState(name, email, password, confirmPassword, loginMode)
+    val uiState = LoginUiState(name, email, password, confirmPassword, loginMode, formEnabled)
     val uiEvents =
         LoginUiEvents(
             { name = it },
@@ -155,6 +168,7 @@ private fun LoginFields(
                 stringResource(R.string.name),
                 Icons.Filled.Person,
                 KeyboardOptions(keyboardType = KeyboardType.Text),
+                enabled = state.formEnabled,
             )
         }
         LoginField(
@@ -163,6 +177,7 @@ private fun LoginFields(
             stringResource(R.string.email),
             ImageVector.vectorResource(R.drawable.email),
             KeyboardOptions(keyboardType = KeyboardType.Email),
+            enabled = state.formEnabled,
         )
         AnimatedVisibility(state.loginMode != LoginMode.FORGOT) {
             LoginField(
@@ -172,6 +187,7 @@ private fun LoginFields(
                 ImageVector.vectorResource(R.drawable.password),
                 KeyboardOptions(keyboardType = KeyboardType.Password),
                 visualTransformation = PasswordVisualTransformation(),
+                enabled = state.formEnabled,
             )
         }
         AnimatedVisibility(state.loginMode == LoginMode.REGISTER) {
@@ -183,6 +199,7 @@ private fun LoginFields(
                 KeyboardOptions(keyboardType = KeyboardType.Password),
                 isError = state.password != state.confirmPassword,
                 visualTransformation = PasswordVisualTransformation(),
+                enabled = state.formEnabled,
             )
         }
     }
@@ -222,6 +239,7 @@ private fun LoginButtons(
                     LoginMode.FORGOT -> events.onRequestResetPress(uiState.email)
                 }
             },
+            enabled = uiState.formEnabled,
             modifier = Modifier.width(width),
         ) {
             Text(
@@ -263,6 +281,7 @@ private fun LoginField(
     modifier: Modifier = Modifier,
     isError: Boolean = false,
     visualTransformation: VisualTransformation = VisualTransformation.None,
+    enabled: Boolean = true,
 ) {
     OutlinedTextField(
         value = value,
@@ -272,6 +291,7 @@ private fun LoginField(
         isError = isError,
         visualTransformation = visualTransformation,
         keyboardOptions = keyboardOptions,
+        enabled = enabled,
         singleLine = true,
         modifier = modifier,
     )
