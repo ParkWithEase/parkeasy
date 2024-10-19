@@ -12,7 +12,7 @@ function extractNextCursor(linkHeader: string | null): string | null {
     for (const link of linkHeader.split(',')) {
         const nextURI = regex.exec(link)?.[1];
         if (nextURI) {
-            result = new URL(nextURI, "http://localhost").searchParams.get('after');
+            result = new URL(nextURI, 'http://localhost').searchParams.get('after');
             if (result) {
                 break;
             }
