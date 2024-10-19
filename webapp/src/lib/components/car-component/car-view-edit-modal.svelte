@@ -6,7 +6,8 @@
         ModalHeader,
         ModalFooter,
         Form,
-        TextInput
+        TextInput,
+        InlineNotification
     } from 'carbon-components-svelte';
 
     import { createEventDispatcher } from 'svelte';
@@ -15,6 +16,7 @@
 
     export let openState: boolean;
     export let isEdit: boolean = false;
+    export let errorMessage: string;
     function deleteCar() {
         dispatch('delete', {
             text: 'Delete'
@@ -61,6 +63,9 @@
 
         {#if isEdit}
             <ModalBody hasForm>
+                {#if errorMessage}
+                    <InlineNotification title="Error:" bind:subtitle={errorMessage} />
+                {/if}
                 <Form on:submit id="car-edit-form">
                     <TextInput
                         required

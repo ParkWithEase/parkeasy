@@ -9,7 +9,7 @@
     import Add from 'carbon-icons-svelte/lib/Add.svelte';
 
     import { getErrorMessage } from '$lib/utils/error-handler';
-    import { intersectionObserver } from '@sveu/browser';
+    import IntersectionObserver from 'svelte-intersection-observer';
     import { newClient } from '$lib/utils/client';
 
     let isViewEditModalOpen: boolean = false;
@@ -19,7 +19,7 @@
     let selectedCarInfo: Car;
     let errorMessage: string;
     let loadTrigger: HTMLElement | null = null;
-    let list: HTMLElement | null = null;
+    let intersecting: boolean;
 
     let client = newClient();
     export let data: PageData;
@@ -32,24 +32,38 @@
     }
 
     let loadLock = false;
-    // eslint-disable-next-line
-    $: loadTrigger,
-        intersectionObserver(
-            loadTrigger,
-            ([{ isIntersecting }]) => {
-                if (canLoadMore && !loadLock && isIntersecting) {
-                    loadLock = true;
-                    data.paging.next().then(({ value: { data: cars, hasNext } }) => {
-                        if (cars) {
-                            data.cars = [...data.cars, ...cars];
-                        }
-                        canLoadMore = !!hasNext;
-                        loadLock = false;
-                    });
+
+    // $: if (intersecting) {
+    //     if (canLoadMore && !loadLock) {
+    //         loadLock = true;
+    //         data.paging.next().then(({ value: { data: cars, hasNext } }) => {
+    //             if (cars) {
+    //                 data.cars = [...data.cars, ...cars];
+    //             }
+    //             canLoadMore = !!hasNext;
+    //             loadLock = false;
+    //         });
+    //     }
+    // }
+
+    // $: console.log(intersecting);
+    function intersect(event: Event) {
+        console.log(event.detail.isIntersecting);
+        while (intersecting == event.detail.isIntersecting && canLoadMore && !loadLock) {
+            console.log('intersection: ' + intersecting);
+            console.log('event: ' + event.detail.isIntersecting);
+            loadLock = true;
+            data.paging.next().then(({ value: { data: cars, hasNext } }) => {
+                if (cars) {
+                    data.cars = [...data.cars, ...cars];
                 }
-            },
-            { root: list }
-        );
+                canLoadMore = !!hasNext;
+                loadLock = false;
+            });
+            console.log('intersection: ' + intersecting);
+            console.log('event: ' + event.detail.isIntersecting);
+        }
+    }
 
     function handleCreate(event: Event) {
         event.preventDefault();
@@ -69,6 +83,7 @@
                 if (new_car) {
                     data.cars = [...data.cars, { details: new_car.details, id: new_car.id }];
                     errorMessage = '';
+                    isAddModalOpen = false;
                 }
                 if (error) {
                     errorMessage = getErrorMessage(error);
@@ -76,9 +91,6 @@
             })
             .catch((err) => {
                 errorMessage = err;
-            })
-            .finally(() => {
-                isAddModalOpen = false;
             });
     }
 
@@ -148,17 +160,13 @@
     }
 </script>
 
-{#if errorMessage}
-    <InlineNotification title="Error:" bind:subtitle={errorMessage} />
-{/if}
-
 <div class="button-container" style="">
     <Button style="margin: 1rem;" icon={Add} on:click={() => (isAddModalOpen = true)}
         >New Car</Button
     >
 </div>
 
-<div bind:this={list} style="overflow: auto">
+<div>
     {#key data.cars}
         {#each data?.cars as car}
             <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -168,9 +176,13 @@
         {/each}
     {/key}
 
-    {#if canLoadMore}
+    <IntersectionObserver
+        element={loadTrigger}
+        on:intersect={(e) => intersect(e)}
+        bind:intersecting
+    >
         <div bind:this={loadTrigger}>Loading...</div>
-    {/if}
+    </IntersectionObserver>
 </div>
 
 <CarViewEditModal
@@ -179,8 +191,9 @@
     bind:isEdit={isEditModalOpen}
     on:submit={handleEdit}
     on:delete={handleDelete}
+    bind:errorMessage
 />
-<CarAddModal bind:openState={isAddModalOpen} on:submit={handleCreate} />
+<CarAddModal bind:openState={isAddModalOpen} on:submit={handleCreate} bind:errorMessage />
 
 <style>
     .button-container {

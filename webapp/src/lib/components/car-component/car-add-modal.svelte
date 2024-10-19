@@ -1,7 +1,8 @@
 <script lang="ts">
-    import { Modal, TextInput, Form } from 'carbon-components-svelte';
+    import { Modal, TextInput, Form, InlineNotification } from 'carbon-components-svelte';
 
     export let openState: boolean;
+    export let errorMessage: string;
 </script>
 
 <Modal
@@ -14,6 +15,9 @@
     on:open
     on:click:button--primary={() => document.getElementById('car-create-form').requestSubmit()}
 >
+    {#if errorMessage}
+        <InlineNotification title="Error:" bind:subtitle={errorMessage} />
+    {/if}
     <Form on:submit id="car-create-form">
         <TextInput
             required
