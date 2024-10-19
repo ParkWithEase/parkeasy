@@ -53,6 +53,7 @@
         on:close={() => {
             cleanUp();
             isEdit = false;
+            errorMessage = '';
         }}
     >
         {#if isEdit}
@@ -64,13 +65,18 @@
         {#if isEdit}
             <ModalBody hasForm>
                 {#if errorMessage}
-                    <InlineNotification title="Error:" bind:subtitle={errorMessage} />
+                    <InlineNotification
+                        title="Error:"
+                        bind:subtitle={errorMessage}
+                        on:close={() => (errorMessage = '')}
+                    />
                 {/if}
                 <Form on:submit id="car-edit-form">
                     <TextInput
                         required
                         labelText="License plate"
                         name="license-plate"
+                        aria-label="edit-car-license-plate"
                         placeholder="Your car license plate"
                         value={carInfo.license_plate}
                     />
@@ -78,6 +84,7 @@
                         required
                         labelText="Color"
                         name="color"
+                        aria-label="edit-car-color"
                         placeholder="Car's color"
                         value={carInfo.color}
                     />
@@ -85,6 +92,7 @@
                         required
                         labelText="Model"
                         name="model"
+                        aria-label="edit-car-model"
                         placeholder="Car's model"
                         value={carInfo.model}
                     />
@@ -92,6 +100,7 @@
                         required
                         name="make"
                         labelText="Make"
+                        aria-label="edit-car-make"
                         placeholder="Car's make"
                         value={carInfo.make}
                     />

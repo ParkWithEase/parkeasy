@@ -14,8 +14,8 @@
     let isViewEditModalOpen: boolean = false;
     let isEditModalOpen: boolean = false;
     let isAddModalOpen: boolean = false;
-    let selectedCarID: string;
-    let selectedCarInfo: Car;
+    let selectedCarID: string | null;
+    let selectedCarInfo: Car | null;
     let errorMessage: string;
     let loadTrigger: HTMLElement | null = null;
     let intersecting: boolean;
@@ -46,8 +46,6 @@
     function handleCreate(event: Event) {
         event.preventDefault();
         const formData = new FormData(event.target as HTMLFormElement);
-        console.log(formData.get('color'));
-
         client
             .POST('/cars', {
                 body: {
@@ -88,6 +86,8 @@
                             return item.id !== selectedCarID;
                         });
                         errorMessage = '';
+                        selectedCarID = null;
+                        selectedCarInfo = null;
                     }
                 })
                 .catch((err) => {
@@ -139,8 +139,11 @@
 </script>
 
 <div class="button-container" style="">
-    <Button style="margin: 1rem;" icon={Add} on:click={() => (isAddModalOpen = true)}
-        >New Car</Button
+    <Button
+        aria-label="new-car-button"
+        style="margin: 1rem;"
+        icon={Add}
+        on:click={() => (isAddModalOpen = true)}>New Car</Button
     >
 </div>
 
@@ -148,7 +151,7 @@
     {#key data.cars}
         {#each data?.cars as car}
             <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-            <div on:click={() => selectCarIndex(car.id, car.details)}>
+            <div id={car.id} on:click={() => selectCarIndex(car.id, car.details)}>
                 <CarDisplay car={car.details}></CarDisplay>
             </div>
         {/each}
@@ -160,15 +163,20 @@
     {/if}
 </IntersectionObserver>
 
-<CarViewEditModal
-    bind:openState={isViewEditModalOpen}
-    bind:carInfo={selectedCarInfo}
-    bind:isEdit={isEditModalOpen}
-    on:submit={handleEdit}
-    on:delete={handleDelete}
-    bind:errorMessage
-/>
-<CarAddModal bind:openState={isAddModalOpen} on:submit={handleCreate} bind:errorMessage />
+{#if !isAddModalOpen}
+    <CarViewEditModal
+        bind:openState={isViewEditModalOpen}
+        bind:carInfo={selectedCarInfo}
+        bind:isEdit={isEditModalOpen}
+        on:submit={handleEdit}
+        on:delete={handleDelete}
+        bind:errorMessage
+    />
+{/if}
+
+{#if !isViewEditModalOpen}
+    <CarAddModal bind:openState={isAddModalOpen} on:submit={handleCreate} bind:errorMessage />
+{/if}
 
 <style>
     .button-container {
