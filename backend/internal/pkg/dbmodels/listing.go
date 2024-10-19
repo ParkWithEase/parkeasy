@@ -410,7 +410,7 @@ func (o *Listing) Preload(name string, retrieved any) error {
 		o.R.ParkingspotidParkingspot = rel
 
 		if rel != nil {
-			rel.R.ParkingspotidListings = ListingSlice{o}
+			rel.R.ParkingspotidListing = o
 		}
 		return nil
 	default:
@@ -473,7 +473,7 @@ func (o *Listing) LoadListingParkingspotidParkingspot(ctx context.Context, exec 
 		return err
 	}
 
-	related.R.ParkingspotidListings = ListingSlice{o}
+	related.R.ParkingspotidListing = o
 
 	o.R.ParkingspotidParkingspot = related
 	return nil
@@ -496,7 +496,7 @@ func (os ListingSlice) LoadListingParkingspotidParkingspot(ctx context.Context, 
 				continue
 			}
 
-			rel.R.ParkingspotidListings = append(rel.R.ParkingspotidListings, o)
+			rel.R.ParkingspotidListing = o
 
 			o.R.ParkingspotidParkingspot = rel
 			break
@@ -532,7 +532,7 @@ func (listing0 *Listing) InsertParkingspotidParkingspot(ctx context.Context, exe
 
 	listing0.R.ParkingspotidParkingspot = parkingspot1
 
-	parkingspot1.R.ParkingspotidListings = append(parkingspot1.R.ParkingspotidListings, listing0)
+	parkingspot1.R.ParkingspotidListing = listing0
 
 	return nil
 }
@@ -547,7 +547,7 @@ func (listing0 *Listing) AttachParkingspotidParkingspot(ctx context.Context, exe
 
 	listing0.R.ParkingspotidParkingspot = parkingspot1
 
-	parkingspot1.R.ParkingspotidListings = append(parkingspot1.R.ParkingspotidListings, listing0)
+	parkingspot1.R.ParkingspotidListing = listing0
 
 	return nil
 }

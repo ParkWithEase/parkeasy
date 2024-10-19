@@ -110,7 +110,6 @@ var ColumnNames = struct {
 		Streetaddress:      "streetaddress",
 		Longitude:          "longitude",
 		Latitude:           "latitude",
-		Coordinates:        "coordinates",
 		Hasshelter:         "hasshelter",
 		Hasplugin:          "hasplugin",
 		Haschargingstation: "haschargingstation",
