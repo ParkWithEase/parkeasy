@@ -5,16 +5,12 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.data.remote.UserRepository
-import io.github.parkwithease.parkeasy.di.IoDispatcher
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
 import io.github.parkwithease.parkeasy.model.ResetCredentials
 import io.github.parkwithease.parkeasy.ui.SnackbarController
 import io.github.parkwithease.parkeasy.ui.SnackbarEvent
 import javax.inject.Inject
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -22,18 +18,14 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class LoginViewModel
 @Inject
-constructor(
-    authRepo: AuthRepository,
-    private val userRepo: UserRepository,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-) : ViewModel() {
+constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : ViewModel() {
     val loggedIn = authRepo.statusFlow
 
     private val _formEnabled = MutableStateFlow(true)
     val formEnabled = _formEnabled.asStateFlow()
 
     fun onLoginPress(email: String, password: String) {
-        CoroutineScope(ioDispatcher).launch {
+        viewModelScope.launch {
             _formEnabled.value = false
             if (userRepo.login(LoginCredentials(email, password))) {
                 SnackbarController.sendEvent(
@@ -48,7 +40,7 @@ constructor(
 
     fun onRegisterPress(name: String, email: String, password: String, confirmPassword: String) {
         if (password == confirmPassword) {
-            CoroutineScope(ioDispatcher).launch {
+            viewModelScope.launch {
                 _formEnabled.value = false
                 if (userRepo.register(RegistrationCredentials(name, email, password))) {
                     SnackbarController.sendEvent(
@@ -71,7 +63,7 @@ constructor(
     }
 
     fun onRequestResetPress(email: String) {
-        CoroutineScope(ioDispatcher).launch {
+        viewModelScope.launch {
             if (userRepo.requestReset(ResetCredentials(email))) {
                 SnackbarController.sendEvent(
                     event = SnackbarEvent(message = "Reset email sent\nJk... we're working on it")
