@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 @HiltViewModel
 class NavBarViewModel @Inject constructor(authRepo: AuthRepository) : ViewModel() {
-    private val _selectedItem = MutableStateFlow(0)
+    private val _selectedItem = MutableStateFlow(2)
     val selectedItem = _selectedItem.asStateFlow()
     val loggedIn = authRepo.statusFlow
 

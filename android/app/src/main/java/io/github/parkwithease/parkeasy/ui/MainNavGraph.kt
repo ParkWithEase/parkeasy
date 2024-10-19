@@ -39,7 +39,7 @@ fun MainNavGraph(
             startDestination = "login",
             modifier = Modifier.padding(innerPadding),
         ) {
-            loginScreen { navController.navigateToList() }
+            loginScreen { navController.navigateToProfile() }
             listScreen()
             mapScreen()
             profileScreen { navController.navigateToLogin() }

@@ -1,14 +1,16 @@
 package io.github.parkwithease.parkeasy.ui.login
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.data.remote.UserRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
-import io.github.parkwithease.parkeasy.model.Event
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
 import io.github.parkwithease.parkeasy.model.ResetCredentials
+import io.github.parkwithease.parkeasy.ui.SnackbarController
+import io.github.parkwithease.parkeasy.ui.SnackbarEvent
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -30,16 +32,15 @@ constructor(
     private val _formEnabled = MutableStateFlow(true)
     val formEnabled = _formEnabled.asStateFlow()
 
-    private val _message = MutableStateFlow(Event.initial(""))
-    val message = _message.asStateFlow()
-
     fun onLoginPress(email: String, password: String) {
         CoroutineScope(ioDispatcher).launch {
             _formEnabled.value = false
             if (userRepo.login(LoginCredentials(email, password))) {
-                _message.value = Event("Logged in successfully")
+                SnackbarController.sendEvent(
+                    event = SnackbarEvent(message = "Logged in successfully")
+                )
             } else {
-                _message.value = Event("Error logging in")
+                SnackbarController.sendEvent(event = SnackbarEvent(message = "Error logging in"))
             }
             _formEnabled.value = true
         }
@@ -50,23 +51,35 @@ constructor(
             CoroutineScope(ioDispatcher).launch {
                 _formEnabled.value = false
                 if (userRepo.register(RegistrationCredentials(name, email, password))) {
-                    _message.value = Event("Registered successfully")
+                    SnackbarController.sendEvent(
+                        event = SnackbarEvent(message = "Registered successfully")
+                    )
                 } else {
-                    _message.value = Event("Error registering")
+                    SnackbarController.sendEvent(
+                        event = SnackbarEvent(message = "Error registering")
+                    )
                 }
                 _formEnabled.value = true
             }
         } else {
-            _message.value = Event("Passwords don't match")
+            viewModelScope.launch {
+                SnackbarController.sendEvent(
+                    event = SnackbarEvent(message = "Passwords don't match")
+                )
+            }
         }
     }
 
     fun onRequestResetPress(email: String) {
         CoroutineScope(ioDispatcher).launch {
             if (userRepo.requestReset(ResetCredentials(email))) {
-                _message.value = Event("Reset email sent\nJk... we're working on it")
+                SnackbarController.sendEvent(
+                    event = SnackbarEvent(message = "Reset email sent\nJk... we're working on it")
+                )
             } else {
-                _message.value = Event("Error resetting password")
+                SnackbarController.sendEvent(
+                    event = SnackbarEvent(message = "Error resetting password")
+                )
             }
         }
     }
