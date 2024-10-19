@@ -68,6 +68,7 @@
         margin-left: 1rem;
         border-radius: 20px;
         background-color: rgb(186, 214, 183);
+        min-height: min-content;
     }
 
     .sidebar {

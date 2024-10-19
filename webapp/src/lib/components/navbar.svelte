@@ -1,5 +1,20 @@
 <script lang="ts">
     import logo from '$lib/images/logo-text.png';
+    import {
+    Header,
+    HeaderUtilities,
+    HeaderGlobalAction,
+    SideNav,
+    SideNavItems,
+    SideNavMenu,
+    SideNavMenuItem,
+    SideNavLink,
+    SkipToContent,
+    Content,
+    Grid,
+    Row,
+    Column,
+    } from "carbon-components-svelte";
 </script>
 
 <svelte:window />
