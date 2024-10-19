@@ -7,7 +7,6 @@
     import CarViewEditModal from '$lib/components/car-component/car-view-edit-modal.svelte';
     import { Button } from 'carbon-components-svelte';
     import Add from 'carbon-icons-svelte/lib/Add.svelte';
-    import { BACKEND_SERVER } from '$lib/constants';
 
     import { getErrorMessage } from '$lib/utils/error-handler';
     import { intersectionObserver } from '@sveu/browser';
@@ -19,7 +18,6 @@
     let selectedCarID: string;
     let selectedCarInfo: Car;
     let errorMessage: string;
-    let afterToken: string = '';
     let loadTrigger: HTMLElement | null = null;
     let list: HTMLElement | null = null;
 
@@ -34,6 +32,7 @@
     }
 
     let loadLock = false;
+    // eslint-disable-next-line
     $: loadTrigger,
         intersectionObserver(
             loadTrigger,

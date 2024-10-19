@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/auth": {
+    '/auth': {
         parameters: {
             query?: never;
             header?: never;
@@ -12,25 +12,25 @@ export interface paths {
             cookie?: never;
         };
         /** Check if the current session is valid */
-        get: operations["check-session"];
+        get: operations['check-session'];
         put?: never;
         /**
          * Create a new session
          * @description Create a new session for the given user. The existing session, if any, will be invalidated regardless of whether authentication succeeds.
          */
-        post: operations["create-session"];
+        post: operations['create-session'];
         /** Invalidates the current session */
-        delete: operations["delete-session"];
+        delete: operations['delete-session'];
         options?: never;
         head?: never;
         /**
          * Refresh the current session
          * @description Invalidates the current session token and return a new one.
          */
-        patch: operations["refresh-session"];
+        patch: operations['refresh-session'];
         trace?: never;
     };
-    "/auth/password": {
+    '/auth/password': {
         parameters: {
             query?: never;
             header?: never;
@@ -42,7 +42,7 @@ export interface paths {
          * Update password
          * @description Change the password used to authenticate the identity associated with the current session.
          */
-        put: operations["update-password"];
+        put: operations['update-password'];
         post?: never;
         delete?: never;
         options?: never;
@@ -50,7 +50,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/password:forgot": {
+    '/auth/password:forgot': {
         parameters: {
             query?: never;
             header?: never;
@@ -63,14 +63,14 @@ export interface paths {
          * Request password recovery
          * @description Submits a request to recover the password of the identity associated with the given email.
          */
-        post: operations["forgot-password"];
+        post: operations['forgot-password'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/password:reset": {
+    '/auth/password:reset': {
         parameters: {
             query?: never;
             header?: never;
@@ -80,14 +80,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Reset password using recovery token */
-        post: operations["reset-password"];
+        post: operations['reset-password'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/cars": {
+    '/cars': {
         parameters: {
             query?: never;
             header?: never;
@@ -95,17 +95,17 @@ export interface paths {
             cookie?: never;
         };
         /** Get cars associated to the current user */
-        get: operations["list-cars"];
+        get: operations['list-cars'];
         put?: never;
         /** Create a new car */
-        post: operations["create-car"];
+        post: operations['create-car'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/cars/{id}": {
+    '/cars/{id}': {
         parameters: {
             query?: never;
             header?: never;
@@ -113,18 +113,18 @@ export interface paths {
             cookie?: never;
         };
         /** Get information about a car */
-        get: operations["get-car"];
+        get: operations['get-car'];
         /** Update information about a car */
-        put: operations["update-car"];
+        put: operations['update-car'];
         post?: never;
         /** Delete the specified car */
-        delete: operations["delete-car"];
+        delete: operations['delete-car'];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/healthz": {
+    '/healthz': {
         parameters: {
             query?: never;
             header?: never;
@@ -132,7 +132,7 @@ export interface paths {
             cookie?: never;
         };
         /** Return whether API server is ready to serve */
-        get: operations["check-health"];
+        get: operations['check-health'];
         put?: never;
         post?: never;
         delete?: never;
@@ -141,7 +141,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/spots": {
+    '/spots': {
         parameters: {
             query?: never;
             header?: never;
@@ -151,14 +151,14 @@ export interface paths {
         get?: never;
         put?: never;
         /** Create a new parking spot */
-        post: operations["create-parking-spot"];
+        post: operations['create-parking-spot'];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/spots/{id}": {
+    '/spots/{id}': {
         parameters: {
             query?: never;
             header?: never;
@@ -166,17 +166,17 @@ export interface paths {
             cookie?: never;
         };
         /** Get information about a parking spot */
-        get: operations["get-parking-spot"];
+        get: operations['get-parking-spot'];
         put?: never;
         post?: never;
         /** Delete the specified parking spot */
-        delete: operations["delete-parking-spot"];
+        delete: operations['delete-parking-spot'];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/user": {
+    '/user': {
         parameters: {
             query?: never;
             header?: never;
@@ -184,13 +184,13 @@ export interface paths {
             cookie?: never;
         };
         /** Get the current user information */
-        get: operations["get-current-user"];
+        get: operations['get-current-user'];
         put?: never;
         /**
          * Create a new user
          * @description Create a new user. The existing session, if any, will be invalidated regardless of whether this operation succeeds.
          */
-        post: operations["create-user"];
+        post: operations['create-user'];
         delete?: never;
         options?: never;
         head?: never;
@@ -208,7 +208,7 @@ export interface components {
              */
             readonly $schema?: string;
             /** @description Details about the car */
-            details: components["schemas"]["CarDetails"];
+            details: components['schemas']['CarDetails'];
             /** @description ID of this resource */
             id: string;
         };
@@ -273,7 +273,7 @@ export interface components {
             /** @description A human-readable explanation specific to this occurrence of the problem. */
             detail?: string;
             /** @description Optional list of individual error details */
-            errors?: components["schemas"]["ErrorDetail"][] | null;
+            errors?: components['schemas']['ErrorDetail'][] | null;
             /**
              * Format: uri
              * @description A URI reference that identifies the specific occurrence of the problem.
@@ -299,10 +299,10 @@ export interface components {
              * @description A URL to the JSON Schema for this object.
              */
             readonly $schema?: string;
-            features?: components["schemas"]["ParkingSpotFeatures"];
+            features?: components['schemas']['ParkingSpotFeatures'];
             /** @description ID of this resource */
             id: string;
-            location: components["schemas"]["ParkingSpotLocation"];
+            location: components['schemas']['ParkingSpotLocation'];
         };
         ParkingSpotCreationInput: {
             /**
@@ -310,8 +310,8 @@ export interface components {
              * @description A URL to the JSON Schema for this object.
              */
             readonly $schema?: string;
-            features?: components["schemas"]["ParkingSpotFeatures"];
-            location: components["schemas"]["ParkingSpotLocation"];
+            features?: components['schemas']['ParkingSpotFeatures'];
+            location: components['schemas']['ParkingSpotLocation'];
         };
         ParkingSpotFeatures: {
             /** @description Whether parking spot has an EV charging station */
@@ -423,7 +423,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    "check-session": {
+    'check-session': {
         parameters: {
             query?: never;
             header?: never;
@@ -435,7 +435,7 @@ export interface operations {
             /** @description No Content */
             204: {
                 headers: {
-                    "Cache-Control"?: string;
+                    'Cache-Control'?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -446,7 +446,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -455,12 +455,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "create-session": {
+    'create-session': {
         parameters: {
             query?: never;
             header?: never;
@@ -469,7 +469,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["EmailPasswordLoginInput"];
+                'application/json': components['schemas']['EmailPasswordLoginInput'];
             };
         };
         responses: {
@@ -478,8 +478,8 @@ export interface operations {
              *     The session ID is returned in a cookie named `session`. This cookie must be included in subsequent requests. */
             201: {
                 headers: {
-                    "Cache-Control"?: string;
-                    "Set-Cookie"?: string;
+                    'Cache-Control'?: string;
+                    'Set-Cookie'?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -490,7 +490,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Unprocessable Entity */
@@ -499,7 +499,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -508,12 +508,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "delete-session": {
+    'delete-session': {
         parameters: {
             query?: never;
             header?: never;
@@ -525,8 +525,8 @@ export interface operations {
             /** @description No Content */
             204: {
                 headers: {
-                    "Cache-Control"?: string;
-                    "Set-Cookie"?: string;
+                    'Cache-Control'?: string;
+                    'Set-Cookie'?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -537,12 +537,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "refresh-session": {
+    'refresh-session': {
         parameters: {
             query?: never;
             header?: never;
@@ -554,8 +554,8 @@ export interface operations {
             /** @description No Content */
             204: {
                 headers: {
-                    "Cache-Control"?: string;
-                    "Set-Cookie"?: string;
+                    'Cache-Control'?: string;
+                    'Set-Cookie'?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -566,7 +566,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -575,12 +575,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "update-password": {
+    'update-password': {
         parameters: {
             query?: never;
             header?: never;
@@ -589,7 +589,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PasswordUpdateInput"];
+                'application/json': components['schemas']['PasswordUpdateInput'];
             };
         };
         responses: {
@@ -606,7 +606,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Unprocessable Entity */
@@ -615,7 +615,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -624,12 +624,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "forgot-password": {
+    'forgot-password': {
         parameters: {
             query?: never;
             header?: never;
@@ -638,7 +638,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PasswordResetTokenRequest"];
+                'application/json': components['schemas']['PasswordResetTokenRequest'];
             };
         };
         responses: {
@@ -648,7 +648,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TokenMessageBody"];
+                    'application/json': components['schemas']['TokenMessageBody'];
                 };
             };
             /** @description Unprocessable Entity */
@@ -657,7 +657,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -666,12 +666,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "reset-password": {
+    'reset-password': {
         parameters: {
             query?: never;
             header?: never;
@@ -680,7 +680,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PasswordResetInput"];
+                'application/json': components['schemas']['PasswordResetInput'];
             };
         };
         responses: {
@@ -697,7 +697,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -706,12 +706,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "list-cars": {
+    'list-cars': {
         parameters: {
             query?: {
                 /** @description Token used for requesting the next page of resources */
@@ -732,7 +732,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Car"][] | null;
+                    'application/json': components['schemas']['Car'][] | null;
                 };
             };
             /** @description Unauthorized */
@@ -741,7 +741,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Unprocessable Entity */
@@ -750,7 +750,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -759,12 +759,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "create-car": {
+    'create-car': {
         parameters: {
             query?: never;
             header?: never;
@@ -773,7 +773,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CarCreationInput"];
+                'application/json': components['schemas']['CarCreationInput'];
             };
         };
         responses: {
@@ -783,7 +783,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Car"];
+                    'application/json': components['schemas']['Car'];
                 };
             };
             /** @description Unauthorized */
@@ -792,7 +792,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Unprocessable Entity */
@@ -801,7 +801,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -810,12 +810,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "get-car": {
+    'get-car': {
         parameters: {
             query?: never;
             header?: never;
@@ -832,7 +832,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Car"];
+                    'application/json': components['schemas']['Car'];
                 };
             };
             /** @description Unauthorized */
@@ -841,7 +841,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Not Found */
@@ -850,7 +850,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Unprocessable Entity */
@@ -859,7 +859,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -868,12 +868,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "update-car": {
+    'update-car': {
         parameters: {
             query?: never;
             header?: never;
@@ -884,7 +884,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CarCreationInput"];
+                'application/json': components['schemas']['CarCreationInput'];
             };
         };
         responses: {
@@ -894,7 +894,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Car"];
+                    'application/json': components['schemas']['Car'];
                 };
             };
             /** @description Unauthorized */
@@ -903,7 +903,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Not Found */
@@ -912,7 +912,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Unprocessable Entity */
@@ -921,7 +921,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -930,12 +930,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "delete-car": {
+    'delete-car': {
         parameters: {
             query?: never;
             header?: never;
@@ -959,7 +959,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Forbidden */
@@ -968,7 +968,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Unprocessable Entity */
@@ -977,7 +977,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -986,12 +986,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "check-health": {
+    'check-health': {
         parameters: {
             query?: never;
             header?: never;
@@ -1013,12 +1013,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "create-parking-spot": {
+    'create-parking-spot': {
         parameters: {
             query?: never;
             header?: never;
@@ -1027,7 +1027,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ParkingSpotCreationInput"];
+                'application/json': components['schemas']['ParkingSpotCreationInput'];
             };
         };
         responses: {
@@ -1037,7 +1037,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ParkingSpot"];
+                    'application/json': components['schemas']['ParkingSpot'];
                 };
             };
             /** @description Unauthorized */
@@ -1046,7 +1046,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Unprocessable Entity */
@@ -1055,7 +1055,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -1064,12 +1064,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "get-parking-spot": {
+    'get-parking-spot': {
         parameters: {
             query?: never;
             header?: never;
@@ -1086,7 +1086,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ParkingSpot"];
+                    'application/json': components['schemas']['ParkingSpot'];
                 };
             };
             /** @description Unauthorized */
@@ -1095,7 +1095,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Not Found */
@@ -1104,7 +1104,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Unprocessable Entity */
@@ -1113,7 +1113,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -1122,12 +1122,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "delete-parking-spot": {
+    'delete-parking-spot': {
         parameters: {
             query?: never;
             header?: never;
@@ -1151,7 +1151,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Forbidden */
@@ -1160,7 +1160,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Unprocessable Entity */
@@ -1169,7 +1169,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -1178,12 +1178,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "get-current-user": {
+    'get-current-user': {
         parameters: {
             query?: never;
             header?: never;
@@ -1198,7 +1198,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserProfile"];
+                    'application/json': components['schemas']['UserProfile'];
                 };
             };
             /** @description Unauthorized */
@@ -1207,7 +1207,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Not Found */
@@ -1216,7 +1216,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -1225,12 +1225,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };
     };
-    "create-user": {
+    'create-user': {
         parameters: {
             query?: never;
             header?: never;
@@ -1239,7 +1239,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UserCreationInput"];
+                'application/json': components['schemas']['UserCreationInput'];
             };
         };
         responses: {
@@ -1248,8 +1248,8 @@ export interface operations {
              *     A new session for this user is returned in the cookie named `session`. */
             201: {
                 headers: {
-                    "Cache-Control"?: string;
-                    "Set-Cookie"?: string;
+                    'Cache-Control'?: string;
+                    'Set-Cookie'?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -1260,7 +1260,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
             /** @description Internal Server Error */
@@ -1269,7 +1269,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
+                    'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
         };

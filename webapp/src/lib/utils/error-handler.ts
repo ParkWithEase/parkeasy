@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
-import type { components } from "$lib/sdk/schema";
+import type { components } from '$lib/sdk/schema';
 
-type ErrorModel = components["schemas"]["ErrorModel"];
+type ErrorModel = components['schemas']['ErrorModel'];
 
 export function getErrorMessage(errorDetails: ErrorModel): string {
     switch (errorDetails.status) {
@@ -12,7 +12,8 @@ export function getErrorMessage(errorDetails: ErrorModel): string {
         case 500:
             return (
                 errorDetails.errors?.[0].location +
-                ' : ' + errorDetails.detail + 
+                ' : ' +
+                errorDetails.detail +
                 ' with value ' +
                 errorDetails.errors?.[0].value
             );

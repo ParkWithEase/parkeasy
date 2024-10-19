@@ -6,13 +6,11 @@ import type { PageLoad } from './$types';
 export const ssr = false;
 
 export const load: PageLoad = async ({ fetch }) => {
-    const client = newClient({fetch});
-    const paging = paginate(client, "/cars", { params: { count: 5 }});
+    const client = newClient({ fetch });
+    const paging = paginate(client, '/cars', { params: { count: 5 } });
     const { data, error: err, hasNext } = (await paging.next()).value ?? {};
-    if(err)
-    {
-        switch(err.status)
-        {
+    if (err) {
+        switch (err.status) {
             case 401:
                 redirect(307, '/auth/login');
                 break;
@@ -24,6 +22,6 @@ export const load: PageLoad = async ({ fetch }) => {
     return {
         cars: data,
         hasNext: !!hasNext,
-        paging: paging,
-    }
-}
+        paging: paging
+    };
+};
