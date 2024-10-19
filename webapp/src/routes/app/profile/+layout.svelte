@@ -3,7 +3,7 @@
     import Navbar from '$lib/components/navbar.svelte';
     import { goto } from '$app/navigation';
     import { BACKEND_SERVER } from '$lib/constants';
-    import { page } from '$app/stores';
+    import { page, navigating } from '$app/stores';
 
     async function logout() {
         try {
@@ -52,7 +52,11 @@
         <a class="logout-link" href="/" on:click={logout}>Logout</a>
     </div>
     <div class="info-container">
-        <slot></slot>
+        {#await $navigating?.complete}
+            <div>Loading.</div>
+        {:then}
+            <slot></slot>
+        {/await}
     </div>
 </div>
 
