@@ -1,4 +1,5 @@
 <script lang="ts">
+    import type { PageData } from './$types';
     import type { Car } from '$lib/types/car/car';
     import { InlineNotification } from 'carbon-components-svelte';
     import CarDisplay from '$lib/components/car-component/car-display.svelte';
@@ -10,8 +11,7 @@
 
     import { getErrorMessage } from '$lib/utils/error-handler';
     import { intersectionObserver } from '@sveu/browser';
-
-    const regex = /[?&]after=([^&?]+)/;
+    import { newClient } from '$lib/utils/client';
 
     let isViewEditModalOpen: boolean = false;
     let isEditModalOpen: boolean = false;
@@ -20,153 +20,132 @@
     let selectedCarInfo: Car;
     let errorMessage: string;
     let afterToken: string = '';
-    let canLoadMore: boolean = true;
-    let loadLock: boolean = false;
-    let target: HTMLElement | null = null;
-    let root: HTMLElement | null = null;
+    let loadTrigger: HTMLElement | null = null;
+    let list: HTMLElement | null = null;
 
-    let data = [];
+    let client = newClient();
+    export let data: PageData;
+    let canLoadMore = data.hasNext;
 
     function selectCarIndex(index: string, CarInfo: Car) {
         isViewEditModalOpen = true;
         selectedCarID = index;
         selectedCarInfo = CarInfo;
     }
-    root = this;
 
-    $: target,
+    let loadLock = false;
+    $: loadTrigger,
         intersectionObserver(
-            target,
+            loadTrigger,
             ([{ isIntersecting }]) => {
                 if (canLoadMore && !loadLock && isIntersecting) {
                     loadLock = true;
-                    getPage();
+                    data.paging.next().then(({ value: { data: cars, hasNext } }) => {
+                        if (cars) {
+                            data.cars = [...data.cars, ...cars];
+                        }
+                        canLoadMore = !!hasNext;
+                        loadLock = false;
+                    });
                 }
             },
-            { root }
+            { root: list }
         );
 
-    export async function getPage() {
-        const response = await fetch(`${BACKEND_SERVER}/cars?after=${afterToken}&count=5`, {
-            credentials: 'include'
-        });
-        try {
-            if (response.ok) {
-                data = [...data, ...(await response.json())];
-
-                if (response.headers.get('link') != null) {
-                    let param = response.headers.get('link')?.match(regex);
-                    afterToken = param != null ? param[1] : '';
-                } else {
-                    canLoadMore = false;
-                    afterToken = '';
-                }
-                loadLock = false;
-            } else {
-                const errorDetails = await response.json();
-                errorMessage = getErrorMessage(errorDetails);
-            }
-        } catch (err) {
-            errorMessage = 'Something wrong happen ' + err;
-        }
-    }
-
-    export async function handleCreate(event: Event) {
+    function handleCreate(event: Event) {
         event.preventDefault();
         const formData = new FormData(event.target as HTMLFormElement);
         console.log(formData.get('color'));
-        try {
-            const response = await fetch(`${BACKEND_SERVER}/cars`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
+
+        client
+            .POST('/cars', {
+                body: {
                     license_plate: formData.get('license-plate') as string,
                     color: formData.get('color') as string,
                     model: formData.get('model') as string,
                     make: formData.get('make') as string
-                })
-            });
-
-            if (response.ok) {
-                const new_car = await response.json();
-
-                //temporary code to see update
-                data = [...data, { details: new_car.details, id: new_car.id }];
-                errorMessage = '';
-            } else {
-                const errorDetails = await response.json();
-                errorMessage = getErrorMessage(errorDetails);
-            }
-        } catch (err) {
-            errorMessage = 'Something wrong happen ' + err;
-        }
-
-        isAddModalOpen = false;
-    }
-
-    export async function handleDelete() {
-        if (confirm('Are you sure you want to remove this car?')) {
-            try {
-                const response = await fetch(`${BACKEND_SERVER}/cars/${selectedCarID}`, {
-                    method: 'DELETE',
-                    credentials: 'include'
-                });
-                if (response.ok) {
-                    errorMessage = '';
-                    isViewEditModalOpen = false;
-                    data = data.filter(function (item) {
-                        return item.id !== selectedCarID;
-                    });
-                } else {
-                    const errorDetails = await response.json();
-                    errorMessage = getErrorMessage(errorDetails);
                 }
-            } catch (err) {
-                errorMessage = 'Something wrong happen ' + err;
-            }
-        } else {
-            isViewEditModalOpen = true;
+            })
+            .then(({ data: new_car, error }) => {
+                if (new_car) {
+                    data.cars = [...data.cars, { details: new_car.details, id: new_car.id }];
+                    errorMessage = '';
+                }
+                if (error) {
+                    errorMessage = getErrorMessage(error);
+                }
+            })
+            .catch((err) => {
+                errorMessage = err;
+            })
+            .finally(() => {
+                isAddModalOpen = false;
+            });
+    }
+
+    function handleDelete() {
+        if (confirm('Are you sure you want to remove this car?')) {
+            client
+                .DELETE('/cars/{id}', {
+                    params: {
+                        path: { id: selectedCarID }
+                    }
+                })
+                .then(({ error }) => {
+                    if (error) {
+                        errorMessage = getErrorMessage(error);
+                    } else {
+                        data.cars = data.cars?.filter(function (item) {
+                            return item.id !== selectedCarID;
+                        });
+                        errorMessage = '';
+                    }
+                })
+                .catch((err) => {
+                    errorMessage = err;
+                })
+                .finally(() => {
+                    isViewEditModalOpen = false;
+                });
         }
     }
 
-    export async function handleEdit(event: Event) {
+    function handleEdit(event: Event) {
         event.preventDefault();
         const formData = new FormData(event.target as HTMLFormElement);
-        try {
-            const response = await fetch(`${BACKEND_SERVER}/cars/${selectedCarID}`, {
-                method: 'PUT',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
+        client
+            .PUT('/cars/{id}', {
+                params: {
+                    path: { id: selectedCarID }
                 },
-                body: JSON.stringify({
+                body: {
                     license_plate: formData.get('license-plate') as string,
                     color: formData.get('color') as string,
                     model: formData.get('model') as string,
                     make: formData.get('make') as string
-                })
+                }
+            })
+            .then(({ data: change_car, error }) => {
+                if (change_car) {
+                    isEditModalOpen = false;
+                    data.cars = data.cars?.map((car) => {
+                        if (car.id == change_car.id) {
+                            return change_car;
+                        } else {
+                            return car;
+                        }
+                    });
+                    selectedCarInfo = change_car.details;
+                    errorMessage = '';
+                }
+                if (error) {
+                    isEditModalOpen = true;
+                    errorMessage = getErrorMessage(error);
+                }
+            })
+            .catch((err) => {
+                errorMessage = err;
             });
-            if (response.ok) {
-                errorMessage = '';
-                isEditModalOpen = false;
-
-                //temporary code to see update
-                selectedCarInfo.license_plate = formData.get('license-plate') as string;
-                selectedCarInfo.color = formData.get('color') as string;
-                selectedCarInfo.model = formData.get('model') as string;
-                selectedCarInfo.make = formData.get('make') as string;
-                data = [...data];
-            } else {
-                isEditModalOpen = true;
-                const errorDetails = await response.json();
-                errorMessage = getErrorMessage(errorDetails);
-            }
-        } catch (err) {
-            errorMessage = 'Something wrong happen ' + err;
-        }
     }
 </script>
 
@@ -180,9 +159,9 @@
     >
 </div>
 
-<div>
-    {#key data}
-        {#each data as car}
+<div bind:this={list} style="overflow: auto">
+    {#key data.cars}
+        {#each data?.cars as car}
             <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <div on:click={() => selectCarIndex(car.id, car.details)}>
                 <CarDisplay car={car.details}></CarDisplay>
@@ -191,7 +170,7 @@
     {/key}
 
     {#if canLoadMore}
-        <div bind:this={target}>Loading...</div>
+        <div bind:this={loadTrigger}>Loading...</div>
     {/if}
 </div>
 
