@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.remember
@@ -37,7 +36,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-                MainNavGraph({ SnackbarHost(hostState = snackbarHostState) })
+                MainNavGraph(hostState = snackbarHostState)
             }
         }
     }

@@ -2,6 +2,8 @@ package io.github.parkwithease.parkeasy.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -19,7 +21,7 @@ import io.github.parkwithease.parkeasy.ui.profile.profileScreen
 
 @Composable
 fun MainNavGraph(
-    snackbarHost: @Composable () -> Unit,
+    hostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
@@ -31,7 +33,7 @@ fun MainNavGraph(
                 navController::navigateToProfile,
             )
         },
-        snackbarHost = snackbarHost,
+        snackbarHost = { SnackbarHost(hostState = hostState) },
         modifier = modifier,
     ) { innerPadding ->
         NavHost(
