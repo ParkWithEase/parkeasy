@@ -24,7 +24,7 @@
         <TextInput required labelText="Postal code" name="postal-code" placeholder="Postal code" />
         <p>Utilities</p>
         <Checkbox name="shelter" labelText="shelter" />
-        <Checkbox name="charging-station" labelText="Charging Station" />
         <Checkbox name="plug-in" labelText="Plug-in" />
+        <Checkbox name="charging-station" labelText="Charging Station" />
     </Form>
 </Modal>

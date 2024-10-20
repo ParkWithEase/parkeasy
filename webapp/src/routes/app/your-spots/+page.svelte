@@ -31,6 +31,7 @@
             isListed: false
         };
         data.spots = [...data.spots, new_spot];
+        isAddModalOpen = false;
     }
 </script>
 
