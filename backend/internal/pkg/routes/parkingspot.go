@@ -22,13 +22,29 @@ type ParkingSpotServicer interface {
 	DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
 }
 
+type ListingServicer interface {
+	// Creates a new listing attached to `parkingspotID`.
+	//
+	// Returns the listing internal ID and the model.
+	Create(ctx context.Context, userID int64, listing *models.ListingCreationInput) (int64, models.Listing, error)
+	// Get the listing with `listingID` if a valid `parkingspotID` is passed.
+	GetByUUID(ctx context.Context, userID int64, listingID uuid.UUID) (models.Listing, error)
+	// Unlist the listing with `listingID` if `userID` owns the resource. Also, includes making it public and removing it from being public
+	UpdateByUUID(ctx context.Context, userID int64, listingID uuid.UUID, listing *models.ListingCreationInput) error
+}
+
 type ParkingSpotRoute struct {
-	service       ParkingSpotServicer
-	sessionGetter SessionDataGetter
+	spotService    ParkingSpotServicer
+	listingService ListingServicer
+	sessionGetter  SessionDataGetter
 }
 
 type ParkingSpotOutput struct {
 	Body models.ParkingSpot
+}
+
+type ListingOutput struct {
+	Body models.Listing
 }
 
 var ParkingSpotTag = huma.Tag{
@@ -38,11 +54,11 @@ var ParkingSpotTag = huma.Tag{
 
 // Returns a new `ParkingSpotRoute`
 func NewParkingSpotRoute(
-	service ParkingSpotServicer,
+	spotService ParkingSpotServicer,
 	sessionGetter SessionDataGetter,
 ) *ParkingSpotRoute {
 	return &ParkingSpotRoute{
-		service:       service,
+		spotService:   spotService,
 		sessionGetter: sessionGetter,
 	}
 }
@@ -66,7 +82,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	},
 	) (*ParkingSpotOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		_, result, err := r.service.Create(ctx, userID, &input.Body)
+		_, result, err := r.spotService.Create(ctx, userID, &input.Body)
 		if err != nil {
 			var detail error
 			switch {
@@ -107,13 +123,13 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		Path:        "/spots/{id}",
 		Summary:     "Get information about a parking spot",
 		Tags:        []string{ParkingSpotTag.Name},
-		Errors:      []int{http.StatusNotFound},
+		Errors:      []int{http.StatusUnprocessableEntity},
 	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
 	) (*ParkingSpotOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		result, err := r.service.GetByUUID(ctx, userID, input.ID)
+		result, err := r.spotService.GetByUUID(ctx, userID, input.ID)
 		if err != nil {
 			if errors.Is(err, models.ErrParkingSpotNotFound) {
 				detail := &huma.ErrorDetail{
@@ -127,6 +143,32 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		return &ParkingSpotOutput{Body: result}, nil
 	})
 
+	// huma.Register(api, *withUserID(&huma.Operation{
+	// 	OperationID: "create-listing-for-a-parking-spot",
+	// 	Method:      http.MethodPost,
+	// 	Path:        "/spots/list",
+	// 	Summary:     "Create a new listing for a parking spot",
+	// 	Tags:        []string{ParkingSpotTag.Name},
+	// 	Errors:      []int{http.StatusNotFound},
+	// }), func(ctx context.Context, input *struct {
+	// 	Body models.ListingCreationInput
+	// },
+	// ) (*ListingOutput, error) {
+	// 	userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+	// 	result, err := r.listingService.Create(ctx, userID, input.ID)
+	// 	if err != nil {
+	// 		if errors.Is(err, models.ErrParkingSpotNotFound) {
+	// 			detail := &huma.ErrorDetail{
+	// 				Location: "path.id",
+	// 				Value:    input.ID,
+	// 			}
+	// 			return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
+	// 		}
+	// 		return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
+	// 	}
+	// 	return &ParkingSpotOutput{Body: result}, nil
+	// })
+
 	huma.Register(api, *withUserID(&huma.Operation{
 		OperationID: "delete-parking-spot",
 		Method:      http.MethodDelete,
@@ -139,7 +181,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	},
 	) (*struct{}, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		err := r.service.DeleteByUUID(ctx, userID, input.ID)
+		err := r.spotService.DeleteByUUID(ctx, userID, input.ID)
 		if err != nil {
 			if errors.Is(err, models.ErrParkingSpotOwned) {
 				detail := &huma.ErrorDetail{
