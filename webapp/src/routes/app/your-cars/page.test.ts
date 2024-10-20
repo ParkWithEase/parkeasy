@@ -1,4 +1,4 @@
-import { expect, test, describe, beforeAll, afterAll, afterEach, beforeEach, vi } from 'vitest';
+import { expect, test, describe, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { load } from './+page';
 import { render, screen } from '@testing-library/svelte';
@@ -20,11 +20,6 @@ beforeAll(() => {
         }
     });
 });
-beforeEach(() => {
-    server.use(
-        http.get(`${BACKEND_SERVER}/cars`, () => HttpResponse.json(test_data, { status: 200 }))
-    );
-});
 
 afterEach(() => server.resetHandlers());
 
@@ -33,6 +28,9 @@ afterAll(() => server.close());
 describe('fetch cars information test', () => {
     test('test if cars is loaded correctly', async () => {
         //Data is loaded correctly
+        server.use(
+            http.get(`${BACKEND_SERVER}/cars`, () => HttpResponse.json(test_data, { status: 200 }))
+        );
         const data = await load({ fetch: global.fetch });
         expect(data.cars).toStrictEqual(test_data);
 
@@ -46,8 +44,7 @@ describe('fetch cars information test', () => {
     });
 
     test('test if cars create work correctly', async () => {
-        const data = await load({ fetch: global.fetch });
-
+        const data = { cars: test_data, hasNext: undefined, paging: undefined };
         const new_car_detail = {
             license_plate: 'lic-new',
             make: 'color-new',
@@ -64,12 +61,12 @@ describe('fetch cars information test', () => {
 
         const createButton = screen.getByRole('button', { name: 'new-car-button' });
         await user.click(createButton);
-        const license_plate_field = screen.getByRole('textbox', {
-            name: 'create-car-license-plate'
+        let license_plate_field = screen.getByRole('textbox', {
+            name: 'License plate'
         });
-        const color_field = screen.getByRole('textbox', { name: 'create-car-color' });
-        const model_field = screen.getByRole('textbox', { name: 'create-car-model' });
-        const make_field = screen.getByRole('textbox', { name: 'create-car-make' });
+        let color_field = screen.getByRole('textbox', { name: 'Color' });
+        let model_field = screen.getByRole('textbox', { name: 'Model' });
+        let make_field = screen.getByRole('textbox', { name: 'Make' });
 
         console.log('Test creating a new car with correct input');
         await user.click(license_plate_field);
@@ -84,7 +81,7 @@ describe('fetch cars information test', () => {
         await user.click(make_field);
         await user.keyboard(new_car_detail.make);
 
-        const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+        let confirmButton = screen.getByRole('button', { name: 'Confirm' });
         await user.click(confirmButton);
         screen.getByText(new_car_detail.license_plate);
         screen.getByText('Color: ' + new_car_detail.color);
@@ -109,6 +106,14 @@ describe('fetch cars information test', () => {
         );
         console.log('Test creating a new car with incorrect input');
         await user.click(createButton);
+
+        license_plate_field = screen.getByRole('textbox', {
+            name: 'License plate'
+        });
+        color_field = screen.getByRole('textbox', { name: 'Color' });
+        model_field = screen.getByRole('textbox', { name: 'Model' });
+        make_field = screen.getByRole('textbox', { name: 'Make' });
+        confirmButton = screen.getByRole('button', { name: 'Confirm' });
         await user.click(license_plate_field);
         await user.keyboard('Very wrong license this is certainly invalid');
 
@@ -120,16 +125,15 @@ describe('fetch cars information test', () => {
 
         await user.click(make_field);
         await user.keyboard('wrong');
-        await user.click(confirmButton);
 
+        await user.click(confirmButton);
         screen.getByText('Error:');
         const closeModalButton = screen.getByRole('button', { name: 'Close the modal' });
         await user.click(closeModalButton);
     });
 
     test('Test delete functionality', async () => {
-        const data = await load({ fetch: global.fetch });
-
+        const data = { cars: test_data, hasNext: undefined, paging: undefined };
         window.confirm = vi.fn(() => {
             console.log('confirm');
             return true;
@@ -151,7 +155,7 @@ describe('fetch cars information test', () => {
     });
 
     test('Test edit functionality', async () => {
-        const data = await load({ fetch: global.fetch });
+        const data = { cars: test_data, hasNext: undefined, paging: undefined };
         render(CarPage, { data: data });
         const car_to_edit = screen.getByText(test_data[0].details.license_plate);
         await user.click(car_to_edit);
@@ -174,10 +178,10 @@ describe('fetch cars information test', () => {
             )
         );
         console.log('Edit with correct input');
-        let license_plate_field = screen.getByRole('textbox', { name: 'edit-car-license-plate' });
-        let color_field = screen.getByRole('textbox', { name: 'edit-car-color' });
-        let model_field = screen.getByRole('textbox', { name: 'edit-car-model' });
-        let make_field = screen.getByRole('textbox', { name: 'edit-car-make' });
+        let license_plate_field = screen.getByRole('textbox', { name: 'License plate' });
+        let color_field = screen.getByRole('textbox', { name: 'Color' });
+        let model_field = screen.getByRole('textbox', { name: 'Model' });
+        let make_field = screen.getByRole('textbox', { name: 'Make' });
         await user.click(license_plate_field);
         await user.clear(license_plate_field);
         await user.keyboard(edit_car_detail.license_plate);
@@ -221,10 +225,10 @@ describe('fetch cars information test', () => {
 
         editButton = screen.getByRole('button', { name: 'Edit' });
         await user.click(editButton);
-        license_plate_field = screen.getByRole('textbox', { name: 'edit-car-license-plate' });
-        color_field = screen.getByRole('textbox', { name: 'edit-car-color' });
-        model_field = screen.getByRole('textbox', { name: 'edit-car-model' });
-        make_field = screen.getByRole('textbox', { name: 'edit-car-make' });
+        license_plate_field = screen.getByRole('textbox', { name: 'License plate' });
+        color_field = screen.getByRole('textbox', { name: 'Color' });
+        model_field = screen.getByRole('textbox', { name: 'Model' });
+        make_field = screen.getByRole('textbox', { name: 'Make' });
         await user.click(license_plate_field);
         await user.clear(license_plate_field);
         await user.keyboard('1');
@@ -243,6 +247,7 @@ describe('fetch cars information test', () => {
         confirmButton = screen.getByRole('button', { name: 'Confirm' });
 
         await user.click(confirmButton);
+
         screen.getByText('Error:');
         const closeModalButton = screen.getByRole('button', { name: 'Close' });
         await user.click(closeModalButton);

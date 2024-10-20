@@ -10,10 +10,9 @@
     import { getErrorMessage } from '$lib/utils/error-handler';
     import IntersectionObserver from 'svelte-intersection-observer';
     import { newClient } from '$lib/utils/client';
+    import { CarModalState } from '$lib/enum/car-model';
 
-    let isViewEditModalOpen: boolean = false;
-    let isEditModalOpen: boolean = false;
-    let isAddModalOpen: boolean = false;
+    let currentModalState = CarModalState.NONE;
     let selectedCarID: string | null;
     let selectedCarInfo: Car | null;
     let errorMessage: string;
@@ -25,7 +24,7 @@
     let canLoadMore = data.hasNext;
 
     function selectCarIndex(index: string, CarInfo: Car) {
-        isViewEditModalOpen = true;
+        currentModalState = CarModalState.VIEW;
         selectedCarID = index;
         selectedCarInfo = CarInfo;
     }
@@ -34,18 +33,23 @@
 
     $: while (intersecting && canLoadMore && !loadLock) {
         loadLock = true;
-        data.paging.next().then(({ value: { data: cars, hasNext } }) => {
-            if (cars) {
-                data.cars = [...data.cars, ...cars];
-            }
-            canLoadMore = !!hasNext;
-            loadLock = false;
-        });
+        data.paging
+            .next()
+            .then(({ value: { data: cars, hasNext } }) => {
+                if (cars) {
+                    data.cars = [...data.cars, ...cars];
+                }
+                canLoadMore = !!hasNext;
+            })
+            .finally(() => {
+                loadLock = false;
+            });
     }
 
     function handleCreate(event: Event) {
         event.preventDefault();
         const formData = new FormData(event.target as HTMLFormElement);
+        console.log(formData.get('license-plate'));
         client
             .POST('/cars', {
                 body: {
@@ -59,7 +63,7 @@
                 if (new_car) {
                     data.cars = [...data.cars, { details: new_car.details, id: new_car.id }];
                     errorMessage = '';
-                    isAddModalOpen = false;
+                    currentModalState = CarModalState.NONE;
                 }
                 if (error) {
                     errorMessage = getErrorMessage(error);
@@ -94,7 +98,7 @@
                     errorMessage = err;
                 })
                 .finally(() => {
-                    isViewEditModalOpen = false;
+                    currentModalState = CarModalState.NONE;
                 });
         }
     }
@@ -116,7 +120,7 @@
             })
             .then(({ data: change_car, error }) => {
                 if (change_car) {
-                    isEditModalOpen = false;
+                    currentModalState = CarModalState.VIEW;
                     data.cars = data.cars?.map((car) => {
                         if (car.id == change_car.id) {
                             return change_car;
@@ -128,7 +132,7 @@
                     errorMessage = '';
                 }
                 if (error) {
-                    isEditModalOpen = true;
+                    currentModalState = CarModalState.EDIT;
                     errorMessage = getErrorMessage(error);
                 }
             })
@@ -143,7 +147,7 @@
         aria-label="new-car-button"
         style="margin: 1rem;"
         icon={Add}
-        on:click={() => (isAddModalOpen = true)}>New Car</Button
+        on:click={() => (currentModalState = CarModalState.ADD)}>New Car</Button
     >
 </div>
 
@@ -163,19 +167,18 @@
     {/if}
 </IntersectionObserver>
 
-{#if !isAddModalOpen}
+{#if currentModalState == CarModalState.EDIT || currentModalState == CarModalState.VIEW}
     <CarViewEditModal
-        bind:openState={isViewEditModalOpen}
+        bind:state={currentModalState}
         bind:carInfo={selectedCarInfo}
-        bind:isEdit={isEditModalOpen}
         on:submit={handleEdit}
         on:delete={handleDelete}
         bind:errorMessage
     />
 {/if}
 
-{#if !isViewEditModalOpen}
-    <CarAddModal bind:openState={isAddModalOpen} on:submit={handleCreate} bind:errorMessage />
+{#if currentModalState == CarModalState.ADD}
+    <CarAddModal bind:state={currentModalState} on:submit={handleCreate} bind:errorMessage />
 {/if}
 
 <style>
