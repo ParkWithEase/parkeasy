@@ -107,4 +107,39 @@ jobs:
         with:
           sparse-checkout: backend
 
-      - run: podman build -t packserver backend/
+      - name: Get Git commit timestamps
+        run: echo "TIMESTAMP=$(git log -1 --pretty=%ct)" >> $GITHUB_ENV
+
+      - name: Create container metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/parkwithease/parkserver
+          tags: |
+            type=sha
+            type=ref,event=pr
+
+      - name: Setup Docker BuildKit
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container image
+        uses: docker/build-push-action@v6
+        with:
+          push: false
+          context: backend
+          file: backend/Containerfile
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: |
+            type=docker,dest=${{ runner.temp }}/parkserver.tar.zst,compression=zstd
+        env:
+          SOURCE_DATE_EPOCH: ${{ env.TIMESTAMP }}
+
+      - name: Upload container image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: parkserver container
+          path: ${{ runner.temp }}/parkserver.tar.zst
