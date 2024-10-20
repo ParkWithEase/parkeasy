@@ -73,7 +73,6 @@ constructor(
             val response =
                 withContext(ioDispatcher) {
                     client.delete("/auth") {
-                        contentType(ContentType.Application.Json)
                         cookie(authCookie.name, authCookie.value)
                     }
                 }
