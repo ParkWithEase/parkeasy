@@ -4,7 +4,7 @@
     export let spot;
 </script>
 
-<a href={`/spots/${spot.id}/spot-info`}>
+<a href={`your-spots/${spot.id}/spot-info`}>
     <div class="spot-info">
         <div>
             <img src={BackgroundImage} class="spot-image" alt="A parking spot" />
