@@ -175,9 +175,7 @@
         on:delete={handleDelete}
         bind:errorMessage
     />
-{/if}
-
-{#if currentModalState == CarModalState.ADD}
+{:else if currentModalState == CarModalState.ADD}
     <CarAddModal bind:state={currentModalState} on:submit={handleCreate} bind:errorMessage />
 {/if}
 

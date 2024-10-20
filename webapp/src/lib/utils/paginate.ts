@@ -7,10 +7,10 @@ function extractNextCursor(linkHeader: string | null): string | null {
         return null;
     }
 
-    const regex = /<([^>]+)>; rel="next"/g;
+    const regex = /<(.*)>; rel="next"/;
     let result: string | null = null;
     for (const link of linkHeader.split(',')) {
-        const nextURI = regex.exec(link)?.[1];
+        const nextURI = link.match(regex)?.[1];
         if (nextURI) {
             result = new URL(nextURI, 'http://localhost').searchParams.get('after');
             if (result) {
