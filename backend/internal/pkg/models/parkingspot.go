@@ -14,6 +14,9 @@ var (
 	ErrInvalidPostalCode    = CodeSpotInvalid.WithMsg("the specified postal code is invalid")
 	ErrInvalidStreetAddress = CodeSpotInvalid.WithMsg("the specified street address is invalid")
 	ErrInvalidCoordinate    = CodeSpotInvalid.WithMsg("the specified coordinate is invalid")
+	ErrListingNotFound      = CodeNotFound.WithMsg("this listing does not exist")
+	ErrListingDuplicate     = CodeDuplicate.WithMsg("listing already exists")
+	ErrTimeUnitDuplicate    = CodeDuplicate.WithMsg("time slot already exists")
 )
 
 type ParkingSpotLocation struct {
@@ -56,6 +59,7 @@ type ParkingSpotCreationInput struct {
 }
 
 type ListingCreationInput struct {
+	ID           uuid.UUID  `json:"id" doc:"ID of the parking spot"`
 	PricePerHour float32    `json:"price_per_hour" doc:"price per hour"`
 	MakePublic   bool       `json:"make_public" doc:"if the listing is supposed to be public"`
 	Availability []TimeSlot `json:"availability,omitempty"`
