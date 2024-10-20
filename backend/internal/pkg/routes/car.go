@@ -43,7 +43,7 @@ type CarOutput struct {
 }
 
 type CarListOutput struct {
-	Link []string `header:"Link" doc:"Contains details on getting the next page of resources" example:"</cars?after=gQL>; rel=\"next\""`
+	Link []string `header:"Link" doc:"Contains details on getting the next page of resources" example:"<https://example.com/cars?after=gQL>; rel=\"next\""`
 	Body []models.Car
 }
 
@@ -69,6 +69,8 @@ func (r *CarRoute) RegisterCarTag(api huma.API) {
 
 // Registers `/car` routes
 func (r *CarRoute) RegisterCarRoutes(api huma.API) {
+	apiPrefix := getAPIPrefix(api.OpenAPI())
+
 	huma.Register(api, *withUserID(&huma.Operation{
 		OperationID:   "create-car",
 		Method:        http.MethodPost,
@@ -109,13 +111,11 @@ func (r *CarRoute) RegisterCarRoutes(api huma.API) {
 
 		result := CarListOutput{Body: cars}
 		if nextCursor != "" {
-			nextURL := url.URL{
-				Path: "/cars",
-				RawQuery: url.Values{
-					"count": []string{strconv.Itoa(input.Count)},
-					"after": []string{string(nextCursor)},
-				}.Encode(),
-			}
+			nextURL := apiPrefix.JoinPath("/cars")
+			nextURL.RawQuery = url.Values{
+				"count": []string{strconv.Itoa(input.Count)},
+				"after": []string{string(nextCursor)},
+			}.Encode()
 			result.Link = append(result.Link, "<"+nextURL.String()+`>; rel="next"`)
 		}
 		return &result, nil

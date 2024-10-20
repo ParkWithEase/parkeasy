@@ -386,6 +386,43 @@ func TestGetManyCar(t *testing.T) {
 
 		srv.AssertExpectations(t)
 	})
+
+	t.Run("respect server URL if set", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockCarService)
+		route := NewCarRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		api.OpenAPI().Servers = append(api.OpenAPI().Servers, &huma.Server{
+			URL: "http://localhost",
+		})
+		huma.AutoRegister(api, route)
+
+		testUUID := uuid.New()
+		srv.On("GetMany", mock.Anything, testUserID, 1, models.Cursor("")).
+			Return([]models.Car{{ID: testUUID}}, models.Cursor("cursor"), nil).
+			Once()
+
+		resp := api.GetCtx(ctx, "/cars?count=1")
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+		links := link.ParseResponse(resp.Result())
+		if assert.NotEmpty(t, links) {
+			nextLinks, ok := links["next"]
+			if assert.True(t, ok, "there should be links with rel=next") {
+				nextURL, err := url.Parse(nextLinks.URI)
+				require.NoError(t, err)
+				assert.Equal(t, "http", nextURL.Scheme)
+				assert.Equal(t, "localhost", nextURL.Host)
+				assert.Equal(t, "/cars", nextURL.Path)
+				queries, err := url.ParseQuery(nextURL.RawQuery)
+				require.NoError(t, err)
+				assert.Equal(t, "1", queries.Get("count"))
+				assert.Equal(t, "cursor", queries.Get("after"))
+			}
+		}
+
+		srv.AssertExpectations(t)
+	})
 }
 
 func TestDeleteCar(t *testing.T) {
