@@ -3,22 +3,38 @@
     import {
     Header,
     HeaderUtilities,
-    HeaderGlobalAction,
-    SkipToContent
+    HeaderGlobalAction
     } from "carbon-components-svelte";
     import Logout from "../../../node_modules/carbon-icons-svelte/lib/Logout.svelte";
     import User from "../../../node_modules/carbon-icons-svelte/lib/User.svelte";
     import Map from "../../../node_modules/carbon-icons-svelte/lib/Map.svelte";
     import MobileAdd from "carbon-icons-svelte/lib/MobileAdd.svelte";
+    import { BACKEND_SERVER } from '$lib/constants';
+    import { goto } from '$app/navigation';
+
+    async function logout() {
+        try {
+            const response = await fetch(`${BACKEND_SERVER}/auth`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (response.ok) {
+                goto('/auth/login');
+            } else {
+                throw new Error("Can't log out for some reason");
+            }
+        } catch {
+            throw new Error('Something went wrong');
+        }
+    }
+
+
 </script>
 
 <svelte:window />
 
 <Header>
     <a href="/#"><img src={logo} alt="parkeasy-logo" class="text-logo" /></a>
-    <svelte:fragment slot="skip-to-content">
-      <SkipToContent />
-    </svelte:fragment>
     <HeaderUtilities>
       <HeaderGlobalAction
         iconDescription="Explore open spots"
@@ -32,12 +48,13 @@
         iconDescription="Log out"
         tooltipAlignment="end"
         icon={Logout}
+        href="/"
+        on:click={logout}
       />
     </HeaderUtilities>
 </Header>
 
 <style>
-
     .text-logo {
         max-height: 4rem;
     }

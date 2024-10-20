@@ -44,8 +44,8 @@ a:hover {
 }
 
 h1 {
+    margin: 1rem;
     font-size: 2rem;
-    text-align: center;
 }
 
 h2 {
