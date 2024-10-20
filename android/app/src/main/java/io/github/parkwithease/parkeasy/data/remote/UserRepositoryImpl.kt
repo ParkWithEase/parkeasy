@@ -90,6 +90,20 @@ constructor(
                     setBody(credentials)
                 }
             }
-        return response.status == HttpStatusCode.Accepted
+        return response.status.isSuccess()
+    }
+
+    override suspend fun getUser(): Profile? {
+        val response: HttpResponse
+        val authCookie = authRepo.sessionFlow.firstOrNull()
+        response =
+            withContext(ioDispatcher) {
+                client.get("/user") {
+                    if (authCookie != null) {
+                        cookie(authCookie.name, authCookie.value)
+                    }
+                }
+            }
+        return if (response.status.isSuccess()) response.body() else null
     }
 }
