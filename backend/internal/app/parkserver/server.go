@@ -39,6 +39,8 @@ type Config struct {
 	DBPool *pgxpool.Pool
 	// The address to run the server on
 	Addr string
+	// The origin to allow cross-origin request from.
+	CorsOrigin string
 	// Whether to run server in insecure mode. This allows cookies to be transferred over plain HTTP.
 	Insecure bool
 }
@@ -114,8 +116,8 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 
 	srv.Handler = LogMiddleware(srv.Handler)
 
-	if c.Insecure {
-		corsMiddleware := cors.New(cors.Options{
+	if c.Insecure || c.CorsOrigin != "" {
+		corsOpts := cors.Options{
 			AllowedMethods: []string{
 				http.MethodGet,
 				http.MethodHead,
@@ -124,15 +126,21 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 				http.MethodDelete,
 				http.MethodPatch,
 			},
+			AllowCredentials: true,
+			ExposedHeaders:   []string{"Link"},
+		}
+
+		if c.Insecure {
 			// NOTE: This allow all credentials to be passed across CORS
 			//
 			// It is very insecure, and as such should only be enabled for development
-			AllowOriginFunc: func(_ string) bool {
+			corsOpts.AllowOriginFunc = func(_ string) bool {
 				return true
-			},
-			AllowCredentials: true,
-			ExposedHeaders:   []string{"Link"},
-		})
+			}
+		} else {
+			corsOpts.AllowedOrigins = append(corsOpts.AllowedOrigins, c.CorsOrigin)
+		}
+		corsMiddleware := cors.New(corsOpts)
 		srv.Handler = corsMiddleware.Handler(srv.Handler)
 	}
 

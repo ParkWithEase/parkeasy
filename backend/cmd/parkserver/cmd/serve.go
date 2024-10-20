@@ -56,9 +56,10 @@ func (c *DBConfig) String() string {
 }
 
 type ServeCmd struct {
-	DB       DBConfig `embed:"" group:"db" prefix:"db-" envprefix:"DB_"`
-	Port     uint16   `short:"p" placeholder:"PORT" env:"PORT" default:"8080" help:"Port to serve the server on (default: ${default})."`
-	Insecure bool     `env:"INSECURE" help:"Run in insecure mode for development (ie. CORS allow-all, HTTP cookies)."`
+	CorsOrigin string   `placeholder:"ORIGIN" env:"CORS_ORIGIN" help:"Allow pages from ORIGIN to access the API server."`
+	DB         DBConfig `embed:"" group:"db" prefix:"db-" envprefix:"DB_"`
+	Port       uint16   `short:"p" placeholder:"PORT" env:"PORT" default:"8080" help:"Port to serve the server on (default: ${default})."`
+	Insecure   bool     `env:"INSECURE" help:"Run in insecure mode for development (ie. CORS allow-all, HTTP cookies)."`
 }
 
 func (s *ServeCmd) Run(ctx context.Context, l *zerolog.Logger, globals *Globals) error {
@@ -89,6 +90,8 @@ func (s *ServeCmd) Run(ctx context.Context, l *zerolog.Logger, globals *Globals)
 
 	if config.Insecure {
 		log.Warn().Msg("running in insecure mode")
+	} else {
+		log.Debug().Str("origin", s.CorsOrigin).Msg("allowing cross-origin requests")
 	}
 	log.Info().Uint16("port", s.Port).Msg("server started")
 	err = config.ListenAndServe(ctx)
