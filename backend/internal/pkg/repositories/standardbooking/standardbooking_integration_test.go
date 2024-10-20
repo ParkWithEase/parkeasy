@@ -89,6 +89,7 @@ func TestPostgresIntegration(t *testing.T) {
 		assert.NotEqual(t, -1, createEntry.BookingID)
 		assert.Equal(t, userID, createEntry.OwnerID)
 		assert.Equal(t, sampleListingId, createEntry.ListingID)
+		// TO-DO Finish test to check the timeunits that were updated
 
 		// Testing get
 		getEntry, err := repo.GetByUUID(ctx, createEntry.StandardBooking.ID)

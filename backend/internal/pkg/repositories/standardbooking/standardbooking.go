@@ -15,6 +15,7 @@ var (
 
 type Entry struct {
 	models.StandardBooking
+	models.TimeSlot
 	InternalID 	int64 // The internal ID of this standard booking
 	BookingID	int64 // The booking ID of this standard booking
 	OwnerID		int64 // The user ID owning this standard booking

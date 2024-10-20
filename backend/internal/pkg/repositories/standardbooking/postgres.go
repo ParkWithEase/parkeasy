@@ -9,12 +9,14 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbmodels"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/aarondl/opt/omit"
+	"github.com/aarondl/opt/omitnull"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/scan"
 )
 
@@ -28,7 +30,7 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 	}
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, listingID int64, booking *models.StandardBookingCreationInput) (Entry, error) {
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, listingID int64, booking *models.StandardBookingCreationInput,) (Entry, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return Entry{}, fmt.Errorf("could not start a transaction: %w", err)
@@ -57,6 +59,19 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, listingID
 		return Entry{}, err
 	}
 
+	updated, err := dbmodels.Timeunits.UpdateQ(
+		ctx, p.db,
+		dbmodels.UpdateWhere.Timeunits.Listingid.EQ(listingID),
+		dbmodels.UpdateWhere.Timeunits.Date.EQ(booking.Date),
+		dbmodels.UpdateWhere.Timeunits.Unitnum.GTE(booking.StartUnitNum),
+		dbmodels.UpdateWhere.Timeunits.Unitnum.LTE(booking.EndUnitNum),
+		&dbmodels.TimeunitSetter{
+			Bookingid: omitnull.From(bookingInserted.Bookingid),
+		},
+		um.Returning(dbmodels.Timeunits.Columns()),
+	).All()
+
+
 	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
@@ -75,8 +90,20 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, listingID
 		ID:      standardBookingInserted.Standardbookinguuid,
 	}
 
+	var units []int16
+
+	for _, row := range updated {
+		units = append(units, row.Unitnum)
+	}
+
+	timeslot := models.TimeSlot{
+		Date:  booking.Date,
+		Units: units,
+	}
+
 	entry := Entry{
 		StandardBooking: standardBooking,
+		TimeSlot: 		 timeslot,
 		InternalID:      standardBookingInserted.Bookingid,
 		BookingID:       bookingInserted.Bookingid,
 		OwnerID:         userID,
