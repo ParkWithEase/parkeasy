@@ -66,9 +66,13 @@ private data class LoginEvents(
 
 @Composable
 fun LoginScreen(
+    showSnackbar: suspend (String, String?) -> Boolean,
     onLogin: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: LoginViewModel = hiltViewModel<LoginViewModel>(),
+    viewModel: LoginViewModel =
+        hiltViewModel<LoginViewModel, LoginViewModel.Factory>(
+            creationCallback = { factory -> factory.create(showSnackbar = showSnackbar) }
+        ),
 ) {
     val loggedIn by viewModel.loggedIn.collectAsState(false)
     val formEnabled by viewModel.formEnabled.collectAsState()

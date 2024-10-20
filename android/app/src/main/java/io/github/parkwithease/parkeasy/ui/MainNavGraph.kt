@@ -2,9 +2,12 @@ package io.github.parkwithease.parkeasy.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -21,10 +24,18 @@ import io.github.parkwithease.parkeasy.ui.profile.profileScreen
 
 @Composable
 fun MainNavGraph(
-    hostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val showSnackbar: suspend (message: String, actionLabel: String?) -> Boolean =
+        { message, actionLabel ->
+            snackbarHostState.showSnackbar(
+                message,
+                actionLabel,
+                duration = SnackbarDuration.Short,
+            ) == SnackbarResult.ActionPerformed
+        }
     Scaffold(
         bottomBar = {
             NavBar(
@@ -33,7 +44,7 @@ fun MainNavGraph(
                 navController::navigateToProfile,
             )
         },
-        snackbarHost = { SnackbarHost(hostState = hostState) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         modifier = modifier,
     ) { innerPadding ->
         NavHost(
@@ -41,10 +52,10 @@ fun MainNavGraph(
             startDestination = "login",
             modifier = Modifier.padding(innerPadding),
         ) {
-            loginScreen { navController.navigateToProfile() }
+            loginScreen(showSnackbar, navController::navigateToProfile)
             listScreen()
             mapScreen()
-            profileScreen { navController.navigateToLogin() }
+            profileScreen(navController::navigateToLogin)
         }
     }
 }
