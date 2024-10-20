@@ -23,7 +23,7 @@ var (
 )
 
 type Repository interface {
-	Create(ctx context.Context, parkingspotID int64, listing *models.ListingCreationInput) (int64, Entry, error)
+	Create(ctx context.Context, parkingspotID int64, list *models.ListingCreationInput) (int64, Entry, error)
 	GetByUUID(ctx context.Context, listingID uuid.UUID) (Entry, error)
 	GetSpotByUUID(ctx context.Context, listingID uuid.UUID) (int64, error)
 	UnlistByUUID(ctx context.Context, listingID uuid.UUID) (Entry, error)
