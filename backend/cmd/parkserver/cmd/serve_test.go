@@ -99,3 +99,42 @@ func TestDBComponents(t *testing.T) {
 		assert.Equal(t, testURL, cli.DB.String())
 	})
 }
+
+func TestAPIPrefix(t *testing.T) {
+	t.Parallel()
+
+	t.Run("default API prefix", func(t *testing.T) {
+		t.Parallel()
+		var cli ServeCmd
+		k, err := kong.New(&cli)
+		require.NoError(t, err)
+		_, err = k.Parse([]string{})
+		require.NoError(t, err)
+
+		assert.Equal(t, "http://localhost:8080", cli.getAPIPrefix())
+	})
+
+	t.Run("prefix without scheme", func(t *testing.T) {
+		t.Parallel()
+
+		var cli ServeCmd
+		k, err := kong.New(&cli)
+		require.NoError(t, err)
+		_, err = k.Parse([]string{"--api-prefix", "localhost"})
+		require.NoError(t, err)
+
+		assert.Equal(t, "https://localhost", cli.getAPIPrefix())
+	})
+
+	t.Run("prefix with scheme", func(t *testing.T) {
+		t.Parallel()
+
+		var cli ServeCmd
+		k, err := kong.New(&cli)
+		require.NoError(t, err)
+		_, err = k.Parse([]string{"--api-prefix", "http://localhost"})
+		require.NoError(t, err)
+
+		assert.Equal(t, "http://localhost", cli.getAPIPrefix())
+	})
+}

@@ -56,10 +56,23 @@ func (c *DBConfig) String() string {
 }
 
 type ServeCmd struct {
+	APIPrefix  *url.URL `env:"API_PREFIX" placeholder:"PREFIX" help:"Specify the base prefix of the API server (example: http://localhost:8080/). If not specified, will be set to localhost at serve port."`
 	CorsOrigin string   `placeholder:"ORIGIN" env:"CORS_ORIGIN" help:"Allow pages from ORIGIN to access the API server."`
 	DB         DBConfig `embed:"" group:"db" prefix:"db-" envprefix:"DB_"`
 	Port       uint16   `short:"p" placeholder:"PORT" env:"PORT" default:"8080" help:"Port to serve the server on (default: ${default})."`
 	Insecure   bool     `env:"INSECURE" help:"Run in insecure mode for development (ie. CORS allow-all, HTTP cookies)."`
+}
+
+func (s *ServeCmd) getAPIPrefix() string {
+	if s.APIPrefix == nil {
+		prefix := net.JoinHostPort("localhost", strconv.Itoa(int(s.Port)))
+		prefix = "http://" + prefix
+		return prefix
+	}
+	if s.APIPrefix.Scheme == "" {
+		s.APIPrefix.Scheme = "https"
+	}
+	return s.APIPrefix.String()
 }
 
 func (s *ServeCmd) Run(ctx context.Context, l *zerolog.Logger, globals *Globals) error {
@@ -77,9 +90,10 @@ func (s *ServeCmd) Run(ctx context.Context, l *zerolog.Logger, globals *Globals)
 	defer pool.Close()
 
 	config := parkserver.Config{
-		DBPool:   pool,
-		Addr:     net.JoinHostPort("", strconv.Itoa(int(s.Port))),
-		Insecure: s.Insecure,
+		DBPool:    pool,
+		APIPrefix: s.getAPIPrefix(),
+		Addr:      net.JoinHostPort("", strconv.Itoa(int(s.Port))),
+		Insecure:  s.Insecure,
 	}
 
 	log.Info().Msg("running migrations")
