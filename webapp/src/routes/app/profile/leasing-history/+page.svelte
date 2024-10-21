@@ -4,7 +4,7 @@
     let leasingList: Booking[] = [
         {
             booking_id: '000101010',
-            address: 'Chancellor\'s Circle',
+            address: "Chancellor's Circle",
             postalCode: 'X1X1X1',
             price: 10.26,
             time_from: 800,
@@ -22,7 +22,7 @@
         },
         {
             booking_id: '000101010',
-            address: 'Chancellor\'s Circle',
+            address: "Chancellor's Circle",
             postalCode: 'X1X1X1',
             price: 10.26,
             time_from: 800,
@@ -40,7 +40,7 @@
         },
         {
             booking_id: '000101010',
-            address: 'Chancellor\'s Circle',
+            address: "Chancellor's Circle",
             postalCode: 'X1X1X1',
             price: 10.26,
             time_from: 800,
@@ -79,23 +79,20 @@
                     </div>
                 </div>
             </div>
-            <hr class="separator">
+            <hr class="separator" />
         {/each}
-        
     {/key}
 </div>
 
-
-
 <style>
-    h1{
+    h1 {
         font-weight: bold;
     }
 
-    .separator{
+    .separator {
         width: 90%;
     }
-    .list-container{
+    .list-container {
         width: 80%;
         border-top: 2px solid black;
     }
@@ -110,7 +107,7 @@
     .leasing-info {
         flex: 1;
         display: flex;
-        flex-direction: column
+        flex-direction: column;
     }
     .leasing-image {
         max-height: 10%;

@@ -1,13 +1,8 @@
 <script lang="ts">
     import Navbar from '$lib/components/navbar.svelte';
-    
-    
+
     import { navigating } from '$app/stores';
-    import {
-    SideNav,
-    SideNavItems,
-    SideNavLink
-  } from "carbon-components-svelte";
+    import { SideNav, SideNavItems, SideNavLink } from 'carbon-components-svelte';
 
     let isSideNavOpen = true;
 </script>
@@ -16,10 +11,10 @@
 
 <SideNav bind:isOpen={isSideNavOpen}>
     <SideNavItems>
-      <SideNavLink text="Your Profile" href="/app/profile/user-profile"/>
-      <SideNavLink text="Booking History" href="/app/profile/booking-history"/>
-      <SideNavLink text="Leasing History" href="/app/profile/leasing-history"/>
-      <SideNavLink text="Preferred Spots" href="/app/profile/preferred-spots"/>
+        <SideNavLink text="Your Profile" href="/app/profile/user-profile" />
+        <SideNavLink text="Booking History" href="/app/profile/booking-history" />
+        <SideNavLink text="Leasing History" href="/app/profile/leasing-history" />
+        <SideNavLink text="Preferred Spots" href="/app/profile/preferred-spots" />
     </SideNavItems>
 </SideNav>
 
@@ -31,9 +26,7 @@
     {/await}
 </div>
 
-
 <style>
-
     :global(.bx--side-nav__items) {
         height: 50%;
         border-right: 1px black solid;

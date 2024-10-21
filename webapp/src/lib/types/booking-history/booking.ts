@@ -1,5 +1,5 @@
 export type Booking = {
-    booking_id: string,
+    booking_id: string;
     address: string;
     postalCode: string;
     price: number;

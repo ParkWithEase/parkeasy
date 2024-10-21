@@ -7,7 +7,6 @@
     <h1>Your Profile</h1>
 </header>
 <div class="container">
-    
     <div>
         <p>Name: {data.full_name}</p>
     </div>
@@ -17,7 +16,7 @@
 </div>
 
 <style>
-    h1{
+    h1 {
         font-weight: bold;
     }
 
