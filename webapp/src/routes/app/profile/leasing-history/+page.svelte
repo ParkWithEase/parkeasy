@@ -61,7 +61,6 @@
 <div class="list-container">
     {#key leasingList}
         {#each leasingList as leasing}
-            <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <div class="leasing-info-container">
                 <LeasingHistoryDisplay booking={leasing}></LeasingHistoryDisplay>
             </div>
