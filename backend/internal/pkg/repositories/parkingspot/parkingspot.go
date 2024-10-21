@@ -19,6 +19,10 @@ type Cursor struct {
 	ID int64    // The internal parking spot ID to use as anchor
 }
 
+type Distance struct {
+	distance float32
+}
+
 var (
 	ErrDuplicatedAddress  = errors.New("address already exist in the database")
 	ErrNotFound           = errors.New("no parking spot found")

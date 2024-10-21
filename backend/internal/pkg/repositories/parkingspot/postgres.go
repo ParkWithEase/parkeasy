@@ -220,11 +220,28 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUI
 	return result.Userid, err
 }
 
-func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.Val[Cursor], longitude float64, latitude float64) ([]Entry, error) {
-	where := dbmodels.SelectWhere.Parkingspots.
-	
+func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.Val[Cursor], longitude float64, latitude float64, distance omit.Val[Distance]) ([]Entry, error) {
+	// 	SELECT *
+	// FROM places
+	// WHERE
+	//   earth_box(ll_to_earth(center_lat, center_lng), radius_in_meters)
+	//   @> ll_to_earth(lat, lng)
+
+	where := []bob.Expression{}
+
 	if cursor, ok := after.Get(); ok {
 		where = psql.WhereAnd(where, dbmodels.SelectWhere.Cars.Carid.GT(cursor.ID))
+	}
+
+	if dist, ok := distance.Get(); ok {
+		// Create a custom expression for the earth_box and ll_to_earth functions
+		distanceExpr := psql.F("earth_box", psql.Arg(psql.F("ll_to_earth"), psql.Arg()))(
+			`earth_box(ll_to_earth(?, ?), ?) @> ll_to_earth(latitude_column, longitude_column)`,
+			latitude, longitude, *distance, // *distance for pointers, distance.Value() for omitnull.Val
+		)
+
+		// Append this custom expression to the where clause
+		where = append(where, distanceExpr)
 	}
 
 	entryCursor, err := dbmodels.Cars.Query(
