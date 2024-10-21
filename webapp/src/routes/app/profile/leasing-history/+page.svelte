@@ -1,6 +1,5 @@
 <script lang="ts">
     import LeasingHistoryDisplay from '$lib/components/history-list-component/history-list-display.svelte';
-    import logo from '$lib/images/parkeasy-logo.png';
     let leasingList = [
         {
             booking_id: '000101010',
@@ -64,7 +63,6 @@
         {#each leasingList as leasing}
             <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <div class="leasing-info-container">
-                <img class="booking-image" src={logo} alt="a car" />
                 <LeasingHistoryDisplay booking={leasing}></LeasingHistoryDisplay>
             </div>
         {/each}
@@ -75,12 +73,6 @@
     :global(.bx--content) {
         padding: 0rem;
     }
-
-    .booking-image {
-        max-height: 9%;
-        max-width: 12%;
-    }
-
     .leasing-info-container {
         display: flex;
         flex-direction: row;

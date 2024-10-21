@@ -1,7 +1,9 @@
 <script lang="ts">
     export let booking;
+    import logo from '$lib/images/parkeasy-logo.png';
 </script>
 
+<img class="booking-image" src={logo} alt="a car" />
 <div class="booking-info">
     <div>
         <p class="booking-head">{booking.address}</p>
@@ -27,5 +29,10 @@
     }
     .booking-data {
         font-size: 1rem;
+    }
+    .booking-image {
+        max-height: 9%;
+        max-width: 12%;
+        padding: 1rem
     }
 </style>
