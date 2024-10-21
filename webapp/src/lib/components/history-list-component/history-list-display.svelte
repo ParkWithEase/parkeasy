@@ -33,6 +33,6 @@
     .booking-image {
         max-height: 9%;
         max-width: 12%;
-        padding: 1rem
+        padding: 1rem;
     }
 </style>
