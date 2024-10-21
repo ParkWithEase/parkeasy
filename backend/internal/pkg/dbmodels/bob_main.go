@@ -13,46 +13,34 @@ import (
 )
 
 var TableNames = struct {
-	Auths            string
-	Bookings         string
-	Cars             string
-	GeographyColumns string
-	GeometryColumns  string
-	Listings         string
-	Parkingspots     string
-	Resettokens      string
-	Sessions         string
-	SpatialRefSys    string
-	Timeunits        string
-	Users            string
+	Auths        string
+	Bookings     string
+	Cars         string
+	Parkingspots string
+	Resettokens  string
+	Sessions     string
+	Timeunits    string
+	Users        string
 }{
-	Auths:            "auth",
-	Bookings:         "booking",
-	Cars:             "car",
-	GeographyColumns: "geography_columns",
-	GeometryColumns:  "geometry_columns",
-	Listings:         "listing",
-	Parkingspots:     "parkingspot",
-	Resettokens:      "resettoken",
-	Sessions:         "sessions",
-	SpatialRefSys:    "spatial_ref_sys",
-	Timeunits:        "timeunit",
-	Users:            "users",
+	Auths:        "auth",
+	Bookings:     "booking",
+	Cars:         "car",
+	Parkingspots: "parkingspot",
+	Resettokens:  "resettoken",
+	Sessions:     "sessions",
+	Timeunits:    "timeunit",
+	Users:        "users",
 }
 
 var ColumnNames = struct {
-	Auths            authColumnNames
-	Bookings         bookingColumnNames
-	Cars             carColumnNames
-	GeographyColumns geographyColumnColumnNames
-	GeometryColumns  geometryColumnColumnNames
-	Listings         listingColumnNames
-	Parkingspots     parkingspotColumnNames
-	Resettokens      resettokenColumnNames
-	Sessions         sessionColumnNames
-	SpatialRefSys    spatialRefSyColumnNames
-	Timeunits        timeunitColumnNames
-	Users            userColumnNames
+	Auths        authColumnNames
+	Bookings     bookingColumnNames
+	Cars         carColumnNames
+	Parkingspots parkingspotColumnNames
+	Resettokens  resettokenColumnNames
+	Sessions     sessionColumnNames
+	Timeunits    timeunitColumnNames
+	Users        userColumnNames
 }{
 	Auths: authColumnNames{
 		Authid:       "authid",
@@ -75,31 +63,6 @@ var ColumnNames = struct {
 		Model:        "model",
 		Color:        "color",
 	},
-	GeographyColumns: geographyColumnColumnNames{
-		FTableCatalog:    "f_table_catalog",
-		FTableSchema:     "f_table_schema",
-		FTableName:       "f_table_name",
-		FGeographyColumn: "f_geography_column",
-		CoordDimension:   "coord_dimension",
-		Srid:             "srid",
-		Type:             "type",
-	},
-	GeometryColumns: geometryColumnColumnNames{
-		FTableCatalog:   "f_table_catalog",
-		FTableSchema:    "f_table_schema",
-		FTableName:      "f_table_name",
-		FGeometryColumn: "f_geometry_column",
-		CoordDimension:  "coord_dimension",
-		Srid:            "srid",
-		Type:            "type",
-	},
-	Listings: listingColumnNames{
-		Listingid:     "listingid",
-		Parkingspotid: "parkingspotid",
-		Listinguuid:   "listinguuid",
-		Priceperhour:  "priceperhour",
-		Isactive:      "isactive",
-	},
 	Parkingspots: parkingspotColumnNames{
 		Parkingspotid:      "parkingspotid",
 		Userid:             "userid",
@@ -107,12 +70,14 @@ var ColumnNames = struct {
 		Postalcode:         "postalcode",
 		Countrycode:        "countrycode",
 		City:               "city",
+		Province:           "province",
 		Streetaddress:      "streetaddress",
 		Longitude:          "longitude",
 		Latitude:           "latitude",
 		Hasshelter:         "hasshelter",
 		Hasplugin:          "hasplugin",
 		Haschargingstation: "haschargingstation",
+		Priceperhour:       "priceperhour",
 	},
 	Resettokens: resettokenColumnNames{
 		Token:    "token",
@@ -124,18 +89,12 @@ var ColumnNames = struct {
 		Data:   "data",
 		Expiry: "expiry",
 	},
-	SpatialRefSys: spatialRefSyColumnNames{
-		Srid:      "srid",
-		AuthName:  "auth_name",
-		AuthSrid:  "auth_srid",
-		Srtext:    "srtext",
-		Proj4text: "proj4text",
-	},
 	Timeunits: timeunitColumnNames{
-		Unitnum:   "unitnum",
-		Date:      "date",
-		Listingid: "listingid",
-		Bookingid: "bookingid",
+		Starttime:     "starttime",
+		Endtime:       "endtime",
+		Parkingspotid: "parkingspotid",
+		Bookingid:     "bookingid",
+		Status:        "status",
 	},
 	Users: userColumnNames{
 		Userid:     "userid",
@@ -156,45 +115,33 @@ var (
 )
 
 func Where[Q psql.Filterable]() struct {
-	Auths            authWhere[Q]
-	Bookings         bookingWhere[Q]
-	Cars             carWhere[Q]
-	GeographyColumns geographyColumnWhere[Q]
-	GeometryColumns  geometryColumnWhere[Q]
-	Listings         listingWhere[Q]
-	Parkingspots     parkingspotWhere[Q]
-	Resettokens      resettokenWhere[Q]
-	Sessions         sessionWhere[Q]
-	SpatialRefSys    spatialRefSyWhere[Q]
-	Timeunits        timeunitWhere[Q]
-	Users            userWhere[Q]
+	Auths        authWhere[Q]
+	Bookings     bookingWhere[Q]
+	Cars         carWhere[Q]
+	Parkingspots parkingspotWhere[Q]
+	Resettokens  resettokenWhere[Q]
+	Sessions     sessionWhere[Q]
+	Timeunits    timeunitWhere[Q]
+	Users        userWhere[Q]
 } {
 	return struct {
-		Auths            authWhere[Q]
-		Bookings         bookingWhere[Q]
-		Cars             carWhere[Q]
-		GeographyColumns geographyColumnWhere[Q]
-		GeometryColumns  geometryColumnWhere[Q]
-		Listings         listingWhere[Q]
-		Parkingspots     parkingspotWhere[Q]
-		Resettokens      resettokenWhere[Q]
-		Sessions         sessionWhere[Q]
-		SpatialRefSys    spatialRefSyWhere[Q]
-		Timeunits        timeunitWhere[Q]
-		Users            userWhere[Q]
+		Auths        authWhere[Q]
+		Bookings     bookingWhere[Q]
+		Cars         carWhere[Q]
+		Parkingspots parkingspotWhere[Q]
+		Resettokens  resettokenWhere[Q]
+		Sessions     sessionWhere[Q]
+		Timeunits    timeunitWhere[Q]
+		Users        userWhere[Q]
 	}{
-		Auths:            buildAuthWhere[Q](AuthColumns),
-		Bookings:         buildBookingWhere[Q](BookingColumns),
-		Cars:             buildCarWhere[Q](CarColumns),
-		GeographyColumns: buildGeographyColumnWhere[Q](GeographyColumnColumns),
-		GeometryColumns:  buildGeometryColumnWhere[Q](GeometryColumnColumns),
-		Listings:         buildListingWhere[Q](ListingColumns),
-		Parkingspots:     buildParkingspotWhere[Q](ParkingspotColumns),
-		Resettokens:      buildResettokenWhere[Q](ResettokenColumns),
-		Sessions:         buildSessionWhere[Q](SessionColumns),
-		SpatialRefSys:    buildSpatialRefSyWhere[Q](SpatialRefSyColumns),
-		Timeunits:        buildTimeunitWhere[Q](TimeunitColumns),
-		Users:            buildUserWhere[Q](UserColumns),
+		Auths:        buildAuthWhere[Q](AuthColumns),
+		Bookings:     buildBookingWhere[Q](BookingColumns),
+		Cars:         buildCarWhere[Q](CarColumns),
+		Parkingspots: buildParkingspotWhere[Q](ParkingspotColumns),
+		Resettokens:  buildResettokenWhere[Q](ResettokenColumns),
+		Sessions:     buildSessionWhere[Q](SessionColumns),
+		Timeunits:    buildTimeunitWhere[Q](TimeunitColumns),
+		Users:        buildUserWhere[Q](UserColumns),
 	}
 }
 
@@ -222,7 +169,6 @@ type joins[Q dialect.Joinable] struct {
 	Auths        joinSet[authJoins[Q]]
 	Bookings     joinSet[bookingJoins[Q]]
 	Cars         joinSet[carJoins[Q]]
-	Listings     joinSet[listingJoins[Q]]
 	Parkingspots joinSet[parkingspotJoins[Q]]
 	Resettokens  joinSet[resettokenJoins[Q]]
 	Timeunits    joinSet[timeunitJoins[Q]]
@@ -242,7 +188,6 @@ func getJoins[Q dialect.Joinable]() joins[Q] {
 		Auths:        buildJoinSet[authJoins[Q]](AuthColumns, buildAuthJoins),
 		Bookings:     buildJoinSet[bookingJoins[Q]](BookingColumns, buildBookingJoins),
 		Cars:         buildJoinSet[carJoins[Q]](CarColumns, buildCarJoins),
-		Listings:     buildJoinSet[listingJoins[Q]](ListingColumns, buildListingJoins),
 		Parkingspots: buildJoinSet[parkingspotJoins[Q]](ParkingspotColumns, buildParkingspotJoins),
 		Resettokens:  buildJoinSet[resettokenJoins[Q]](ResettokenColumns, buildResettokenJoins),
 		Timeunits:    buildJoinSet[timeunitJoins[Q]](TimeunitColumns, buildTimeunitJoins),

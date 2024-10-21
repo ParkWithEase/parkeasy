@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 
 	"github.com/google/uuid"
+	"github.com/govalues/decimal"
 )
 
 // Make sure the type uuid.UUID satisfies database/sql.Scanner
@@ -15,3 +16,9 @@ var _ sql.Scanner = (*uuid.UUID)(nil)
 
 // Make sure the type uuid.UUID satisfies database/sql/driver.Valuer
 var _ driver.Valuer = *new(uuid.UUID)
+
+// Make sure the type decimal.Decimal satisfies database/sql.Scanner
+var _ sql.Scanner = (*decimal.Decimal)(nil)
+
+// Make sure the type decimal.Decimal satisfies database/sql/driver.Valuer
+var _ driver.Valuer = *new(decimal.Decimal)

@@ -15,11 +15,12 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stephenafamo/bob/gen"
 	"github.com/stephenafamo/bob/gen/bobgen-psql/driver"
+	"github.com/stephenafamo/bob/gen/drivers"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-const PostgresContainer = "docker.io/postgis/postgis:16-3.4"
+const PostgresContainer = "docker.io/library/postgres:16"
 
 type CLI struct {
 	OutDir  string `short:"o" help:"Set output directory." placeholder:"DIR" default:"internal/pkg/dbmodels"`
@@ -76,6 +77,11 @@ func (cli *CLI) Run(ctx context.Context) (err error) {
 			StructTagCasing: "snake",
 			RelationTag:     "-",
 			Generator:       "modelgen",
+			Types: drivers.Types{
+				"decimal.Decimal": {
+					Imports: []string{`"github.com/govalues/decimal"`},
+				},
+			},
 		},
 		Outputs: []*gen.Output{
 			{

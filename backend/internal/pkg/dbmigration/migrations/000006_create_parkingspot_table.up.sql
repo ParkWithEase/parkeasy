@@ -6,13 +6,17 @@ CREATE TABLE IF NOT EXISTS ParkingSpot (
   PostalCode TEXT NOT NULL, 
   CountryCode TEXT NOT NULL,
   City TEXT NOT NULL,
+  Province TEXT NOT NULL,
   StreetAddress TEXT NOT NULL,
   Longitude REAL NOT NULL,
   Latitude REAL NOT NULL,
   HasShelter BOOLEAN NOT NULL DEFAULT false,
   HasPlugIn BOOLEAN NOT NULL DEFAULT false,
-  HasChargingStation BOOLEAN NOT NULL DEFAULT false
+  HasChargingStation BOOLEAN NOT NULL DEFAULT false,
+  PricePerHour DECIMAL NOT NULL
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS ParkingSpotUUIDIdx ON ParkingSpot(ParkingSpotUUID);
 CREATE UNIQUE INDEX IF NOT EXISTS ParkingSpotCoordinateIdx ON ParkingSpot(Longitude, Latitude);
+
+CREATE EXTENSION earthdistance CASCADE;

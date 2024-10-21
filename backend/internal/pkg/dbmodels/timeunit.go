@@ -13,6 +13,7 @@ import (
 	"github.com/aarondl/opt/null"
 	"github.com/aarondl/opt/omit"
 	"github.com/aarondl/opt/omitnull"
+	"github.com/google/uuid"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
@@ -26,10 +27,11 @@ import (
 
 // Timeunit is an object representing the database table.
 type Timeunit struct {
-	Unitnum   int16           `db:"unitnum,pk" `
-	Date      time.Time       `db:"date,pk" `
-	Listingid int64           `db:"listingid,pk" `
-	Bookingid null.Val[int64] `db:"bookingid" `
+	Starttime     time.Time       `db:"starttime,pk" `
+	Endtime       time.Time       `db:"endtime,pk" `
+	Parkingspotid uuid.UUID       `db:"parkingspotid,pk" `
+	Bookingid     null.Val[int64] `db:"bookingid" `
+	Status        string          `db:"status" `
 
 	R timeunitR `db:"-" `
 }
@@ -49,79 +51,94 @@ type TimeunitsStmt = bob.QueryStmt[*Timeunit, TimeunitSlice]
 
 // timeunitR is where relationships are stored.
 type timeunitR struct {
-	BookingidBooking *Booking // timeunit.timeunit_bookingid_fkey
+	BookingidBooking           *Booking     // timeunit.timeunit_bookingid_fkey
+	ParkingspotuuidParkingspot *Parkingspot // timeunit.timeunit_parkingspotid_fkey
 }
 
 // TimeunitSetter is used for insert/upsert/update operations
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type TimeunitSetter struct {
-	Unitnum   omit.Val[int16]     `db:"unitnum,pk" `
-	Date      omit.Val[time.Time] `db:"date,pk" `
-	Listingid omit.Val[int64]     `db:"listingid,pk" `
-	Bookingid omitnull.Val[int64] `db:"bookingid" `
+	Starttime     omit.Val[time.Time] `db:"starttime,pk" `
+	Endtime       omit.Val[time.Time] `db:"endtime,pk" `
+	Parkingspotid omit.Val[uuid.UUID] `db:"parkingspotid,pk" `
+	Bookingid     omitnull.Val[int64] `db:"bookingid" `
+	Status        omit.Val[string]    `db:"status" `
 }
 
 func (s TimeunitSetter) SetColumns() []string {
-	vals := make([]string, 0, 4)
-	if !s.Unitnum.IsUnset() {
-		vals = append(vals, "unitnum")
+	vals := make([]string, 0, 5)
+	if !s.Starttime.IsUnset() {
+		vals = append(vals, "starttime")
 	}
 
-	if !s.Date.IsUnset() {
-		vals = append(vals, "date")
+	if !s.Endtime.IsUnset() {
+		vals = append(vals, "endtime")
 	}
 
-	if !s.Listingid.IsUnset() {
-		vals = append(vals, "listingid")
+	if !s.Parkingspotid.IsUnset() {
+		vals = append(vals, "parkingspotid")
 	}
 
 	if !s.Bookingid.IsUnset() {
 		vals = append(vals, "bookingid")
 	}
 
+	if !s.Status.IsUnset() {
+		vals = append(vals, "status")
+	}
+
 	return vals
 }
 
 func (s TimeunitSetter) Overwrite(t *Timeunit) {
-	if !s.Unitnum.IsUnset() {
-		t.Unitnum, _ = s.Unitnum.Get()
+	if !s.Starttime.IsUnset() {
+		t.Starttime, _ = s.Starttime.Get()
 	}
-	if !s.Date.IsUnset() {
-		t.Date, _ = s.Date.Get()
+	if !s.Endtime.IsUnset() {
+		t.Endtime, _ = s.Endtime.Get()
 	}
-	if !s.Listingid.IsUnset() {
-		t.Listingid, _ = s.Listingid.Get()
+	if !s.Parkingspotid.IsUnset() {
+		t.Parkingspotid, _ = s.Parkingspotid.Get()
 	}
 	if !s.Bookingid.IsUnset() {
 		t.Bookingid, _ = s.Bookingid.GetNull()
 	}
+	if !s.Status.IsUnset() {
+		t.Status, _ = s.Status.Get()
+	}
 }
 
 func (s TimeunitSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 4)
-	if s.Unitnum.IsUnset() {
+	vals := make([]bob.Expression, 5)
+	if s.Starttime.IsUnset() {
 		vals[0] = psql.Raw("DEFAULT")
 	} else {
-		vals[0] = psql.Arg(s.Unitnum)
+		vals[0] = psql.Arg(s.Starttime)
 	}
 
-	if s.Date.IsUnset() {
+	if s.Endtime.IsUnset() {
 		vals[1] = psql.Raw("DEFAULT")
 	} else {
-		vals[1] = psql.Arg(s.Date)
+		vals[1] = psql.Arg(s.Endtime)
 	}
 
-	if s.Listingid.IsUnset() {
+	if s.Parkingspotid.IsUnset() {
 		vals[2] = psql.Raw("DEFAULT")
 	} else {
-		vals[2] = psql.Arg(s.Listingid)
+		vals[2] = psql.Arg(s.Parkingspotid)
 	}
 
 	if s.Bookingid.IsUnset() {
 		vals[3] = psql.Raw("DEFAULT")
 	} else {
 		vals[3] = psql.Arg(s.Bookingid)
+	}
+
+	if s.Status.IsUnset() {
+		vals[4] = psql.Raw("DEFAULT")
+	} else {
+		vals[4] = psql.Arg(s.Status)
 	}
 
 	return im.Values(vals...)
@@ -132,26 +149,26 @@ func (s TimeunitSetter) Apply(q *dialect.UpdateQuery) {
 }
 
 func (s TimeunitSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 4)
+	exprs := make([]bob.Expression, 0, 5)
 
-	if !s.Unitnum.IsUnset() {
+	if !s.Starttime.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "unitnum")...),
-			psql.Arg(s.Unitnum),
+			psql.Quote(append(prefix, "starttime")...),
+			psql.Arg(s.Starttime),
 		}})
 	}
 
-	if !s.Date.IsUnset() {
+	if !s.Endtime.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "date")...),
-			psql.Arg(s.Date),
+			psql.Quote(append(prefix, "endtime")...),
+			psql.Arg(s.Endtime),
 		}})
 	}
 
-	if !s.Listingid.IsUnset() {
+	if !s.Parkingspotid.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "listingid")...),
-			psql.Arg(s.Listingid),
+			psql.Quote(append(prefix, "parkingspotid")...),
+			psql.Arg(s.Parkingspotid),
 		}})
 	}
 
@@ -162,24 +179,33 @@ func (s TimeunitSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if !s.Status.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "status")...),
+			psql.Arg(s.Status),
+		}})
+	}
+
 	return exprs
 }
 
 type timeunitColumnNames struct {
-	Unitnum   string
-	Date      string
-	Listingid string
-	Bookingid string
+	Starttime     string
+	Endtime       string
+	Parkingspotid string
+	Bookingid     string
+	Status        string
 }
 
 var TimeunitColumns = buildTimeunitColumns("timeunit")
 
 type timeunitColumns struct {
-	tableAlias string
-	Unitnum    psql.Expression
-	Date       psql.Expression
-	Listingid  psql.Expression
-	Bookingid  psql.Expression
+	tableAlias    string
+	Starttime     psql.Expression
+	Endtime       psql.Expression
+	Parkingspotid psql.Expression
+	Bookingid     psql.Expression
+	Status        psql.Expression
 }
 
 func (c timeunitColumns) Alias() string {
@@ -192,19 +218,21 @@ func (timeunitColumns) AliasedAs(alias string) timeunitColumns {
 
 func buildTimeunitColumns(alias string) timeunitColumns {
 	return timeunitColumns{
-		tableAlias: alias,
-		Unitnum:    psql.Quote(alias, "unitnum"),
-		Date:       psql.Quote(alias, "date"),
-		Listingid:  psql.Quote(alias, "listingid"),
-		Bookingid:  psql.Quote(alias, "bookingid"),
+		tableAlias:    alias,
+		Starttime:     psql.Quote(alias, "starttime"),
+		Endtime:       psql.Quote(alias, "endtime"),
+		Parkingspotid: psql.Quote(alias, "parkingspotid"),
+		Bookingid:     psql.Quote(alias, "bookingid"),
+		Status:        psql.Quote(alias, "status"),
 	}
 }
 
 type timeunitWhere[Q psql.Filterable] struct {
-	Unitnum   psql.WhereMod[Q, int16]
-	Date      psql.WhereMod[Q, time.Time]
-	Listingid psql.WhereMod[Q, int64]
-	Bookingid psql.WhereNullMod[Q, int64]
+	Starttime     psql.WhereMod[Q, time.Time]
+	Endtime       psql.WhereMod[Q, time.Time]
+	Parkingspotid psql.WhereMod[Q, uuid.UUID]
+	Bookingid     psql.WhereNullMod[Q, int64]
+	Status        psql.WhereMod[Q, string]
 }
 
 func (timeunitWhere[Q]) AliasedAs(alias string) timeunitWhere[Q] {
@@ -213,16 +241,18 @@ func (timeunitWhere[Q]) AliasedAs(alias string) timeunitWhere[Q] {
 
 func buildTimeunitWhere[Q psql.Filterable](cols timeunitColumns) timeunitWhere[Q] {
 	return timeunitWhere[Q]{
-		Unitnum:   psql.Where[Q, int16](cols.Unitnum),
-		Date:      psql.Where[Q, time.Time](cols.Date),
-		Listingid: psql.Where[Q, int64](cols.Listingid),
-		Bookingid: psql.WhereNull[Q, int64](cols.Bookingid),
+		Starttime:     psql.Where[Q, time.Time](cols.Starttime),
+		Endtime:       psql.Where[Q, time.Time](cols.Endtime),
+		Parkingspotid: psql.Where[Q, uuid.UUID](cols.Parkingspotid),
+		Bookingid:     psql.WhereNull[Q, int64](cols.Bookingid),
+		Status:        psql.Where[Q, string](cols.Status),
 	}
 }
 
 type timeunitJoins[Q dialect.Joinable] struct {
-	typ              string
-	BookingidBooking func(context.Context) modAs[Q, bookingColumns]
+	typ                        string
+	BookingidBooking           func(context.Context) modAs[Q, bookingColumns]
+	ParkingspotuuidParkingspot func(context.Context) modAs[Q, parkingspotColumns]
 }
 
 func (j timeunitJoins[Q]) aliasedAs(alias string) timeunitJoins[Q] {
@@ -231,48 +261,49 @@ func (j timeunitJoins[Q]) aliasedAs(alias string) timeunitJoins[Q] {
 
 func buildTimeunitJoins[Q dialect.Joinable](cols timeunitColumns, typ string) timeunitJoins[Q] {
 	return timeunitJoins[Q]{
-		typ:              typ,
-		BookingidBooking: timeunitsJoinBookingidBooking[Q](cols, typ),
+		typ:                        typ,
+		BookingidBooking:           timeunitsJoinBookingidBooking[Q](cols, typ),
+		ParkingspotuuidParkingspot: timeunitsJoinParkingspotuuidParkingspot[Q](cols, typ),
 	}
 }
 
 // FindTimeunit retrieves a single record by primary key
 // If cols is empty Find will return all columns.
-func FindTimeunit(ctx context.Context, exec bob.Executor, UnitnumPK int16, DatePK time.Time, ListingidPK int64, cols ...string) (*Timeunit, error) {
+func FindTimeunit(ctx context.Context, exec bob.Executor, StarttimePK time.Time, EndtimePK time.Time, ParkingspotidPK uuid.UUID, cols ...string) (*Timeunit, error) {
 	if len(cols) == 0 {
 		return Timeunits.Query(
 			ctx, exec,
-			SelectWhere.Timeunits.Unitnum.EQ(UnitnumPK),
-			SelectWhere.Timeunits.Date.EQ(DatePK),
-			SelectWhere.Timeunits.Listingid.EQ(ListingidPK),
+			SelectWhere.Timeunits.Starttime.EQ(StarttimePK),
+			SelectWhere.Timeunits.Endtime.EQ(EndtimePK),
+			SelectWhere.Timeunits.Parkingspotid.EQ(ParkingspotidPK),
 		).One()
 	}
 
 	return Timeunits.Query(
 		ctx, exec,
-		SelectWhere.Timeunits.Unitnum.EQ(UnitnumPK),
-		SelectWhere.Timeunits.Date.EQ(DatePK),
-		SelectWhere.Timeunits.Listingid.EQ(ListingidPK),
+		SelectWhere.Timeunits.Starttime.EQ(StarttimePK),
+		SelectWhere.Timeunits.Endtime.EQ(EndtimePK),
+		SelectWhere.Timeunits.Parkingspotid.EQ(ParkingspotidPK),
 		sm.Columns(Timeunits.Columns().Only(cols...)),
 	).One()
 }
 
 // TimeunitExists checks the presence of a single record by primary key
-func TimeunitExists(ctx context.Context, exec bob.Executor, UnitnumPK int16, DatePK time.Time, ListingidPK int64) (bool, error) {
+func TimeunitExists(ctx context.Context, exec bob.Executor, StarttimePK time.Time, EndtimePK time.Time, ParkingspotidPK uuid.UUID) (bool, error) {
 	return Timeunits.Query(
 		ctx, exec,
-		SelectWhere.Timeunits.Unitnum.EQ(UnitnumPK),
-		SelectWhere.Timeunits.Date.EQ(DatePK),
-		SelectWhere.Timeunits.Listingid.EQ(ListingidPK),
+		SelectWhere.Timeunits.Starttime.EQ(StarttimePK),
+		SelectWhere.Timeunits.Endtime.EQ(EndtimePK),
+		SelectWhere.Timeunits.Parkingspotid.EQ(ParkingspotidPK),
 	).Exists()
 }
 
 // PrimaryKeyVals returns the primary key values of the Timeunit
 func (o *Timeunit) PrimaryKeyVals() bob.Expression {
 	return psql.ArgGroup(
-		o.Unitnum,
-		o.Date,
-		o.Listingid,
+		o.Starttime,
+		o.Endtime,
+		o.Parkingspotid,
 	)
 }
 
@@ -290,9 +321,9 @@ func (o *Timeunit) Delete(ctx context.Context, exec bob.Executor) error {
 func (o *Timeunit) Reload(ctx context.Context, exec bob.Executor) error {
 	o2, err := Timeunits.Query(
 		ctx, exec,
-		SelectWhere.Timeunits.Unitnum.EQ(o.Unitnum),
-		SelectWhere.Timeunits.Date.EQ(o.Date),
-		SelectWhere.Timeunits.Listingid.EQ(o.Listingid),
+		SelectWhere.Timeunits.Starttime.EQ(o.Starttime),
+		SelectWhere.Timeunits.Endtime.EQ(o.Endtime),
+		SelectWhere.Timeunits.Parkingspotid.EQ(o.Parkingspotid),
 	).One()
 	if err != nil {
 		return err
@@ -314,20 +345,20 @@ func (o TimeunitSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
 func (o TimeunitSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	var mods []bob.Mod[*dialect.SelectQuery]
 
-	UnitnumPK := make([]int16, len(o))
-	DatePK := make([]time.Time, len(o))
-	ListingidPK := make([]int64, len(o))
+	StarttimePK := make([]time.Time, len(o))
+	EndtimePK := make([]time.Time, len(o))
+	ParkingspotidPK := make([]uuid.UUID, len(o))
 
 	for i, o := range o {
-		UnitnumPK[i] = o.Unitnum
-		DatePK[i] = o.Date
-		ListingidPK[i] = o.Listingid
+		StarttimePK[i] = o.Starttime
+		EndtimePK[i] = o.Endtime
+		ParkingspotidPK[i] = o.Parkingspotid
 	}
 
 	mods = append(mods,
-		SelectWhere.Timeunits.Unitnum.In(UnitnumPK...),
-		SelectWhere.Timeunits.Date.In(DatePK...),
-		SelectWhere.Timeunits.Listingid.In(ListingidPK...),
+		SelectWhere.Timeunits.Starttime.In(StarttimePK...),
+		SelectWhere.Timeunits.Endtime.In(EndtimePK...),
+		SelectWhere.Timeunits.Parkingspotid.In(ParkingspotidPK...),
 	)
 
 	o2, err := Timeunits.Query(ctx, exec, mods...).All()
@@ -337,13 +368,13 @@ func (o TimeunitSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 
 	for _, old := range o {
 		for _, new := range o2 {
-			if new.Unitnum != old.Unitnum {
+			if new.Starttime.Equal(old.Starttime) {
 				continue
 			}
-			if new.Date.Equal(old.Date) {
+			if new.Endtime.Equal(old.Endtime) {
 				continue
 			}
-			if new.Listingid != old.Listingid {
+			if new.Parkingspotid != old.Parkingspotid {
 				continue
 			}
 			new.R = old.R
@@ -374,6 +405,25 @@ func timeunitsJoinBookingidBooking[Q dialect.Joinable](from timeunitColumns, typ
 	}
 }
 
+func timeunitsJoinParkingspotuuidParkingspot[Q dialect.Joinable](from timeunitColumns, typ string) func(context.Context) modAs[Q, parkingspotColumns] {
+	return func(ctx context.Context) modAs[Q, parkingspotColumns] {
+		return modAs[Q, parkingspotColumns]{
+			c: ParkingspotColumns,
+			f: func(to parkingspotColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Parkingspots.Name(ctx).As(to.Alias())).On(
+						to.Parkingspotuuid.EQ(from.Parkingspotid),
+					))
+				}
+
+				return mods
+			},
+		}
+	}
+}
+
 // BookingidBooking starts a query for related objects on booking
 func (o *Timeunit) BookingidBooking(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
 	return Bookings.Query(ctx, exec, append(mods,
@@ -389,6 +439,24 @@ func (os TimeunitSlice) BookingidBooking(ctx context.Context, exec bob.Executor,
 
 	return Bookings.Query(ctx, exec, append(mods,
 		sm.Where(psql.Group(BookingColumns.Bookingid).In(PKArgs...)),
+	)...)
+}
+
+// ParkingspotuuidParkingspot starts a query for related objects on parkingspot
+func (o *Timeunit) ParkingspotuuidParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
+	return Parkingspots.Query(ctx, exec, append(mods,
+		sm.Where(ParkingspotColumns.Parkingspotuuid.EQ(psql.Arg(o.Parkingspotid))),
+	)...)
+}
+
+func (os TimeunitSlice) ParkingspotuuidParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
+	PKArgs := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgs[i] = psql.ArgGroup(o.Parkingspotid)
+	}
+
+	return Parkingspots.Query(ctx, exec, append(mods,
+		sm.Where(psql.Group(ParkingspotColumns.Parkingspotuuid).In(PKArgs...)),
 	)...)
 }
 
@@ -408,6 +476,18 @@ func (o *Timeunit) Preload(name string, retrieved any) error {
 
 		if rel != nil {
 			rel.R.BookingidTimeunits = TimeunitSlice{o}
+		}
+		return nil
+	case "ParkingspotuuidParkingspot":
+		rel, ok := retrieved.(*Parkingspot)
+		if !ok {
+			return fmt.Errorf("timeunit cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.ParkingspotuuidParkingspot = rel
+
+		if rel != nil {
+			rel.R.ParkingspotuuidTimeunits = TimeunitSlice{o}
 		}
 		return nil
 	default:
@@ -503,6 +583,94 @@ func (os TimeunitSlice) LoadTimeunitBookingidBooking(ctx context.Context, exec b
 	return nil
 }
 
+func PreloadTimeunitParkingspotuuidParkingspot(opts ...psql.PreloadOption) psql.Preloader {
+	return psql.Preload[*Parkingspot, ParkingspotSlice](orm.Relationship{
+		Name: "ParkingspotuuidParkingspot",
+		Sides: []orm.RelSide{
+			{
+				From: "timeunit",
+				To:   TableNames.Parkingspots,
+				ToExpr: func(ctx context.Context) bob.Expression {
+					return Parkingspots.Name(ctx)
+				},
+				FromColumns: []string{
+					ColumnNames.Timeunits.Parkingspotid,
+				},
+				ToColumns: []string{
+					ColumnNames.Parkingspots.Parkingspotuuid,
+				},
+			},
+		},
+	}, Parkingspots.Columns().Names(), opts...)
+}
+
+func ThenLoadTimeunitParkingspotuuidParkingspot(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
+	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+		loader, isLoader := retrieved.(interface {
+			LoadTimeunitParkingspotuuidParkingspot(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+		})
+		if !isLoader {
+			return fmt.Errorf("object %T cannot load TimeunitParkingspotuuidParkingspot", retrieved)
+		}
+
+		err := loader.LoadTimeunitParkingspotuuidParkingspot(ctx, exec, queryMods...)
+
+		// Don't cause an issue due to missing relationships
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+
+		return err
+	})
+}
+
+// LoadTimeunitParkingspotuuidParkingspot loads the timeunit's ParkingspotuuidParkingspot into the .R struct
+func (o *Timeunit) LoadTimeunitParkingspotuuidParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.ParkingspotuuidParkingspot = nil
+
+	related, err := o.ParkingspotuuidParkingspot(ctx, exec, mods...).One()
+	if err != nil {
+		return err
+	}
+
+	related.R.ParkingspotuuidTimeunits = TimeunitSlice{o}
+
+	o.R.ParkingspotuuidParkingspot = related
+	return nil
+}
+
+// LoadTimeunitParkingspotuuidParkingspot loads the timeunit's ParkingspotuuidParkingspot into the .R struct
+func (os TimeunitSlice) LoadTimeunitParkingspotuuidParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	parkingspots, err := os.ParkingspotuuidParkingspot(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		for _, rel := range parkingspots {
+			if o.Parkingspotid != rel.Parkingspotuuid {
+				continue
+			}
+
+			rel.R.ParkingspotuuidTimeunits = append(rel.R.ParkingspotuuidTimeunits, o)
+
+			o.R.ParkingspotuuidParkingspot = rel
+			break
+		}
+	}
+
+	return nil
+}
+
 func attachTimeunitBookingidBooking0(ctx context.Context, exec bob.Executor, count int, timeunit0 *Timeunit, booking1 *Booking) (*Timeunit, error) {
 	setter := &TimeunitSetter{
 		Bookingid: omitnull.From(booking1.Bookingid),
@@ -545,6 +713,52 @@ func (timeunit0 *Timeunit) AttachBookingidBooking(ctx context.Context, exec bob.
 	timeunit0.R.BookingidBooking = booking1
 
 	booking1.R.BookingidTimeunits = append(booking1.R.BookingidTimeunits, timeunit0)
+
+	return nil
+}
+
+func attachTimeunitParkingspotuuidParkingspot0(ctx context.Context, exec bob.Executor, count int, timeunit0 *Timeunit, parkingspot1 *Parkingspot) (*Timeunit, error) {
+	setter := &TimeunitSetter{
+		Parkingspotid: omit.From(parkingspot1.Parkingspotuuid),
+	}
+
+	err := Timeunits.Update(ctx, exec, setter, timeunit0)
+	if err != nil {
+		return nil, fmt.Errorf("attachTimeunitParkingspotuuidParkingspot0: %w", err)
+	}
+
+	return timeunit0, nil
+}
+
+func (timeunit0 *Timeunit) InsertParkingspotuuidParkingspot(ctx context.Context, exec bob.Executor, related *ParkingspotSetter) error {
+	parkingspot1, err := Parkingspots.Insert(ctx, exec, related)
+	if err != nil {
+		return fmt.Errorf("inserting related objects: %w", err)
+	}
+
+	_, err = attachTimeunitParkingspotuuidParkingspot0(ctx, exec, 1, timeunit0, parkingspot1)
+	if err != nil {
+		return err
+	}
+
+	timeunit0.R.ParkingspotuuidParkingspot = parkingspot1
+
+	parkingspot1.R.ParkingspotuuidTimeunits = append(parkingspot1.R.ParkingspotuuidTimeunits, timeunit0)
+
+	return nil
+}
+
+func (timeunit0 *Timeunit) AttachParkingspotuuidParkingspot(ctx context.Context, exec bob.Executor, parkingspot1 *Parkingspot) error {
+	var err error
+
+	_, err = attachTimeunitParkingspotuuidParkingspot0(ctx, exec, 1, timeunit0, parkingspot1)
+	if err != nil {
+		return err
+	}
+
+	timeunit0.R.ParkingspotuuidParkingspot = parkingspot1
+
+	parkingspot1.R.ParkingspotuuidTimeunits = append(parkingspot1.R.ParkingspotuuidTimeunits, timeunit0)
 
 	return nil
 }
