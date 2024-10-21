@@ -12,17 +12,17 @@ var (
 	ErrParkingSpotNotFound  = CodeNotFound.WithMsg("this parking spot does not exist")
 	ErrParkingSpotDuplicate = CodeDuplicate.WithMsg("parking spot already exists")
 	ErrCountryNotSupported  = CodeCountryNotSupported.WithMsg("the specified country is not supported")
+	ErrProvinceNotSupported = CodeProvinceNotSupported.WithMsg("the specified province is not supported")
 	ErrInvalidPostalCode    = CodeSpotInvalid.WithMsg("the specified postal code is invalid")
 	ErrInvalidStreetAddress = CodeSpotInvalid.WithMsg("the specified street address is invalid")
 	ErrInvalidCoordinate    = CodeSpotInvalid.WithMsg("the specified coordinate is invalid")
-	ErrListingNotFound      = CodeNotFound.WithMsg("this listing does not exist")
-	ErrListingDuplicate     = CodeDuplicate.WithMsg("listing already exists")
 	ErrTimeUnitDuplicate    = CodeDuplicate.WithMsg("time slot already exists")
 )
 
 type ParkingSpotLocation struct {
 	PostalCode    string  `json:"postal_code,omitempty" doc:"The postal code of the parking spot"`
 	CountryCode   string  `json:"country_code" pattern:"[A-Z][A-Z]" doc:"The country code of a parking spot"`
+	ProvinceCode  string  `json:"province_code" pattern:"[A-Z][A-Z]" doc:"The province code of a parking spot"`
 	City          string  `json:"city" doc:"The city the parking spot is in"`
 	State         string  `json:"state" doc:"The province the parking spot is in"`
 	StreetAddress string  `json:"street_address" doc:"The street address of the parking spot"`
