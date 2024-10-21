@@ -70,10 +70,10 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 	for _, timeslot := range spot.Availability {
 		// Insert each unit
 		inserted, err := dbmodels.Timeunits.Insert(ctx, p.db, &dbmodels.TimeunitSetter{
-			Starttime:     omit.From(timeslot.StartTime),
-			Endtime:       omit.From(timeslot.EndTime),
-			Parkingspotid: omit.From(inserted.Parkingspotuuid),
-			Status:        omit.From(timeslot.Status),
+			Starttime:       omit.From(timeslot.StartTime),
+			Endtime:         omit.From(timeslot.EndTime),
+			Parkingspotuuid: omit.From(inserted.Parkingspotuuid),
+			Status:          omit.From(timeslot.Status),
 		})
 		if err != nil {
 			var pgErr *pgconn.PgError
@@ -202,7 +202,7 @@ func (p *PostgresRepository) GetAvalByUUID(ctx context.Context, spotID uuid.UUID
 			dbmodels.TimeunitColumns.Endtime,
 			dbmodels.TimeunitColumns.Status,
 		),
-		dbmodels.SelectWhere.Timeunits.Parkingspotid.EQ(spotID),
+		dbmodels.SelectWhere.Timeunits.Parkingspotuuid.EQ(spotID),
 		dbmodels.SelectWhere.Timeunits.Starttime.GTE(startDate),
 		dbmodels.SelectWhere.Timeunits.Endtime.LTE(endDate),
 		sm.OrderBy(dbmodels.TimeunitColumns.Starttime),
