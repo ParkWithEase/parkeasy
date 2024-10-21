@@ -56,3 +56,11 @@ type ParkingSpotCreationInput struct {
 	PricePerHour decimal.Decimal     `json:"price_per_hour" doc:"price per hour"`
 	Availability []TimeUnit          `json:"availability,omitempty"`
 }
+
+type ParkingSpotGetInput struct {
+	PostalCode    string `json:"postal_code,omitempty" doc:"The postal code of location"`
+	CountryCode   string `json:"country_code" pattern:"[A-Z][A-Z]" doc:"The country code of location"`
+	City          string `json:"city" doc:"The city the location is in"`
+	State         string `json:"state" doc:"The province the location is in"`
+	StreetAddress string `json:"street_address" doc:"The street address of the location"`
+}

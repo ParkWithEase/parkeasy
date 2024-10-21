@@ -26,10 +26,15 @@ type ListingServicer interface {
 	// Creates a new listing attached to `parkingspotID`.
 	//
 	// Returns the listing internal ID and the model.
-	Create(ctx context.Context, userID int64, listing *models.ListingCreationInput) (int64, models.Listing, error)
+	Create(ctx context.Context, userID int64, parkingspotID uuid.UUID, listing *models.ListingCreationInput) (int64, models.Listing, error)
 	// Get the listing with `listingID` if a valid `parkingspotID` is passed.
-	GetByUUID(ctx context.Context, userID int64, listingID uuid.UUID) (models.Listing, error)
-	// Unlist the listing with `listingID` if `userID` owns the resource. Also, includes making it public and removing it from being public
+	GetByUUID(ctx context.Context, listingID uuid.UUID) (models.Listing, error)
+	// Get at most `count` parking spots.
+	//
+	// If there are more entries following the result, a non-empty cursor will be returned
+	// which can be passed to the next invocation to get the next entries.
+	GetMany(ctx context.Context, count int, after models.Cursor) ([]models.Listing, models.Cursor, error)
+	// Update the listing with `listingID` if `userID` owns the resource. Also, includes making it public and removing it from being public
 	UpdateByUUID(ctx context.Context, userID int64, listingID uuid.UUID, listing *models.ListingCreationInput) error
 }
 
@@ -142,32 +147,6 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		}
 		return &ParkingSpotOutput{Body: result}, nil
 	})
-
-	// huma.Register(api, *withUserID(&huma.Operation{
-	// 	OperationID: "create-listing-for-a-parking-spot",
-	// 	Method:      http.MethodPost,
-	// 	Path:        "/spots/list",
-	// 	Summary:     "Create a new listing for a parking spot",
-	// 	Tags:        []string{ParkingSpotTag.Name},
-	// 	Errors:      []int{http.StatusNotFound},
-	// }), func(ctx context.Context, input *struct {
-	// 	Body models.ListingCreationInput
-	// },
-	// ) (*ListingOutput, error) {
-	// 	userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-	// 	result, err := r.listingService.Create(ctx, userID, input.ID)
-	// 	if err != nil {
-	// 		if errors.Is(err, models.ErrParkingSpotNotFound) {
-	// 			detail := &huma.ErrorDetail{
-	// 				Location: "path.id",
-	// 				Value:    input.ID,
-	// 			}
-	// 			return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
-	// 		}
-	// 		return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
-	// 	}
-	// 	return &ParkingSpotOutput{Body: result}, nil
-	// })
 
 	huma.Register(api, *withUserID(&huma.Operation{
 		OperationID: "delete-parking-spot",
