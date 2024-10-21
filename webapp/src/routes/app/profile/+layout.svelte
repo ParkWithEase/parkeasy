@@ -1,5 +1,4 @@
 <script lang="ts">
-
     import { navigating, page } from '$app/stores';
     import { SideNav, SideNavItems, SideNavLink, Content } from 'carbon-components-svelte';
 

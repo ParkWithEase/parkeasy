@@ -36,11 +36,11 @@
 </div>
 
 <style>
-    :global(.bx--content){
+    :global(.bx--content) {
         padding: 0rem;
     }
 
-    .booking-image{
+    .booking-image {
         max-height: 9%;
         max-width: 12%;
     }
