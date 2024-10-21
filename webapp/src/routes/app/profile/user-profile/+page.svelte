@@ -3,9 +3,6 @@
     export let data: PageData;
 </script>
 
-<header class="header">
-    <h1>Your Profile</h1>
-</header>
 <div class="container">
     <div>
         <p>Name: {data.full_name}</p>
@@ -16,15 +13,10 @@
 </div>
 
 <style>
-    h1 {
-        font-weight: bold;
-    }
-
     .container {
         display: flex;
         justify-items: flex-start;
         flex-direction: column;
-        border-top: 2px solid black;
     }
 
     p {

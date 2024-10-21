@@ -4,7 +4,7 @@
     let leasingList: Booking[] = [
         {
             booking_id: '000101010',
-            address: 'Chancellor\'s Circle',
+            address: "Chancellor's Circle",
             postalCode: 'X1X1X1',
             price: 10.26,
             time_from: 800,
@@ -22,7 +22,7 @@
         },
         {
             booking_id: '000101010',
-            address: 'Chancellor\'s Circle',
+            address: "Chancellor's Circle",
             postalCode: 'X1X1X1',
             price: 10.26,
             time_from: 800,
@@ -40,7 +40,7 @@
         },
         {
             booking_id: '000101010',
-            address: 'Chancellor\'s Circle',
+            address: "Chancellor's Circle",
             postalCode: 'X1X1X1',
             price: 10.26,
             time_from: 800,
@@ -64,14 +64,11 @@
         {#each leasingList as leasing}
             <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <div class="leasing-info-container">
-                <LeasingHistoryDisplay booking = {leasing}></LeasingHistoryDisplay>
+                <LeasingHistoryDisplay booking={leasing}></LeasingHistoryDisplay>
             </div>
         {/each}
-        
     {/key}
 </div>
-
-
 
 <style>
     .leasing-info-container {
@@ -81,5 +78,4 @@
         gap: 2rem;
         color: rgb(0, 0, 0);
     }
-
 </style>

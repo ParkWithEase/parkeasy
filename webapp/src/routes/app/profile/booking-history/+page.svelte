@@ -28,7 +28,7 @@
         {#each bookingList as booking}
             <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <div class="booking-info-container">
-                <BookingHistoryDisplay booking = {booking}></BookingHistoryDisplay>
+                <BookingHistoryDisplay {booking}></BookingHistoryDisplay>
             </div>
         {/each}
     {/key}
@@ -42,5 +42,4 @@
         gap: 2rem;
         color: rgb(0, 0, 0);
     }
-
 </style>

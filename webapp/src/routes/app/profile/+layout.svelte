@@ -1,5 +1,4 @@
 <script lang="ts">
-    import Navbar from '$lib/components/navbar.svelte';
 
     import { navigating, page } from '$app/stores';
     import { SideNav, SideNavItems, SideNavLink, Content } from 'carbon-components-svelte';
@@ -11,8 +10,6 @@
 
     let is_side_nav_open: boolean = true;
 </script>
-
-<Navbar />
 
 <SideNav bind:isOpen={is_side_nav_open}>
     <SideNavItems>
@@ -50,30 +47,6 @@
 </Content>
 
 <style>
-    :global(.bx--side-nav__items) {
-        height: 50%;
-        border-right: 1px black solid;
-        font-size: 1rem;
-    }
-
-    :global(.bx--side-nav__link) {
-        border-radius: 10px;
-        text-decoration: none;
-        color: #000000;
-    }
-
-    :global(.bx--side-nav__link):hover {
-        color: #7ed957;
-        background-color: rgb(0, 0, 0);
-        transition: 0.3s;
-    }
-
-    :global(.bx--side-nav__link):active {
-        color: #ffffff;
-        background-color: rgb(0, 0, 0);
-        transition: 0.3s;
-    }
-
     .info-container {
         position: relative;
         width: 100%;
