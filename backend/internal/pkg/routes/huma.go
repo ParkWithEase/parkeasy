@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/user"
@@ -49,7 +50,7 @@ details on how to get the next page of results. For example:
 will populate the ` + "`Link`" + ` header like this:
 
 ` + "```http" + `
-Link: </cars?after=gQo&count=50>; rel="next"
+Link: <https://example.com/cars?after=gQo&count=50>; rel="next"
 ` + "```" + `
 
 Currently the API server only provides the relative URL for the next page of
@@ -98,5 +99,26 @@ func withUserID(op *huma.Operation) *huma.Operation {
 		result.Metadata = make(map[string]any, 8)
 	}
 	result.Metadata[wantUserID] = true
+	return result
+}
+
+// Returns the first valid server URL in OpenAPI specification.
+//
+// If no valid server is found, a relative URL to `/` is returned.
+func getAPIPrefix(api *huma.OpenAPI) *url.URL {
+	var result *url.URL
+	var err error
+	for _, server := range api.Servers {
+		result, err = url.Parse(server.URL)
+		if err == nil {
+			break
+		}
+	}
+
+	if result == nil {
+		result = &url.URL{
+			Path: "/",
+		}
+	}
 	return result
 }

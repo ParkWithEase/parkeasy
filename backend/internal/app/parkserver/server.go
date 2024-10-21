@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/geocoding"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
 	"github.com/sourcegraph/conc"
@@ -37,8 +38,14 @@ import (
 type Config struct {
 	// Database pool for Postgres connection
 	DBPool *pgxpool.Pool
+	// The prefix to the API endpoint
+	APIPrefix string
+	// Geocodio API key
+	GeocodioAPIKey string
 	// The address to run the server on
 	Addr string
+	// The origin to allow cross-origin request from.
+	CorsOrigin string
 	// Whether to run server in insecure mode. This allows cookies to be transferred over plain HTTP.
 	Insecure bool
 }
@@ -67,6 +74,9 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	healthService := health.New(c.DBPool)
 	healthRoute := routes.NewHealthRoute(healthService)
 
+	geocodioRepository := geocoding.NewGeocodio(http.DefaultClient, c.GeocodioAPIKey)
+	_ = geocodioRepository // FIXME: actually use the repository
+
 	routes.UseHumaMiddlewares(api, sessionManager, userService)
 	huma.AutoRegister(api, authRoute)
 	huma.AutoRegister(api, userRoute)
@@ -87,6 +97,13 @@ func (c *Config) NewHumaAPI() huma.API {
 	api := humago.New(router, config)
 	sessionManager := routes.NewSessionManager(pgxstore.New(c.DBPool))
 	sessionManager.Cookie.Secure = !c.Insecure
+
+	if c.APIPrefix != "" {
+		api.OpenAPI().Servers = append(api.OpenAPI().Servers, &huma.Server{
+			URL:         c.APIPrefix,
+			Description: "API server endpoint",
+		})
+	}
 
 	c.RegisterRoutes(api, sessionManager)
 
@@ -114,8 +131,8 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 
 	srv.Handler = LogMiddleware(srv.Handler)
 
-	if c.Insecure {
-		corsMiddleware := cors.New(cors.Options{
+	if c.Insecure || c.CorsOrigin != "" {
+		corsOpts := cors.Options{
 			AllowedMethods: []string{
 				http.MethodGet,
 				http.MethodHead,
@@ -124,14 +141,21 @@ func (c *Config) ListenAndServe(ctx context.Context) error {
 				http.MethodDelete,
 				http.MethodPatch,
 			},
+			AllowCredentials: true,
+			ExposedHeaders:   []string{"Link"},
+		}
+
+		if c.Insecure {
 			// NOTE: This allow all credentials to be passed across CORS
 			//
 			// It is very insecure, and as such should only be enabled for development
-			AllowOriginFunc: func(_ string) bool {
+			corsOpts.AllowOriginFunc = func(_ string) bool {
 				return true
-			},
-			AllowCredentials: true,
-		})
+			}
+		} else {
+			corsOpts.AllowedOrigins = append(corsOpts.AllowedOrigins, c.CorsOrigin)
+		}
+		corsMiddleware := cors.New(corsOpts)
 		srv.Handler = corsMiddleware.Handler(srv.Handler)
 	}
 

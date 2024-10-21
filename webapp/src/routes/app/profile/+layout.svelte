@@ -1,122 +1,47 @@
 <script lang="ts">
-    import userClipart from '$lib/images/user-clipart.png';
-    import Navbar from '$lib/components/navbar.svelte';
-    import { goto } from '$app/navigation';
-    import { BACKEND_SERVER } from '$lib/constants';
-    import { page } from '$app/stores';
+    import { navigating, page } from '$app/stores';
+    import { SideNav, SideNavItems, SideNavLink, Content } from 'carbon-components-svelte';
 
-    async function logout() {
-        try {
-            const response = await fetch(`${BACKEND_SERVER}/auth`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
-            if (response.ok) {
-                goto('/auth/login');
-            } else {
-                throw new Error("Can't log out for some reason");
-            }
-        } catch {
-            throw new Error('Something went wrong');
-        }
-    }
+    let user_profile_link = '/app/profile/user-profile';
+    let booking_history_link = '/app/profile/booking-history';
+    let leasing_history_link = '/app/profile/leasing-history';
+    let preferred_spots_link = '/app/profile/preferred-spots';
+
+    let is_side_nav_open: boolean = true;
 </script>
 
-<Navbar />
+<SideNav bind:isOpen={is_side_nav_open}>
+    <SideNavItems>
+        <SideNavLink
+            text="Your Profile"
+            href={user_profile_link}
+            isSelected={user_profile_link == $page.url.pathname}
+        />
+        <SideNavLink
+            text="Booking History"
+            href={booking_history_link}
+            isSelected={booking_history_link == $page.url.pathname}
+        />
+        <SideNavLink
+            text="Leasing History"
+            href={leasing_history_link}
+            isSelected={leasing_history_link == $page.url.pathname}
+        />
+        <SideNavLink
+            text="Preferred Spots"
+            href={preferred_spots_link}
+            isSelected={preferred_spots_link == $page.url.pathname}
+        />
+    </SideNavItems>
+</SideNav>
 
-<div class="container">
-    <div class="sidebar">
-        <a href="/app/profile/user-profile"
-            ><img src={userClipart} alt="user" class="logo-small" /></a
-        >
-        <a
-            class="sidebar-link"
-            href="/app/profile/user-profile"
-            class:active={$page.url.pathname.includes('user-profile')}>User Profile</a
-        >
-        <a
-            class="sidebar-link"
-            href="/app/profile/booking-history"
-            class:active={$page.url.pathname.includes('booking-history')}>Booking History</a
-        >
-        <a
-            class="sidebar-link"
-            href="/app/profile/leasing-history"
-            class:active={$page.url.pathname.includes('leasing-history')}>Listing History</a
-        >
-        <a
-            class="sidebar-link"
-            href="/app/profile/preference-spots"
-            class:active={$page.url.pathname.includes('preference-spots')}>Preference Cars</a
-        >
-        <a class="logout-link" href="/" on:click={logout}>Logout</a>
-    </div>
-    <div class="info-container">
+<Content>
+    {#await $navigating?.complete}
+        <div>Loading.</div>
+    {:then}
         <slot></slot>
-    </div>
-</div>
+    {/await}
+</Content>
 
 <style>
-    .container {
-        display: flex;
-        flex-direction: row;
-        margin: 10rem 3rem;
-        max-height: fit-content;
-    }
-
-    .container > div {
-        margin-left: 1rem;
-        border-radius: 20px;
-        background-color: rgb(186, 214, 183);
-    }
-
-    .sidebar {
-        display: flex;
-        width: 30%;
-        max-height: 70vh;
-        flex-direction: column;
-        font-size: 1.2rem;
-        font-weight: bold;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .sidebar > a {
-        margin: 1rem;
-        padding: 1rem 7rem;
-        border-radius: 10px;
-        text-decoration: none;
-        color: #000000;
-    }
-
-    .sidebar-link:hover {
-        color: #7ed957;
-        background-color: rgb(0, 0, 0);
-        transition: 0.3s;
-    }
-
-    .sidebar-link:active {
-        color: #ffffff;
-        background-color: rgb(0, 0, 0);
-        transition: 0.3s;
-    }
-
-    a.active {
-        color: #ffffff;
-        background-color: #32683b;
-        transition: 0.3s;
-    }
-
-    .logout-link:hover {
-        color: #f83636;
-        background-color: rgb(0, 0, 0);
-        transition: 0.3s;
-    }
-
-    .info-container {
-        position: relative;
-        width: 70%;
-        max-height: 70vh;
-        background-color: aliceblue;
-    }
 </style>

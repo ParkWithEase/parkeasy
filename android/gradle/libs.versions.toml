@@ -17,6 +17,7 @@ hilt-navigation = "1.2.0"
 ktfmt = "0.20.1"
 detekt = "1.23.7"
 detekt-compose = "0.4.12"
+kover = "0.8.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -68,3 +69,4 @@ kotlin-ksp = { id = "com.google.devtools.ksp", version.ref = "kotlin-ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+kotlinx-kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

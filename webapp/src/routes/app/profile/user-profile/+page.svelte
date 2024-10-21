@@ -1,48 +1,16 @@
 <script lang="ts">
-    import { goto } from '$app/navigation';
-    import { BACKEND_SERVER, INTERNAL_SERVER_ERROR } from '$lib/constants';
-    import type { UserProfile } from '$lib/types/user/user';
-    import { SkeletonText } from 'carbon-components-svelte';
-    async function getUser(): Promise<UserProfile | null> {
-        try {
-            const response = await fetch(`${BACKEND_SERVER}/user`, {
-                credentials: 'include'
-            });
-
-            if (response.ok) {
-                console.log(response);
-                let user: UserProfile = (await response.json()) as UserProfile;
-                return user;
-            } else {
-                goto('/auth/login');
-                return null;
-            }
-        } catch {
-            throw new Error(INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    let promise = getUser();
+    import type { PageData } from './$types';
+    export let data: PageData;
 </script>
 
-{#await promise}
-    <SkeletonText paragraph lines={2} />
-{:then user}
-    {#if user != undefined}
-        <div class="container">
-            <div>
-                <p>Name: {user.full_name}</p>
-            </div>
-            <div>
-                <p>Email: {user.email}</p>
-            </div>
-        </div>
-    {:else}
-        <div>
-            {INTERNAL_SERVER_ERROR}
-        </div>
-    {/if}
-{/await}
+<div class="container">
+    <div>
+        <p>Name: {data.full_name}</p>
+    </div>
+    <div>
+        <p>Email: {data.email}</p>
+    </div>
+</div>
 
 <style>
     .container {
@@ -52,6 +20,8 @@
     }
 
     p {
-        font-size: 2rem;
+        padding-top: 1rem;
+        margin-left: 1rem;
+        font-size: 1.2rem;
     }
 </style>

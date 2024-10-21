@@ -11,8 +11,11 @@
         background-color: black;
         color: lightgreen;
         text-align: center;
-        position: fixed;
+        position: absolute;
         width: 100%;
         bottom: 0px;
+        position: absolute;
+        z-index: 999;
+        margin: 0 auto;
     }
 </style>
