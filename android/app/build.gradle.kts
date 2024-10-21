@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.kotlinx.kover)
 }
 
 android {
@@ -56,6 +57,25 @@ android {
         abortOnError = true
 
         baseline = file("lint-baseline.xml")
+    }
+}
+
+kover {
+    reports {
+        filters {
+            excludes {
+                annotatedBy("*Generated*")
+                classes(
+                    "*\$BindsModule",
+                    "*\$KeyModule",
+                    "*\$InstanceHolder"
+                )
+                packages(
+                    "hilt_aggregated_deps",
+                    "dagger.*"
+                )
+            }
+        }
     }
 }
 
