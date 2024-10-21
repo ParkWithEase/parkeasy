@@ -71,11 +71,13 @@
 </div>
 
 <style>
+    :global(.bx--content){
+        padding: 0rem;
+    }
+
     .leasing-info-container {
         display: flex;
         flex-direction: row;
-        padding: 1rem;
-        gap: 2rem;
         color: rgb(0, 0, 0);
     }
 </style>

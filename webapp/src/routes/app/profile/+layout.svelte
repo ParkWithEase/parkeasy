@@ -37,19 +37,12 @@
 </SideNav>
 
 <Content>
-    <div class="info-container">
-        {#await $navigating?.complete}
-            <div>Loading.</div>
-        {:then}
-            <slot></slot>
-        {/await}
-    </div>
+    {#await $navigating?.complete}
+        <div>Loading.</div>
+    {:then}
+        <slot></slot>
+    {/await}
 </Content>
 
 <style>
-    .info-container {
-        position: relative;
-        width: 100%;
-        height: 100vh;
-    }
 </style>

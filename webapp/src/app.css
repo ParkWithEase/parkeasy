@@ -149,16 +149,3 @@ button:focus:not(:focus-visible) {
     width: 1px;
     white-space: nowrap;
 }
-
-:global(bx--btn.bx--btn--primary) {
-    color: rgb(0, 248, 248);
-    background-color: black;
-    margin: 10px;
-    padding: 5px;
-    border: 1px solid white;
-    border-radius: 5px;
-}
-
-:global(bx--form--fluid.fluidForm.bx--form) {
-    border: 2px solid black;
-}
