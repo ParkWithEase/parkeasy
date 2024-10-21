@@ -121,9 +121,17 @@ jobs:
           name: Android APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Run unit tests
-        run: ./gradlew :app:testDebugUnitTest
+      - name: Run unit tests with coverage
+        run: ./gradlew :app:koverXmlReportDebug
         working-directory: android
+
+      - name: Upload unit test coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: android/app/build/reports/kover/reportDebug.xml
+          flags: android-unit
+          disable_file_fixes: true # This is not compatible with sparse-checkout
 
       - name: Create AVD
         if: steps.avd-cache.outputs.cache-hit != 'true'
