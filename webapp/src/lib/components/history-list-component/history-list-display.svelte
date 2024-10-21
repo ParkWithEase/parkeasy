@@ -1,6 +1,5 @@
 <script lang="ts">
-    import type { Booking } from '$lib/types/booking-history/booking';
-    export let booking: Booking;
+    export let booking;
 </script>
 
 <div class="booking-info">

@@ -1,8 +1,7 @@
 <script lang="ts">
-    import type { Booking } from '$lib/types/booking-history/booking';
     import LeasingHistoryDisplay from '$lib/components/history-list-component/history-list-display.svelte';
     import logo from '$lib/images/parkeasy-logo.png';
-    let leasingList: Booking[] = [
+    let leasingList = [
         {
             booking_id: '000101010',
             address: "Chancellor's Circle",
