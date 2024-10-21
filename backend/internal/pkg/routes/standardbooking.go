@@ -15,7 +15,7 @@ type StandardBookingServicer interface {
 	// Creates a new standard booking attached to `userID`.
 	//
 	// Returns the standard booking internal ID and the model.
-	Create(ctx context.Context, userID int64, listingID int64, booking *models.StandardBookingCreationInput) (int64, models.StandardBooking, error)
+	Create(ctx context.Context, userID int64, listingID int64, booking *models.StandardBookingCreationInput) (int64, models.StandardBooking, models.TimeSlot, error)
 	// Get the standard booking with `standardbookingID` if `userID` has enough permission to view the resource.
 	GetByUUID(ctx context.Context, userID int64, standardbookingID uuid.UUID) (models.StandardBooking, error)
 }
