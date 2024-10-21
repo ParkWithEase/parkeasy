@@ -2,7 +2,7 @@
     import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
     import { TimeSlotStatus } from '$lib/enum/timeslot-status';
 
-    export const availability_table: TimeSlotStatus[][] = Array.from(
+    export let availability_table: TimeSlotStatus[][] = Array.from(
         { length: TOTAL_SEGMENTS_NUMBER },
         () => Array(DAY_IN_A_WEEK).fill(0)
     );
@@ -19,25 +19,17 @@
         <th>Sat</th>
         <th>Sun</th>
     </tr>
-    {#each Array(24) as _, index (index)}
+    {#each Array(24) as _, segment (segment)}
         <tr class="odd-row">
-            <th rowspan="2"> {index}:00 </th>
-            <td>random data</td>
-            <td>random data</td>
-            <td>random data</td>
-            <td>random data</td>
-            <td>random data</td>
-            <td>random data</td>
-            <td>random data</td>
+            <th rowspan="2"> {segment}:00 </th>
+            {#each Array(7) as _, day (day)}
+                <td>{availability_table[segment * 2][day]}</td>
+            {/each}
         </tr>
         <tr class="even-row">
-            <td>random data</td>
-            <td>random data</td>
-            <td>random data</td>
-            <td>random data</td>
-            <td>random data</td>
-            <td>random data</td>
-            <td>random data</td>
+            {#each Array(7) as _, day (day)}
+                <td>{availability_table[segment * 2 + 1][day]}</td>
+            {/each}
         </tr>
     {/each}
 </table>

@@ -57,12 +57,17 @@ export const spots_time_slot = [
     {
         id: '1',
         time_slots: [
-            { date: new Date('2024-20-10'), segment: 1, status: TimeSlotStatus.AVAILABLE },
-            { date: new Date('2024-20-10'), segment: 2, status: TimeSlotStatus.AVAILABLE },
-            { date: new Date('2024-21-10'), segment: 1, status: TimeSlotStatus.BOOKED },
-            { date: new Date('2024-21-10'), segment: 2, status: TimeSlotStatus.BOOKED },
-            { date: new Date('2024-21-10'), segment: 1, status: TimeSlotStatus.AUCTIONED },
-            { date: new Date('2024-21-10'), segment: 2, status: TimeSlotStatus.AUCTIONED }
+            { date: new Date('2024-10-19T00:00:00'), segment: 1, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date('2024-10-19T00:00:00'), segment: 2, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date('2024-10-19T00:00:00'), segment: 3, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date('2024-10-19T00:00:00'), segment: 4, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date('2024-10-19T00:00:00'), segment: 5, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date('2024-10-19T00:00:00'), segment: 6, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date('2024-10-19T00:00:00'), segment: 7, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date('2024-10-24T00:00:00'), segment: 1, status: TimeSlotStatus.BOOKED },
+            { date: new Date('2024-10-24T00:00:00'), segment: 2, status: TimeSlotStatus.BOOKED },
+            { date: new Date('2024-10-25T00:00:00'), segment: 1, status: TimeSlotStatus.AUCTIONED },
+            { date: new Date('2024-10-25T00:00:00'), segment: 2, status: TimeSlotStatus.AUCTIONED }
         ]
     }
 ];

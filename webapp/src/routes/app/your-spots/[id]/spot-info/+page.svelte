@@ -5,37 +5,76 @@
     import { Edit } from 'carbon-icons-svelte';
     import SpotEditModal from '$lib/components/spot-component/spot-edit-modal.svelte';
     import AvailabilityTable from '$lib/components/spot-component/availability-table.svelte';
-    import type { TimeSlotStatus } from '$lib/enum/timeslot-status';
+    import { TimeSlotStatus } from '$lib/enum/timeslot-status';
     import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
+    import { getMonday, getNextMonday, getPreviousMonday } from '$lib/utils/datetime-util';
 
     export let data: PageData;
     let is_edit_modal_open: boolean;
     let spot = data.spot;
-    let time_slots = data.time_slots;
-    let time_slot_edit = [];
-    let status_table: TimeSlotStatus[][] = Array.from({ length: TOTAL_SEGMENTS_NUMBER }, () =>
+
+    let availability_table: TimeSlotStatus[][] = Array.from({ length: TOTAL_SEGMENTS_NUMBER }, () =>
         Array(DAY_IN_A_WEEK).fill(0)
     );
 
-    let currentMonday = getMonday(new Date(Date.now()));
-    console.log(currentMonday);
-    console.log(getNextMonday(currentMonday));
+    //reminder to change these to now()
+    let today = new Date('2024-10-15T03:24:00');
+    let currentMonday = getMonday(today);
+    let nextMonday = getNextMonday(today);
+    let time_slots = [];
+    let time_slot_edit = [];
 
-    function getMonday(d: Date) {
-        let this_week_monday = new Date(d);
-        this_week_monday.setSeconds(0);
-        this_week_monday.setMinutes(0);
-        this_week_monday.setHours(0);
-        let day = this_week_monday.getDay() || 7;
-        let diff = this_week_monday.getDate() - day + 1;
-        this_week_monday.setDate(diff);
-        return this_week_monday;
+    extractRelevantTimeSlot();
+    updateTimeTable();
+
+    function extractRelevantTimeSlot() {
+        time_slots = [];
+        data.time_slots?.forEach((slot) => {
+            if (slot.date >= currentMonday && slot.date < nextMonday) {
+                time_slots = [...time_slots, slot];
+            }
+        });
     }
 
-    function getNextMonday(d: Date) {
-        let next_week_monday = getMonday(d);
-        next_week_monday.setDate(next_week_monday.getDate() + 7);
-        return next_week_monday;
+    function updateTimeTable() {
+        let week_day = (today.getDay() || 7) - 1;
+        let current_seg = today.getHours() * 2 + Math.ceil(today.getMinutes() / 30);
+
+        for (let day = 0; day < DAY_IN_A_WEEK; day++) {
+            let currentDate = new Date(currentMonday);
+            currentDate.setDate(currentMonday.getDate() + day);
+            for (let seg = 0; seg < TOTAL_SEGMENTS_NUMBER; seg++) {
+                if (day < week_day || (day == week_day && seg <= current_seg)) {
+                    availability_table[seg][day] = TimeSlotStatus.PASTDUE;
+                } else {
+                    availability_table[seg][day] = TimeSlotStatus.NONE;
+                }
+            }
+        }
+
+        time_slots.forEach((slot) => {
+            let day = slot.date.getDay() || 7 - 1;
+            availability_table[slot.segment][day] = slot.status;
+        });
+
+        time_slot_edit.forEach((slot) => {
+            let day = slot.date.getDay() || 7 - 1;
+            availability_table[slot.segment][day] = slot.status;
+        });
+    }
+
+    function toNextWeek() {
+        currentMonday = getNextMonday(currentMonday);
+        nextMonday = getNextMonday(nextMonday);
+        extractRelevantTimeSlot();
+        updateTimeTable();
+    }
+
+    function toPrevWeek() {
+        currentMonday = getPreviousMonday(currentMonday);
+        nextMonday = getPreviousMonday(nextMonday);
+        extractRelevantTimeSlot();
+        updateTimeTable();
     }
 
     function handleSubmit(event: Event) {
@@ -117,7 +156,14 @@
     />
 
     <p class="spot-info-header">Availability</p>
-    <AvailabilityTable bind:availability_table={status_table} />
+
+    <div>
+        <p>From {currentMonday.toDateString()} at 00:00 to {nextMonday.toDateString()} at 00:00</p>
+        <Button on:click={toPrevWeek}>Prev Week</Button>
+        <Button on:click={toNextWeek}>Next Week</Button>
+    </div>
+
+    <AvailabilityTable bind:availability_table />
 </Content>
 
 <style>
