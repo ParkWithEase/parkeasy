@@ -72,6 +72,7 @@ func (cli *CLI) Run(ctx context.Context) (err error) {
 	})
 	state := gen.State{
 		Config: gen.Config{
+			Wipe:            true,
 			NoFactory:       true,
 			StructTagCasing: "snake",
 			RelationTag:     "-",
