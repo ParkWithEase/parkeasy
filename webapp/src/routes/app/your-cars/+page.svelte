@@ -182,7 +182,7 @@
 <style>
     .button-container {
         position: sticky;
-        top: 0;
+        top: 2.5rem;
         background: white;
     }
 </style>

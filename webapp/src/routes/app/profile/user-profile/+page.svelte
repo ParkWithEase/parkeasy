@@ -20,6 +20,8 @@
     }
 
     p {
-        font-size: 2rem;
+        padding-top: 1rem;
+        margin-left: 1rem;
+        font-size: 1.2rem;
     }
 </style>

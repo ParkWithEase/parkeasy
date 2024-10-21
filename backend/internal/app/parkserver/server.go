@@ -37,6 +37,8 @@ import (
 type Config struct {
 	// Database pool for Postgres connection
 	DBPool *pgxpool.Pool
+	// The prefix to the API endpoint
+	APIPrefix string
 	// The address to run the server on
 	Addr string
 	// The origin to allow cross-origin request from.
@@ -89,6 +91,13 @@ func (c *Config) NewHumaAPI() huma.API {
 	api := humago.New(router, config)
 	sessionManager := routes.NewSessionManager(pgxstore.New(c.DBPool))
 	sessionManager.Cookie.Secure = !c.Insecure
+
+	if c.APIPrefix != "" {
+		api.OpenAPI().Servers = append(api.OpenAPI().Servers, &huma.Server{
+			URL:         c.APIPrefix,
+			Description: "API server endpoint",
+		})
+	}
 
 	c.RegisterRoutes(api, sessionManager)
 
