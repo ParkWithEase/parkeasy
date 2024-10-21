@@ -22,7 +22,6 @@ var (
 type ParkingSpotLocation struct {
 	PostalCode    string  `json:"postal_code,omitempty" doc:"The postal code of the parking spot"`
 	CountryCode   string  `json:"country_code" pattern:"[A-Z][A-Z]" doc:"The country code of a parking spot"`
-	ProvinceCode  string  `json:"province_code" pattern:"[A-Z][A-Z]" doc:"The province code of a parking spot"`
 	City          string  `json:"city" doc:"The city the parking spot is in"`
 	State         string  `json:"state" doc:"The province the parking spot is in"`
 	StreetAddress string  `json:"street_address" doc:"The street address of the parking spot"`
