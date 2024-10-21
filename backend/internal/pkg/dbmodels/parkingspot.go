@@ -59,7 +59,7 @@ type ParkingspotsStmt = bob.QueryStmt[*Parkingspot, ParkingspotSlice]
 // parkingspotR is where relationships are stored.
 type parkingspotR struct {
 	UseridUser               *User         // parkingspot.parkingspot_userid_fkey
-	ParkingspotuuidTimeunits TimeunitSlice // timeunit.timeunit_parkingspotid_fkey
+	ParkingspotuuidTimeunits TimeunitSlice // timeunit.timeunit_parkingspotuuid_fkey
 }
 
 // ParkingspotSetter is used for insert/upsert/update operations
@@ -631,7 +631,7 @@ func parkingspotsJoinParkingspotuuidTimeunits[Q dialect.Joinable](from parkingsp
 
 				{
 					mods = append(mods, dialect.Join[Q](typ, Timeunits.Name(ctx).As(to.Alias())).On(
-						to.Parkingspotid.EQ(from.Parkingspotuuid),
+						to.Parkingspotuuid.EQ(from.Parkingspotuuid),
 					))
 				}
 
@@ -662,7 +662,7 @@ func (os ParkingspotSlice) UseridUser(ctx context.Context, exec bob.Executor, mo
 // ParkingspotuuidTimeunits starts a query for related objects on timeunit
 func (o *Parkingspot) ParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
 	return Timeunits.Query(ctx, exec, append(mods,
-		sm.Where(TimeunitColumns.Parkingspotid.EQ(psql.Arg(o.Parkingspotuuid))),
+		sm.Where(TimeunitColumns.Parkingspotuuid.EQ(psql.Arg(o.Parkingspotuuid))),
 	)...)
 }
 
@@ -673,7 +673,7 @@ func (os ParkingspotSlice) ParkingspotuuidTimeunits(ctx context.Context, exec bo
 	}
 
 	return Timeunits.Query(ctx, exec, append(mods,
-		sm.Where(psql.Group(TimeunitColumns.Parkingspotid).In(PKArgs...)),
+		sm.Where(psql.Group(TimeunitColumns.Parkingspotuuid).In(PKArgs...)),
 	)...)
 }
 
@@ -861,7 +861,7 @@ func (os ParkingspotSlice) LoadParkingspotParkingspotuuidTimeunits(ctx context.C
 
 	for _, o := range os {
 		for _, rel := range timeunits {
-			if o.Parkingspotuuid != rel.Parkingspotid {
+			if o.Parkingspotuuid != rel.Parkingspotuuid {
 				continue
 			}
 
@@ -922,7 +922,7 @@ func (parkingspot0 *Parkingspot) AttachUseridUser(ctx context.Context, exec bob.
 
 func insertParkingspotParkingspotuuidTimeunits0(ctx context.Context, exec bob.Executor, timeunits1 []*TimeunitSetter, parkingspot0 *Parkingspot) (TimeunitSlice, error) {
 	for i := range timeunits1 {
-		timeunits1[i].Parkingspotid = omit.From(parkingspot0.Parkingspotuuid)
+		timeunits1[i].Parkingspotuuid = omit.From(parkingspot0.Parkingspotuuid)
 	}
 
 	ret, err := Timeunits.InsertMany(ctx, exec, timeunits1...)
@@ -935,7 +935,7 @@ func insertParkingspotParkingspotuuidTimeunits0(ctx context.Context, exec bob.Ex
 
 func attachParkingspotParkingspotuuidTimeunits0(ctx context.Context, exec bob.Executor, count int, timeunits1 TimeunitSlice, parkingspot0 *Parkingspot) (TimeunitSlice, error) {
 	setter := &TimeunitSetter{
-		Parkingspotid: omit.From(parkingspot0.Parkingspotuuid),
+		Parkingspotuuid: omit.From(parkingspot0.Parkingspotuuid),
 	}
 
 	err := Timeunits.Update(ctx, exec, setter, timeunits1...)

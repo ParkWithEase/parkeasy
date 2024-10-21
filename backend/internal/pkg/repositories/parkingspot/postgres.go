@@ -292,6 +292,7 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.
 
 		//Get availability
 		availability, _ := p.GetAvalByUUID(ctx, dbSpot.Parkingspotuuid, startDate, endDate)
+		// FIXME: How to handle errors apart from nothing found
 
 		// TODO: Move dbmodels.Parkingspot -> Entry to a proc or something.
 		result = append(result, Entry{
@@ -319,4 +320,30 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.
 		})
 	}
 	return result, nil
+}
+
+func formEntry(dbSpot dbmodels.Parkingspot, availability []models.TimeUnit) Entry {
+	return Entry{
+		ParkingSpot: models.ParkingSpot{
+			Location: models.ParkingSpotLocation{
+				PostalCode:    dbSpot.Postalcode,
+				CountryCode:   dbSpot.Countrycode,
+				City:          dbSpot.City,
+				State:         dbSpot.State,
+				StreetAddress: dbSpot.Streetaddress,
+				Longitude:     float64(dbSpot.Longitude),
+				Latitude:      float64(dbSpot.Latitude),
+			},
+			Features: models.ParkingSpotFeatures{
+				Shelter:         dbSpot.Hasshelter,
+				PlugIn:          dbSpot.Hasplugin,
+				ChargingStation: dbSpot.Haschargingstation,
+			},
+			PricePerHour: dbSpot.Priceperhour,
+			ID:           dbSpot.Parkingspotuuid,
+			Availability: availability,
+		},
+		InternalID: dbSpot.Parkingspotid,
+		OwnerID:    dbSpot.Userid,
+	}
 }

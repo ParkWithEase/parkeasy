@@ -2,9 +2,9 @@
 CREATE TABLE IF NOT EXISTS TimeUnit (
   StartTime TIMESTAMPTZ NOT NULL,
   EndTime TIMESTAMPTZ NOT NULL,
-  ParkingSpotId UUID NOT NULL REFERENCES ParkingSpot(ParkingSpotUUID),
+  ParkingSpotUUID UUID NOT NULL REFERENCES ParkingSpot(ParkingSpotUUID),
   BookingId BIGINT DEFAULT NULL REFERENCES Booking(BookingID),
   Status TEXT NOT NULL,
-  PRIMARY KEY (StartTime, EndTime, ParkingSpotId)
+  PRIMARY KEY (StartTime, EndTime, ParkingSpotUUID)
 );
 
