@@ -40,7 +40,7 @@
         <HeaderGlobalAction
             iconDescription="Add your spot"
             icon={MobileAdd}
-            href="/app/profile/user-profile"
+            href="/app/your-spots"
         />
         <HeaderGlobalAction iconDescription="Your Cars" icon={Car} href="/app/your-cars" />
         <HeaderGlobalAction

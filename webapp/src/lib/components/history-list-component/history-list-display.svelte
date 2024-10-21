@@ -21,7 +21,6 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        border: 1px solid #cfcfcfcf;
     }
     .booking-head {
         font-size: 1.5rem;

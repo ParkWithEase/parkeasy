@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { Booking } from '$lib/types/booking-history/booking';
     import BookingHistoryDisplay from '$lib/components/history-list-component/history-list-display.svelte';
+    import logo from '$lib/images/parkeasy-logo.png';
     let bookingList: Booking[] = [
         {
             booking_id: '000101010',
@@ -28,6 +29,7 @@
         {#each bookingList as booking}
             <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <div class="booking-info-container">
+                <img class="booking-image" src={logo} alt="a car" />
                 <BookingHistoryDisplay {booking}></BookingHistoryDisplay>
             </div>
         {/each}
@@ -38,10 +40,16 @@
     :global(.bx--content){
         padding: 0rem;
     }
-    
+
+    .booking-image{
+        max-height: 9%;
+        max-width: 12%;
+    }
+
     .booking-info-container {
         display: flex;
         flex-direction: row;
         color: rgb(0, 0, 0);
+        border: 1px solid #cfcfcfcf;
     }
 </style>
