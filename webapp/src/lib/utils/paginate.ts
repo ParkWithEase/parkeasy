@@ -1,18 +1,19 @@
 import type { Client, FetchOptions } from 'openapi-fetch';
 import type { PathsWithMethod, FilterKeys } from 'openapi-typescript-helpers';
 import type { paths } from '$lib/sdk/schema';
+import { BACKEND_SERVER } from '$lib/constants';
 
 function extractNextCursor(linkHeader: string | null): string | null {
     if (!linkHeader) {
         return null;
     }
 
-    const regex = /<(.*)>; rel="next"/g;
+    const regex = /<(.*)>; rel="next"/;
     let result: string | null = null;
     for (const link of linkHeader.split(',')) {
         const nextURI = link.match(regex)?.[1];
         if (nextURI) {
-            result = new URL(nextURI).searchParams.get('after');
+            result = new URL(nextURI, BACKEND_SERVER).searchParams.get('after');
             if (result) {
                 break;
             }

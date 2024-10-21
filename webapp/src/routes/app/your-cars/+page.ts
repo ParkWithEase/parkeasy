@@ -7,7 +7,7 @@ export const ssr = false;
 
 export const load: PageLoad = async ({ fetch }) => {
     const client = newClient({ fetch });
-    const paging = paginate(client, '/cars', { params: { count: 5 } });
+    const paging = paginate(client, '/cars', { params: { query: { count: 5 } } });
     const { data, error: err, hasNext } = (await paging.next()).value ?? {};
     if (err) {
         switch (err.status) {

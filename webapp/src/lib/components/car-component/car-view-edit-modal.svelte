@@ -6,15 +6,17 @@
         ModalHeader,
         ModalFooter,
         Form,
-        TextInput
+        TextInput,
+        InlineNotification
     } from 'carbon-components-svelte';
+    import { CarModalState } from '$lib/enum/car-model';
 
     import { createEventDispatcher } from 'svelte';
 
     const dispatch = createEventDispatcher();
 
-    export let openState: boolean;
-    export let isEdit: boolean = false;
+    export let state: CarModalState;
+    export let errorMessage: string;
     function deleteCar() {
         dispatch('delete', {
             text: 'Delete'
@@ -28,7 +30,7 @@
         if (form) {
             form.reset();
         }
-        isEdit = false;
+        state = CarModalState.VIEW;
     }
 
     function submitForm() {
@@ -46,21 +48,31 @@
 {#if carInfo}
     <ComposedModal
         preventCloseOnClickOutside={true}
-        bind:open={openState}
-        on:click:button--primary={isEdit ? () => submitForm() : () => (isEdit = true)}
+        open={state == CarModalState.EDIT || state == CarModalState.VIEW}
+        on:click:button--primary={state == CarModalState.EDIT
+            ? () => submitForm()
+            : () => (state = CarModalState.EDIT)}
         on:close={() => {
             cleanUp();
-            isEdit = false;
+            errorMessage = '';
+            state = CarModalState.NONE;
         }}
     >
-        {#if isEdit}
+        {#if state == CarModalState.EDIT}
             <ModalHeader title="Edit car" />
         {:else}
             <ModalHeader title="Car Info" />
         {/if}
 
-        {#if isEdit}
+        {#if state == CarModalState.EDIT}
             <ModalBody hasForm>
+                {#if errorMessage}
+                    <InlineNotification
+                        title="Error:"
+                        bind:subtitle={errorMessage}
+                        on:close={() => (errorMessage = '')}
+                    />
+                {/if}
                 <Form on:submit id="car-edit-form">
                     <TextInput
                         required
@@ -110,13 +122,13 @@
             </ModalBody>
         {/if}
 
-        {#if isEdit}
+        {#if state == CarModalState.EDIT}
             <ModalFooter
                 primaryButtonText="Confirm"
                 secondaryButtonText="Cancel"
                 on:click:button--secondary={() => {
                     cleanUp();
-                    openState = true;
+                    state = CarModalState.VIEW;
                 }}
             />
         {:else}
