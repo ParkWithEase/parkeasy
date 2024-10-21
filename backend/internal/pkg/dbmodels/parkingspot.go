@@ -31,7 +31,7 @@ type Parkingspot struct {
 	Postalcode         string          `db:"postalcode" `
 	Countrycode        string          `db:"countrycode" `
 	City               string          `db:"city" `
-	Province           string          `db:"province" `
+	State              string          `db:"state" `
 	Streetaddress      string          `db:"streetaddress" `
 	Longitude          float32         `db:"longitude" `
 	Latitude           float32         `db:"latitude" `
@@ -72,7 +72,7 @@ type ParkingspotSetter struct {
 	Postalcode         omit.Val[string]          `db:"postalcode" `
 	Countrycode        omit.Val[string]          `db:"countrycode" `
 	City               omit.Val[string]          `db:"city" `
-	Province           omit.Val[string]          `db:"province" `
+	State              omit.Val[string]          `db:"state" `
 	Streetaddress      omit.Val[string]          `db:"streetaddress" `
 	Longitude          omit.Val[float32]         `db:"longitude" `
 	Latitude           omit.Val[float32]         `db:"latitude" `
@@ -108,8 +108,8 @@ func (s ParkingspotSetter) SetColumns() []string {
 		vals = append(vals, "city")
 	}
 
-	if !s.Province.IsUnset() {
-		vals = append(vals, "province")
+	if !s.State.IsUnset() {
+		vals = append(vals, "state")
 	}
 
 	if !s.Streetaddress.IsUnset() {
@@ -162,8 +162,8 @@ func (s ParkingspotSetter) Overwrite(t *Parkingspot) {
 	if !s.City.IsUnset() {
 		t.City, _ = s.City.Get()
 	}
-	if !s.Province.IsUnset() {
-		t.Province, _ = s.Province.Get()
+	if !s.State.IsUnset() {
+		t.State, _ = s.State.Get()
 	}
 	if !s.Streetaddress.IsUnset() {
 		t.Streetaddress, _ = s.Streetaddress.Get()
@@ -226,10 +226,10 @@ func (s ParkingspotSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
 		vals[5] = psql.Arg(s.City)
 	}
 
-	if s.Province.IsUnset() {
+	if s.State.IsUnset() {
 		vals[6] = psql.Raw("DEFAULT")
 	} else {
-		vals[6] = psql.Arg(s.Province)
+		vals[6] = psql.Arg(s.State)
 	}
 
 	if s.Streetaddress.IsUnset() {
@@ -326,10 +326,10 @@ func (s ParkingspotSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
-	if !s.Province.IsUnset() {
+	if !s.State.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "province")...),
-			psql.Arg(s.Province),
+			psql.Quote(append(prefix, "state")...),
+			psql.Arg(s.State),
 		}})
 	}
 
@@ -392,7 +392,7 @@ type parkingspotColumnNames struct {
 	Postalcode         string
 	Countrycode        string
 	City               string
-	Province           string
+	State              string
 	Streetaddress      string
 	Longitude          string
 	Latitude           string
@@ -412,7 +412,7 @@ type parkingspotColumns struct {
 	Postalcode         psql.Expression
 	Countrycode        psql.Expression
 	City               psql.Expression
-	Province           psql.Expression
+	State              psql.Expression
 	Streetaddress      psql.Expression
 	Longitude          psql.Expression
 	Latitude           psql.Expression
@@ -439,7 +439,7 @@ func buildParkingspotColumns(alias string) parkingspotColumns {
 		Postalcode:         psql.Quote(alias, "postalcode"),
 		Countrycode:        psql.Quote(alias, "countrycode"),
 		City:               psql.Quote(alias, "city"),
-		Province:           psql.Quote(alias, "province"),
+		State:              psql.Quote(alias, "state"),
 		Streetaddress:      psql.Quote(alias, "streetaddress"),
 		Longitude:          psql.Quote(alias, "longitude"),
 		Latitude:           psql.Quote(alias, "latitude"),
@@ -457,7 +457,7 @@ type parkingspotWhere[Q psql.Filterable] struct {
 	Postalcode         psql.WhereMod[Q, string]
 	Countrycode        psql.WhereMod[Q, string]
 	City               psql.WhereMod[Q, string]
-	Province           psql.WhereMod[Q, string]
+	State              psql.WhereMod[Q, string]
 	Streetaddress      psql.WhereMod[Q, string]
 	Longitude          psql.WhereMod[Q, float32]
 	Latitude           psql.WhereMod[Q, float32]
@@ -479,7 +479,7 @@ func buildParkingspotWhere[Q psql.Filterable](cols parkingspotColumns) parkingsp
 		Postalcode:         psql.Where[Q, string](cols.Postalcode),
 		Countrycode:        psql.Where[Q, string](cols.Countrycode),
 		City:               psql.Where[Q, string](cols.City),
-		Province:           psql.Where[Q, string](cols.Province),
+		State:              psql.Where[Q, string](cols.State),
 		Streetaddress:      psql.Where[Q, string](cols.Streetaddress),
 		Longitude:          psql.Where[Q, float32](cols.Longitude),
 		Latitude:           psql.Where[Q, float32](cols.Latitude),

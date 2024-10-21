@@ -70,7 +70,7 @@ var ColumnNames = struct {
 		Postalcode:         "postalcode",
 		Countrycode:        "countrycode",
 		City:               "city",
-		Province:           "province",
+		State:              "state",
 		Streetaddress:      "streetaddress",
 		Longitude:          "longitude",
 		Latitude:           "latitude",
