@@ -14,7 +14,9 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
+	"github.com/stephenafamo/bob/dialect/psql/fm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/scan"
 )
 
 type PostgresRepository struct {
@@ -51,7 +53,6 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		Haschargingstation: omit.From(spot.Features.ChargingStation),
 		Priceperhour:       omit.From(spot.PricePerHour),
 	})
-
 	if err != nil {
 		// Handle duplicate error
 		var pgErr *pgconn.PgError
@@ -73,7 +74,6 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 			Parkingspotid: omit.From(inserted.Parkingspotuuid),
 			Status:        omit.From(timeslot.Status),
 		})
-
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) {
@@ -87,7 +87,8 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		availability = append(availability, models.TimeUnit{
 			StartTime: inserted.Starttime,
 			EndTime:   inserted.Endtime,
-			Status:    inserted.Status})
+			Status:    inserted.Status,
+		})
 	}
 
 	err = tx.Commit()
@@ -170,7 +171,8 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (E
 		availability = append(availability, models.TimeUnit{
 			StartTime: timeslot.Starttime,
 			EndTime:   timeslot.Endtime,
-			Status:    timeslot.Status})
+			Status:    timeslot.Status,
+		})
 	}
 
 	location := models.ParkingSpotLocation{
@@ -227,30 +229,37 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.
 	//   earth_box(ll_to_earth(center_lat, center_lng), radius_in_meters)
 	//   @> ll_to_earth(lat, lng)
 
-	where := []bob.Expression{}
-
-	if cursor, ok := after.Get(); ok {
-		where = psql.WhereAnd(where, dbmodels.SelectWhere.Cars.Carid.GT(cursor.ID))
+	type Result struct {
+		dbmodels.Parkingspot
+		DistanceToOrigin float64 `db:"distance_to_origin"`
 	}
 
-	if dist, ok := distance.Get(); ok {
-		// Create a custom expression for the earth_box and ll_to_earth functions
-		distanceExpr := psql.F("earth_box", psql.Arg(psql.F("ll_to_earth"), psql.Arg()))(
-			`earth_box(ll_to_earth(?, ?), ?) @> ll_to_earth(latitude_column, longitude_column)`,
-			latitude, longitude, *distance, // *distance for pointers, distance.Value() for omitnull.Val
-		)
+	centre := psql.F("ll_to_earth", psql.Arg(latitude), psql.Arg(longitude))
+	spotPosition := psql.F("ll_to_earth", dbmodels.ParkingspotColumns.Latitude, dbmodels.ParkingspotColumns.Longitude)
 
-		// Append this custom expression to the where clause
-		where = append(where, distanceExpr)
-	}
-
-	entryCursor, err := dbmodels.Cars.Query(
-		ctx, p.db,
-		sm.Columns(dbmodels.Cars.Columns()),
-		sm.OrderBy(dbmodels.CarColumns.Carid),
-		where,
+	// FIXME: I'm assuming that a distance is passed.
+	realDistance := distance.MustGet().distance
+	query := psql.Select(
+		sm.Columns(
+			dbmodels.Parkingspots.Columns(),
+			psql.F("earth_distance", centre, spotPosition)(fm.As("distance_to_origin")),
+		),
+		sm.From(dbmodels.Parkingspots.Name(ctx)),
+		sm.OrderBy("distance_to_origin").Asc(),
+		sm.Where(
+			psql.F(
+				"earth_box",
+				centre,
+				psql.Arg(realDistance),
+			)().OP(
+				"@>",
+				spotPosition,
+			),
+		),
 		sm.Limit(limit),
-	).Cursor()
+	)
+
+	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[Result]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return []Entry{}, nil
@@ -261,22 +270,34 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.
 
 	result := make([]Entry, 0, 8)
 	for entryCursor.Next() {
-		dbCar, err := entryCursor.Get()
+		dbSpot, err := entryCursor.Get()
 		if err != nil { // if there's an error, just return what we already have
 			break
 		}
+
+		// TODO: Move dbmodels.Parkingspot -> Entry to a proc or something.
 		result = append(result, Entry{
-			Car: models.Car{
-				Details: models.CarDetails{
-					LicensePlate: dbCar.Licenseplate,
-					Make:         dbCar.Make,
-					Model:        dbCar.Model,
-					Color:        dbCar.Color,
+			ParkingSpot: models.ParkingSpot{
+				Location: models.ParkingSpotLocation{
+					PostalCode:    dbSpot.Postalcode,
+					CountryCode:   dbSpot.Countrycode,
+					City:          dbSpot.City,
+					State:         "", // FIXME: we don't have this? dbSpot.State,
+					StreetAddress: dbSpot.Streetaddress,
+					Longitude:     float64(dbSpot.Longitude),
+					Latitude:      float64(dbSpot.Latitude),
 				},
-				ID: dbCar.Caruuid,
+				Features: models.ParkingSpotFeatures{
+					Shelter:         dbSpot.Hasshelter,
+					PlugIn:          dbSpot.Hasplugin,
+					ChargingStation: dbSpot.Haschargingstation,
+				},
+				PricePerHour: dbSpot.Priceperhour,
+				ID:           dbSpot.Parkingspotuuid,
+				// XXX: decide whether to load availability here
 			},
-			InternalID: dbCar.Carid,
-			OwnerID:    dbCar.Userid,
+			InternalID: dbSpot.Parkingspotid,
+			OwnerID:    dbSpot.Userid,
 		})
 	}
 	return result, nil
