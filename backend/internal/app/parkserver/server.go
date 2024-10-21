@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/geocoding"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
 	"github.com/sourcegraph/conc"
@@ -39,6 +40,8 @@ type Config struct {
 	DBPool *pgxpool.Pool
 	// The prefix to the API endpoint
 	APIPrefix string
+	// Geocodio API key
+	GeocodioAPIKey string
 	// The address to run the server on
 	Addr string
 	// The origin to allow cross-origin request from.
@@ -70,6 +73,9 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 
 	healthService := health.New(c.DBPool)
 	healthRoute := routes.NewHealthRoute(healthService)
+
+	geocodioRepository := geocoding.NewGeocodio(http.DefaultClient, c.GeocodioAPIKey)
+	_ = geocodioRepository // FIXME: actually use the repository
 
 	routes.UseHumaMiddlewares(api, sessionManager, userService)
 	huma.AutoRegister(api, authRoute)
