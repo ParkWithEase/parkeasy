@@ -139,11 +139,15 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		OperationID: "list-spots",
 		Method:      http.MethodGet,
 		Path:        "/spots",
-		Summary:     "Get listings associated to the current user",
-		Tags:        []string{CarTag.Name},
+		Summary:     "Get listings around a location",
+		Tags:        []string{ParkingSpotTag.Name},
 	}), func(ctx context.Context, input *struct {
-		After models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
-		Count int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of listings that appear per page."`
+		postal_code    string `query:"postal_code" default:"R3C 4V9" doc:"postal code for the location"`
+		country_code   string `query:"country_code" default:"CA" doc:"country code for the location"`
+		city           string `query:"city" default:"Winnipeg" doc:"city of the location"`
+		state          string `query:"state" default:"MB" doc:"state of the location"`
+		street_address string `query:"street_address" default:"123 Main St" doc:"street address of the location"`
+		distance       int32  `query:"distance" minimum:"1" default:"250" doc:"distance in meters from location"`
 	},
 	) (*CarListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)

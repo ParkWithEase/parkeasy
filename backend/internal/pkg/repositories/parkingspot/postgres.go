@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbmodels"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
@@ -127,7 +128,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 	return entry, nil
 }
 
-func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error) {
+func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) (Entry, error) {
 	spotResult, err := dbmodels.Parkingspots.Query(
 		ctx, p.db,
 		sm.Columns(
@@ -154,25 +155,11 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (E
 		return Entry{}, err
 	}
 
-	timeUnitResult, err := dbmodels.Timeunits.Query(
-		ctx, p.db,
-		sm.Columns(
-			dbmodels.TimeunitColumns.Starttime,
-			dbmodels.TimeunitColumns.Endtime,
-			dbmodels.TimeunitColumns.Status,
-		),
-		dbmodels.SelectWhere.Timeunits.Parkingspotid.EQ(spotID),
-		sm.OrderBy(dbmodels.TimeunitColumns.Starttime),
-	).All()
-
-	availability := make([]models.TimeUnit, 0, len(timeUnitResult)) // Initialize slice
-
-	for _, timeslot := range timeUnitResult {
-		availability = append(availability, models.TimeUnit{
-			StartTime: timeslot.Starttime,
-			EndTime:   timeslot.Endtime,
-			Status:    timeslot.Status,
-		})
+	//Initialize error variable
+	var timeError error
+	availability, err := p.GetAvalByUUID(ctx, spotID, startDate, endDate)
+	if err != nil && !errors.Is(err, ErrTimeUnitNotFound) {
+		timeError = err
 	}
 
 	location := models.ParkingSpotLocation{
@@ -201,7 +188,42 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (E
 		ParkingSpot: parkingspot,
 		InternalID:  spotResult.Parkingspotid,
 		OwnerID:     spotResult.Userid,
-	}, err
+	}, timeError
+}
+
+func (p *PostgresRepository) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
+	// startDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	// endDate := startDate.AddDate(0, 0, 7)
+
+	timeUnitResult, err := dbmodels.Timeunits.Query(
+		ctx, p.db,
+		sm.Columns(
+			dbmodels.TimeunitColumns.Starttime,
+			dbmodels.TimeunitColumns.Endtime,
+			dbmodels.TimeunitColumns.Status,
+		),
+		dbmodels.SelectWhere.Timeunits.Parkingspotid.EQ(spotID),
+		dbmodels.SelectWhere.Timeunits.Starttime.GTE(startDate),
+		dbmodels.SelectWhere.Timeunits.Endtime.LTE(endDate),
+		sm.OrderBy(dbmodels.TimeunitColumns.Starttime),
+	).All()
+
+	if (err != nil && errors.Is(err, sql.ErrNoRows)) || len(timeUnitResult) == 0 {
+		err = ErrTimeUnitNotFound
+		return make([]models.TimeUnit, 0, 1), err
+	}
+
+	availability := make([]models.TimeUnit, 0, len(timeUnitResult)) // Initialize slice
+
+	for _, timeslot := range timeUnitResult {
+		availability = append(availability, models.TimeUnit{
+			StartTime: timeslot.Starttime,
+			EndTime:   timeslot.Endtime,
+			Status:    timeslot.Status,
+		})
+	}
+
+	return availability, nil
 }
 
 func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error) {
@@ -222,12 +244,7 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUI
 	return result.Userid, err
 }
 
-func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.Val[Cursor], longitude float64, latitude float64, distance omit.Val[Distance]) ([]Entry, error) {
-	// 	SELECT *
-	// FROM places
-	// WHERE
-	//   earth_box(ll_to_earth(center_lat, center_lng), radius_in_meters)
-	//   @> ll_to_earth(lat, lng)
+func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.Val[Cursor], longitude float64, latitude float64, distance int32, startDate time.Time, endDate time.Time) ([]Entry, error) {
 
 	type Result struct {
 		dbmodels.Parkingspot
@@ -237,8 +254,6 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.
 	centre := psql.F("ll_to_earth", psql.Arg(latitude), psql.Arg(longitude))
 	spotPosition := psql.F("ll_to_earth", dbmodels.ParkingspotColumns.Latitude, dbmodels.ParkingspotColumns.Longitude)
 
-	// FIXME: I'm assuming that a distance is passed.
-	realDistance := distance.MustGet().distance
 	query := psql.Select(
 		sm.Columns(
 			dbmodels.Parkingspots.Columns(),
@@ -250,7 +265,7 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.
 			psql.F(
 				"earth_box",
 				centre,
-				psql.Arg(realDistance),
+				psql.Arg(distance),
 			)().OP(
 				"@>",
 				spotPosition,
@@ -275,6 +290,9 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.
 			break
 		}
 
+		//Get availability
+		availability, _ := p.GetAvalByUUID(ctx, dbSpot.Parkingspotuuid, startDate, endDate)
+
 		// TODO: Move dbmodels.Parkingspot -> Entry to a proc or something.
 		result = append(result, Entry{
 			ParkingSpot: models.ParkingSpot{
@@ -282,7 +300,7 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.
 					PostalCode:    dbSpot.Postalcode,
 					CountryCode:   dbSpot.Countrycode,
 					City:          dbSpot.City,
-					State:         "", // FIXME: we don't have this? dbSpot.State,
+					State:         dbSpot.Province,
 					StreetAddress: dbSpot.Streetaddress,
 					Longitude:     float64(dbSpot.Longitude),
 					Latitude:      float64(dbSpot.Latitude),
@@ -294,7 +312,7 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.
 				},
 				PricePerHour: dbSpot.Priceperhour,
 				ID:           dbSpot.Parkingspotuuid,
-				// XXX: decide whether to load availability here
+				Availability: availability,
 			},
 			InternalID: dbSpot.Parkingspotid,
 			OwnerID:    dbSpot.Userid,

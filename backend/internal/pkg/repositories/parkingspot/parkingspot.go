@@ -3,6 +3,7 @@ package parkingspot
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/google/uuid"
@@ -19,10 +20,6 @@ type Cursor struct {
 	ID int64    // The internal parking spot ID to use as anchor
 }
 
-type Distance struct {
-	distance float32
-}
-
 var (
 	ErrDuplicatedAddress  = errors.New("address already exist in the database")
 	ErrNotFound           = errors.New("no parking spot found")
@@ -32,6 +29,6 @@ var (
 
 type Repository interface {
 	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, error)
-	GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error)
+	GetByUUID(ctx context.Context, spotID uuid.UUID, date time.Time) (Entry, error)
 	GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error)
 }
