@@ -19,32 +19,17 @@ type ParkingSpotServicer interface {
 	// Get the parking spot with `spotID` if `userID` has enough permission to view the resource.
 	GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error)
 	// Delete the parking spot with `spotID` if `userID` owns the resource.
-	DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
-}
-
-type ListingServicer interface {
-	// Creates a new listing attached to `parkingspotID`.
-	//
-	// Returns the listing internal ID and the model.
-	Create(ctx context.Context, userID int64, listing *models.ListingCreationInput) (int64, models.Listing, error)
-	// Get the listing with `listingID` if a valid `parkingspotID` is passed.
-	GetByUUID(ctx context.Context, userID int64, listingID uuid.UUID) (models.Listing, error)
-	// Unlist the listing with `listingID` if `userID` owns the resource. Also, includes making it public and removing it from being public
-	UpdateByUUID(ctx context.Context, userID int64, listingID uuid.UUID, listing *models.ListingCreationInput) error
+	// DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
 }
 
 type ParkingSpotRoute struct {
-	spotService    ParkingSpotServicer
-	listingService ListingServicer
+	service    ParkingSpotServicer
 	sessionGetter  SessionDataGetter
 }
 
 type ParkingSpotOutput struct {
+	Link []string `header:"Link" doc:"Contains details on getting the next page of resources" example:"</spots?after=gQL>; rel=\"next\""`
 	Body models.ParkingSpot
-}
-
-type ListingOutput struct {
-	Body models.Listing
 }
 
 var ParkingSpotTag = huma.Tag{
@@ -54,11 +39,11 @@ var ParkingSpotTag = huma.Tag{
 
 // Returns a new `ParkingSpotRoute`
 func NewParkingSpotRoute(
-	spotService ParkingSpotServicer,
+	service ParkingSpotServicer,
 	sessionGetter SessionDataGetter,
 ) *ParkingSpotRoute {
 	return &ParkingSpotRoute{
-		spotService:   spotService,
+		service:   service,
 		sessionGetter: sessionGetter,
 	}
 }
@@ -82,7 +67,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	},
 	) (*ParkingSpotOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		_, result, err := r.spotService.Create(ctx, userID, &input.Body)
+		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
 			var detail error
 			switch {
@@ -100,6 +85,11 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 				detail = &huma.ErrorDetail{
 					Location: "body.location.country",
 					Value:    input.Body.Location.CountryCode,
+				}
+			case errors.Is(err, models.ErrProvinceNotSupported):
+				detail = &huma.ErrorDetail{
+					Location: "body.location.province",
+					Value:    input.Body.Location.ProvinceCode,
 				}
 			case errors.Is(err, models.ErrInvalidPostalCode):
 				detail = &huma.ErrorDetail{
@@ -143,6 +133,37 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		return &ParkingSpotOutput{Body: result}, nil
 	})
 
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID: "list-spots",
+		Method:      http.MethodGet,
+		Path:        "/spots",
+		Summary:     "Get listings associated to the current user",
+		Tags:        []string{CarTag.Name},
+	}), func(ctx context.Context, input *struct {
+		After models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
+		Count int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of listings that appear per page."`
+	},
+	) (*CarListOutput, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		cars, nextCursor, err := r.service.GetMany(ctx, userID, input.Count, input.After)
+		if err != nil {
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
+		}
+
+		result := CarListOutput{Body: cars}
+		if nextCursor != "" {
+			nextURL := url.URL{
+				Path: "/cars",
+				RawQuery: url.Values{
+					"count": []string{strconv.Itoa(input.Count)},
+					"after": []string{string(nextCursor)},
+				}.Encode(),
+			}
+			result.Link = append(result.Link, "<"+nextURL.String()+`>; rel="next"`)
+		}
+		return &result, nil
+	})
+
 	// huma.Register(api, *withUserID(&huma.Operation{
 	// 	OperationID: "create-listing-for-a-parking-spot",
 	// 	Method:      http.MethodPost,
@@ -169,29 +190,29 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	// 	return &ParkingSpotOutput{Body: result}, nil
 	// })
 
-	huma.Register(api, *withUserID(&huma.Operation{
-		OperationID: "delete-parking-spot",
-		Method:      http.MethodDelete,
-		Path:        "/spots/{id}",
-		Summary:     "Delete the specified parking spot",
-		Tags:        []string{ParkingSpotTag.Name},
-		Errors:      []int{http.StatusForbidden},
-	}), func(ctx context.Context, input *struct {
-		ID uuid.UUID `path:"id"`
-	},
-	) (*struct{}, error) {
-		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		err := r.spotService.DeleteByUUID(ctx, userID, input.ID)
-		if err != nil {
-			if errors.Is(err, models.ErrParkingSpotOwned) {
-				detail := &huma.ErrorDetail{
-					Location: "path.id",
-					Value:    input.ID,
-				}
-				return nil, NewHumaError(ctx, http.StatusForbidden, err, detail)
-			}
-			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
-		}
-		return nil, nil
-	})
+	// huma.Register(api, *withUserID(&huma.Operation{
+	// 	OperationID: "delete-parking-spot",
+	// 	Method:      http.MethodDelete,
+	// 	Path:        "/spots/{id}",
+	// 	Summary:     "Delete the specified parking spot",
+	// 	Tags:        []string{ParkingSpotTag.Name},
+	// 	Errors:      []int{http.StatusForbidden},
+	// }), func(ctx context.Context, input *struct {
+	// 	ID uuid.UUID `path:"id"`
+	// },
+	// ) (*struct{}, error) {
+	// 	userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+	// 	err := r.spotService.DeleteByUUID(ctx, userID, input.ID)
+	// 	if err != nil {
+	// 		if errors.Is(err, models.ErrParkingSpotOwned) {
+	// 			detail := &huma.ErrorDetail{
+	// 				Location: "path.id",
+	// 				Value:    input.ID,
+	// 			}
+	// 			return nil, NewHumaError(ctx, http.StatusForbidden, err, detail)
+	// 		}
+	// 		return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
+	// 	}
+	// 	return nil, nil
+	// })
 }
