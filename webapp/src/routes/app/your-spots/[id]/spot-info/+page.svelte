@@ -5,10 +5,38 @@
     import { Edit } from 'carbon-icons-svelte';
     import SpotEditModal from '$lib/components/spot-component/spot-edit-modal.svelte';
     import AvailabilityTable from '$lib/components/spot-component/availability-table.svelte';
+    import type { TimeSlotStatus } from '$lib/enum/timeslot-status';
+    import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
 
     export let data: PageData;
-    let isEditModalOpen: boolean;
+    let is_edit_modal_open: boolean;
     let spot = data.spot;
+    let time_slots = data.time_slots;
+    let time_slot_edit = [];
+    let status_table: TimeSlotStatus[][] = Array.from({ length: TOTAL_SEGMENTS_NUMBER }, () =>
+        Array(DAY_IN_A_WEEK).fill(0)
+    );
+
+    let currentMonday = getMonday(new Date(Date.now()));
+    console.log(currentMonday);
+    console.log(getNextMonday(currentMonday));
+
+    function getMonday(d: Date) {
+        let this_week_monday = new Date(d);
+        this_week_monday.setSeconds(0);
+        this_week_monday.setMinutes(0);
+        this_week_monday.setHours(0);
+        let day = this_week_monday.getDay() || 7;
+        let diff = this_week_monday.getDate() - day + 1;
+        this_week_monday.setDate(diff);
+        return this_week_monday;
+    }
+
+    function getNextMonday(d: Date) {
+        let next_week_monday = getMonday(d);
+        next_week_monday.setDate(next_week_monday.getDate() + 7);
+        return next_week_monday;
+    }
 
     function handleSubmit(event: Event) {
         event.preventDefault();
@@ -31,7 +59,7 @@
             },
             isListed: false
         };
-        isEditModalOpen = false;
+        is_edit_modal_open = false;
         spot = new_spot;
     }
 </script>
@@ -61,7 +89,7 @@
             <p class="spot-info-label">Utilities</p>
             <Checkbox
                 name="shelter"
-                labelText="shelter"
+                labelText="Shelter"
                 checked={spot?.features.shelter}
                 readonly
             />
@@ -78,14 +106,18 @@
                 readonly
             />
         </div>
-        <Button style="max-width: 4rem;" icon={Edit} on:click={() => (isEditModalOpen = true)}
+        <Button style="max-width: 4rem;" icon={Edit} on:click={() => (is_edit_modal_open = true)}
             >Edit</Button
         >
     </div>
-    <SpotEditModal bind:openState={isEditModalOpen} bind:spotInfo={spot} on:submit={handleSubmit} />
+    <SpotEditModal
+        bind:openState={is_edit_modal_open}
+        bind:spotInfo={spot}
+        on:submit={handleSubmit}
+    />
 
     <p class="spot-info-header">Availability</p>
-    <AvailabilityTable />
+    <AvailabilityTable bind:availability_table={status_table} />
 </Content>
 
 <style>

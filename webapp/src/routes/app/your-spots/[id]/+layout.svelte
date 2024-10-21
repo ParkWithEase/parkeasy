@@ -9,7 +9,7 @@
     console.log($page.url.pathname);
 </script>
 
-<SideNav isOpen rail>
+<SideNav isOpen>
     <SideNavItems>
         <SideNavLink
             text="General Information"

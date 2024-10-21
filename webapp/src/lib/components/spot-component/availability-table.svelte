@@ -1,8 +1,10 @@
 <script lang="ts">
+    import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
     import { TimeSlotStatus } from '$lib/enum/timeslot-status';
 
-    export const availability_table: TimeSlotStatus[][] = Array.from({ length: 48 }, () =>
-        Array(7).fill(0)
+    export const availability_table: TimeSlotStatus[][] = Array.from(
+        { length: TOTAL_SEGMENTS_NUMBER },
+        () => Array(DAY_IN_A_WEEK).fill(0)
     );
 </script>
 
