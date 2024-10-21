@@ -15,6 +15,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stephenafamo/bob/gen"
 	"github.com/stephenafamo/bob/gen/bobgen-psql/driver"
+	"github.com/stephenafamo/bob/gen/drivers"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
@@ -77,6 +78,11 @@ func (cli *CLI) Run(ctx context.Context) (err error) {
 			StructTagCasing: "snake",
 			RelationTag:     "-",
 			Generator:       "modelgen",
+			Types: drivers.Types{
+				"decimal.Decimal": {
+					Imports: []string{`"github.com/govalues/decimal"`},
+				},
+			},
 		},
 		Outputs: []*gen.Output{
 			{

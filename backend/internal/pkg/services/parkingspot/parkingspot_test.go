@@ -27,7 +27,6 @@ var publicTestEntry = parkingspot.Entry{
 	},
 	InternalID: 0,
 	OwnerID:    testOwnerID,
-	IsPublic:   true,
 }
 
 var privateTestEntry = parkingspot.Entry{
@@ -36,7 +35,6 @@ var privateTestEntry = parkingspot.Entry{
 	},
 	InternalID: 1,
 	OwnerID:    testOwnerID,
-	IsPublic:   false,
 }
 
 var (
@@ -232,18 +230,6 @@ func TestGet(t *testing.T) {
 		repo.AssertExpectations(t)
 	})
 
-	t.Run("all users can access public spots", func(t *testing.T) {
-		t.Parallel()
-
-		repo := new(mockRepo)
-		repo.AddGetCalls()
-		srv := New(repo)
-
-		spot, err := srv.GetByUUID(ctx, testNonOwnerID, testPublicSpotID)
-		require.NoError(t, err)
-		assert.Equal(t, publicTestEntry.ParkingSpot, spot)
-	})
-
 	t.Run("owner can access private spots", func(t *testing.T) {
 		t.Parallel()
 
@@ -304,18 +290,6 @@ func TestDelete(t *testing.T) {
 		require.NoError(t, err)
 		// NOTE: due to permission checking, we actually don't call Delete on the repo since
 		// the spot doesn't exist when queried
-		repo.AssertNotCalled(t, "DeleteByUUID")
-	})
-
-	t.Run("deleting a private owned spot by non-owner acts like no error happened", func(t *testing.T) {
-		t.Parallel()
-
-		repo := new(mockRepo)
-		repo.AddGetCalls()
-		srv := New(repo)
-
-		err := srv.DeleteByUUID(ctx, testNonOwnerID, testPrivateSpotID)
-		require.NoError(t, err)
 		repo.AssertNotCalled(t, "DeleteByUUID")
 	})
 

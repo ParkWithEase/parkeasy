@@ -3,6 +3,7 @@ package parkingspot
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
@@ -66,6 +67,12 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
+		sampleAvailability := []models.TimeUnit
+		sampleAvailability = append(sampleAvailability, models.TimeUnit{
+			StartTime: time.Date(2024, time.October, 21, 14, 30, 0, 0, time.UTC), // 2:30 PM on October 21, 2024
+			EndTime:   time.Date(2024, time.October, 21, 16, 30, 0, 0, time.UTC), // 4:30 PM on October 21, 2024),
+		})
+
 		sampleLocation := models.ParkingSpotLocation{
 			PostalCode:    "L2E6T2",
 			CountryCode:   "CA",
@@ -82,12 +89,14 @@ func TestPostgresIntegration(t *testing.T) {
 		}
 
 		creationInput := models.ParkingSpotCreationInput{
-			Location: sampleLocation,
-			Features: sampleFeatures,
+			Location:     sampleLocation,
+			Features:     sampleFeatures,
+			PricePerHour: 10.50,
+			Availability: sampleAvailability,
 		}
 
 		// Testing create
-		spotID, createEntry, err := repo.Create(ctx, userID, &creationInput)
+		createEntry, err := repo.Create(ctx, userID, &creationInput)
 		require.NoError(t, err)
 		assert.NotEqual(t, -1, spotID)
 		assert.NotEqual(t, uuid.Nil, createEntry.ParkingSpot.ID)
@@ -104,6 +113,7 @@ func TestPostgresIntegration(t *testing.T) {
 		assert.Equal(t, sampleFeatures.Shelter, getEntry.ParkingSpot.Features.Shelter)
 		assert.Equal(t, sampleFeatures.PlugIn, getEntry.ParkingSpot.Features.PlugIn)
 		assert.Equal(t, sampleFeatures.ChargingStation, getEntry.ParkingSpot.Features.ChargingStation)
+		assert.Equal(t, sampleAvailability, getEntry.Availability)
 
 		// Testing get owner id
 		ownerID, err := repo.GetOwnerByUUID(ctx, createEntry.ParkingSpot.ID)

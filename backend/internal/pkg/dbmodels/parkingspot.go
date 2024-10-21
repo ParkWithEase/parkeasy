@@ -11,6 +11,7 @@ import (
 
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
+	"github.com/govalues/decimal"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
@@ -24,19 +25,20 @@ import (
 
 // Parkingspot is an object representing the database table.
 type Parkingspot struct {
-	Parkingspotid      int64     `db:"parkingspotid,pk" `
-	Userid             int64     `db:"userid" `
-	Parkingspotuuid    uuid.UUID `db:"parkingspotuuid" `
-	Postalcode         string    `db:"postalcode" `
-	Countrycode        string    `db:"countrycode" `
-	City               string    `db:"city" `
-	Streetaddress      string    `db:"streetaddress" `
-	Longitude          float32   `db:"longitude" `
-	Latitude           float32   `db:"latitude" `
-	Hasshelter         bool      `db:"hasshelter" `
-	Hasplugin          bool      `db:"hasplugin" `
-	Haschargingstation bool      `db:"haschargingstation" `
-	Ispublic           bool      `db:"ispublic" `
+	Parkingspotid      int64           `db:"parkingspotid,pk" `
+	Userid             int64           `db:"userid" `
+	Parkingspotuuid    uuid.UUID       `db:"parkingspotuuid" `
+	Postalcode         string          `db:"postalcode" `
+	Countrycode        string          `db:"countrycode" `
+	City               string          `db:"city" `
+	State              string          `db:"state" `
+	Streetaddress      string          `db:"streetaddress" `
+	Longitude          float32         `db:"longitude" `
+	Latitude           float32         `db:"latitude" `
+	Hasshelter         bool            `db:"hasshelter" `
+	Hasplugin          bool            `db:"hasplugin" `
+	Haschargingstation bool            `db:"haschargingstation" `
+	Priceperhour       decimal.Decimal `db:"priceperhour" `
 
 	R parkingspotR `db:"-" `
 }
@@ -56,30 +58,32 @@ type ParkingspotsStmt = bob.QueryStmt[*Parkingspot, ParkingspotSlice]
 
 // parkingspotR is where relationships are stored.
 type parkingspotR struct {
-	UseridUser *User // parkingspot.parkingspot_userid_fkey
+	UseridUser               *User         // parkingspot.parkingspot_userid_fkey
+	ParkingspotuuidTimeunits TimeunitSlice // timeunit.timeunit_parkingspotid_fkey
 }
 
 // ParkingspotSetter is used for insert/upsert/update operations
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type ParkingspotSetter struct {
-	Parkingspotid      omit.Val[int64]     `db:"parkingspotid,pk" `
-	Userid             omit.Val[int64]     `db:"userid" `
-	Parkingspotuuid    omit.Val[uuid.UUID] `db:"parkingspotuuid" `
-	Postalcode         omit.Val[string]    `db:"postalcode" `
-	Countrycode        omit.Val[string]    `db:"countrycode" `
-	City               omit.Val[string]    `db:"city" `
-	Streetaddress      omit.Val[string]    `db:"streetaddress" `
-	Longitude          omit.Val[float32]   `db:"longitude" `
-	Latitude           omit.Val[float32]   `db:"latitude" `
-	Hasshelter         omit.Val[bool]      `db:"hasshelter" `
-	Hasplugin          omit.Val[bool]      `db:"hasplugin" `
-	Haschargingstation omit.Val[bool]      `db:"haschargingstation" `
-	Ispublic           omit.Val[bool]      `db:"ispublic" `
+	Parkingspotid      omit.Val[int64]           `db:"parkingspotid,pk" `
+	Userid             omit.Val[int64]           `db:"userid" `
+	Parkingspotuuid    omit.Val[uuid.UUID]       `db:"parkingspotuuid" `
+	Postalcode         omit.Val[string]          `db:"postalcode" `
+	Countrycode        omit.Val[string]          `db:"countrycode" `
+	City               omit.Val[string]          `db:"city" `
+	State              omit.Val[string]          `db:"state" `
+	Streetaddress      omit.Val[string]          `db:"streetaddress" `
+	Longitude          omit.Val[float32]         `db:"longitude" `
+	Latitude           omit.Val[float32]         `db:"latitude" `
+	Hasshelter         omit.Val[bool]            `db:"hasshelter" `
+	Hasplugin          omit.Val[bool]            `db:"hasplugin" `
+	Haschargingstation omit.Val[bool]            `db:"haschargingstation" `
+	Priceperhour       omit.Val[decimal.Decimal] `db:"priceperhour" `
 }
 
 func (s ParkingspotSetter) SetColumns() []string {
-	vals := make([]string, 0, 13)
+	vals := make([]string, 0, 14)
 	if !s.Parkingspotid.IsUnset() {
 		vals = append(vals, "parkingspotid")
 	}
@@ -102,6 +106,10 @@ func (s ParkingspotSetter) SetColumns() []string {
 
 	if !s.City.IsUnset() {
 		vals = append(vals, "city")
+	}
+
+	if !s.State.IsUnset() {
+		vals = append(vals, "state")
 	}
 
 	if !s.Streetaddress.IsUnset() {
@@ -128,8 +136,8 @@ func (s ParkingspotSetter) SetColumns() []string {
 		vals = append(vals, "haschargingstation")
 	}
 
-	if !s.Ispublic.IsUnset() {
-		vals = append(vals, "ispublic")
+	if !s.Priceperhour.IsUnset() {
+		vals = append(vals, "priceperhour")
 	}
 
 	return vals
@@ -154,6 +162,9 @@ func (s ParkingspotSetter) Overwrite(t *Parkingspot) {
 	if !s.City.IsUnset() {
 		t.City, _ = s.City.Get()
 	}
+	if !s.State.IsUnset() {
+		t.State, _ = s.State.Get()
+	}
 	if !s.Streetaddress.IsUnset() {
 		t.Streetaddress, _ = s.Streetaddress.Get()
 	}
@@ -172,13 +183,13 @@ func (s ParkingspotSetter) Overwrite(t *Parkingspot) {
 	if !s.Haschargingstation.IsUnset() {
 		t.Haschargingstation, _ = s.Haschargingstation.Get()
 	}
-	if !s.Ispublic.IsUnset() {
-		t.Ispublic, _ = s.Ispublic.Get()
+	if !s.Priceperhour.IsUnset() {
+		t.Priceperhour, _ = s.Priceperhour.Get()
 	}
 }
 
 func (s ParkingspotSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 13)
+	vals := make([]bob.Expression, 14)
 	if s.Parkingspotid.IsUnset() {
 		vals[0] = psql.Raw("DEFAULT")
 	} else {
@@ -215,46 +226,52 @@ func (s ParkingspotSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
 		vals[5] = psql.Arg(s.City)
 	}
 
-	if s.Streetaddress.IsUnset() {
+	if s.State.IsUnset() {
 		vals[6] = psql.Raw("DEFAULT")
 	} else {
-		vals[6] = psql.Arg(s.Streetaddress)
+		vals[6] = psql.Arg(s.State)
+	}
+
+	if s.Streetaddress.IsUnset() {
+		vals[7] = psql.Raw("DEFAULT")
+	} else {
+		vals[7] = psql.Arg(s.Streetaddress)
 	}
 
 	if s.Longitude.IsUnset() {
-		vals[7] = psql.Raw("DEFAULT")
+		vals[8] = psql.Raw("DEFAULT")
 	} else {
-		vals[7] = psql.Arg(s.Longitude)
+		vals[8] = psql.Arg(s.Longitude)
 	}
 
 	if s.Latitude.IsUnset() {
-		vals[8] = psql.Raw("DEFAULT")
+		vals[9] = psql.Raw("DEFAULT")
 	} else {
-		vals[8] = psql.Arg(s.Latitude)
+		vals[9] = psql.Arg(s.Latitude)
 	}
 
 	if s.Hasshelter.IsUnset() {
-		vals[9] = psql.Raw("DEFAULT")
+		vals[10] = psql.Raw("DEFAULT")
 	} else {
-		vals[9] = psql.Arg(s.Hasshelter)
+		vals[10] = psql.Arg(s.Hasshelter)
 	}
 
 	if s.Hasplugin.IsUnset() {
-		vals[10] = psql.Raw("DEFAULT")
+		vals[11] = psql.Raw("DEFAULT")
 	} else {
-		vals[10] = psql.Arg(s.Hasplugin)
+		vals[11] = psql.Arg(s.Hasplugin)
 	}
 
 	if s.Haschargingstation.IsUnset() {
-		vals[11] = psql.Raw("DEFAULT")
-	} else {
-		vals[11] = psql.Arg(s.Haschargingstation)
-	}
-
-	if s.Ispublic.IsUnset() {
 		vals[12] = psql.Raw("DEFAULT")
 	} else {
-		vals[12] = psql.Arg(s.Ispublic)
+		vals[12] = psql.Arg(s.Haschargingstation)
+	}
+
+	if s.Priceperhour.IsUnset() {
+		vals[13] = psql.Raw("DEFAULT")
+	} else {
+		vals[13] = psql.Arg(s.Priceperhour)
 	}
 
 	return im.Values(vals...)
@@ -265,7 +282,7 @@ func (s ParkingspotSetter) Apply(q *dialect.UpdateQuery) {
 }
 
 func (s ParkingspotSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 13)
+	exprs := make([]bob.Expression, 0, 14)
 
 	if !s.Parkingspotid.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -306,6 +323,13 @@ func (s ParkingspotSetter) Expressions(prefix ...string) []bob.Expression {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			psql.Quote(append(prefix, "city")...),
 			psql.Arg(s.City),
+		}})
+	}
+
+	if !s.State.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "state")...),
+			psql.Arg(s.State),
 		}})
 	}
 
@@ -351,10 +375,10 @@ func (s ParkingspotSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
-	if !s.Ispublic.IsUnset() {
+	if !s.Priceperhour.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "ispublic")...),
-			psql.Arg(s.Ispublic),
+			psql.Quote(append(prefix, "priceperhour")...),
+			psql.Arg(s.Priceperhour),
 		}})
 	}
 
@@ -368,13 +392,14 @@ type parkingspotColumnNames struct {
 	Postalcode         string
 	Countrycode        string
 	City               string
+	State              string
 	Streetaddress      string
 	Longitude          string
 	Latitude           string
 	Hasshelter         string
 	Hasplugin          string
 	Haschargingstation string
-	Ispublic           string
+	Priceperhour       string
 }
 
 var ParkingspotColumns = buildParkingspotColumns("parkingspot")
@@ -387,13 +412,14 @@ type parkingspotColumns struct {
 	Postalcode         psql.Expression
 	Countrycode        psql.Expression
 	City               psql.Expression
+	State              psql.Expression
 	Streetaddress      psql.Expression
 	Longitude          psql.Expression
 	Latitude           psql.Expression
 	Hasshelter         psql.Expression
 	Hasplugin          psql.Expression
 	Haschargingstation psql.Expression
-	Ispublic           psql.Expression
+	Priceperhour       psql.Expression
 }
 
 func (c parkingspotColumns) Alias() string {
@@ -413,13 +439,14 @@ func buildParkingspotColumns(alias string) parkingspotColumns {
 		Postalcode:         psql.Quote(alias, "postalcode"),
 		Countrycode:        psql.Quote(alias, "countrycode"),
 		City:               psql.Quote(alias, "city"),
+		State:              psql.Quote(alias, "state"),
 		Streetaddress:      psql.Quote(alias, "streetaddress"),
 		Longitude:          psql.Quote(alias, "longitude"),
 		Latitude:           psql.Quote(alias, "latitude"),
 		Hasshelter:         psql.Quote(alias, "hasshelter"),
 		Hasplugin:          psql.Quote(alias, "hasplugin"),
 		Haschargingstation: psql.Quote(alias, "haschargingstation"),
-		Ispublic:           psql.Quote(alias, "ispublic"),
+		Priceperhour:       psql.Quote(alias, "priceperhour"),
 	}
 }
 
@@ -430,13 +457,14 @@ type parkingspotWhere[Q psql.Filterable] struct {
 	Postalcode         psql.WhereMod[Q, string]
 	Countrycode        psql.WhereMod[Q, string]
 	City               psql.WhereMod[Q, string]
+	State              psql.WhereMod[Q, string]
 	Streetaddress      psql.WhereMod[Q, string]
 	Longitude          psql.WhereMod[Q, float32]
 	Latitude           psql.WhereMod[Q, float32]
 	Hasshelter         psql.WhereMod[Q, bool]
 	Hasplugin          psql.WhereMod[Q, bool]
 	Haschargingstation psql.WhereMod[Q, bool]
-	Ispublic           psql.WhereMod[Q, bool]
+	Priceperhour       psql.WhereMod[Q, decimal.Decimal]
 }
 
 func (parkingspotWhere[Q]) AliasedAs(alias string) parkingspotWhere[Q] {
@@ -451,19 +479,21 @@ func buildParkingspotWhere[Q psql.Filterable](cols parkingspotColumns) parkingsp
 		Postalcode:         psql.Where[Q, string](cols.Postalcode),
 		Countrycode:        psql.Where[Q, string](cols.Countrycode),
 		City:               psql.Where[Q, string](cols.City),
+		State:              psql.Where[Q, string](cols.State),
 		Streetaddress:      psql.Where[Q, string](cols.Streetaddress),
 		Longitude:          psql.Where[Q, float32](cols.Longitude),
 		Latitude:           psql.Where[Q, float32](cols.Latitude),
 		Hasshelter:         psql.Where[Q, bool](cols.Hasshelter),
 		Hasplugin:          psql.Where[Q, bool](cols.Hasplugin),
 		Haschargingstation: psql.Where[Q, bool](cols.Haschargingstation),
-		Ispublic:           psql.Where[Q, bool](cols.Ispublic),
+		Priceperhour:       psql.Where[Q, decimal.Decimal](cols.Priceperhour),
 	}
 }
 
 type parkingspotJoins[Q dialect.Joinable] struct {
-	typ        string
-	UseridUser func(context.Context) modAs[Q, userColumns]
+	typ                      string
+	UseridUser               func(context.Context) modAs[Q, userColumns]
+	ParkingspotuuidTimeunits func(context.Context) modAs[Q, timeunitColumns]
 }
 
 func (j parkingspotJoins[Q]) aliasedAs(alias string) parkingspotJoins[Q] {
@@ -472,8 +502,9 @@ func (j parkingspotJoins[Q]) aliasedAs(alias string) parkingspotJoins[Q] {
 
 func buildParkingspotJoins[Q dialect.Joinable](cols parkingspotColumns, typ string) parkingspotJoins[Q] {
 	return parkingspotJoins[Q]{
-		typ:        typ,
-		UseridUser: parkingspotsJoinUseridUser[Q](cols, typ),
+		typ:                      typ,
+		UseridUser:               parkingspotsJoinUseridUser[Q](cols, typ),
+		ParkingspotuuidTimeunits: parkingspotsJoinParkingspotuuidTimeunits[Q](cols, typ),
 	}
 }
 
@@ -591,6 +622,25 @@ func parkingspotsJoinUseridUser[Q dialect.Joinable](from parkingspotColumns, typ
 	}
 }
 
+func parkingspotsJoinParkingspotuuidTimeunits[Q dialect.Joinable](from parkingspotColumns, typ string) func(context.Context) modAs[Q, timeunitColumns] {
+	return func(ctx context.Context) modAs[Q, timeunitColumns] {
+		return modAs[Q, timeunitColumns]{
+			c: TimeunitColumns,
+			f: func(to timeunitColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Timeunits.Name(ctx).As(to.Alias())).On(
+						to.Parkingspotid.EQ(from.Parkingspotuuid),
+					))
+				}
+
+				return mods
+			},
+		}
+	}
+}
+
 // UseridUser starts a query for related objects on users
 func (o *Parkingspot) UseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
 	return Users.Query(ctx, exec, append(mods,
@@ -606,6 +656,24 @@ func (os ParkingspotSlice) UseridUser(ctx context.Context, exec bob.Executor, mo
 
 	return Users.Query(ctx, exec, append(mods,
 		sm.Where(psql.Group(UserColumns.Userid).In(PKArgs...)),
+	)...)
+}
+
+// ParkingspotuuidTimeunits starts a query for related objects on timeunit
+func (o *Parkingspot) ParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
+	return Timeunits.Query(ctx, exec, append(mods,
+		sm.Where(TimeunitColumns.Parkingspotid.EQ(psql.Arg(o.Parkingspotuuid))),
+	)...)
+}
+
+func (os ParkingspotSlice) ParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
+	PKArgs := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgs[i] = psql.ArgGroup(o.Parkingspotuuid)
+	}
+
+	return Timeunits.Query(ctx, exec, append(mods,
+		sm.Where(psql.Group(TimeunitColumns.Parkingspotid).In(PKArgs...)),
 	)...)
 }
 
@@ -625,6 +693,20 @@ func (o *Parkingspot) Preload(name string, retrieved any) error {
 
 		if rel != nil {
 			rel.R.UseridParkingspots = ParkingspotSlice{o}
+		}
+		return nil
+	case "ParkingspotuuidTimeunits":
+		rels, ok := retrieved.(TimeunitSlice)
+		if !ok {
+			return fmt.Errorf("parkingspot cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.ParkingspotuuidTimeunits = rels
+
+		for _, rel := range rels {
+			if rel != nil {
+				rel.R.ParkingspotuuidParkingspot = o
+			}
 		}
 		return nil
 	default:
@@ -720,6 +802,78 @@ func (os ParkingspotSlice) LoadParkingspotUseridUser(ctx context.Context, exec b
 	return nil
 }
 
+func ThenLoadParkingspotParkingspotuuidTimeunits(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
+	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+		loader, isLoader := retrieved.(interface {
+			LoadParkingspotParkingspotuuidTimeunits(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+		})
+		if !isLoader {
+			return fmt.Errorf("object %T cannot load ParkingspotParkingspotuuidTimeunits", retrieved)
+		}
+
+		err := loader.LoadParkingspotParkingspotuuidTimeunits(ctx, exec, queryMods...)
+
+		// Don't cause an issue due to missing relationships
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+
+		return err
+	})
+}
+
+// LoadParkingspotParkingspotuuidTimeunits loads the parkingspot's ParkingspotuuidTimeunits into the .R struct
+func (o *Parkingspot) LoadParkingspotParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.ParkingspotuuidTimeunits = nil
+
+	related, err := o.ParkingspotuuidTimeunits(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, rel := range related {
+		rel.R.ParkingspotuuidParkingspot = o
+	}
+
+	o.R.ParkingspotuuidTimeunits = related
+	return nil
+}
+
+// LoadParkingspotParkingspotuuidTimeunits loads the parkingspot's ParkingspotuuidTimeunits into the .R struct
+func (os ParkingspotSlice) LoadParkingspotParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	timeunits, err := os.ParkingspotuuidTimeunits(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		o.R.ParkingspotuuidTimeunits = nil
+	}
+
+	for _, o := range os {
+		for _, rel := range timeunits {
+			if o.Parkingspotuuid != rel.Parkingspotid {
+				continue
+			}
+
+			rel.R.ParkingspotuuidParkingspot = o
+
+			o.R.ParkingspotuuidTimeunits = append(o.R.ParkingspotuuidTimeunits, rel)
+		}
+	}
+
+	return nil
+}
+
 func attachParkingspotUseridUser0(ctx context.Context, exec bob.Executor, count int, parkingspot0 *Parkingspot, user1 *User) (*Parkingspot, error) {
 	setter := &ParkingspotSetter{
 		Userid: omit.From(user1.Userid),
@@ -762,6 +916,72 @@ func (parkingspot0 *Parkingspot) AttachUseridUser(ctx context.Context, exec bob.
 	parkingspot0.R.UseridUser = user1
 
 	user1.R.UseridParkingspots = append(user1.R.UseridParkingspots, parkingspot0)
+
+	return nil
+}
+
+func insertParkingspotParkingspotuuidTimeunits0(ctx context.Context, exec bob.Executor, timeunits1 []*TimeunitSetter, parkingspot0 *Parkingspot) (TimeunitSlice, error) {
+	for i := range timeunits1 {
+		timeunits1[i].Parkingspotid = omit.From(parkingspot0.Parkingspotuuid)
+	}
+
+	ret, err := Timeunits.InsertMany(ctx, exec, timeunits1...)
+	if err != nil {
+		return ret, fmt.Errorf("insertParkingspotParkingspotuuidTimeunits0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachParkingspotParkingspotuuidTimeunits0(ctx context.Context, exec bob.Executor, count int, timeunits1 TimeunitSlice, parkingspot0 *Parkingspot) (TimeunitSlice, error) {
+	setter := &TimeunitSetter{
+		Parkingspotid: omit.From(parkingspot0.Parkingspotuuid),
+	}
+
+	err := Timeunits.Update(ctx, exec, setter, timeunits1...)
+	if err != nil {
+		return nil, fmt.Errorf("attachParkingspotParkingspotuuidTimeunits0: %w", err)
+	}
+
+	return timeunits1, nil
+}
+
+func (parkingspot0 *Parkingspot) InsertParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, related ...*TimeunitSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	timeunits1, err := insertParkingspotParkingspotuuidTimeunits0(ctx, exec, related, parkingspot0)
+	if err != nil {
+		return err
+	}
+
+	parkingspot0.R.ParkingspotuuidTimeunits = append(parkingspot0.R.ParkingspotuuidTimeunits, timeunits1...)
+
+	for _, rel := range timeunits1 {
+		rel.R.ParkingspotuuidParkingspot = parkingspot0
+	}
+	return nil
+}
+
+func (parkingspot0 *Parkingspot) AttachParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, related ...*Timeunit) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	timeunits1 := TimeunitSlice(related)
+
+	_, err = attachParkingspotParkingspotuuidTimeunits0(ctx, exec, len(related), timeunits1, parkingspot0)
+	if err != nil {
+		return err
+	}
+
+	parkingspot0.R.ParkingspotuuidTimeunits = append(parkingspot0.R.ParkingspotuuidTimeunits, timeunits1...)
+
+	for _, rel := range related {
+		rel.R.ParkingspotuuidParkingspot = parkingspot0
+	}
 
 	return nil
 }

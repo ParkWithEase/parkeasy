@@ -18,6 +18,7 @@ var (
 	CodeCarInvalid          = NewUserErrorCode("car-invalid", "2024-10-13")
 	CodeSpotInvalid         = NewUserErrorCode("spot-invalid", "2024-10-13")
 	CodeCountryNotSupported = NewUserErrorCode("country-not-supported", "2024-10-13")
+	CodeProvinceNotSupported = NewUserErrorCode("province-not-supported", "2024-10-21")
 	CodeNoProfile           = NewUserErrorCode("no-profile", "2024-10-13")
 	CodeUnhealthy           = NewUserErrorCode("unhealthy", "2024-10-14")
 )

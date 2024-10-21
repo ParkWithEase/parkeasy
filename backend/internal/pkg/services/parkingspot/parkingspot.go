@@ -20,10 +20,26 @@ func New(repo parkingspot.Repository) *Service {
 	}
 }
 
+func isValidProvinceCode(code string) bool {
+    validProvinceCodes := []string{
+        "AB", "BC", "MB", "NB", "NL", "NT", "NS", "NU", "ON", "PE", "QC", "SK", "YT",
+    }
+
+    for _, validCode := range validProvinceCodes {
+        if code == validCode {
+            return true
+        }
+    }
+    return false
+}
+
 func (s *Service) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpot, error) {
 	// NOTE: We only support Canadian spots at the moment
 	if spot.Location.CountryCode != "CA" {
 		return 0, models.ParkingSpot{}, models.ErrCountryNotSupported
+	}
+	if !isValidProvinceCode(spot.Location.PostalCode) {
+		return 0, models.ParkingSpot{}, models.ErrProvinceNotSupported
 	}
 	canadianPostalCodeRegexp := regexp.MustCompile("^[A-Z][0-9][A-Z][0-9][A-Z][0-9]$")
 	if !canadianPostalCodeRegexp.MatchString(spot.Location.PostalCode) {
@@ -42,14 +58,14 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 	// FIXME: We are putting total trust on to the client about Long/Lat
 	//
 	// The potential way to do this is via Geocoding the address and ignore the client's Long/Lat
-	internalID, result, err := s.repo.Create(ctx, userID, spot)
+	result, err := s.repo.Create(ctx, userID, spot)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrDuplicatedAddress) {
 			err = models.ErrParkingSpotDuplicate
 		}
 		return 0, models.ParkingSpot{}, err
 	}
-	return internalID, result.ParkingSpot, nil
+	return result.InternalID, result.ParkingSpot, nil
 }
 
 func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error) {
@@ -60,27 +76,23 @@ func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID)
 		}
 		return models.ParkingSpot{}, err
 	}
-	if result.OwnerID != userID && !result.IsPublic {
+	if result.OwnerID != userID {
 		return models.ParkingSpot{}, models.ErrParkingSpotNotFound
 	}
 	return result.ParkingSpot, nil
 }
 
-func (s *Service) DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error {
-	result, err := s.repo.GetByUUID(ctx, spotID)
-	if err != nil {
-		// It's not an error to delete something that doesn't exist
-		if errors.Is(err, parkingspot.ErrNotFound) {
-			return nil
-		}
-		return err
-	}
-	if result.OwnerID != userID {
-		// Spots owned by an another user but not public should act like a missing spot
-		if !result.IsPublic {
-			return nil
-		}
-		return models.ErrParkingSpotOwned
-	}
-	return s.repo.DeleteByUUID(ctx, spotID)
-}
+// func (s *Service) DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error {
+// 	result, err := s.repo.GetByUUID(ctx, spotID)
+// 	if err != nil {
+// 		// It's not an error to delete something that doesn't exist
+// 		if errors.Is(err, parkingspot.ErrNotFound) {
+// 			return nil
+// 		}
+// 		return err
+// 	}
+// 	if result.OwnerID != userID {
+// 		return models.ErrParkingSpotOwned
+// 	}
+// 	return s.repo.DeleteByUUID(ctx, spotID)
+// }

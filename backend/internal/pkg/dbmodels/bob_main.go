@@ -14,26 +14,32 @@ import (
 
 var TableNames = struct {
 	Auths        string
+	Bookings     string
 	Cars         string
 	Parkingspots string
 	Resettokens  string
 	Sessions     string
+	Timeunits    string
 	Users        string
 }{
 	Auths:        "auth",
+	Bookings:     "booking",
 	Cars:         "car",
 	Parkingspots: "parkingspot",
 	Resettokens:  "resettoken",
 	Sessions:     "sessions",
+	Timeunits:    "timeunit",
 	Users:        "users",
 }
 
 var ColumnNames = struct {
 	Auths        authColumnNames
+	Bookings     bookingColumnNames
 	Cars         carColumnNames
 	Parkingspots parkingspotColumnNames
 	Resettokens  resettokenColumnNames
 	Sessions     sessionColumnNames
+	Timeunits    timeunitColumnNames
 	Users        userColumnNames
 }{
 	Auths: authColumnNames{
@@ -41,6 +47,12 @@ var ColumnNames = struct {
 		Authuuid:     "authuuid",
 		Email:        "email",
 		Passwordhash: "passwordhash",
+	},
+	Bookings: bookingColumnNames{
+		Bookingid:   "bookingid",
+		Buyeruserid: "buyeruserid",
+		Bookinguuid: "bookinguuid",
+		Paidamount:  "paidamount",
 	},
 	Cars: carColumnNames{
 		Carid:        "carid",
@@ -58,13 +70,14 @@ var ColumnNames = struct {
 		Postalcode:         "postalcode",
 		Countrycode:        "countrycode",
 		City:               "city",
+		State:              "state",
 		Streetaddress:      "streetaddress",
 		Longitude:          "longitude",
 		Latitude:           "latitude",
 		Hasshelter:         "hasshelter",
 		Hasplugin:          "hasplugin",
 		Haschargingstation: "haschargingstation",
-		Ispublic:           "ispublic",
+		Priceperhour:       "priceperhour",
 	},
 	Resettokens: resettokenColumnNames{
 		Token:    "token",
@@ -75,6 +88,13 @@ var ColumnNames = struct {
 		Token:  "token",
 		Data:   "data",
 		Expiry: "expiry",
+	},
+	Timeunits: timeunitColumnNames{
+		Starttime:     "starttime",
+		Endtime:       "endtime",
+		Parkingspotid: "parkingspotid",
+		Bookingid:     "bookingid",
+		Status:        "status",
 	},
 	Users: userColumnNames{
 		Userid:     "userid",
@@ -96,25 +116,31 @@ var (
 
 func Where[Q psql.Filterable]() struct {
 	Auths        authWhere[Q]
+	Bookings     bookingWhere[Q]
 	Cars         carWhere[Q]
 	Parkingspots parkingspotWhere[Q]
 	Resettokens  resettokenWhere[Q]
 	Sessions     sessionWhere[Q]
+	Timeunits    timeunitWhere[Q]
 	Users        userWhere[Q]
 } {
 	return struct {
 		Auths        authWhere[Q]
+		Bookings     bookingWhere[Q]
 		Cars         carWhere[Q]
 		Parkingspots parkingspotWhere[Q]
 		Resettokens  resettokenWhere[Q]
 		Sessions     sessionWhere[Q]
+		Timeunits    timeunitWhere[Q]
 		Users        userWhere[Q]
 	}{
 		Auths:        buildAuthWhere[Q](AuthColumns),
+		Bookings:     buildBookingWhere[Q](BookingColumns),
 		Cars:         buildCarWhere[Q](CarColumns),
 		Parkingspots: buildParkingspotWhere[Q](ParkingspotColumns),
 		Resettokens:  buildResettokenWhere[Q](ResettokenColumns),
 		Sessions:     buildSessionWhere[Q](SessionColumns),
+		Timeunits:    buildTimeunitWhere[Q](TimeunitColumns),
 		Users:        buildUserWhere[Q](UserColumns),
 	}
 }
@@ -141,9 +167,11 @@ func (j joinSet[Q]) AliasedAs(alias string) joinSet[Q] {
 
 type joins[Q dialect.Joinable] struct {
 	Auths        joinSet[authJoins[Q]]
+	Bookings     joinSet[bookingJoins[Q]]
 	Cars         joinSet[carJoins[Q]]
 	Parkingspots joinSet[parkingspotJoins[Q]]
 	Resettokens  joinSet[resettokenJoins[Q]]
+	Timeunits    joinSet[timeunitJoins[Q]]
 	Users        joinSet[userJoins[Q]]
 }
 
@@ -158,9 +186,11 @@ func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q
 func getJoins[Q dialect.Joinable]() joins[Q] {
 	return joins[Q]{
 		Auths:        buildJoinSet[authJoins[Q]](AuthColumns, buildAuthJoins),
+		Bookings:     buildJoinSet[bookingJoins[Q]](BookingColumns, buildBookingJoins),
 		Cars:         buildJoinSet[carJoins[Q]](CarColumns, buildCarJoins),
 		Parkingspots: buildJoinSet[parkingspotJoins[Q]](ParkingspotColumns, buildParkingspotJoins),
 		Resettokens:  buildJoinSet[resettokenJoins[Q]](ResettokenColumns, buildResettokenJoins),
+		Timeunits:    buildJoinSet[timeunitJoins[Q]](TimeunitColumns, buildTimeunitJoins),
 		Users:        buildJoinSet[userJoins[Q]](UserColumns, buildUserJoins),
 	}
 }

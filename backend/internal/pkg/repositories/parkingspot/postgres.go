@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbmodels"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
@@ -13,7 +14,10 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
+	"github.com/stephenafamo/bob/dialect/psql"
+	"github.com/stephenafamo/bob/dialect/psql/fm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/scan"
 )
 
 type PostgresRepository struct {
@@ -26,10 +30,10 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 	}
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, Entry, error) {
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
-		return -1, Entry{}, fmt.Errorf("could not start a transaction: %w", err)
+		return Entry{}, fmt.Errorf("could not start a transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
 
@@ -41,12 +45,14 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		Postalcode:         omit.From(spot.Location.PostalCode),
 		Countrycode:        omit.From(spot.Location.CountryCode),
 		City:               omit.From(spot.Location.City),
+		State:              omit.From(spot.Location.State),
 		Streetaddress:      omit.From(spot.Location.StreetAddress),
 		Longitude:          omit.From(longitude),
 		Latitude:           omit.From(latitude),
 		Hasshelter:         omit.From(spot.Features.Shelter),
 		Hasplugin:          omit.From(spot.Features.PlugIn),
 		Haschargingstation: omit.From(spot.Features.ChargingStation),
+		Priceperhour:       omit.From(spot.PricePerHour),
 	})
 	if err != nil {
 		// Handle duplicate error
@@ -56,12 +62,39 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 				err = ErrDuplicatedAddress
 			}
 		}
-		return -1, Entry{}, err
+		return Entry{}, err
+	}
+
+	availability := make([]models.TimeUnit, 0, len(spot.Availability)) // Initialize slice
+
+	for _, timeslot := range spot.Availability {
+		// Insert each unit
+		inserted, err := dbmodels.Timeunits.Insert(ctx, p.db, &dbmodels.TimeunitSetter{
+			Starttime:     omit.From(timeslot.StartTime),
+			Endtime:       omit.From(timeslot.EndTime),
+			Parkingspotid: omit.From(inserted.Parkingspotuuid),
+			Status:        omit.From(timeslot.Status),
+		})
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				if pgErr.Code == pgerrcode.UniqueViolation {
+					err = ErrDuplicatedTimeUnit
+				}
+			}
+			return Entry{}, err
+		}
+
+		availability = append(availability, models.TimeUnit{
+			StartTime: inserted.Starttime,
+			EndTime:   inserted.Endtime,
+			Status:    inserted.Status,
+		})
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return -1, Entry{}, fmt.Errorf("could not commit transaction: %w", err)
+		return Entry{}, fmt.Errorf("could not commit transaction: %w", err)
 	}
 
 	location := models.ParkingSpotLocation{
@@ -80,43 +113,29 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 	}
 
 	parkingspot := models.ParkingSpot{
-		Location: location,
-		Features: features,
-		ID:       inserted.Parkingspotuuid,
+		Location:     location,
+		Features:     features,
+		ID:           inserted.Parkingspotuuid,
+		PricePerHour: inserted.Priceperhour,
+		Availability: availability,
 	}
 
 	entry := Entry{
 		ParkingSpot: parkingspot,
 		InternalID:  inserted.Parkingspotid,
 		OwnerID:     inserted.Userid,
-		IsPublic:    inserted.Ispublic,
 	}
-	return inserted.Parkingspotid, entry, nil
+	return entry, nil
 }
 
-func (p *PostgresRepository) DeleteByUUID(ctx context.Context, spotID uuid.UUID) error {
-	rowsAffected, err := dbmodels.Parkingspots.DeleteQ(
-		ctx, p.db,
-		dbmodels.DeleteWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
-	).Exec()
-	if err != nil {
-		return fmt.Errorf("could not execute delete: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return ErrNotFound
-	}
-
-	return nil
-}
-
-func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error) {
-	result, err := dbmodels.Parkingspots.Query(
+func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) (Entry, error) {
+	spotResult, err := dbmodels.Parkingspots.Query(
 		ctx, p.db,
 		sm.Columns(
 			dbmodels.ParkingspotColumns.Postalcode,
 			dbmodels.ParkingspotColumns.Countrycode,
 			dbmodels.ParkingspotColumns.City,
+			dbmodels.ParkingspotColumns.State,
 			dbmodels.ParkingspotColumns.Streetaddress,
 			dbmodels.ParkingspotColumns.Longitude,
 			dbmodels.ParkingspotColumns.Latitude,
@@ -125,6 +144,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (E
 			dbmodels.ParkingspotColumns.Haschargingstation,
 			dbmodels.ParkingspotColumns.Parkingspotid,
 			dbmodels.ParkingspotColumns.Userid,
+			dbmodels.ParkingspotColumns.Priceperhour,
 		),
 		dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
 	).One()
@@ -135,32 +155,75 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (E
 		return Entry{}, err
 	}
 
+	//Initialize error variable
+	var timeError error
+	availability, err := p.GetAvalByUUID(ctx, spotID, startDate, endDate)
+	if err != nil && !errors.Is(err, ErrTimeUnitNotFound) {
+		timeError = err
+	}
+
 	location := models.ParkingSpotLocation{
-		PostalCode:    result.Postalcode,
-		CountryCode:   result.Countrycode,
-		City:          result.City,
-		StreetAddress: result.Streetaddress,
-		Longitude:     float64(result.Longitude),
-		Latitude:      float64(result.Latitude),
+		PostalCode:    spotResult.Postalcode,
+		CountryCode:   spotResult.Countrycode,
+		City:          spotResult.City,
+		StreetAddress: spotResult.Streetaddress,
+		Longitude:     float64(spotResult.Longitude),
+		Latitude:      float64(spotResult.Latitude),
 	}
 
 	features := models.ParkingSpotFeatures{
-		Shelter:         result.Hasshelter,
-		PlugIn:          result.Hasplugin,
-		ChargingStation: result.Haschargingstation,
+		Shelter:         spotResult.Hasshelter,
+		PlugIn:          spotResult.Hasplugin,
+		ChargingStation: spotResult.Haschargingstation,
 	}
 
 	parkingspot := models.ParkingSpot{
-		Location: location,
-		Features: features,
-		ID:       spotID,
+		Location:     location,
+		Features:     features,
+		ID:           spotID,
+		Availability: availability,
 	}
 
 	return Entry{
 		ParkingSpot: parkingspot,
-		InternalID:  result.Parkingspotid,
-		OwnerID:     result.Userid,
-	}, err
+		InternalID:  spotResult.Parkingspotid,
+		OwnerID:     spotResult.Userid,
+	}, timeError
+}
+
+func (p *PostgresRepository) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
+	// startDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	// endDate := startDate.AddDate(0, 0, 7)
+
+	timeUnitResult, err := dbmodels.Timeunits.Query(
+		ctx, p.db,
+		sm.Columns(
+			dbmodels.TimeunitColumns.Starttime,
+			dbmodels.TimeunitColumns.Endtime,
+			dbmodels.TimeunitColumns.Status,
+		),
+		dbmodels.SelectWhere.Timeunits.Parkingspotid.EQ(spotID),
+		dbmodels.SelectWhere.Timeunits.Starttime.GTE(startDate),
+		dbmodels.SelectWhere.Timeunits.Endtime.LTE(endDate),
+		sm.OrderBy(dbmodels.TimeunitColumns.Starttime),
+	).All()
+
+	if (err != nil && errors.Is(err, sql.ErrNoRows)) || len(timeUnitResult) == 0 {
+		err = ErrTimeUnitNotFound
+		return make([]models.TimeUnit, 0, 1), err
+	}
+
+	availability := make([]models.TimeUnit, 0, len(timeUnitResult)) // Initialize slice
+
+	for _, timeslot := range timeUnitResult {
+		availability = append(availability, models.TimeUnit{
+			StartTime: timeslot.Starttime,
+			EndTime:   timeslot.Endtime,
+			Status:    timeslot.Status,
+		})
+	}
+
+	return availability, nil
 }
 
 func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error) {
@@ -179,4 +242,81 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUI
 	}
 
 	return result.Userid, err
+}
+
+func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.Val[Cursor], longitude float64, latitude float64, distance int32, startDate time.Time, endDate time.Time) ([]Entry, error) {
+
+	type Result struct {
+		dbmodels.Parkingspot
+		DistanceToOrigin float64 `db:"distance_to_origin"`
+	}
+
+	centre := psql.F("ll_to_earth", psql.Arg(latitude), psql.Arg(longitude))
+	spotPosition := psql.F("ll_to_earth", dbmodels.ParkingspotColumns.Latitude, dbmodels.ParkingspotColumns.Longitude)
+
+	query := psql.Select(
+		sm.Columns(
+			dbmodels.Parkingspots.Columns(),
+			psql.F("earth_distance", centre, spotPosition)(fm.As("distance_to_origin")),
+		),
+		sm.From(dbmodels.Parkingspots.Name(ctx)),
+		sm.OrderBy("distance_to_origin").Asc(),
+		sm.Where(
+			psql.F(
+				"earth_box",
+				centre,
+				psql.Arg(distance),
+			)().OP(
+				"@>",
+				spotPosition,
+			),
+		),
+		sm.Limit(limit),
+	)
+
+	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[Result]())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []Entry{}, nil
+		}
+		return nil, err
+	}
+	defer entryCursor.Close()
+
+	result := make([]Entry, 0, 8)
+	for entryCursor.Next() {
+		dbSpot, err := entryCursor.Get()
+		if err != nil { // if there's an error, just return what we already have
+			break
+		}
+
+		//Get availability
+		availability, _ := p.GetAvalByUUID(ctx, dbSpot.Parkingspotuuid, startDate, endDate)
+
+		// TODO: Move dbmodels.Parkingspot -> Entry to a proc or something.
+		result = append(result, Entry{
+			ParkingSpot: models.ParkingSpot{
+				Location: models.ParkingSpotLocation{
+					PostalCode:    dbSpot.Postalcode,
+					CountryCode:   dbSpot.Countrycode,
+					City:          dbSpot.City,
+					State:         dbSpot.State,
+					StreetAddress: dbSpot.Streetaddress,
+					Longitude:     float64(dbSpot.Longitude),
+					Latitude:      float64(dbSpot.Latitude),
+				},
+				Features: models.ParkingSpotFeatures{
+					Shelter:         dbSpot.Hasshelter,
+					PlugIn:          dbSpot.Hasplugin,
+					ChargingStation: dbSpot.Haschargingstation,
+				},
+				PricePerHour: dbSpot.Priceperhour,
+				ID:           dbSpot.Parkingspotuuid,
+				Availability: availability,
+			},
+			InternalID: dbSpot.Parkingspotid,
+			OwnerID:    dbSpot.Userid,
+		})
+	}
+	return result, nil
 }
