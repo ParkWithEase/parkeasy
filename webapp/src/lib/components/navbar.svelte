@@ -9,6 +9,7 @@
     import User from "../../../node_modules/carbon-icons-svelte/lib/User.svelte";
     import Map from "../../../node_modules/carbon-icons-svelte/lib/Map.svelte";
     import MobileAdd from "carbon-icons-svelte/lib/MobileAdd.svelte";
+    import Car from "carbon-icons-svelte/lib/Car.svelte";
     import { BACKEND_SERVER } from '$lib/constants';
     import { goto } from '$app/navigation';
 
@@ -43,6 +44,7 @@
         href="/#"
       />
       <HeaderGlobalAction iconDescription="Add your spot" icon={MobileAdd} href="/app/profile/user-profile"/>
+      <HeaderGlobalAction iconDescription="Your Cars" icon={Car} href="/app/your-cars"/>
       <HeaderGlobalAction iconDescription="Profile" icon={User} href="/app/profile/user-profile"/>
       <HeaderGlobalAction
         iconDescription="Log out"
