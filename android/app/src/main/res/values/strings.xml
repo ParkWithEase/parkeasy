@@ -16,4 +16,8 @@
     <string name="request_reset">Request Password Reset</string>
     <string name="return_register">Return to Registering</string>
     <string name="return_login">Return to Login</string>
+    <string name="logout">Logout</string>
+    <string name="preferences_cars">Preferences Cars</string>
+    <string name="listing_history">Listing History</string>
+    <string name="booking_history">Booking History</string>
 </resources>

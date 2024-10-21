@@ -4,17 +4,21 @@ import android.util.Log
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
 import io.github.parkwithease.parkeasy.model.LoginCredentials
+import io.github.parkwithease.parkeasy.model.Profile
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
 import io.github.parkwithease.parkeasy.model.ResetCredentials
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.request.cookie
 import io.ktor.client.request.delete
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.Cookie
-import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import io.ktor.http.setCookie
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
@@ -72,9 +76,7 @@ constructor(
         if (authCookie != null) {
             val response =
                 withContext(ioDispatcher) {
-                    client.delete("/auth") {
-                        cookie(authCookie.name, authCookie.value)
-                    }
+                    client.delete("/auth") { cookie(authCookie.name, authCookie.value) }
                 }
             authRepo.reset()
             Log.d("HTTP", response.toString())
