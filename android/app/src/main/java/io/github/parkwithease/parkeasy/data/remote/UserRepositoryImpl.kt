@@ -13,8 +13,8 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.Cookie
-import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import io.ktor.http.setCookie
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
@@ -90,6 +90,6 @@ constructor(
                     setBody(credentials)
                 }
             }
-        return response.status == HttpStatusCode.Accepted
+        return response.status.isSuccess()
     }
 }
