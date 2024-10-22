@@ -1,0 +1,51 @@
+name: Webapp CD
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - releases/**
+    paths:
+      - .github/workflows/webapp-deploy.yaml
+      - webapp/**/*
+
+concurrency:
+  group: webapp-deploy-${{ github.ref }}
+  cancel-in-progress: true # only deploy latest
+
+jobs:
+  deploy:
+    name: Deploy webapp
+    runs-on: ubuntu-latest
+
+    environment:
+      name: ${{ (github.ref_type == 'branch' && 'webapp-staging') || 'webapp-production' }}
+      url: ${{ steps.deploy.outputs.deployment-url }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: webapp
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+
+      - run: npm ci
+        working-directory: webapp
+
+      - run: npm run build
+        working-directory: webapp
+        env:
+          VITE_API_SERVER_URL: ${{ env.PUBLIC_API_SERVER_URL }}
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy webapp/build --project-name=$DEPLOYMENT_TARGET
