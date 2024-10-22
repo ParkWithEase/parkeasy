@@ -29,6 +29,6 @@ var (
 
 type Repository interface {
 	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, error)
-	GetByUUID(ctx context.Context, spotID uuid.UUID, date time.Time) (Entry, error)
+	GetByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) (Entry, error)
 	GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error)
 }

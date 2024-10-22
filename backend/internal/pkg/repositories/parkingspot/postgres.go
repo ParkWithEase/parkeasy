@@ -70,8 +70,8 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 	for _, timeslot := range spot.Availability {
 		// Insert each unit
 		inserted, err := dbmodels.Timeunits.Insert(ctx, p.db, &dbmodels.TimeunitSetter{
-			Starttime:       omit.From(timeslot.StartTime),
-			Endtime:         omit.From(timeslot.EndTime),
+			Starttime:       omit.From(timeslot.StartTime.UTC()),
+			Endtime:         omit.From(timeslot.EndTime.UTC()),
 			Parkingspotuuid: omit.From(inserted.Parkingspotuuid),
 			Status:          omit.From(timeslot.Status),
 		})
@@ -86,8 +86,8 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		}
 
 		availability = append(availability, models.TimeUnit{
-			StartTime: inserted.Starttime,
-			EndTime:   inserted.Endtime,
+			StartTime: inserted.Starttime.UTC(),
+			EndTime:   inserted.Endtime.UTC(),
 			Status:    inserted.Status,
 		})
 	}
@@ -182,6 +182,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID, st
 		Features:     features,
 		ID:           spotID,
 		Availability: availability,
+		PricePerHour: spotResult.Priceperhour,
 	}
 
 	return Entry{
@@ -217,8 +218,8 @@ func (p *PostgresRepository) GetAvalByUUID(ctx context.Context, spotID uuid.UUID
 
 	for _, timeslot := range timeUnitResult {
 		availability = append(availability, models.TimeUnit{
-			StartTime: timeslot.Starttime,
-			EndTime:   timeslot.Endtime,
+			StartTime: timeslot.Starttime.UTC(),
+			EndTime:   timeslot.Endtime.UTC(),
 			Status:    timeslot.Status,
 		})
 	}

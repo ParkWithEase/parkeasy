@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"regexp"
+	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
@@ -38,7 +39,7 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 	if spot.Location.CountryCode != "CA" {
 		return 0, models.ParkingSpot{}, models.ErrCountryNotSupported
 	}
-	if !isValidProvinceCode(spot.Location.PostalCode) {
+	if !isValidProvinceCode(spot.Location.State) {
 		return 0, models.ParkingSpot{}, models.ErrProvinceNotSupported
 	}
 	canadianPostalCodeRegexp := regexp.MustCompile("^[A-Z][0-9][A-Z][0-9][A-Z][0-9]$")
@@ -68,8 +69,8 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 	return result.InternalID, result.ParkingSpot, nil
 }
 
-func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error) {
-	result, err := s.repo.GetByUUID(ctx, spotID)
+func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID, startDate time.Time, endDate time.Time) (models.ParkingSpot, error) {
+	result, err := s.repo.GetByUUID(ctx, spotID, startDate, endDate)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrNotFound) {
 			err = models.ErrParkingSpotNotFound
@@ -81,18 +82,3 @@ func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID)
 	}
 	return result.ParkingSpot, nil
 }
-
-// func (s *Service) DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error {
-// 	result, err := s.repo.GetByUUID(ctx, spotID)
-// 	if err != nil {
-// 		// It's not an error to delete something that doesn't exist
-// 		if errors.Is(err, parkingspot.ErrNotFound) {
-// 			return nil
-// 		}
-// 		return err
-// 	}
-// 	if result.OwnerID != userID {
-// 		return models.ErrParkingSpotOwned
-// 	}
-// 	return s.repo.DeleteByUUID(ctx, spotID)
-// }

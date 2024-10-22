@@ -91,7 +91,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 			case errors.Is(err, models.ErrProvinceNotSupported):
 				detail = &huma.ErrorDetail{
 					Location: "body.location.province",
-					Value:    input.Body.Location.ProvinceCode,
+					Value:    input.Body.Location.State,
 				}
 			case errors.Is(err, models.ErrInvalidPostalCode):
 				detail = &huma.ErrorDetail{
@@ -121,7 +121,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	},
 	) (*ParkingSpotOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		result, err := r.spotService.GetByUUID(ctx, userID, input.ID)
+		result, err := r.service.GetByUUID(ctx, userID, input.ID)
 		if err != nil {
 			if errors.Is(err, models.ErrParkingSpotNotFound) {
 				detail := &huma.ErrorDetail{
