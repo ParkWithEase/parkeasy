@@ -1,6 +1,7 @@
 package io.github.parkwithease.parkeasy.data.remote
 
 import io.github.parkwithease.parkeasy.model.LoginCredentials
+import io.github.parkwithease.parkeasy.model.Profile
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
 import io.github.parkwithease.parkeasy.model.ResetCredentials
 
@@ -30,4 +31,11 @@ interface UserRepository {
      * @param credentials for the account which the password reset token is for.
      */
     suspend fun requestReset(credentials: ResetCredentials): Boolean
+
+    /**
+     * Gets the user details.
+     *
+     * @return Profile of the user if valid user, null otherwise
+     */
+    suspend fun getUser(): Profile?
 }

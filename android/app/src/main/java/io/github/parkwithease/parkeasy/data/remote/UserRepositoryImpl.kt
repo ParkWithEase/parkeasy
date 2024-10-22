@@ -4,11 +4,14 @@ import android.util.Log
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
 import io.github.parkwithease.parkeasy.model.LoginCredentials
+import io.github.parkwithease.parkeasy.model.Profile
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
 import io.github.parkwithease.parkeasy.model.ResetCredentials
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.request.cookie
 import io.ktor.client.request.delete
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -91,5 +94,22 @@ constructor(
                 }
             }
         return response.status.isSuccess()
+    }
+
+    override suspend fun getUser(): Profile? {
+        val authCookie = authRepo.sessionFlow.firstOrNull()
+        var profile: Profile? = null
+        if (authCookie != null) {
+            val response =
+                withContext(ioDispatcher) {
+                    client.get("/user") {
+                        contentType(ContentType.Application.Json)
+                        cookie(authCookie.name, authCookie.value)
+                    }
+                }
+            profile = response.body()
+            Log.d("HTTP", response.toString())
+        }
+        return profile
     }
 }
