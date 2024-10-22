@@ -31,4 +31,6 @@ type Repository interface {
 	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, error)
 	GetByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) (Entry, error)
 	GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error)
+	GetMany(ctx context.Context, limit int, longitude float64, latitude float64, distance int32, startDate time.Time, endDate time.Time) ([]Entry, error)
+	GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error)
 }

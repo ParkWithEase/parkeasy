@@ -101,6 +101,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		PostalCode:    inserted.Postalcode,
 		CountryCode:   inserted.Countrycode,
 		City:          inserted.City,
+		State:         inserted.State,
 		StreetAddress: inserted.Streetaddress,
 		Longitude:     float64(inserted.Longitude),
 		Latitude:      float64(inserted.Latitude),
@@ -166,6 +167,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID, st
 		PostalCode:    spotResult.Postalcode,
 		CountryCode:   spotResult.Countrycode,
 		City:          spotResult.City,
+		State:         spotResult.State,
 		StreetAddress: spotResult.Streetaddress,
 		Longitude:     float64(spotResult.Longitude),
 		Latitude:      float64(spotResult.Latitude),
@@ -193,8 +195,6 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID, st
 }
 
 func (p *PostgresRepository) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
-	// startDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
-	// endDate := startDate.AddDate(0, 0, 7)
 
 	timeUnitResult, err := dbmodels.Timeunits.Query(
 		ctx, p.db,
@@ -245,7 +245,7 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUI
 	return result.Userid, err
 }
 
-func (p *PostgresRepository) GetMany(ctx context.Context, limit int, after omit.Val[Cursor], longitude float64, latitude float64, distance int32, startDate time.Time, endDate time.Time) ([]Entry, error) {
+func (p *PostgresRepository) GetMany(ctx context.Context, limit int, longitude float64, latitude float64, distance int32, startDate time.Time, endDate time.Time) ([]Entry, error) {
 
 	type Result struct {
 		dbmodels.Parkingspot
