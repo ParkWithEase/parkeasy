@@ -43,8 +43,8 @@ type CarOutput struct {
 }
 
 type CarListOutput struct {
-	Link []string `header:"Link" doc:"Contains details on getting the next page of resources" example:"<https://example.com/cars?after=gQL>; rel=\"next\""`
-	Body []models.Car
+	Link []string     `header:"Link" doc:"Contains details on getting the next page of resources" example:"<https://example.com/cars?after=gQL>; rel=\"next\""`
+	Body []models.Car `nullable:"false"`
 }
 
 var CarTag = huma.Tag{
