@@ -102,6 +102,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		CountryCode:   inserted.Countrycode,
 		City:          inserted.City,
 		StreetAddress: inserted.Streetaddress,
+		State:         inserted.State,
 		Longitude:     float64(inserted.Longitude),
 		Latitude:      float64(inserted.Latitude),
 	}
@@ -167,6 +168,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID, st
 		CountryCode:   spotResult.Countrycode,
 		City:          spotResult.City,
 		StreetAddress: spotResult.Streetaddress,
+		State:         spotResult.State,
 		Longitude:     float64(spotResult.Longitude),
 		Latitude:      float64(spotResult.Latitude),
 	}

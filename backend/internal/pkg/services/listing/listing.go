@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/listing"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/timeunit"
 )
