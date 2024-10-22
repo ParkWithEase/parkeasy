@@ -21,6 +21,7 @@ var (
 	CodeProvinceNotSupported = NewUserErrorCode("province-not-supported", "2024-10-21")
 	CodeNoProfile           = NewUserErrorCode("no-profile", "2024-10-13")
 	CodeUnhealthy           = NewUserErrorCode("unhealthy", "2024-10-14")
+	CodeInvalidTimeWindow   = NewUserErrorCode("invalid-time-window", "2024-10-21")
 )
 
 // Error code for clients.

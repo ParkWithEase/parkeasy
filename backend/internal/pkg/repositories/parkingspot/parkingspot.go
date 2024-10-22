@@ -7,6 +7,7 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/google/uuid"
+	"github.com/aarondl/opt/omit"
 )
 
 type Entry struct {
@@ -31,4 +32,6 @@ type Repository interface {
 	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, error)
 	GetByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) (Entry, error)
 	GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error)
+	GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error)
+	GetMany(ctx context.Context, limit int, after omit.Val[Cursor], longitude float64, latitude float64, distance int32, startDate time.Time, endDate time.Time) ([]Entry, error)
 }
