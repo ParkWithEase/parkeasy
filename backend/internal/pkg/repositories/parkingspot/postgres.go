@@ -159,7 +159,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID, st
 	//Initialize error variable
 	var timeError error
 	availability, err := p.GetAvalByUUID(ctx, spotID, startDate, endDate)
-	if err != nil && !errors.Is(err, ErrTimeUnitNotFound) {
+	if err != nil && errors.Is(err, ErrTimeUnitNotFound) {
 		timeError = err
 	}
 
@@ -213,7 +213,7 @@ func (p *PostgresRepository) GetAvalByUUID(ctx context.Context, spotID uuid.UUID
 
 	if (err != nil && errors.Is(err, sql.ErrNoRows)) || len(timeUnitResult) == 0 {
 		err = ErrTimeUnitNotFound
-		return make([]models.TimeUnit, 0, 1), err
+		return []models.TimeUnit{}, err
 	}
 
 	availability := make([]models.TimeUnit, 0, len(timeUnitResult)) // Initialize slice
