@@ -25,9 +25,13 @@ import io.github.parkwithease.parkeasy.model.Profile
 
 @Composable
 fun ProfileScreen(
+    showSnackbar: suspend (String, String?) -> Boolean,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ProfileViewModel = hiltViewModel<ProfileViewModel>(),
+    viewModel: ProfileViewModel =
+        hiltViewModel<ProfileViewModel, ProfileViewModel.Factory>(
+            creationCallback = { factory -> factory.create(showSnackbar = showSnackbar) }
+        ),
 ) {
     val loggedIn by viewModel.loggedIn.collectAsState(true)
     val latestOnLogout by rememberUpdatedState(onLogout)
