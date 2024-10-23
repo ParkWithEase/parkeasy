@@ -45,6 +45,11 @@ constructor(
     }
 
     fun onLogoutClick() {
-        runBlocking { userRepo.logout() }
+        viewModelScope.launch {
+            showSnackbar(
+                if (userRepo.logout()) "Logged out successfully" else "Error logging out",
+                null,
+            )
+        }
     }
 }

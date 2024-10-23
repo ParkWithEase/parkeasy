@@ -22,8 +22,12 @@ interface UserRepository {
      */
     suspend fun register(credentials: RegistrationCredentials): Boolean
 
-    /** Logs the user out. */
-    suspend fun logout()
+    /**
+     * Logs the user out.
+     *
+     * @return true if success, false if fail
+     */
+    suspend fun logout(): Boolean
 
     /**
      * Requests for a password reset token to be sent.
