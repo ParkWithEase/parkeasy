@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.profile
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +27,7 @@ import io.github.parkwithease.parkeasy.model.Profile
 @Composable
 fun ProfileScreen(
     showSnackbar: suspend (String, String?) -> Boolean,
+    navigateCars: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel =
@@ -41,11 +43,16 @@ fun ProfileScreen(
         }
     }
     val profile by viewModel.profile.collectAsState()
-    ProfileScreen(profile, viewModel::onLogoutClick, modifier)
+    ProfileScreen(profile, navigateCars, viewModel::onLogoutClick, modifier)
 }
 
 @Composable
-fun ProfileScreen(profile: Profile, onLogoutClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ProfileScreen(
+    profile: Profile,
+    onCarsClick: () -> Unit,
+    onLogoutClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Surface(modifier) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -53,6 +60,7 @@ fun ProfileScreen(profile: Profile, onLogoutClick: () -> Unit, modifier: Modifie
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             ProfileDetails(profile)
+            ProfileButton(R.string.cars, onCarsClick)
             LogoutButton(onLogoutClick)
         }
     }
@@ -78,6 +86,15 @@ fun ProfileDetails(profile: Profile, modifier: Modifier = Modifier) {
             singleLine = true,
         )
     }
+}
+
+@Composable
+fun ProfileButton(@StringRes id: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.width(280.dp),
+        content = { Text(stringResource(id)) },
+    )
 }
 
 @Composable

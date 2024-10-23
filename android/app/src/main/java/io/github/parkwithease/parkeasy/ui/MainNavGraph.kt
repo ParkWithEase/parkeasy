@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import io.github.parkwithease.parkeasy.ui.cars.carsScreen
+import io.github.parkwithease.parkeasy.ui.cars.navigateToCars
 import io.github.parkwithease.parkeasy.ui.list.listScreen
 import io.github.parkwithease.parkeasy.ui.list.navigateToList
 import io.github.parkwithease.parkeasy.ui.login.loginScreen
@@ -55,7 +57,12 @@ fun MainNavGraph(
             loginScreen(showSnackbar, navController::navigateToProfile)
             listScreen()
             mapScreen()
-            profileScreen(showSnackbar, navController::navigateToLogin)
+            profileScreen(
+                showSnackbar,
+                navController::navigateToCars,
+                navController::navigateToLogin,
+            )
+            carsScreen(showSnackbar, {})
         }
     }
 }
