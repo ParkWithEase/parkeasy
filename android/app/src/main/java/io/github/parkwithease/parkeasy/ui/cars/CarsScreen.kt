@@ -3,6 +3,7 @@ package io.github.parkwithease.parkeasy.ui.cars
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,15 +17,22 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -62,6 +70,12 @@ fun CarsScreen(
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier) {
+        var addingCar by rememberSaveable { mutableStateOf(true) }
+        var skipPartiallyExpanded by rememberSaveable { mutableStateOf(false) }
+        val scope = rememberCoroutineScope()
+        val bottomSheetState =
+            rememberModalBottomSheetState(skipPartiallyExpanded = skipPartiallyExpanded)
+
         Box {
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
@@ -100,8 +114,30 @@ fun CarsScreen(
                     }
                 }
             }
-            ButtonBar(onRefresh, {}, Modifier.align(Alignment.BottomEnd).padding(16.dp))
+            ButtonBar(
+                onRefresh,
+                { addingCar = true },
+                Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            )
+            if (addingCar) {
+                ModalBottomSheet(
+                    onDismissRequest = { addingCar = false },
+                    sheetState = bottomSheetState,
+                ) {
+                    AddCarForm()
+                }
+            }
         }
+    }
+}
+
+@Composable
+fun AddCarForm(modifier: Modifier = Modifier) {
+    Column(modifier) {
+        OutlinedTextField("License Plate", {}, modifier.fillMaxWidth().padding(16.dp, 4.dp))
+        OutlinedTextField("Colour", {}, modifier.fillMaxWidth().padding(16.dp, 4.dp))
+        OutlinedTextField("Model", {}, modifier.fillMaxWidth().padding(16.dp, 4.dp))
+        OutlinedTextField("Make", {}, modifier.fillMaxWidth().padding(16.dp, 4.dp))
     }
 }
 
@@ -109,7 +145,7 @@ fun CarsScreen(
 fun ButtonBar(onRefresh: () -> Unit, onAdd: () -> Unit, modifier: Modifier = Modifier) {
     Row(modifier, Arrangement.spacedBy(8.dp)) {
         RefreshButton(onRefresh)
-        AddButton({})
+        AddButton(onAdd)
     }
 }
 
