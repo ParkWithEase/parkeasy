@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -98,6 +99,7 @@ fun CarsScreen(
                 }
             }
             RefreshButton(onRefresh, Modifier.align(Alignment.BottomEnd).padding(16.dp))
+            AddButton({}, Modifier.align(Alignment.BottomEnd).padding(16.dp))
         }
     }
 }
@@ -111,6 +113,20 @@ fun RefreshButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
             Icon(
                 imageVector = Icons.Outlined.Refresh,
                 contentDescription = stringResource(R.string.refresh),
+            )
+        },
+    )
+}
+
+@Composable
+fun AddButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = modifier,
+        content = {
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = stringResource(R.string.add_car),
             )
         },
     )
