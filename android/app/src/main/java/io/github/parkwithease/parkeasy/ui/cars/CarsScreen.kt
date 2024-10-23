@@ -1,7 +1,9 @@
 package io.github.parkwithease.parkeasy.ui.cars
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -98,9 +100,16 @@ fun CarsScreen(
                     }
                 }
             }
-            RefreshButton(onRefresh, Modifier.align(Alignment.BottomEnd).padding(16.dp))
-            AddButton({}, Modifier.align(Alignment.BottomEnd).padding(16.dp))
+            ButtonBar(onRefresh, {}, Modifier.align(Alignment.BottomEnd).padding(16.dp))
         }
+    }
+}
+
+@Composable
+fun ButtonBar(onRefresh: () -> Unit, onAdd: () -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier, Arrangement.spacedBy(8.dp)) {
+        RefreshButton(onRefresh)
+        AddButton({})
     }
 }
 
