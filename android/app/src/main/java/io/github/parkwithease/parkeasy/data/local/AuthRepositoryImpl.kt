@@ -18,7 +18,10 @@ class AuthRepositoryImpl @Inject constructor(private val dataStore: DataStore<Pr
     private val status = booleanPreferencesKey("status")
 
     override val sessionFlow: Flow<Cookie> =
-        dataStore.data.map { preferences -> parseServerSetCookieHeader(preferences[session] ?: "") }
+        dataStore.data.map { preferences ->
+            val session = preferences[session]
+            if (session != null) parseServerSetCookieHeader(session) else Cookie("session", "")
+        }
 
     override val statusFlow: Flow<Boolean> =
         dataStore.data.map { preferences -> preferences[status] ?: false }
@@ -32,7 +35,7 @@ class AuthRepositoryImpl @Inject constructor(private val dataStore: DataStore<Pr
 
     override suspend fun reset() {
         dataStore.edit { settings ->
-            settings[session] = ""
+            settings.remove(session)
             settings[status] = false
         }
     }
