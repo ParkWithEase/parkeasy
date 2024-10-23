@@ -55,7 +55,7 @@ fun MainNavGraph(
             loginScreen(showSnackbar, navController::navigateToProfile)
             listScreen()
             mapScreen()
-            profileScreen(navController::navigateToLogin)
+            profileScreen(showSnackbar, navController::navigateToLogin)
         }
     }
 }
