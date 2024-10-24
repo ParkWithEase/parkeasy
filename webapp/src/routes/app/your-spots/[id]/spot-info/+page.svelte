@@ -2,12 +2,13 @@
     import type { PageData } from './$types';
     import Background from '$lib/images/background.png';
     import { Content, Checkbox, Button } from 'carbon-components-svelte';
-    import { Edit } from 'carbon-icons-svelte';
+    import { Edit, ArrowLeft, ArrowRight } from 'carbon-icons-svelte';
     import SpotEditModal from '$lib/components/spot-component/spot-edit-modal.svelte';
     import AvailabilityTable from '$lib/components/spot-component/availability-table.svelte';
     import { TimeSlotStatus } from '$lib/enum/timeslot-status';
     import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
-    import { getMonday, getNextMonday, getPreviousMonday } from '$lib/utils/datetime-util';
+    import { getMonday, getDateWithDayOffset } from '$lib/utils/datetime-util';
+    import { onMount } from 'svelte';
 
     export let data: PageData;
     let is_edit_modal_open: boolean;
@@ -18,22 +19,28 @@
     );
 
     //reminder to change these to now()
-    let today = new Date('2024-10-15T03:24:00');
-    let currentMonday = getMonday(today);
-    let nextMonday = getNextMonday(today);
-    let time_slots = [];
-    let time_slot_edit = [];
+    let today: Date;
+    let currentMonday: Date;
+    let nextMonday: Date;
+    let time_slots_display = [];
+    let time_slot_edit_records = [];
+    let time_slot_edit_display = [];
 
-    extractRelevantTimeSlot();
+    today = new Date('2024-10-15T03:24:00');
+    currentMonday = getMonday(today);
+    nextMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
+
+    time_slots_display = extractRelevantTimeSlot(data.time_slots, currentMonday, nextMonday);
     updateTimeTable();
 
-    function extractRelevantTimeSlot() {
-        time_slots = [];
-        data.time_slots?.forEach((slot) => {
-            if (slot.date >= currentMonday && slot.date < nextMonday) {
-                time_slots = [...time_slots, slot];
+    function extractRelevantTimeSlot(full_time_slot: [], startDate: Date, endDate: Date) {
+        let relevant_time_slots = [];
+        full_time_slot?.forEach((slot) => {
+            if (slot.date >= startDate && slot.date < endDate) {
+                relevant_time_slots = [...relevant_time_slots, slot];
             }
         });
+        return relevant_time_slots;
     }
 
     function updateTimeTable() {
@@ -52,35 +59,44 @@
             }
         }
 
-        time_slots.forEach((slot) => {
+        time_slots_display.forEach((slot) => {
             let day = slot.date.getDay() || 7 - 1;
             availability_table[slot.segment][day] = slot.status;
         });
 
-        time_slot_edit.forEach((slot) => {
+        time_slot_edit_display.forEach((slot) => {
             let day = slot.date.getDay() || 7 - 1;
             availability_table[slot.segment][day] = slot.status;
         });
     }
 
     function toNextWeek() {
-        currentMonday = getNextMonday(currentMonday);
-        nextMonday = getNextMonday(nextMonday);
-        extractRelevantTimeSlot();
+        currentMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
+        nextMonday = getDateWithDayOffset(nextMonday, DAY_IN_A_WEEK);
+        time_slots_display = extractRelevantTimeSlot(data.time_slots, currentMonday, nextMonday);
+        time_slot_edit_display = extractRelevantTimeSlot(
+            data.time_slot_edit_records,
+            currentMonday,
+            nextMonday
+        );
         updateTimeTable();
     }
 
     function toPrevWeek() {
-        currentMonday = getPreviousMonday(currentMonday);
-        nextMonday = getPreviousMonday(nextMonday);
-        extractRelevantTimeSlot();
+        currentMonday = getDateWithDayOffset(currentMonday, -DAY_IN_A_WEEK);
+        nextMonday = getDateWithDayOffset(nextMonday, -DAY_IN_A_WEEK);
+        time_slots_display = extractRelevantTimeSlot(data.time_slots, currentMonday, nextMonday);
+        time_slot_edit_display = extractRelevantTimeSlot(
+            time_slot_edit_records,
+            currentMonday,
+            nextMonday
+        );
         updateTimeTable();
     }
 
     function handleSubmit(event: Event) {
         event.preventDefault();
         const formData = new FormData(event.target as HTMLFormElement);
-        console.log(formData.get('shelter'));
         let new_spot = {
             id: spot.id,
             features: {
@@ -159,8 +175,20 @@
 
     <div>
         <p>From {currentMonday.toDateString()} at 00:00 to {nextMonday.toDateString()} at 00:00</p>
-        <Button on:click={toPrevWeek}>Prev Week</Button>
-        <Button on:click={toNextWeek}>Next Week</Button>
+        <Button
+            kind="tertiary"
+            iconDescription="Last Week"
+            size="small"
+            on:click={toPrevWeek}
+            icon={ArrowLeft}>Last Week</Button
+        >
+        <Button
+            size="small"
+            iconDescription="Next Week"
+            kind="tertiary"
+            on:click={toNextWeek}
+            icon={ArrowRight}>Next Week</Button
+        >
     </div>
 
     <AvailabilityTable bind:availability_table />

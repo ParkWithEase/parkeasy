@@ -1,3 +1,4 @@
+//Return the monday of the week corresponding to the input date
 export function getMonday(d: Date) {
     const this_week_monday = new Date(d);
     this_week_monday.setSeconds(0);
@@ -9,14 +10,10 @@ export function getMonday(d: Date) {
     return this_week_monday;
 }
 
-export function getNextMonday(d: Date) {
-    const next_week_monday = getMonday(d);
-    next_week_monday.setDate(next_week_monday.getDate() + 7);
-    return next_week_monday;
-}
 
-export function getPreviousMonday(d: Date) {
-    const prev_week_monday = getMonday(d);
-    prev_week_monday.setDate(prev_week_monday.getDate() - 7);
-    return prev_week_monday;
+//Return a date that is <offset> number days from the input date
+export function getDateWithDayOffset(d: Date, offset: number) {
+    const result = new Date(d);
+    result.setDate(result.getDate() + offset);
+    return result;
 }
