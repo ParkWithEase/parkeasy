@@ -23,12 +23,34 @@
         <tr class="odd-row">
             <th rowspan="2"> {segment}:00 </th>
             {#each Array(7) as _, day (day)}
-                <td>{availability_table[segment * 2][day]}</td>
+                {@const status = availability_table[segment * 2][day]}
+                {#if status == TimeSlotStatus.AVAILABLE}
+                    <td class="available"></td>
+                {:else if status == TimeSlotStatus.BOOKED}
+                    <td class="booked"></td>
+                {:else if status == TimeSlotStatus.AUCTIONED}
+                    <td class="auctioned"></td>
+                {:else if status == TimeSlotStatus.PASTDUE}
+                    <td class="pastdue"></td>
+                {:else}
+                    <td></td>
+                {/if}
             {/each}
         </tr>
         <tr class="even-row">
             {#each Array(7) as _, day (day)}
-                <td>{availability_table[segment * 2 + 1][day]}</td>
+                {@const status = availability_table[segment * 2 + 1][day]}
+                {#if status == TimeSlotStatus.AVAILABLE}
+                    <td class="available"></td>
+                {:else if status == TimeSlotStatus.BOOKED}
+                    <td class="booked"></td>
+                {:else if status == TimeSlotStatus.AUCTIONED}
+                    <td class="auctioned"></td>
+                {:else if status == TimeSlotStatus.PASTDUE}
+                    <td class="pastdue"></td>
+                {:else}
+                    <td></td>
+                {/if}
             {/each}
         </tr>
     {/each}
@@ -70,5 +92,21 @@
     table {
         width: 100%;
         table-layout: fixed;
+    }
+
+    td.available {
+        background-color: rgba(111, 220, 140, 0.5);
+    }
+
+    td.booked {
+        background-color: rgba(218, 30, 40, 0.5);
+    }
+
+    td.auctioned {
+        background-color: rgba(253, 220, 105, 0.5);
+    }
+
+    td.pastdue {
+        background-color: rgba(185, 185, 185, 0.5);
     }
 </style>

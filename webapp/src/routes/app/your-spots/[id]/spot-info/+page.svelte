@@ -26,7 +26,7 @@
     let time_slot_edit_records = [];
     let time_slot_edit_display = [];
 
-    today = new Date('2024-10-15T03:24:00');
+    today = new Date(Date.UTC(2024, 9, 15, 3, 24, 0));
     currentMonday = getMonday(today);
     nextMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
 
@@ -44,14 +44,20 @@
     }
 
     function updateTimeTable() {
-        let week_day = (today.getDay() || 7) - 1;
-        let current_seg = today.getHours() * 2 + Math.ceil(today.getMinutes() / 30);
+        let current_seg = today.getUTCHours() * 2 + Math.ceil(today.getUTCMinutes() / 30);
+        let cutoff_date = new Date(
+            Date.UTC(today.getFullYear(), today.getUTCMonth(), today.getUTCDate())
+        );
 
         for (let day = 0; day < DAY_IN_A_WEEK; day++) {
             let currentDate = new Date(currentMonday);
-            currentDate.setDate(currentMonday.getDate() + day);
+            currentDate.setUTCDate(currentMonday.getDate() + day);
+            currentDate.setUTCHours(0, 0, 0, 0);
             for (let seg = 0; seg < TOTAL_SEGMENTS_NUMBER; seg++) {
-                if (day < week_day || (day == week_day && seg <= current_seg)) {
+                if (
+                    currentDate < cutoff_date ||
+                    (+currentDate === +cutoff_date && seg < current_seg)
+                ) {
                     availability_table[seg][day] = TimeSlotStatus.PASTDUE;
                 } else {
                     availability_table[seg][day] = TimeSlotStatus.NONE;
@@ -59,13 +65,15 @@
             }
         }
 
+        console.log(availability_table);
+
         time_slots_display.forEach((slot) => {
-            let day = slot.date.getDay() || 7 - 1;
+            let day = slot.date.getUTCDay() || 7 - 1;
             availability_table[slot.segment][day] = slot.status;
         });
 
         time_slot_edit_display.forEach((slot) => {
-            let day = slot.date.getDay() || 7 - 1;
+            let day = slot.date.getUTCDay() || 7 - 1;
             availability_table[slot.segment][day] = slot.status;
         });
     }
@@ -173,10 +181,12 @@
 
     <p class="spot-info-header">Availability</p>
 
-    <div>
-        <p>From {currentMonday.toDateString()} at 00:00 to {nextMonday.toDateString()} at 00:00</p>
+    <div class="date-controller">
+        <p>
+            From {currentMonday.toDateString()} at 00:00 to {nextMonday.toDateString()} at 00:00
+        </p>
         <Button
-            kind="tertiary"
+            kind="secondary"
             iconDescription="Last Week"
             size="small"
             on:click={toPrevWeek}
@@ -185,7 +195,7 @@
         <Button
             size="small"
             iconDescription="Next Week"
-            kind="tertiary"
+            kind="secondary"
             on:click={toNextWeek}
             icon={ArrowRight}>Next Week</Button
         >
@@ -217,5 +227,9 @@
         flex-direction: column;
         max-width: 20rem;
         margin-bottom: 1rem;
+    }
+
+    .date-controller {
+        margin: 1rem;
     }
 </style>

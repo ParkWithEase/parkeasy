@@ -1,7 +1,7 @@
 export enum TimeSlotStatus {
     NONE,
     AVAILABLE,
-    AUCTIONED,
     BOOKED,
+    AUCTIONED,
     PASTDUE
 }

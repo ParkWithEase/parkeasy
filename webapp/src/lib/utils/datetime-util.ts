@@ -4,9 +4,9 @@ export function getMonday(d: Date) {
     this_week_monday.setSeconds(0);
     this_week_monday.setMinutes(0);
     this_week_monday.setHours(0);
-    const day = this_week_monday.getDay() || 7;
-    const diff = this_week_monday.getDate() - day + 1;
-    this_week_monday.setDate(diff);
+    const day = this_week_monday.getUTCDay() || 7;
+    const diff = this_week_monday.getUTCDate() - day + 1;
+    this_week_monday.setUTCDate(diff);
     return this_week_monday;
 }
 
@@ -14,6 +14,6 @@ export function getMonday(d: Date) {
 //Return a date that is <offset> number days from the input date
 export function getDateWithDayOffset(d: Date, offset: number) {
     const result = new Date(d);
-    result.setDate(result.getDate() + offset);
+    result.setUTCDate(result.getUTCDate() + offset);
     return result;
 }
