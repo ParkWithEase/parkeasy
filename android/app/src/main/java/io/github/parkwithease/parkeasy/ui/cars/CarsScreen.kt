@@ -70,7 +70,7 @@ fun CarsScreen(
     isRefreshing: Boolean,
     state: PullToRefreshState,
     onRefresh: () -> Unit,
-    onSelectCar: (Car) -> Unit,
+    onCarClick: (Car) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier) {
@@ -91,29 +91,7 @@ fun CarsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     items(cars.count()) { index ->
-                        ListItem({
-                            Card(
-                                modifier =
-                                    Modifier.fillMaxWidth().clickable { onSelectCar(cars[index]) }
-                            ) {
-                                Text(
-                                    cars[index].details.color,
-                                    Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp),
-                                )
-                                Text(
-                                    cars[index].details.model,
-                                    Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp),
-                                )
-                                Text(
-                                    cars[index].details.make,
-                                    Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp),
-                                )
-                                Text(
-                                    cars[index].details.licensePlate,
-                                    Modifier.padding(8.dp, 8.dp, 0.dp, 8.dp),
-                                )
-                            }
-                        })
+                        ListItem({ CarCard(cars[index], onCarClick, Modifier.fillMaxWidth()) })
                     }
                 }
             }
@@ -222,4 +200,14 @@ private fun AddButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
             )
         },
     )
+}
+
+@Composable
+private fun CarCard(car: Car, onCarClick: (Car) -> Unit, modifier: Modifier = Modifier) {
+    Card(modifier = modifier.clickable { onCarClick(car) }) {
+        Text(car.details.color, Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp))
+        Text(car.details.model, Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp))
+        Text(car.details.make, Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp))
+        Text(car.details.licensePlate, Modifier.padding(8.dp, 8.dp, 0.dp, 8.dp))
+    }
 }
