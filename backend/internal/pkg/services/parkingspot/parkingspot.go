@@ -2,14 +2,21 @@ package parkingspot
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"regexp"
 	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
+	"github.com/aarondl/opt/omit"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
+
+// Largest number of entries returned per request
+const MaximumCount = 1000
 
 type Service struct {
 	repo parkingspot.Repository
@@ -70,6 +77,10 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 }
 
 func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID, startDate time.Time, endDate time.Time) (models.ParkingSpot, error) {
+	if endDate.Before(startDate) {
+		return models.ParkingSpot{}, models.ErrInvalidTimeWindow
+	}
+
 	result, err := s.repo.GetByUUID(ctx, spotID, startDate, endDate)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrNotFound) {
@@ -81,4 +92,83 @@ func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID,
 		return models.ParkingSpot{}, models.ErrParkingSpotNotFound
 	}
 	return result.ParkingSpot, nil
+}
+
+func (s *Service) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
+	if endDate.Before(startDate) {
+		return []models.TimeUnit{}, models.ErrInvalidTimeWindow
+	}
+
+	result, err := s.repo.GetAvalByUUID(ctx, spotID, startDate, endDate)
+	if err != nil {
+		if errors.Is(err, parkingspot.ErrTimeUnitNotFound) {
+			err = models.ErrAvailabilityNotFound
+		}
+		return []models.TimeUnit{}, err
+	}
+
+	return result, nil
+}
+
+func (s *Service) GetMany(ctx context.Context, count int, after models.Cursor, longitude float64, latitude float64, distance int32, startDate time.Time, endDate time.Time) (spots []models.ParkingSpot, next models.Cursor, err error) {
+	if count <= 0 {
+		return []models.ParkingSpot{}, "", nil
+	}
+	if endDate.Before(startDate) {
+		return []models.ParkingSpot{}, "", models.ErrInvalidTimeWindow
+	}
+	if longitude == 0 || latitude == 0 {
+		return []models.ParkingSpot{}, "", models.ErrInvalidCoordinate
+	}
+
+	cursor := decodeCursor(after)
+	count = min(count, MaximumCount)
+	spotEntries, err := s.repo.GetMany(ctx, count+1, cursor, longitude, latitude, distance, startDate, endDate)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(spotEntries) > count {
+		spotEntries = spotEntries[:len(spotEntries)-1]
+
+		next, err = encodeCursor(parkingspot.Cursor{
+			ID: spotEntries[len(spotEntries)-1].InternalID,
+		})
+		// This is an issue, but not enough to abort the request
+		if err != nil {
+			log.Err(err).
+				Int64("parkingspotid", spotEntries[len(spotEntries)-2].InternalID).
+				Msg("could not encode next cursor")
+		}
+	}
+
+	result := make([]models.ParkingSpot, 0, len(spotEntries))
+	for _, entry := range spotEntries {
+		result = append(result, entry.ParkingSpot)
+	}
+	return result, next, nil
+}
+
+
+func decodeCursor(cursor models.Cursor) omit.Val[parkingspot.Cursor] {
+	raw, err := base64.RawURLEncoding.DecodeString(string(cursor))
+	if err != nil {
+		return omit.Val[parkingspot.Cursor]{}
+	}
+
+	var result parkingspot.Cursor
+	err = cbor.Unmarshal(raw, &result)
+	if err != nil {
+		return omit.Val[parkingspot.Cursor]{}
+	}
+
+	return omit.From(result)
+}
+
+func encodeCursor(cursor parkingspot.Cursor) (models.Cursor, error) {
+	raw, err := cbor.Marshal(cursor)
+	if err != nil {
+		return "", err
+	}
+
+	return models.Cursor(base64.RawURLEncoding.EncodeToString(raw)), nil
 }

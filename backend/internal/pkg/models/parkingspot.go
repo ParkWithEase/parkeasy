@@ -10,6 +10,7 @@ import (
 var (
 	ErrParkingSpotOwned     = CodeForbidden.WithMsg("parking spot is owned by an another user")
 	ErrParkingSpotNotFound  = CodeNotFound.WithMsg("this parking spot does not exist")
+	ErrAvailabilityNotFound = CodeNotFound.WithMsg("availability for this parking spot does not exist")
 	ErrParkingSpotDuplicate = CodeDuplicate.WithMsg("parking spot already exists")
 	ErrCountryNotSupported  = CodeCountryNotSupported.WithMsg("the specified country is not supported")
 	ErrProvinceNotSupported = CodeProvinceNotSupported.WithMsg("the specified province is not supported")
@@ -17,6 +18,7 @@ var (
 	ErrInvalidStreetAddress = CodeSpotInvalid.WithMsg("the specified street address is invalid")
 	ErrInvalidCoordinate    = CodeSpotInvalid.WithMsg("the specified coordinate is invalid")
 	ErrTimeUnitDuplicate    = CodeDuplicate.WithMsg("time slot already exists")
+	ErrInvalidTimeWindow	= CodeInvalidTimeWindow.WithMsg("the specified start and/or end dates are invalid")
 )
 
 type ParkingSpotLocation struct {

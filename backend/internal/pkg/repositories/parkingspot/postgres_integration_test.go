@@ -186,11 +186,24 @@ func TestPostgresIntegration(t *testing.T) {
 		assert.Equal(t, samplePricePerHour, getEntry.PricePerHour)
 		assert.Equal(t, userID, getEntry.OwnerID)
 
+		// Testing get existent with incorrect start and end dates
+		getEntry, err = repo.GetByUUID(ctx, createEntry.ParkingSpot.ID, sampleTimeUnit[1].EndTime, sampleTimeUnit[1].EndTime.AddDate(0, 0, 1))
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, ErrTimeUnitNotFound)
+		}
+		assert.Equal(t, sampleLocation, getEntry.Location)
+		assert.Equal(t, sampleFeatures, getEntry.Features)
+		assert.Equal(t, samplePricePerHour, getEntry.PricePerHour)
+		assert.Equal(t, userID, getEntry.OwnerID)
+		assert.Equal(t, []models.TimeUnit{}, getEntry.Availability)
+
+
 		// Testing get owner id
 		ownerID, err := repo.GetOwnerByUUID(ctx, createEntry.ParkingSpot.ID)
 		require.NoError(t, err)
 		assert.Equal(t, userID, ownerID)
 	})
+
 
 	t.Run("get non-existent", func(t *testing.T) {
 		_, err := repo.GetByUUID(ctx, uuid.Nil, time.Now(), time.Now().Add(time.Hour))
@@ -310,14 +323,22 @@ func TestPostgresIntegration(t *testing.T) {
 			assert.Equal(t, sampleAvailability, timeunits)
 		})
 
-		t.Run("no availibility found", func(t *testing.T) {
+		t.Run("no availibility found bad window", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := repo.GetAvalByUUID(ctx, createEntry.ID, sampleTimeUnit[1].EndTime, sampleTimeUnit[1].EndTime.AddDate(0, 0, 1))
 			if assert.Error(t, err, "Trying to get availibility for time period that does not have any should fail") {
 				assert.ErrorIs(t, err, ErrTimeUnitNotFound)
 			}
+		})
 
+		t.Run("no availibility found non-existent spotID", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := repo.GetAvalByUUID(ctx, uuid.Nil, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
+			if assert.Error(t, err, "Trying to get availibility for time period that does not have any should fail") {
+				assert.ErrorIs(t, err, ErrTimeUnitNotFound)
+			}
 		})
 	})
 

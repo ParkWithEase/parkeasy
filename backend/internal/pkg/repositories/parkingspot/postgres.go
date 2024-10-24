@@ -30,6 +30,11 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 	}
 }
 
+type Result struct {
+	dbmodels.Parkingspot
+	DistanceToOrigin float64 `db:"distance_to_origin"`
+}
+
 func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -160,7 +165,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID, st
 	//Initialize error variable
 	var timeError error
 	availability, err := p.GetAvalByUUID(ctx, spotID, startDate, endDate)
-	if err != nil && !errors.Is(err, ErrTimeUnitNotFound) {
+	if err != nil && errors.Is(err, ErrTimeUnitNotFound) {
 		timeError = err
 	}
 
@@ -213,7 +218,7 @@ func (p *PostgresRepository) GetAvalByUUID(ctx context.Context, spotID uuid.UUID
 
 	if (err != nil && errors.Is(err, sql.ErrNoRows)) || len(timeUnitResult) == 0 {
 		err = ErrTimeUnitNotFound
-		return make([]models.TimeUnit, 0, 1), err
+		return []models.TimeUnit{}, err
 	}
 
 	availability := make([]models.TimeUnit, 0, len(timeUnitResult)) // Initialize slice
@@ -248,11 +253,6 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUI
 }
 
 func (p *PostgresRepository) GetMany(ctx context.Context, limit int, longitude float64, latitude float64, distance int32, startDate time.Time, endDate time.Time) ([]Entry, error) {
-
-	type Result struct {
-		dbmodels.Parkingspot
-		DistanceToOrigin float64 `db:"distance_to_origin"`
-	}
 
 	centre := psql.F("ll_to_earth", psql.Arg(latitude), psql.Arg(longitude))
 	spotPosition := psql.F("ll_to_earth", dbmodels.ParkingspotColumns.Latitude, dbmodels.ParkingspotColumns.Longitude)
@@ -297,35 +297,12 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, longitude f
 		availability, _ := p.GetAvalByUUID(ctx, dbSpot.Parkingspotuuid, startDate, endDate)
 		// FIXME: How to handle errors apart from nothing found
 
-		// TODO: Move dbmodels.Parkingspot -> Entry to a proc or something.
-		result = append(result, Entry{
-			ParkingSpot: models.ParkingSpot{
-				Location: models.ParkingSpotLocation{
-					PostalCode:    dbSpot.Postalcode,
-					CountryCode:   dbSpot.Countrycode,
-					City:          dbSpot.City,
-					State:         dbSpot.State,
-					StreetAddress: dbSpot.Streetaddress,
-					Longitude:     float64(dbSpot.Longitude),
-					Latitude:      float64(dbSpot.Latitude),
-				},
-				Features: models.ParkingSpotFeatures{
-					Shelter:         dbSpot.Hasshelter,
-					PlugIn:          dbSpot.Hasplugin,
-					ChargingStation: dbSpot.Haschargingstation,
-				},
-				PricePerHour: dbSpot.Priceperhour,
-				ID:           dbSpot.Parkingspotuuid,
-				Availability: availability,
-			},
-			InternalID: dbSpot.Parkingspotid,
-			OwnerID:    dbSpot.Userid,
-		})
+		result = append(result, formEntry(dbSpot, availability))
 	}
 	return result, nil
 }
 
-func formEntry(dbSpot dbmodels.Parkingspot, availability []models.TimeUnit) Entry {
+func formEntry(dbSpot Result, availability []models.TimeUnit) Entry {
 	return Entry{
 		ParkingSpot: models.ParkingSpot{
 			Location: models.ParkingSpotLocation{
