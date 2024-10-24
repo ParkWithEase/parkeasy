@@ -8,7 +8,6 @@
     import { TimeSlotStatus } from '$lib/enum/timeslot-status';
     import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
     import { getMonday, getDateWithDayOffset } from '$lib/utils/datetime-util';
-    import { onMount } from 'svelte';
 
     export let data: PageData;
     let is_edit_modal_open: boolean;
@@ -22,14 +21,17 @@
     let today: Date;
     let currentMonday: Date;
     let nextMonday: Date;
-    let time_slots_display = [];
+
+    //This array contain all edit history
     let time_slot_edit_records = [];
+
+    //These array contain exactly 7 days of data we want to display
+    let time_slots_display = [];
     let time_slot_edit_display = [];
 
     today = new Date(Date.UTC(2024, 9, 15, 3, 24, 0));
     currentMonday = getMonday(today);
     nextMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
-
     time_slots_display = extractRelevantTimeSlot(data.time_slots, currentMonday, nextMonday);
     updateTimeTable();
 
@@ -49,14 +51,16 @@
             Date.UTC(today.getFullYear(), today.getUTCMonth(), today.getUTCDate())
         );
 
+        console.log('cutoff: ' + cutoff_date.toUTCString());
+
         for (let day = 0; day < DAY_IN_A_WEEK; day++) {
             let currentDate = new Date(currentMonday);
-            currentDate.setUTCDate(currentMonday.getDate() + day);
+            currentDate.setUTCDate(currentMonday.getUTCDate() + day);
             currentDate.setUTCHours(0, 0, 0, 0);
             for (let seg = 0; seg < TOTAL_SEGMENTS_NUMBER; seg++) {
                 if (
-                    currentDate < cutoff_date ||
-                    (+currentDate === +cutoff_date && seg < current_seg)
+                    currentDate.getTime() < cutoff_date.getTime() ||
+                    (currentDate.getTime() == cutoff_date.getTime() && seg < current_seg)
                 ) {
                     availability_table[seg][day] = TimeSlotStatus.PASTDUE;
                 } else {
@@ -65,15 +69,13 @@
             }
         }
 
-        console.log(availability_table);
-
         time_slots_display.forEach((slot) => {
-            let day = slot.date.getUTCDay() || 7 - 1;
+            let day = (slot.date.getUTCDay() || 7) - 1;
             availability_table[slot.segment][day] = slot.status;
         });
 
         time_slot_edit_display.forEach((slot) => {
-            let day = slot.date.getUTCDay() || 7 - 1;
+            let day = (slot.date.getUTCDay() || 7) - 1;
             availability_table[slot.segment][day] = slot.status;
         });
     }
@@ -83,10 +85,11 @@
         nextMonday = getDateWithDayOffset(nextMonday, DAY_IN_A_WEEK);
         time_slots_display = extractRelevantTimeSlot(data.time_slots, currentMonday, nextMonday);
         time_slot_edit_display = extractRelevantTimeSlot(
-            data.time_slot_edit_records,
+            time_slot_edit_records,
             currentMonday,
             nextMonday
         );
+        console.log(time_slot_edit_display);
         updateTimeTable();
     }
 
@@ -99,6 +102,7 @@
             currentMonday,
             nextMonday
         );
+        console.log(time_slot_edit_display);
         updateTimeTable();
     }
 
@@ -124,6 +128,62 @@
         };
         is_edit_modal_open = false;
         spot = new_spot;
+    }
+
+    /*
+    this function should remove the edit event if there is already one event at that time slot. Or 
+    append the new event if no event happens to that time slot
+    */
+
+    function handleEdit(event: Event) {
+        if (
+            [TimeSlotStatus.BOOKED, TimeSlotStatus.PASTDUE, TimeSlotStatus.AUCTIONED].includes(
+                event.detail.status
+            )
+        ) {
+            console.log('Can not modify this slot');
+        } else {
+            let date = new Date(currentMonday);
+            date.setUTCDate(currentMonday.getUTCDate() + event.detail.day);
+            let new_time_slot = {
+                date: date,
+                segment: event.detail.segment,
+                status: event.detail.status
+            };
+            if (event.detail.status === TimeSlotStatus.NONE) {
+                new_time_slot.status = TimeSlotStatus.AVAILABLE;
+            } else {
+                new_time_slot.status = TimeSlotStatus.NONE;
+            }
+            let match_display_index = time_slot_edit_display.findIndex((slot) => {
+                return (
+                    slot.date.getTime() == new_time_slot.date.getTime() &&
+                    slot.segment == new_time_slot.segment
+                );
+            });
+            if (match_display_index !== -1) {
+                time_slot_edit_display = [
+                    ...time_slot_edit_display.slice(0, match_display_index),
+                    ...time_slot_edit_display.slice(match_display_index + 1)
+                ];
+
+                let match_record_index = time_slot_edit_records.findIndex((slot) => {
+                    return (
+                        slot.date.getTime() == new_time_slot.date.getTime() &&
+                        slot.segment == new_time_slot.segment
+                    );
+                });
+                time_slot_edit_records = [
+                    ...time_slot_edit_records.slice(0, match_record_index),
+                    ...time_slot_edit_records.slice(match_record_index + 1)
+                ];
+            } else {
+                time_slot_edit_display = [...time_slot_edit_display, new_time_slot];
+                time_slot_edit_records = [...time_slot_edit_records, new_time_slot];
+            }
+
+            availability_table[event.detail.segment][event.detail.day] = new_time_slot.status;
+        }
     }
 </script>
 
@@ -183,7 +243,7 @@
 
     <div class="date-controller">
         <p>
-            From {currentMonday.toDateString()} at 00:00 to {nextMonday.toDateString()} at 00:00
+            From {currentMonday.toUTCString()} to {nextMonday.toUTCString()}
         </p>
         <Button
             kind="secondary"
@@ -201,7 +261,7 @@
         >
     </div>
 
-    <AvailabilityTable bind:availability_table />
+    <AvailabilityTable bind:availability_table on:edit={(e) => handleEdit(e)} />
 </Content>
 
 <style>

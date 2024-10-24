@@ -1,9 +1,9 @@
 //Return the monday of the week corresponding to the input date
 export function getMonday(d: Date) {
     const this_week_monday = new Date(d);
-    this_week_monday.setSeconds(0);
-    this_week_monday.setMinutes(0);
-    this_week_monday.setHours(0);
+    this_week_monday.setUTCSeconds(0);
+    this_week_monday.setUTCMinutes(0);
+    this_week_monday.setUTCHours(0);
     const day = this_week_monday.getUTCDay() || 7;
     const diff = this_week_monday.getUTCDate() - day + 1;
     this_week_monday.setUTCDate(diff);

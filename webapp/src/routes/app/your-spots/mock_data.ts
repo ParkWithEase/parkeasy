@@ -57,17 +57,17 @@ export const spots_time_slot = [
     {
         id: '1',
         time_slots: [
-            { date: new Date('2024-10-19T00:00:00'), segment: 1, status: TimeSlotStatus.AVAILABLE },
-            { date: new Date('2024-10-19T00:00:00'), segment: 2, status: TimeSlotStatus.AVAILABLE },
-            { date: new Date('2024-10-19T00:00:00'), segment: 3, status: TimeSlotStatus.AVAILABLE },
-            { date: new Date('2024-10-19T00:00:00'), segment: 4, status: TimeSlotStatus.AVAILABLE },
-            { date: new Date('2024-10-19T00:00:00'), segment: 5, status: TimeSlotStatus.AVAILABLE },
-            { date: new Date('2024-10-19T00:00:00'), segment: 6, status: TimeSlotStatus.AVAILABLE },
-            { date: new Date('2024-10-19T00:00:00'), segment: 7, status: TimeSlotStatus.AVAILABLE },
-            { date: new Date('2024-10-24T00:00:00'), segment: 1, status: TimeSlotStatus.BOOKED },
-            { date: new Date('2024-10-24T00:00:00'), segment: 2, status: TimeSlotStatus.BOOKED },
-            { date: new Date('2024-10-25T00:00:00'), segment: 1, status: TimeSlotStatus.AUCTIONED },
-            { date: new Date('2024-10-25T00:00:00'), segment: 2, status: TimeSlotStatus.AUCTIONED }
+            { date: new Date(Date.UTC(2024,9,19,0,0,0)), segment: 1, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date(Date.UTC(2024,9,19,0,0,0)), segment: 2, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date(Date.UTC(2024,9,19,0,0,0)), segment: 3, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date(Date.UTC(2024,9,19,0,0,0)), segment: 4, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date(Date.UTC(2024,9,19,0,0,0)), segment: 5, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date(Date.UTC(2024,9,19,0,0,0)), segment: 6, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date(Date.UTC(2024,9,19,0,0,0)), segment: 7, status: TimeSlotStatus.AVAILABLE },
+            { date: new Date(Date.UTC(2024,9,24,0,0,0)), segment: 1, status: TimeSlotStatus.BOOKED },
+            { date: new Date(Date.UTC(2024,9,24,0,0,0)), segment: 2, status: TimeSlotStatus.BOOKED },
+            { date: new Date(Date.UTC(2024,9,25,0,0,0)), segment: 1, status: TimeSlotStatus.AUCTIONED },
+            { date: new Date(Date.UTC(2024,9,25,0,0,0)), segment: 2, status: TimeSlotStatus.AUCTIONED }
         ]
     }
 ];

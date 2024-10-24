@@ -1,14 +1,28 @@
 <script lang="ts">
     import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
     import { TimeSlotStatus } from '$lib/enum/timeslot-status';
+    import { isMouseEvent } from '@testing-library/user-event/dist/cjs/event/eventMap.js';
+    import { createEventDispatcher } from 'svelte';
 
+    let dispatcher = createEventDispatcher();
     export let availability_table: TimeSlotStatus[][] = Array.from(
         { length: TOTAL_SEGMENTS_NUMBER },
         () => Array(DAY_IN_A_WEEK).fill(0)
     );
+
+    function handleEdit(event: Event, day: number, segment: number, status: TimeSlotStatus) {
+        event.preventDefault();
+        if (event.buttons == 1 || (event.buttons == 0 && event.button == 0)) {
+            dispatcher('edit', {
+                day: day,
+                segment: segment,
+                status: status
+            });
+        }
+    }
 </script>
 
-<table class="availability-table">
+<table class="availability-table" draggable="false">
     <tr class="header-row">
         <th>Time</th>
         <th>Mon</th>
@@ -20,37 +34,49 @@
         <th>Sun</th>
     </tr>
     {#each Array(24) as _, segment (segment)}
-        <tr class="odd-row">
-            <th rowspan="2"> {segment}:00 </th>
+        <tr class="odd-row" draggable="false">
+            <th rowspan="2" draggable="false"> {segment}:00 </th>
             {#each Array(7) as _, day (day)}
                 {@const status = availability_table[segment * 2][day]}
-                {#if status == TimeSlotStatus.AVAILABLE}
-                    <td class="available"></td>
-                {:else if status == TimeSlotStatus.BOOKED}
-                    <td class="booked"></td>
-                {:else if status == TimeSlotStatus.AUCTIONED}
-                    <td class="auctioned"></td>
-                {:else if status == TimeSlotStatus.PASTDUE}
-                    <td class="pastdue"></td>
-                {:else}
-                    <td></td>
-                {/if}
+                <td
+                    draggable="false"
+                    on:pointerenter={(e) => handleEdit(e, day, segment * 2, status)}
+                    on:mousedown={(e) => handleEdit(e, day, segment * 2, status)}
+                >
+                    {#if status == TimeSlotStatus.AVAILABLE}
+                        <div class="available"></div>
+                    {:else if status == TimeSlotStatus.BOOKED}
+                        <div class="booked"></div>
+                    {:else if status == TimeSlotStatus.AUCTIONED}
+                        <div class="auctioned"></div>
+                    {:else if status == TimeSlotStatus.PASTDUE}
+                        <div class="pastdue"></div>
+                    {:else}
+                        <div></div>
+                    {/if}
+                </td>
             {/each}
         </tr>
-        <tr class="even-row">
+        <tr draggable="false" class="even-row">
             {#each Array(7) as _, day (day)}
                 {@const status = availability_table[segment * 2 + 1][day]}
-                {#if status == TimeSlotStatus.AVAILABLE}
-                    <td class="available"></td>
-                {:else if status == TimeSlotStatus.BOOKED}
-                    <td class="booked"></td>
-                {:else if status == TimeSlotStatus.AUCTIONED}
-                    <td class="auctioned"></td>
-                {:else if status == TimeSlotStatus.PASTDUE}
-                    <td class="pastdue"></td>
-                {:else}
-                    <td></td>
-                {/if}
+                <td
+                    draggable="false"
+                    on:pointerenter={(e) => handleEdit(e, day, segment * 2 + 1, status)}
+                    on:mousedown={(e) => handleEdit(e, day, segment * 2 + 1, status)}
+                >
+                    {#if status == TimeSlotStatus.AVAILABLE}
+                        <div class="available"></div>
+                    {:else if status == TimeSlotStatus.BOOKED}
+                        <div class="booked"></div>
+                    {:else if status == TimeSlotStatus.AUCTIONED}
+                        <div class="auctioned"></div>
+                    {:else if status == TimeSlotStatus.PASTDUE}
+                        <div class="pastdue"></div>
+                    {:else}
+                        <div></div>
+                    {/if}
+                </td>
             {/each}
         </tr>
     {/each}
@@ -59,14 +85,22 @@
 <style>
     td,
     th {
-        border-left: 1px solid black;
-        border-right: 1px solid black;
+        border-left: 2px solid black;
+        border-right: 2px solid black;
     }
     td {
+        height: 100%;
+        width: 100%;
         font-size: 1rem;
-        padding: 0.3rem;
         vertical-align: middle;
         text-align: center;
+    }
+
+    td:hover {
+        border: 2px solid rgb(0, 102, 255);
+    }
+    tr {
+        height: 100%;
     }
 
     th {
@@ -76,37 +110,42 @@
         text-align: center;
     }
     .odd-row {
-        border: 1px solid black;
+        border: 2px solid black;
         border-bottom: none;
     }
 
     .even-row {
-        border: 1px solid black;
+        border: 2px solid black;
         border-top: none;
     }
 
     .header-row {
-        border: 1px solid black;
+        border: 2px solid black;
     }
 
     table {
         width: 100%;
+        height: 1px;
         table-layout: fixed;
     }
 
-    td.available {
+    td > div {
+        height: 100%;
+        pointer-events: none;
+    }
+    div.available {
         background-color: rgba(111, 220, 140, 0.5);
     }
 
-    td.booked {
+    div.booked {
         background-color: rgba(218, 30, 40, 0.5);
     }
 
-    td.auctioned {
+    div.auctioned {
         background-color: rgba(253, 220, 105, 0.5);
     }
 
-    td.pastdue {
+    div.pastdue {
         background-color: rgba(185, 185, 185, 0.5);
     }
 </style>
