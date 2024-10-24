@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -30,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -40,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.Car
+import io.github.parkwithease.parkeasy.model.CarDetails
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,12 +74,11 @@ fun CarsScreen(
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier) {
-        var addingCar by rememberSaveable { mutableStateOf(true) }
-        var skipPartiallyExpanded by rememberSaveable { mutableStateOf(false) }
+        var addingCar by rememberSaveable { mutableStateOf(false) }
+        val skipPartiallyExpanded by rememberSaveable { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
         val bottomSheetState =
             rememberModalBottomSheetState(skipPartiallyExpanded = skipPartiallyExpanded)
-
         Box {
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
@@ -124,7 +127,18 @@ fun CarsScreen(
                     onDismissRequest = { addingCar = false },
                     sheetState = bottomSheetState,
                 ) {
-                    AddCarForm()
+                    AddCarForm(
+                        {
+                            scope
+                                .launch { bottomSheetState.hide() }
+                                .invokeOnCompletion {
+                                    if (!bottomSheetState.isVisible) {
+                                        addingCar = false
+                                    }
+                                }
+                        },
+                        { true },
+                    )
                 }
             }
         }
@@ -132,17 +146,50 @@ fun CarsScreen(
 }
 
 @Composable
-fun AddCarForm(modifier: Modifier = Modifier) {
+private fun AddCarForm(
+    onClose: () -> Unit,
+    onAddCar: (CarDetails) -> Boolean,
+    modifier: Modifier = Modifier,
+) {
+    var carDetails by remember { mutableStateOf(CarDetails()) }
     Column(modifier) {
-        OutlinedTextField("License Plate", {}, modifier.fillMaxWidth().padding(16.dp, 4.dp))
-        OutlinedTextField("Colour", {}, modifier.fillMaxWidth().padding(16.dp, 4.dp))
-        OutlinedTextField("Model", {}, modifier.fillMaxWidth().padding(16.dp, 4.dp))
-        OutlinedTextField("Make", {}, modifier.fillMaxWidth().padding(16.dp, 4.dp))
+        OutlinedTextField(
+            value = carDetails.licensePlate,
+            onValueChange = { carDetails = carDetails.copy(licensePlate = it) },
+            label = { Text(stringResource(R.string.license_plate)) },
+            modifier = Modifier.fillMaxWidth().padding(16.dp, 4.dp),
+        )
+        OutlinedTextField(
+            value = carDetails.color,
+            onValueChange = { carDetails = carDetails.copy(color = it) },
+            label = { Text(stringResource(R.string.color)) },
+            modifier = Modifier.fillMaxWidth().padding(16.dp, 4.dp),
+        )
+        OutlinedTextField(
+            value = carDetails.model,
+            onValueChange = { carDetails = carDetails.copy(model = it) },
+            label = { Text(stringResource(R.string.model)) },
+            modifier = Modifier.fillMaxWidth().padding(16.dp, 4.dp),
+        )
+        OutlinedTextField(
+            value = carDetails.make,
+            onValueChange = { carDetails = carDetails.copy(make = it) },
+            label = { Text(stringResource(R.string.make)) },
+            modifier = Modifier.fillMaxWidth().padding(16.dp, 4.dp),
+        )
+        Button(
+            content = { Text(stringResource(R.string.add_car)) },
+            onClick = {
+                onClose()
+                onAddCar(carDetails)
+            },
+            modifier = Modifier.fillMaxWidth().padding(16.dp, 4.dp),
+        )
     }
 }
 
 @Composable
-fun ButtonBar(onRefresh: () -> Unit, onAdd: () -> Unit, modifier: Modifier = Modifier) {
+private fun ButtonBar(onRefresh: () -> Unit, onAdd: () -> Unit, modifier: Modifier = Modifier) {
     Row(modifier, Arrangement.spacedBy(8.dp)) {
         RefreshButton(onRefresh)
         AddButton(onAdd)
@@ -150,7 +197,7 @@ fun ButtonBar(onRefresh: () -> Unit, onAdd: () -> Unit, modifier: Modifier = Mod
 }
 
 @Composable
-fun RefreshButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun RefreshButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     FloatingActionButton(
         onClick = onClick,
         modifier = modifier,
@@ -164,7 +211,7 @@ fun RefreshButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun AddButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun AddButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     FloatingActionButton(
         onClick = onClick,
         modifier = modifier,

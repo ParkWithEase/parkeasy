@@ -5,15 +5,15 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Car(
-    val details: CarDetails,
-    val id: String,
+    val details: CarDetails = CarDetails(),
+    val id: String = "",
     @SerialName("\$schema") val schema: String = "", // ContentNegotiation needs this.
 )
 
 @Serializable
 data class CarDetails(
-    val color: String = "",
-    @SerialName("license_plate") val licensePlate: String = "",
-    val make: String = "",
-    val model: String = "",
+    var color: String = "",
+    @SerialName("license_plate") var licensePlate: String = "",
+    var make: String = "",
+    var model: String = "",
 )
