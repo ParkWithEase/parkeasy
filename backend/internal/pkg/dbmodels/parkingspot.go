@@ -33,8 +33,8 @@ type Parkingspot struct {
 	City               string          `db:"city" `
 	State              string          `db:"state" `
 	Streetaddress      string          `db:"streetaddress" `
-	Longitude          float32         `db:"longitude" `
-	Latitude           float32         `db:"latitude" `
+	Longitude          decimal.Decimal `db:"longitude" `
+	Latitude           decimal.Decimal `db:"latitude" `
 	Hasshelter         bool            `db:"hasshelter" `
 	Hasplugin          bool            `db:"hasplugin" `
 	Haschargingstation bool            `db:"haschargingstation" `
@@ -74,8 +74,8 @@ type ParkingspotSetter struct {
 	City               omit.Val[string]          `db:"city" `
 	State              omit.Val[string]          `db:"state" `
 	Streetaddress      omit.Val[string]          `db:"streetaddress" `
-	Longitude          omit.Val[float32]         `db:"longitude" `
-	Latitude           omit.Val[float32]         `db:"latitude" `
+	Longitude          omit.Val[decimal.Decimal] `db:"longitude" `
+	Latitude           omit.Val[decimal.Decimal] `db:"latitude" `
 	Hasshelter         omit.Val[bool]            `db:"hasshelter" `
 	Hasplugin          omit.Val[bool]            `db:"hasplugin" `
 	Haschargingstation omit.Val[bool]            `db:"haschargingstation" `
@@ -459,8 +459,8 @@ type parkingspotWhere[Q psql.Filterable] struct {
 	City               psql.WhereMod[Q, string]
 	State              psql.WhereMod[Q, string]
 	Streetaddress      psql.WhereMod[Q, string]
-	Longitude          psql.WhereMod[Q, float32]
-	Latitude           psql.WhereMod[Q, float32]
+	Longitude          psql.WhereMod[Q, decimal.Decimal]
+	Latitude           psql.WhereMod[Q, decimal.Decimal]
 	Hasshelter         psql.WhereMod[Q, bool]
 	Hasplugin          psql.WhereMod[Q, bool]
 	Haschargingstation psql.WhereMod[Q, bool]
@@ -481,8 +481,8 @@ func buildParkingspotWhere[Q psql.Filterable](cols parkingspotColumns) parkingsp
 		City:               psql.Where[Q, string](cols.City),
 		State:              psql.Where[Q, string](cols.State),
 		Streetaddress:      psql.Where[Q, string](cols.Streetaddress),
-		Longitude:          psql.Where[Q, float32](cols.Longitude),
-		Latitude:           psql.Where[Q, float32](cols.Latitude),
+		Longitude:          psql.Where[Q, decimal.Decimal](cols.Longitude),
+		Latitude:           psql.Where[Q, decimal.Decimal](cols.Latitude),
 		Hasshelter:         psql.Where[Q, bool](cols.Hasshelter),
 		Hasplugin:          psql.Where[Q, bool](cols.Hasplugin),
 		Haschargingstation: psql.Where[Q, bool](cols.Haschargingstation),
