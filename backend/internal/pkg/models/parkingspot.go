@@ -18,17 +18,17 @@ var (
 	ErrInvalidStreetAddress = CodeSpotInvalid.WithMsg("the specified street address is invalid")
 	ErrInvalidCoordinate    = CodeSpotInvalid.WithMsg("the specified coordinate is invalid")
 	ErrTimeUnitDuplicate    = CodeDuplicate.WithMsg("time slot already exists")
-	ErrInvalidTimeWindow	= CodeInvalidTimeWindow.WithMsg("the specified start and/or end dates are invalid")
+	ErrInvalidTimeWindow    = CodeInvalidTimeWindow.WithMsg("the specified start and/or end dates are invalid")
 )
 
 type ParkingSpotLocation struct {
-	PostalCode    string  `json:"postal_code,omitempty" doc:"The postal code of the parking spot"`
-	CountryCode   string  `json:"country_code" pattern:"[A-Z][A-Z]" doc:"The country code of a parking spot"`
-	City          string  `json:"city" doc:"The city the parking spot is in"`
-	State         string  `json:"state" doc:"The province the parking spot is in"`
-	StreetAddress string  `json:"street_address" doc:"The street address of the parking spot"`
-	Longitude     float64 `json:"longitude,omitempty" readOnly:"true" doc:"The longitude of the parking spot"`
-	Latitude      float64 `json:"latitude,omitempty" readOnly:"true" doc:"The latitude of the parking spot"`
+	PostalCode    string          `json:"postal_code,omitempty" doc:"The postal code of the parking spot"`
+	CountryCode   string          `json:"country_code" pattern:"[A-Z][A-Z]" doc:"The country code of a parking spot"`
+	City          string          `json:"city" doc:"The city the parking spot is in"`
+	State         string          `json:"state" doc:"The province the parking spot is in"`
+	StreetAddress string          `json:"street_address" doc:"The street address of the parking spot"`
+	Longitude     decimal.Decimal `json:"longitude,omitempty" readOnly:"true" doc:"The longitude of the parking spot"`
+	Latitude      decimal.Decimal `json:"latitude,omitempty" readOnly:"true" doc:"The latitude of the parking spot"`
 }
 
 type ParkingSpotFeatures struct {
