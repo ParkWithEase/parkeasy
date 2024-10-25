@@ -11,6 +11,7 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
+	"github.com/govalues/decimal"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
@@ -42,8 +43,8 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 	}
 	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
 
-	longitude := float32(spot.Location.Longitude)
-	latitude := float32(spot.Location.Latitude)
+	longitude := spot.Location.Longitude
+	latitude := spot.Location.Latitude
 
 	inserted, err := dbmodels.Parkingspots.Insert(ctx, p.db, &dbmodels.ParkingspotSetter{
 		Userid:             omit.From(userID),
@@ -108,9 +109,8 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		City:          inserted.City,
 		State:         inserted.State,
 		StreetAddress: inserted.Streetaddress,
-		State:         inserted.State,
-		Longitude:     float64(inserted.Longitude),
-		Latitude:      float64(inserted.Latitude),
+		Longitude:     inserted.Longitude,
+		Latitude:      inserted.Latitude,
 	}
 
 	features := models.ParkingSpotFeatures{
@@ -175,9 +175,8 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID, st
 		City:          spotResult.City,
 		State:         spotResult.State,
 		StreetAddress: spotResult.Streetaddress,
-		State:         spotResult.State,
-		Longitude:     float64(spotResult.Longitude),
-		Latitude:      float64(spotResult.Latitude),
+		Longitude:     spotResult.Longitude,
+		Latitude:      spotResult.Latitude,
 	}
 
 	features := models.ParkingSpotFeatures{
@@ -252,7 +251,7 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUI
 	return result.Userid, err
 }
 
-func (p *PostgresRepository) GetMany(ctx context.Context, limit int, longitude float64, latitude float64, distance int32, startDate time.Time, endDate time.Time) ([]Entry, error) {
+func (p *PostgresRepository) GetMany(ctx context.Context, limit int, longitude decimal.Decimal, latitude decimal.Decimal, distance int32, startDate time.Time, endDate time.Time) ([]Entry, error) {
 
 	centre := psql.F("ll_to_earth", psql.Arg(latitude), psql.Arg(longitude))
 	spotPosition := psql.F("ll_to_earth", dbmodels.ParkingspotColumns.Latitude, dbmodels.ParkingspotColumns.Longitude)
@@ -311,8 +310,8 @@ func formEntry(dbSpot Result, availability []models.TimeUnit) Entry {
 				City:          dbSpot.City,
 				State:         dbSpot.State,
 				StreetAddress: dbSpot.Streetaddress,
-				Longitude:     float64(dbSpot.Longitude),
-				Latitude:      float64(dbSpot.Latitude),
+				Longitude:     dbSpot.Longitude,
+				Latitude:      dbSpot.Latitude,
 			},
 			Features: models.ParkingSpotFeatures{
 				Shelter:         dbSpot.Hasshelter,

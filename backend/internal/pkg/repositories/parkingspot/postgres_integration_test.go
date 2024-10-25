@@ -9,7 +9,6 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/testutils"
-	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
 	"github.com/govalues/decimal"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,7 +19,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-var epsilon = 1e-8 // Acceptable cariance for longitude and latitude
+var epsilon, _ = decimal.NewFromFloat64(1e-5) // Acceptable cariance for longitude and latitude
 
 func TestPostgresIntegration(t *testing.T) {
 	t.Parallel()
@@ -63,11 +62,11 @@ func TestPostgresIntegration(t *testing.T) {
 	sampleTimeUnit := []models.TimeUnit{
 		{
 			StartTime: time.Date(2024, time.October, 21, 14, 30, 0, 0, time.UTC), // 2:30 PM on October 21, 2024
-			EndTime:   time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC), // 4:30 PM on October 21, 2024),
+			EndTime:   time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC),  // 4:30 PM on October 21, 2024),
 			Status:    "available",
 		},
 		{
-			StartTime: time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC), // 2:30 PM on October 21, 2024
+			StartTime: time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC),  // 2:30 PM on October 21, 2024
 			EndTime:   time.Date(2024, time.October, 21, 15, 30, 0, 0, time.UTC), // 4:30 PM on October 21, 2024),
 			Status:    "available",
 		},
@@ -79,14 +78,17 @@ func TestPostgresIntegration(t *testing.T) {
 		sampleAvailability = append(sampleAvailability, timeunit)
 	}
 
+	lat, _ := decimal.NewFromFloat64(43.07923126220703)
+	long, _ := decimal.NewFromFloat64(-79.07887268066406)
+
 	sampleLocation := models.ParkingSpotLocation{
 		PostalCode:    "L2E6T2",
 		CountryCode:   "CA",
 		City:          "Niagara Falls",
 		StreetAddress: "6650 Niagara Parkway",
 		State:         "MB",
-		Latitude:      43.07923126220703,
-		Longitude:     -79.07887268066406,
+		Latitude:      lat,
+		Longitude:     long,
 	}
 
 	sampleFeatures := models.ParkingSpotFeatures{
@@ -105,8 +107,26 @@ func TestPostgresIntegration(t *testing.T) {
 	}
 
 	// Test variables for GetMany
-	sampleUserLatitude := 43.079
-	sampleUserLongitude := -79.078
+	sampleUserLatitude, _ := decimal.NewFromFloat64(43.079)
+	sampleUserLongitude, _ := decimal.NewFromFloat64(-79.078)
+
+	sampleShortDistLatitute, _ := decimal.NewFromFloat64(49.888870)
+	sampleShortDistLongitude, _ := decimal.NewFromFloat64(-97.134490)
+
+	lat_1, _ := decimal.NewFromFloat64(43.07923126220703)
+	long_1, _ := decimal.NewFromFloat64(-79.07887268066406)
+
+	lat_2, _ := decimal.NewFromFloat64(43.07823181152344)
+	long_2, _ := decimal.NewFromFloat64(-79.07887268066406)
+
+	lat_3, _ := decimal.NewFromFloat64(43.077232360839844)
+	long_3, _ := decimal.NewFromFloat64(-79.07887268066406)
+
+	lat_4, _ := decimal.NewFromFloat64(43.07623291015625)
+	long_4, _ := decimal.NewFromFloat64(-79.07887268066406)
+
+	lat_5, _ := decimal.NewFromFloat64(43.07522964477539)
+	long_5, _ := decimal.NewFromFloat64(-79.07887268066406)
 
 	sampleLocations := []models.ParkingSpotLocation{
 		{
@@ -114,45 +134,72 @@ func TestPostgresIntegration(t *testing.T) {
 			CountryCode:   "CA",
 			City:          "Niagara Falls",
 			StreetAddress: "5 Niagara Parkway",
-			State:         "MB",
-			Latitude:      43.07923126220703,
-			Longitude:     -79.07887268066406,
+			State:         "ON",
+			Latitude:      lat_1,
+			Longitude:     long_1,
 		},
 		{
 			PostalCode:    "L2E6T2",
 			CountryCode:   "CA",
 			City:          "Niagara Falls",
 			StreetAddress: "4 Niagara Parkway",
-			State:         "MB",
-			Latitude:      43.07823181152344,
-			Longitude:     -79.07887268066406,
+			State:         "ON",
+			Latitude:      lat_2,
+			Longitude:     long_2,
 		},
 		{
 			PostalCode:    "L2E6T2",
 			CountryCode:   "CA",
 			City:          "Niagara Falls",
 			StreetAddress: "3 Niagara Parkway",
-			State:         "MB",
-			Latitude:      43.077232360839844,
-			Longitude:     -79.07887268066406,
+			State:         "ON",
+			Latitude:      lat_3,
+			Longitude:     long_3,
 		},
 		{
 			PostalCode:    "L2E6T2",
 			CountryCode:   "CA",
 			City:          "Niagara Falls",
 			StreetAddress: "2 Niagara Parkway",
-			State:         "MB",
-			Latitude:      43.07623291015625,
-			Longitude:     -79.07887268066406,
+			State:         "ON",
+			Latitude:      lat_4,
+			Longitude:     long_4,
 		},
 		{
 			PostalCode:    "L2E6T2",
 			CountryCode:   "CA",
 			City:          "Niagara Falls",
 			StreetAddress: "1 Niagara Parkway",
+			State:         "ON",
+			Latitude:      lat_5,
+			Longitude:     long_5,
+		},
+	}
+
+	lat_6, _ := decimal.NewFromFloat64(49.889900)
+	long_6, _ := decimal.NewFromFloat64(-97.135990)
+
+	lat_7, _ := decimal.NewFromFloat64(49.888850)
+	long_7, _ := decimal.NewFromFloat64(-97.141930)
+
+	sampleWinnipegLocations := []models.ParkingSpotLocation{
+		{
+			PostalCode:    "R3C1A6",
+			CountryCode:   "CA",
+			City:          "Winnipeg",
+			StreetAddress: "180 Main St",
 			State:         "MB",
-			Latitude:      43.07522964477539,
-			Longitude:     -79.07887268066406,
+			Latitude:      lat_6,
+			Longitude:     long_6,
+		},
+		{
+			PostalCode:    "R3C0N9",
+			CountryCode:   "CA",
+			City:          "Winnipeg",
+			StreetAddress: "330 York Ave",
+			State:         "MB",
+			Latitude:      lat_7,
+			Longitude:     long_7,
 		},
 	}
 
@@ -172,7 +219,13 @@ func TestPostgresIntegration(t *testing.T) {
 		assert.NotEqual(t, -1, createEntry.InternalID)
 		assert.NotEqual(t, uuid.Nil, createEntry.ParkingSpot.ID)
 		assert.Equal(t, sampleAvailability, createEntry.Availability)
-		assert.Equal(t, sampleLocation, createEntry.Location)
+		assert.Equal(t, sampleLocation.PostalCode, createEntry.Location.PostalCode)
+		assert.Equal(t, sampleLocation.CountryCode, createEntry.Location.CountryCode)
+		assert.Equal(t, sampleLocation.City, createEntry.Location.City)
+		assert.Equal(t, sampleLocation.State, createEntry.Location.State)
+		assert.Equal(t, sampleLocation.StreetAddress, createEntry.Location.StreetAddress)
+		assert.True(t, floatsAreClose(sampleLocation.Longitude, createEntry.Location.Longitude, epsilon), "Longitude not within epsilon")
+		assert.True(t, floatsAreClose(sampleLocation.Latitude, createEntry.Location.Latitude, epsilon), "Latitude not within epsilon")
 		assert.Equal(t, sampleFeatures, createEntry.Features)
 		assert.Equal(t, samplePricePerHour, createEntry.PricePerHour)
 		assert.Equal(t, userID, createEntry.OwnerID)
@@ -181,7 +234,13 @@ func TestPostgresIntegration(t *testing.T) {
 		getEntry, err := repo.GetByUUID(ctx, createEntry.ParkingSpot.ID, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
 		require.NoError(t, err)
 		assert.Equal(t, sampleAvailability, getEntry.Availability)
-		assert.Equal(t, sampleLocation, getEntry.Location)
+		assert.Equal(t, sampleLocation.PostalCode, getEntry.Location.PostalCode)
+		assert.Equal(t, sampleLocation.CountryCode, getEntry.Location.CountryCode)
+		assert.Equal(t, sampleLocation.City, getEntry.Location.City)
+		assert.Equal(t, sampleLocation.State, getEntry.Location.State)
+		assert.Equal(t, sampleLocation.StreetAddress, getEntry.Location.StreetAddress)
+		assert.True(t, floatsAreClose(sampleLocation.Longitude, getEntry.Location.Longitude, epsilon), "Longitude not within epsilon")
+		assert.True(t, floatsAreClose(sampleLocation.Latitude, getEntry.Location.Latitude, epsilon), "Latitude not within epsilon")
 		assert.Equal(t, sampleFeatures, getEntry.Features)
 		assert.Equal(t, samplePricePerHour, getEntry.PricePerHour)
 		assert.Equal(t, userID, getEntry.OwnerID)
@@ -191,19 +250,23 @@ func TestPostgresIntegration(t *testing.T) {
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, ErrTimeUnitNotFound)
 		}
-		assert.Equal(t, sampleLocation, getEntry.Location)
+		assert.Equal(t, sampleLocation.PostalCode, getEntry.Location.PostalCode)
+		assert.Equal(t, sampleLocation.CountryCode, getEntry.Location.CountryCode)
+		assert.Equal(t, sampleLocation.City, getEntry.Location.City)
+		assert.Equal(t, sampleLocation.State, getEntry.Location.State)
+		assert.Equal(t, sampleLocation.StreetAddress, getEntry.Location.StreetAddress)
+		assert.True(t, floatsAreClose(sampleLocation.Longitude, getEntry.Location.Longitude, epsilon), "Longitude not within epsilon")
+		assert.True(t, floatsAreClose(sampleLocation.Latitude, getEntry.Location.Latitude, epsilon), "Latitude not within epsilon")
 		assert.Equal(t, sampleFeatures, getEntry.Features)
 		assert.Equal(t, samplePricePerHour, getEntry.PricePerHour)
 		assert.Equal(t, userID, getEntry.OwnerID)
 		assert.Equal(t, []models.TimeUnit{}, getEntry.Availability)
-
 
 		// Testing get owner id
 		ownerID, err := repo.GetOwnerByUUID(ctx, createEntry.ParkingSpot.ID)
 		require.NoError(t, err)
 		assert.Equal(t, userID, ownerID)
 	})
-
 
 	t.Run("get non-existent", func(t *testing.T) {
 		_, err := repo.GetByUUID(ctx, uuid.Nil, time.Now(), time.Now().Add(time.Hour))
@@ -250,7 +313,7 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		// Populate data
+		//Insert close locations
 		for _, location := range sampleLocations {
 			spot := models.ParkingSpotCreationInput{
 				Location:     location,
@@ -263,24 +326,74 @@ func TestPostgresIntegration(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		t.Run("simple paginate", func(t *testing.T) {
+		//Insert winnipeg locations for testing various distances
+		for _, location := range sampleWinnipegLocations {
+			spot := models.ParkingSpotCreationInput{
+				Location:     location,
+				Features:     sampleFeatures,
+				PricePerHour: samplePricePerHour,
+				Availability: sampleAvailability,
+			}
+
+			_, err := repo.Create(ctx, userID, &spot)
+			require.NoError(t, err)
+		}
+
+		t.Run("simple get many within 500m", func(t *testing.T) {
 			t.Parallel()
 			// TODO: Update when cursor is functional
 
-			var cursor omit.Val[Cursor]
-			entries, err := repo.GetMany(ctx, 5, cursor, sampleUserLongitude, sampleUserLatitude, 500, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
+			//var cursor omit.Val[Cursor]
+			entries, err := repo.GetMany(ctx, 5, sampleUserLongitude, sampleUserLatitude, 500, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
 			require.NoError(t, err)
-			if assert.LessOrEqual(t, 1, len(entries), "expecting at least one entry") {
-				cursor = omit.From(Cursor{
-					ID: entries[len(entries)-1].InternalID,
-				})
-			}
 
 			for eidx, entry := range entries {
 				if eidx < len(sampleLocations) {
-					assert.Equal(t, sampleLocations[eidx], entry.Location)
+					assert.Equal(t, sampleLocations[eidx].PostalCode, entry.Location.PostalCode)
+					assert.Equal(t, sampleLocations[eidx].CountryCode, entry.Location.CountryCode)
+					assert.Equal(t, sampleLocations[eidx].City, entry.Location.City)
+					assert.Equal(t, sampleLocations[eidx].State, entry.Location.State)
+					assert.Equal(t, sampleLocations[eidx].StreetAddress, entry.Location.StreetAddress)
+					assert.True(t, floatsAreClose(sampleLocations[eidx].Longitude, entry.Location.Longitude, epsilon), "Longitude not within epsilon")
+					assert.True(t, floatsAreClose(sampleLocations[eidx].Latitude, entry.Location.Latitude, epsilon), "Latitude not within epsilon")
 				}
 			}
+		})
+
+		t.Run("simple get many with short distances", func(t *testing.T) {
+			t.Parallel()
+			// TODO: Update when cursor is functional
+
+			//var cursor omit.Val[Cursor]
+			entries, err := repo.GetMany(ctx, 5, sampleShortDistLongitude, sampleShortDistLatitute, 200, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
+			require.NoError(t, err)
+			require.Len(t, entries, 1)
+			assert.Equal(t, sampleWinnipegLocations[0].PostalCode, entries[0].Location.PostalCode)
+			assert.Equal(t, sampleWinnipegLocations[0].CountryCode, entries[0].Location.CountryCode)
+			assert.Equal(t, sampleWinnipegLocations[0].City, entries[0].Location.City)
+			assert.Equal(t, sampleWinnipegLocations[0].State, entries[0].Location.State)
+			assert.Equal(t, sampleWinnipegLocations[0].StreetAddress, entries[0].Location.StreetAddress)
+			assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Longitude, entries[0].Location.Longitude, epsilon), "Longitude not within epsilon")
+			assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Latitude, entries[0].Location.Latitude, epsilon), "Latitude not within epsilon")
+
+			entries, err = repo.GetMany(ctx, 5, sampleShortDistLongitude, sampleShortDistLatitute, 1000, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
+			require.NoError(t, err)
+			require.Len(t, entries, 2)
+			assert.Equal(t, sampleWinnipegLocations[0].PostalCode, entries[0].Location.PostalCode)
+			assert.Equal(t, sampleWinnipegLocations[0].CountryCode, entries[0].Location.CountryCode)
+			assert.Equal(t, sampleWinnipegLocations[0].City, entries[0].Location.City)
+			assert.Equal(t, sampleWinnipegLocations[0].State, entries[0].Location.State)
+			assert.Equal(t, sampleWinnipegLocations[0].StreetAddress, entries[0].Location.StreetAddress)
+			assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Longitude, entries[0].Location.Longitude, epsilon), "Longitude not within epsilon")
+			assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Latitude, entries[0].Location.Latitude, epsilon), "Latitude not within epsilon")
+
+			assert.Equal(t, sampleWinnipegLocations[1].PostalCode, entries[1].Location.PostalCode)
+			assert.Equal(t, sampleWinnipegLocations[1].CountryCode, entries[1].Location.CountryCode)
+			assert.Equal(t, sampleWinnipegLocations[1].City, entries[1].Location.City)
+			assert.Equal(t, sampleWinnipegLocations[1].State, entries[1].Location.State)
+			assert.Equal(t, sampleWinnipegLocations[1].StreetAddress, entries[1].Location.StreetAddress)
+			assert.True(t, floatsAreClose(sampleWinnipegLocations[1].Longitude, entries[1].Location.Longitude, epsilon), "Longitude not within epsilon")
+			assert.True(t, floatsAreClose(sampleWinnipegLocations[1].Latitude, entries[1].Location.Latitude, epsilon), "Latitude not within epsilon")
 		})
 
 		// t.Run("cursor too far", func(t *testing.T) {
@@ -342,4 +455,10 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 	})
 
+}
+
+func floatsAreClose(a decimal.Decimal, b decimal.Decimal, epsilon decimal.Decimal) bool {
+	diff, _ := a.Sub(b)
+
+	return diff.Abs().Less(epsilon)
 }
