@@ -1,1 +1,0 @@
-CREATE EXTENSION earthdistance CASCADE;
