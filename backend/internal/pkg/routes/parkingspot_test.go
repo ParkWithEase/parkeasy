@@ -37,6 +37,12 @@ func (m *mockParkingSpotService) GetByUUID(ctx context.Context, userID int64, sp
 	return args.Get(0).(models.ParkingSpot), args.Error(1)
 }
 
+// GetMany implements ParkingSpotServicer.
+func (m *mockParkingSpotService) GetMany(ctx context.Context, userID int64, location *models.ParkingSpotGetInput) ([]models.ParkingSpot, error) {
+	args := m.Called(ctx, userID, location)
+	return args.Get(0).([]models.ParkingSpot), args.Error(1)
+}
+
 func TestCreateParkingSpot(t *testing.T) {
 	t.Parallel()
 

@@ -3,6 +3,7 @@ package parkingspot
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
@@ -52,9 +53,9 @@ func (m *mockRepo) AddGetCalls() *mock.Call {
 }
 
 // Create implements parkingspot.Repository.
-func (m *mockRepo) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, parkingspot.Entry, error) {
+func (m *mockRepo) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (parkingspot.Entry, error) {
 	args := m.Called(ctx, userID, spot)
-	return args.Get(0).(int64), args.Get(1).(parkingspot.Entry), args.Error(2)
+	return args.Get(1).(parkingspot.Entry), args.Error(1)
 }
 
 // DeleteByUUID implements parkingspot.Repository.
@@ -73,6 +74,12 @@ func (m *mockRepo) GetByUUID(ctx context.Context, spotID uuid.UUID) (parkingspot
 func (m *mockRepo) GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error) {
 	args := m.Called(ctx, spotID)
 	return args.Get(0).(int64), args.Error(1)
+}
+
+// GetAvalByUUID implements parkingspot.Repository.
+func (m *mockRepo) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
+	args := m.Called(ctx, spotID)
+	return args.Get(1).([]models.TimeUnit), args.Error(1)
 }
 
 var sampleLocation = models.ParkingSpotLocation{

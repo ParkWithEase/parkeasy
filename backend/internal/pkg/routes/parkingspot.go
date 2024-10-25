@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"net/url"
-	"strconv"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/danielgtaylor/huma/v2"
@@ -20,6 +18,8 @@ type ParkingSpotServicer interface {
 	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpot, error)
 	// Get the parking spot with `spotID` if `userID` has enough permission to view the resource.
 	GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error)
+	// Get many parking spots
+	GetMany(ctx context.Context, userID int64, location *models.ParkingSpotGetInput) ([]models.ParkingSpot, error)
 	// Delete the parking spot with `spotID` if `userID` owns the resource.
 	// DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
 }
@@ -32,6 +32,10 @@ type ParkingSpotRoute struct {
 type ParkingSpotOutput struct {
 	Link []string `header:"Link" doc:"Contains details on getting the next page of resources" example:"</spots?after=gQL>; rel=\"next\""`
 	Body models.ParkingSpot
+}
+
+type ParkingSpotListOutput struct {
+	Body []models.ParkingSpot
 }
 
 var ParkingSpotTag = huma.Tag{
@@ -149,24 +153,24 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		street_address string `query:"street_address" default:"123 Main St" doc:"street address of the location"`
 		distance       int32  `query:"distance" minimum:"1" default:"250" doc:"distance in meters from location"`
 	},
-	) (*CarListOutput, error) {
+	) (*ParkingSpotListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		cars, nextCursor, err := r.service.GetMany(ctx, userID, input.Count, input.After)
+
+		location := models.ParkingSpotGetInput{
+			PostalCode:    input.postal_code,
+			CountryCode:   input.country_code,
+			City:          input.city,
+			State:         input.state,
+			StreetAddress: input.street_address,
+		}
+
+		spots, err := r.service.GetMany(ctx, userID, &location)
 		if err != nil {
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
 
-		result := CarListOutput{Body: cars}
-		if nextCursor != "" {
-			nextURL := url.URL{
-				Path: "/cars",
-				RawQuery: url.Values{
-					"count": []string{strconv.Itoa(input.Count)},
-					"after": []string{string(nextCursor)},
-				}.Encode(),
-			}
-			result.Link = append(result.Link, "<"+nextURL.String()+`>; rel="next"`)
-		}
+		result := ParkingSpotListOutput{Body: spots}
+
 		return &result, nil
 	})
 
