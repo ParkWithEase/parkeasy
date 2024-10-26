@@ -195,17 +195,42 @@ func (s *Service) GetMany(ctx context.Context, userID int64, count int, filter m
 
 	result := make([]models.ParkingSpotWithDistance, 0, len(spotEntries))
 	for _, entry := range spotEntries {
+		lat, ok := entry.Location.Latitude.Float64()
+		if !ok {
+			//FIXME: just skip the entry for now
+			continue
+		}
+
+		long, ok := entry.Location.Longitude.Float64()
+		if !ok {
+			//FIXME: just skip the entry for now
+			continue
+		}
+
 		result = append(result, models.ParkingSpotWithDistance{
-			ParkingSpot:        entry.ParkingSpot,
+			ParkingSpotOutput: models.ParkingSpotOutput{
+				Location: models.ParkingSpotOutputLocation{
+					PostalCode:    entry.Location.PostalCode,
+					CountryCode:   entry.Location.CountryCode,
+					City:          entry.Location.City,
+					State:         entry.Location.State,
+					StreetAddress: entry.Location.StreetAddress,
+					Longitude:     long,
+					Latitude:      lat,
+				},
+				Features:     entry.ParkingSpot.Features,
+				PricePerHour: entry.ParkingSpot.PricePerHour,
+				ID:           entry.ParkingSpot.ID,
+			},
 			DistanceToLocation: entry.DistanceToLocation,
 		})
 	}
 	return result, nil
 }
 
-func (s *Service) GetManyForUser(ctx context.Context, userID int64, count int) (spots []models.ParkingSpot, err error) {
+func (s *Service) GetManyForUser(ctx context.Context, userID int64, count int) (spots []models.ParkingSpotOutput, err error) {
 	if count <= 0 {
-		return []models.ParkingSpot{}, nil
+		return []models.ParkingSpotOutput{}, nil
 	}
 
 	count = min(count, MaximumCount)
@@ -218,11 +243,33 @@ func (s *Service) GetManyForUser(ctx context.Context, userID int64, count int) (
 		return nil, err
 	}
 
-	result := make([]models.ParkingSpotWithDistance, 0, len(spotEntries))
+	result := make([]models.ParkingSpotOutput, 0, len(spotEntries))
 	for _, entry := range spotEntries {
-		result = append(result, models.ParkingSpotWithDistance{
-			ParkingSpot:        entry.ParkingSpot,
-			DistanceToLocation: entry.DistanceToLocation,
+		lat, ok := entry.Location.Latitude.Float64()
+		if !ok {
+			//FIXME: just skip the entry for now
+			continue
+		}
+
+		long, ok := entry.Location.Longitude.Float64()
+		if !ok {
+			//FIXME: just skip the entry for now
+			continue
+		}
+
+		result = append(result, models.ParkingSpotOutput{
+			Location: models.ParkingSpotOutputLocation{
+				PostalCode:    entry.Location.PostalCode,
+				CountryCode:   entry.Location.CountryCode,
+				City:          entry.Location.City,
+				State:         entry.Location.State,
+				StreetAddress: entry.Location.StreetAddress,
+				Longitude:     long,
+				Latitude:      lat,
+			},
+			Features:     entry.ParkingSpot.Features,
+			PricePerHour: entry.ParkingSpot.PricePerHour,
+			ID:           entry.ParkingSpot.ID,
 		})
 	}
 	return result, nil
