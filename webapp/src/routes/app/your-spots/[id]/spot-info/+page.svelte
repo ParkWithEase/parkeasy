@@ -37,6 +37,7 @@
     function toNextWeek() {
         currentMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
         nextMonday = getDateWithDayOffset(nextMonday, DAY_IN_A_WEEK);
+        console.log(time_slot_edit_records);
         availability_table = getWeekAvailabilityTable(
             today,
             currentMonday,
@@ -113,9 +114,9 @@
             });
 
             if (match_record_index !== -1) {
-                records = [
-                    ...records.slice(0, match_record_index),
-                    ...records.slice(match_record_index + 1)
+                time_slot_edit_records = [
+                    ...time_slot_edit_records.slice(0, match_record_index),
+                    ...time_slot_edit_records.slice(match_record_index + 1)
                 ];
             } else {
                 time_slot_edit_records = [...records, new_time_slot];
