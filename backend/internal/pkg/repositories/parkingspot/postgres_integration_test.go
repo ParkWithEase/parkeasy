@@ -9,6 +9,7 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/testutils"
+	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
 	"github.com/govalues/decimal"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -62,12 +63,12 @@ func TestPostgresIntegration(t *testing.T) {
 	sampleTimeUnit := []models.TimeUnit{
 		{
 			StartTime: time.Date(2024, time.October, 21, 14, 30, 0, 0, time.UTC), // 2:30 PM on October 21, 2024
-			EndTime:   time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC),  // 4:30 PM on October 21, 2024),
+			EndTime:   time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 21, 2024),
 			Status:    "available",
 		},
 		{
-			StartTime: time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC),  // 2:30 PM on October 21, 2024
-			EndTime:   time.Date(2024, time.October, 21, 15, 30, 0, 0, time.UTC), // 4:30 PM on October 21, 2024),
+			StartTime: time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 21, 2024
+			EndTime:   time.Date(2024, time.October, 21, 15, 30, 0, 0, time.UTC), // 3:30 PM on October 21, 2024),
 			Status:    "available",
 		},
 	}
@@ -218,49 +219,27 @@ func TestPostgresIntegration(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEqual(t, -1, createEntry.InternalID)
 		assert.NotEqual(t, uuid.Nil, createEntry.ParkingSpot.ID)
+		sameEntry(t, Entry{
+			ParkingSpot: models.ParkingSpot{
+				Location:     sampleLocation,
+				Features:     sampleFeatures,
+				PricePerHour: samplePricePerHour,
+			},
+			OwnerID: userID,
+		}, createEntry, "created entry not the same")
 		assert.Equal(t, sampleAvailability, createEntry.Availability)
-		assert.Equal(t, sampleLocation.PostalCode, createEntry.Location.PostalCode)
-		assert.Equal(t, sampleLocation.CountryCode, createEntry.Location.CountryCode)
-		assert.Equal(t, sampleLocation.City, createEntry.Location.City)
-		assert.Equal(t, sampleLocation.State, createEntry.Location.State)
-		assert.Equal(t, sampleLocation.StreetAddress, createEntry.Location.StreetAddress)
-		assert.True(t, floatsAreClose(sampleLocation.Longitude, createEntry.Location.Longitude, epsilon), "Longitude not within epsilon")
-		assert.True(t, floatsAreClose(sampleLocation.Latitude, createEntry.Location.Latitude, epsilon), "Latitude not within epsilon")
-		assert.Equal(t, sampleFeatures, createEntry.Features)
-		assert.Equal(t, samplePricePerHour, createEntry.PricePerHour)
-		assert.Equal(t, userID, createEntry.OwnerID)
 
 		// Testing get spot
-		getEntry, err := repo.GetByUUID(ctx, createEntry.ParkingSpot.ID, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
+		getEntry, err := repo.GetByUUID(ctx, createEntry.ParkingSpot.ID)
 		require.NoError(t, err)
-		assert.Equal(t, sampleAvailability, getEntry.Availability)
-		assert.Equal(t, sampleLocation.PostalCode, getEntry.Location.PostalCode)
-		assert.Equal(t, sampleLocation.CountryCode, getEntry.Location.CountryCode)
-		assert.Equal(t, sampleLocation.City, getEntry.Location.City)
-		assert.Equal(t, sampleLocation.State, getEntry.Location.State)
-		assert.Equal(t, sampleLocation.StreetAddress, getEntry.Location.StreetAddress)
-		assert.True(t, floatsAreClose(sampleLocation.Longitude, getEntry.Location.Longitude, epsilon), "Longitude not within epsilon")
-		assert.True(t, floatsAreClose(sampleLocation.Latitude, getEntry.Location.Latitude, epsilon), "Latitude not within epsilon")
-		assert.Equal(t, sampleFeatures, getEntry.Features)
-		assert.Equal(t, samplePricePerHour, getEntry.PricePerHour)
-		assert.Equal(t, userID, getEntry.OwnerID)
-
-		// Testing get existent with incorrect start and end dates
-		getEntry, err = repo.GetByUUID(ctx, createEntry.ParkingSpot.ID, sampleTimeUnit[1].EndTime, sampleTimeUnit[1].EndTime.AddDate(0, 0, 1))
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, ErrTimeUnitNotFound)
-		}
-		assert.Equal(t, sampleLocation.PostalCode, getEntry.Location.PostalCode)
-		assert.Equal(t, sampleLocation.CountryCode, getEntry.Location.CountryCode)
-		assert.Equal(t, sampleLocation.City, getEntry.Location.City)
-		assert.Equal(t, sampleLocation.State, getEntry.Location.State)
-		assert.Equal(t, sampleLocation.StreetAddress, getEntry.Location.StreetAddress)
-		assert.True(t, floatsAreClose(sampleLocation.Longitude, getEntry.Location.Longitude, epsilon), "Longitude not within epsilon")
-		assert.True(t, floatsAreClose(sampleLocation.Latitude, getEntry.Location.Latitude, epsilon), "Latitude not within epsilon")
-		assert.Equal(t, sampleFeatures, getEntry.Features)
-		assert.Equal(t, samplePricePerHour, getEntry.PricePerHour)
-		assert.Equal(t, userID, getEntry.OwnerID)
-		assert.Equal(t, []models.TimeUnit{}, getEntry.Availability)
+		sameEntry(t, Entry{
+			ParkingSpot: models.ParkingSpot{
+				Location:     sampleLocation,
+				Features:     sampleFeatures,
+				PricePerHour: samplePricePerHour,
+			},
+			OwnerID: userID,
+		}, getEntry, "entry retirieved not the same")
 
 		// Testing get owner id
 		ownerID, err := repo.GetOwnerByUUID(ctx, createEntry.ParkingSpot.ID)
@@ -269,7 +248,7 @@ func TestPostgresIntegration(t *testing.T) {
 	})
 
 	t.Run("get non-existent", func(t *testing.T) {
-		_, err := repo.GetByUUID(ctx, uuid.Nil, time.Now(), time.Now().Add(time.Hour))
+		_, err := repo.GetByUUID(ctx, uuid.Nil)
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, ErrNotFound)
 		}
@@ -344,18 +323,29 @@ func TestPostgresIntegration(t *testing.T) {
 			// TODO: Update when cursor is functional
 
 			//var cursor omit.Val[Cursor]
-			entries, err := repo.GetMany(ctx, 5, sampleUserLongitude, sampleUserLatitude, 500, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
+			filter := Filter{
+				Location: omit.From(FilterLocation{
+					Longitude: sampleUserLongitude,
+					Latitude:  sampleUserLatitude,
+					Radius:    500,
+				}),
+			}
+			entries, err := repo.GetMany(ctx, 5, filter)
 			require.NoError(t, err)
 
 			for eidx, entry := range entries {
 				if eidx < len(sampleLocations) {
-					assert.Equal(t, sampleLocations[eidx].PostalCode, entry.Location.PostalCode)
-					assert.Equal(t, sampleLocations[eidx].CountryCode, entry.Location.CountryCode)
-					assert.Equal(t, sampleLocations[eidx].City, entry.Location.City)
-					assert.Equal(t, sampleLocations[eidx].State, entry.Location.State)
-					assert.Equal(t, sampleLocations[eidx].StreetAddress, entry.Location.StreetAddress)
-					assert.True(t, floatsAreClose(sampleLocations[eidx].Longitude, entry.Location.Longitude, epsilon), "Longitude not within epsilon")
-					assert.True(t, floatsAreClose(sampleLocations[eidx].Latitude, entry.Location.Latitude, epsilon), "Latitude not within epsilon")
+
+					currEntry := Entry{
+						ParkingSpot: models.ParkingSpot{
+							Location:     sampleLocations[eidx],
+							Features:     sampleFeatures,
+							PricePerHour: samplePricePerHour,
+						},
+						OwnerID: userID,
+					}
+
+					sameEntry(t, currEntry, entry.Entry, "get many entries do not match")
 				}
 			}
 		})
@@ -365,36 +355,47 @@ func TestPostgresIntegration(t *testing.T) {
 			// TODO: Update when cursor is functional
 
 			//var cursor omit.Val[Cursor]
-			entries, err := repo.GetMany(ctx, 5, sampleShortDistLongitude, sampleShortDistLatitute, 200, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
+			filter := Filter{
+				Location: omit.From(FilterLocation{
+					Longitude: sampleShortDistLongitude,
+					Latitude:  sampleShortDistLatitute,
+					Radius:    200,
+				}),
+			}
+			entries, err := repo.GetMany(ctx, 5, filter)
 			require.NoError(t, err)
 			require.Len(t, entries, 1)
-			assert.Equal(t, sampleWinnipegLocations[0].PostalCode, entries[0].Location.PostalCode)
-			assert.Equal(t, sampleWinnipegLocations[0].CountryCode, entries[0].Location.CountryCode)
-			assert.Equal(t, sampleWinnipegLocations[0].City, entries[0].Location.City)
-			assert.Equal(t, sampleWinnipegLocations[0].State, entries[0].Location.State)
-			assert.Equal(t, sampleWinnipegLocations[0].StreetAddress, entries[0].Location.StreetAddress)
-			assert.InEpsilon(t, sampleWinnipegLocations[0].Longitude.Float64())
-			assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Longitude, entries[0].Location.Longitude, epsilon), "Longitude not within epsilon")
-			assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Latitude, entries[0].Location.Latitude, epsilon), "Latitude not within epsilon")
 
-			entries, err = repo.GetMany(ctx, 5, sampleShortDistLongitude, sampleShortDistLatitute, 1000, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
+			entry := Entry{
+				ParkingSpot: models.ParkingSpot{
+					Location:     sampleWinnipegLocations[0],
+					Features:     sampleFeatures,
+					PricePerHour: samplePricePerHour,
+				},
+				OwnerID: userID,
+			}
+			sameEntry(t, entry, entries[0].Entry, "get many entries for short distances do not match")
+
+			filter = Filter{
+				Location: omit.From(FilterLocation{
+					Longitude: sampleShortDistLongitude,
+					Latitude:  sampleShortDistLatitute,
+					Radius:    1000,
+				}),
+			}
+			entry_1 := Entry{
+				ParkingSpot: models.ParkingSpot{
+					Location:     sampleWinnipegLocations[1],
+					Features:     sampleFeatures,
+					PricePerHour: samplePricePerHour,
+				},
+				OwnerID: userID,
+			}
+			entries, err = repo.GetMany(ctx, 5, filter)
 			require.NoError(t, err)
 			require.Len(t, entries, 2)
-			assert.Equal(t, sampleWinnipegLocations[0].PostalCode, entries[0].Location.PostalCode)
-			assert.Equal(t, sampleWinnipegLocations[0].CountryCode, entries[0].Location.CountryCode)
-			assert.Equal(t, sampleWinnipegLocations[0].City, entries[0].Location.City)
-			assert.Equal(t, sampleWinnipegLocations[0].State, entries[0].Location.State)
-			assert.Equal(t, sampleWinnipegLocations[0].StreetAddress, entries[0].Location.StreetAddress)
-			assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Longitude, entries[0].Location.Longitude, epsilon), "Longitude not within epsilon")
-			assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Latitude, entries[0].Location.Latitude, epsilon), "Latitude not within epsilon")
-
-			assert.Equal(t, sampleWinnipegLocations[1].PostalCode, entries[1].Location.PostalCode)
-			assert.Equal(t, sampleWinnipegLocations[1].CountryCode, entries[1].Location.CountryCode)
-			assert.Equal(t, sampleWinnipegLocations[1].City, entries[1].Location.City)
-			assert.Equal(t, sampleWinnipegLocations[1].State, entries[1].Location.State)
-			assert.Equal(t, sampleWinnipegLocations[1].StreetAddress, entries[1].Location.StreetAddress)
-			assert.True(t, floatsAreClose(sampleWinnipegLocations[1].Longitude, entries[1].Location.Longitude, epsilon), "Longitude not within epsilon")
-			assert.True(t, floatsAreClose(sampleWinnipegLocations[1].Latitude, entries[1].Location.Latitude, epsilon), "Latitude not within epsilon")
+			sameEntry(t, entry, entries[0].Entry, "get many entries for short distances do not match")
+			sameEntry(t, entry_1, entries[1].Entry, "get many entries for short distances do not match")
 		})
 
 		// t.Run("cursor too far", func(t *testing.T) {
@@ -458,21 +459,28 @@ func TestPostgresIntegration(t *testing.T) {
 
 }
 
-func floatsAreClose(t *testing.T, a decimal.Decimal, b decimal.Decimal, epsilon decimal.Decimal) bool {
-	diff, _ := a.Sub(b)
-
-	return diff.Abs().Less(epsilon)
-}
-
 func sameEntry(t *testing.T, expected, actual Entry, msg string) {
 	t.Helper()
+	exp_long, err := expected.Location.Longitude.Float64()
+	assert.True(t, err)
 
-	assert.Equal(t, sampleWinnipegLocations[0].PostalCode, entries[0].Location.PostalCode)
-	assert.Equal(t, sampleWinnipegLocations[0].CountryCode, entries[0].Location.CountryCode)
-	assert.Equal(t, sampleWinnipegLocations[0].City, entries[0].Location.City)
-	assert.Equal(t, sampleWinnipegLocations[0].State, entries[0].Location.State)
-	assert.Equal(t, sampleWinnipegLocations[0].StreetAddress, entries[0].Location.StreetAddress)
-	assert.InEpsilon(t, sampleWinnipegLocations[0].Longitude.Float64())
-	assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Longitude, entries[0].Location.Longitude, epsilon), "Longitude not within epsilon")
-	assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Latitude, entries[0].Location.Latitude, epsilon), "Latitude not within epsilon")
+	exp_lat, err := expected.Location.Latitude.Float64()
+	assert.True(t, err)
+
+	act_long, err := actual.Location.Longitude.Float64()
+	assert.True(t, err)
+
+	act_lat, err := actual.Location.Latitude.Float64()
+	assert.True(t, err)
+
+	assert.Equal(t, expected.Location.PostalCode, actual.Location.PostalCode, msg)
+	assert.Equal(t, expected.Location.CountryCode, actual.Location.CountryCode, msg)
+	assert.Equal(t, expected.Location.City, actual.Location.City, msg)
+	assert.Equal(t, expected.Location.State, actual.Location.State, msg)
+	assert.Equal(t, expected.Location.StreetAddress, actual.Location.StreetAddress, msg)
+	assert.InEpsilon(t, exp_long, act_long, epsilon, msg)
+	assert.InEpsilon(t, exp_lat, act_lat, epsilon, msg)
+	assert.Equal(t, expected.Features, actual.Features, msg)
+	assert.Equal(t, expected.PricePerHour, actual.PricePerHour, msg)
+	assert.Equal(t, expected.OwnerID, actual.OwnerID, msg)
 }
