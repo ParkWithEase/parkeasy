@@ -74,6 +74,13 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 		return 0, models.ParkingSpot{}, models.ErrInvalidStreetAddress
 	}
 
+	// All availability units must be 30 minutes
+	for _, unit := range spot.Availability {
+		if unit.EndTime != unit.StartTime.Add(30*time.Minute) {
+			return 0, models.ParkingSpot{}, models.ErrInvalidTimeUnit
+		}
+	}
+
 	insertSpot := *spot
 	gcr, err := s.geocoder.Geocode(geocoding.Address{
 		Street:     spot.Location.StreetAddress,

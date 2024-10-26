@@ -20,6 +20,7 @@ var (
 	ErrTimeUnitDuplicate    = CodeDuplicate.WithMsg("time slot already exists")
 	ErrInvalidTimeWindow    = CodeInvalidTimeWindow.WithMsg("the specified start and/or end dates are invalid")
 	ErrInvalidAddress       = CodeInvalidAddress.WithMsg("the specified address is invalid")
+	ErrInvalidTimeUnit      = CodeInvalidTimeUnit.WithMsg("passed time unit is not valid, start and end time must be exactly 30 min apart")
 )
 
 type ParkingSpotLocation struct {

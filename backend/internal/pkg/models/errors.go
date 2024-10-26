@@ -22,7 +22,8 @@ var (
 	CodeNoProfile            = NewUserErrorCode("no-profile", "2024-10-13")
 	CodeUnhealthy            = NewUserErrorCode("unhealthy", "2024-10-14")
 	CodeInvalidTimeWindow    = NewUserErrorCode("invalid-time-window", "2024-10-21")
-	CodeInvalidAddress       = NewUserErrorCode("invalid address", "2024-10-25")
+	CodeInvalidAddress       = NewUserErrorCode("invalid-address", "2024-10-25")
+	CodeInvalidTimeUnit      = NewUserErrorCode("invalid-time-slot", "2024-10-26")
 )
 
 // Error code for clients.
