@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbtype"
 	"github.com/google/uuid"
 	"github.com/govalues/decimal"
 )
@@ -22,3 +23,9 @@ var _ sql.Scanner = (*decimal.Decimal)(nil)
 
 // Make sure the type decimal.Decimal satisfies database/sql/driver.Valuer
 var _ driver.Valuer = *new(decimal.Decimal)
+
+// Make sure the type dbtype.Tstzrange satisfies database/sql.Scanner
+var _ sql.Scanner = (*dbtype.Tstzrange)(nil)
+
+// Make sure the type dbtype.Tstzrange satisfies database/sql/driver.Valuer
+var _ driver.Valuer = *new(dbtype.Tstzrange)

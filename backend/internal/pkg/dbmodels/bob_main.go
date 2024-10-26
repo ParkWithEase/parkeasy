@@ -90,11 +90,9 @@ var ColumnNames = struct {
 		Expiry: "expiry",
 	},
 	Timeunits: timeunitColumnNames{
-		Starttime:       "starttime",
-		Endtime:         "endtime",
-		Parkingspotuuid: "parkingspotuuid",
-		Bookingid:       "bookingid",
-		Status:          "status",
+		Timerange:     "timerange",
+		Parkingspotid: "parkingspotid",
+		Bookingid:     "bookingid",
 	},
 	Users: userColumnNames{
 		Userid:     "userid",

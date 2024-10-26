@@ -58,8 +58,8 @@ type ParkingspotsStmt = bob.QueryStmt[*Parkingspot, ParkingspotSlice]
 
 // parkingspotR is where relationships are stored.
 type parkingspotR struct {
-	UseridUser               *User         // parkingspot.parkingspot_userid_fkey
-	ParkingspotuuidTimeunits TimeunitSlice // timeunit.timeunit_parkingspotuuid_fkey
+	UseridUser             *User         // parkingspot.parkingspot_userid_fkey
+	ParkingspotidTimeunits TimeunitSlice // timeunit.timeunit_parkingspotid_fkey
 }
 
 // ParkingspotSetter is used for insert/upsert/update operations
@@ -491,9 +491,9 @@ func buildParkingspotWhere[Q psql.Filterable](cols parkingspotColumns) parkingsp
 }
 
 type parkingspotJoins[Q dialect.Joinable] struct {
-	typ                      string
-	UseridUser               func(context.Context) modAs[Q, userColumns]
-	ParkingspotuuidTimeunits func(context.Context) modAs[Q, timeunitColumns]
+	typ                    string
+	UseridUser             func(context.Context) modAs[Q, userColumns]
+	ParkingspotidTimeunits func(context.Context) modAs[Q, timeunitColumns]
 }
 
 func (j parkingspotJoins[Q]) aliasedAs(alias string) parkingspotJoins[Q] {
@@ -502,9 +502,9 @@ func (j parkingspotJoins[Q]) aliasedAs(alias string) parkingspotJoins[Q] {
 
 func buildParkingspotJoins[Q dialect.Joinable](cols parkingspotColumns, typ string) parkingspotJoins[Q] {
 	return parkingspotJoins[Q]{
-		typ:                      typ,
-		UseridUser:               parkingspotsJoinUseridUser[Q](cols, typ),
-		ParkingspotuuidTimeunits: parkingspotsJoinParkingspotuuidTimeunits[Q](cols, typ),
+		typ:                    typ,
+		UseridUser:             parkingspotsJoinUseridUser[Q](cols, typ),
+		ParkingspotidTimeunits: parkingspotsJoinParkingspotidTimeunits[Q](cols, typ),
 	}
 }
 
@@ -622,7 +622,7 @@ func parkingspotsJoinUseridUser[Q dialect.Joinable](from parkingspotColumns, typ
 	}
 }
 
-func parkingspotsJoinParkingspotuuidTimeunits[Q dialect.Joinable](from parkingspotColumns, typ string) func(context.Context) modAs[Q, timeunitColumns] {
+func parkingspotsJoinParkingspotidTimeunits[Q dialect.Joinable](from parkingspotColumns, typ string) func(context.Context) modAs[Q, timeunitColumns] {
 	return func(ctx context.Context) modAs[Q, timeunitColumns] {
 		return modAs[Q, timeunitColumns]{
 			c: TimeunitColumns,
@@ -631,7 +631,7 @@ func parkingspotsJoinParkingspotuuidTimeunits[Q dialect.Joinable](from parkingsp
 
 				{
 					mods = append(mods, dialect.Join[Q](typ, Timeunits.Name(ctx).As(to.Alias())).On(
-						to.Parkingspotuuid.EQ(from.Parkingspotuuid),
+						to.Parkingspotid.EQ(from.Parkingspotid),
 					))
 				}
 
@@ -659,21 +659,21 @@ func (os ParkingspotSlice) UseridUser(ctx context.Context, exec bob.Executor, mo
 	)...)
 }
 
-// ParkingspotuuidTimeunits starts a query for related objects on timeunit
-func (o *Parkingspot) ParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
+// ParkingspotidTimeunits starts a query for related objects on timeunit
+func (o *Parkingspot) ParkingspotidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
 	return Timeunits.Query(ctx, exec, append(mods,
-		sm.Where(TimeunitColumns.Parkingspotuuid.EQ(psql.Arg(o.Parkingspotuuid))),
+		sm.Where(TimeunitColumns.Parkingspotid.EQ(psql.Arg(o.Parkingspotid))),
 	)...)
 }
 
-func (os ParkingspotSlice) ParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
+func (os ParkingspotSlice) ParkingspotidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
-		PKArgs[i] = psql.ArgGroup(o.Parkingspotuuid)
+		PKArgs[i] = psql.ArgGroup(o.Parkingspotid)
 	}
 
 	return Timeunits.Query(ctx, exec, append(mods,
-		sm.Where(psql.Group(TimeunitColumns.Parkingspotuuid).In(PKArgs...)),
+		sm.Where(psql.Group(TimeunitColumns.Parkingspotid).In(PKArgs...)),
 	)...)
 }
 
@@ -695,17 +695,17 @@ func (o *Parkingspot) Preload(name string, retrieved any) error {
 			rel.R.UseridParkingspots = ParkingspotSlice{o}
 		}
 		return nil
-	case "ParkingspotuuidTimeunits":
+	case "ParkingspotidTimeunits":
 		rels, ok := retrieved.(TimeunitSlice)
 		if !ok {
 			return fmt.Errorf("parkingspot cannot load %T as %q", retrieved, name)
 		}
 
-		o.R.ParkingspotuuidTimeunits = rels
+		o.R.ParkingspotidTimeunits = rels
 
 		for _, rel := range rels {
 			if rel != nil {
-				rel.R.ParkingspotuuidParkingspot = o
+				rel.R.ParkingspotidParkingspot = o
 			}
 		}
 		return nil
@@ -802,16 +802,16 @@ func (os ParkingspotSlice) LoadParkingspotUseridUser(ctx context.Context, exec b
 	return nil
 }
 
-func ThenLoadParkingspotParkingspotuuidTimeunits(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
+func ThenLoadParkingspotParkingspotidTimeunits(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
 	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
 		loader, isLoader := retrieved.(interface {
-			LoadParkingspotParkingspotuuidTimeunits(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+			LoadParkingspotParkingspotidTimeunits(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 		})
 		if !isLoader {
-			return fmt.Errorf("object %T cannot load ParkingspotParkingspotuuidTimeunits", retrieved)
+			return fmt.Errorf("object %T cannot load ParkingspotParkingspotidTimeunits", retrieved)
 		}
 
-		err := loader.LoadParkingspotParkingspotuuidTimeunits(ctx, exec, queryMods...)
+		err := loader.LoadParkingspotParkingspotidTimeunits(ctx, exec, queryMods...)
 
 		// Don't cause an issue due to missing relationships
 		if errors.Is(err, sql.ErrNoRows) {
@@ -822,52 +822,52 @@ func ThenLoadParkingspotParkingspotuuidTimeunits(queryMods ...bob.Mod[*dialect.S
 	})
 }
 
-// LoadParkingspotParkingspotuuidTimeunits loads the parkingspot's ParkingspotuuidTimeunits into the .R struct
-func (o *Parkingspot) LoadParkingspotParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+// LoadParkingspotParkingspotidTimeunits loads the parkingspot's ParkingspotidTimeunits into the .R struct
+func (o *Parkingspot) LoadParkingspotParkingspotidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
 	if o == nil {
 		return nil
 	}
 
 	// Reset the relationship
-	o.R.ParkingspotuuidTimeunits = nil
+	o.R.ParkingspotidTimeunits = nil
 
-	related, err := o.ParkingspotuuidTimeunits(ctx, exec, mods...).All()
+	related, err := o.ParkingspotidTimeunits(ctx, exec, mods...).All()
 	if err != nil {
 		return err
 	}
 
 	for _, rel := range related {
-		rel.R.ParkingspotuuidParkingspot = o
+		rel.R.ParkingspotidParkingspot = o
 	}
 
-	o.R.ParkingspotuuidTimeunits = related
+	o.R.ParkingspotidTimeunits = related
 	return nil
 }
 
-// LoadParkingspotParkingspotuuidTimeunits loads the parkingspot's ParkingspotuuidTimeunits into the .R struct
-func (os ParkingspotSlice) LoadParkingspotParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+// LoadParkingspotParkingspotidTimeunits loads the parkingspot's ParkingspotidTimeunits into the .R struct
+func (os ParkingspotSlice) LoadParkingspotParkingspotidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
 	if len(os) == 0 {
 		return nil
 	}
 
-	timeunits, err := os.ParkingspotuuidTimeunits(ctx, exec, mods...).All()
+	timeunits, err := os.ParkingspotidTimeunits(ctx, exec, mods...).All()
 	if err != nil {
 		return err
 	}
 
 	for _, o := range os {
-		o.R.ParkingspotuuidTimeunits = nil
+		o.R.ParkingspotidTimeunits = nil
 	}
 
 	for _, o := range os {
 		for _, rel := range timeunits {
-			if o.Parkingspotuuid != rel.Parkingspotuuid {
+			if o.Parkingspotid != rel.Parkingspotid {
 				continue
 			}
 
-			rel.R.ParkingspotuuidParkingspot = o
+			rel.R.ParkingspotidParkingspot = o
 
-			o.R.ParkingspotuuidTimeunits = append(o.R.ParkingspotuuidTimeunits, rel)
+			o.R.ParkingspotidTimeunits = append(o.R.ParkingspotidTimeunits, rel)
 		}
 	}
 
@@ -920,51 +920,51 @@ func (parkingspot0 *Parkingspot) AttachUseridUser(ctx context.Context, exec bob.
 	return nil
 }
 
-func insertParkingspotParkingspotuuidTimeunits0(ctx context.Context, exec bob.Executor, timeunits1 []*TimeunitSetter, parkingspot0 *Parkingspot) (TimeunitSlice, error) {
+func insertParkingspotParkingspotidTimeunits0(ctx context.Context, exec bob.Executor, timeunits1 []*TimeunitSetter, parkingspot0 *Parkingspot) (TimeunitSlice, error) {
 	for i := range timeunits1 {
-		timeunits1[i].Parkingspotuuid = omit.From(parkingspot0.Parkingspotuuid)
+		timeunits1[i].Parkingspotid = omit.From(parkingspot0.Parkingspotid)
 	}
 
 	ret, err := Timeunits.InsertMany(ctx, exec, timeunits1...)
 	if err != nil {
-		return ret, fmt.Errorf("insertParkingspotParkingspotuuidTimeunits0: %w", err)
+		return ret, fmt.Errorf("insertParkingspotParkingspotidTimeunits0: %w", err)
 	}
 
 	return ret, nil
 }
 
-func attachParkingspotParkingspotuuidTimeunits0(ctx context.Context, exec bob.Executor, count int, timeunits1 TimeunitSlice, parkingspot0 *Parkingspot) (TimeunitSlice, error) {
+func attachParkingspotParkingspotidTimeunits0(ctx context.Context, exec bob.Executor, count int, timeunits1 TimeunitSlice, parkingspot0 *Parkingspot) (TimeunitSlice, error) {
 	setter := &TimeunitSetter{
-		Parkingspotuuid: omit.From(parkingspot0.Parkingspotuuid),
+		Parkingspotid: omit.From(parkingspot0.Parkingspotid),
 	}
 
 	err := Timeunits.Update(ctx, exec, setter, timeunits1...)
 	if err != nil {
-		return nil, fmt.Errorf("attachParkingspotParkingspotuuidTimeunits0: %w", err)
+		return nil, fmt.Errorf("attachParkingspotParkingspotidTimeunits0: %w", err)
 	}
 
 	return timeunits1, nil
 }
 
-func (parkingspot0 *Parkingspot) InsertParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, related ...*TimeunitSetter) error {
+func (parkingspot0 *Parkingspot) InsertParkingspotidTimeunits(ctx context.Context, exec bob.Executor, related ...*TimeunitSetter) error {
 	if len(related) == 0 {
 		return nil
 	}
 
-	timeunits1, err := insertParkingspotParkingspotuuidTimeunits0(ctx, exec, related, parkingspot0)
+	timeunits1, err := insertParkingspotParkingspotidTimeunits0(ctx, exec, related, parkingspot0)
 	if err != nil {
 		return err
 	}
 
-	parkingspot0.R.ParkingspotuuidTimeunits = append(parkingspot0.R.ParkingspotuuidTimeunits, timeunits1...)
+	parkingspot0.R.ParkingspotidTimeunits = append(parkingspot0.R.ParkingspotidTimeunits, timeunits1...)
 
 	for _, rel := range timeunits1 {
-		rel.R.ParkingspotuuidParkingspot = parkingspot0
+		rel.R.ParkingspotidParkingspot = parkingspot0
 	}
 	return nil
 }
 
-func (parkingspot0 *Parkingspot) AttachParkingspotuuidTimeunits(ctx context.Context, exec bob.Executor, related ...*Timeunit) error {
+func (parkingspot0 *Parkingspot) AttachParkingspotidTimeunits(ctx context.Context, exec bob.Executor, related ...*Timeunit) error {
 	if len(related) == 0 {
 		return nil
 	}
@@ -972,15 +972,15 @@ func (parkingspot0 *Parkingspot) AttachParkingspotuuidTimeunits(ctx context.Cont
 	var err error
 	timeunits1 := TimeunitSlice(related)
 
-	_, err = attachParkingspotParkingspotuuidTimeunits0(ctx, exec, len(related), timeunits1, parkingspot0)
+	_, err = attachParkingspotParkingspotidTimeunits0(ctx, exec, len(related), timeunits1, parkingspot0)
 	if err != nil {
 		return err
 	}
 
-	parkingspot0.R.ParkingspotuuidTimeunits = append(parkingspot0.R.ParkingspotuuidTimeunits, timeunits1...)
+	parkingspot0.R.ParkingspotidTimeunits = append(parkingspot0.R.ParkingspotidTimeunits, timeunits1...)
 
 	for _, rel := range related {
-		rel.R.ParkingspotuuidParkingspot = parkingspot0
+		rel.R.ParkingspotidParkingspot = parkingspot0
 	}
 
 	return nil
