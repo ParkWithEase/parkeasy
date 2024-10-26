@@ -3,12 +3,13 @@
     import {
         CREATE_WITH_EMPTY_AVAILABILITY_TABLE_ERROR,
         DAY_IN_A_WEEK,
-        ERROR_MESSAGE_TIME_OUT
+        ERROR_MESSAGE_TIME_OUT,
+        WAIT_TIME_BEFORE_AUTO_COMPLETE
     } from '$lib/constants';
     import { TimeSlotStatus } from '$lib/enum/timeslot-status';
     import { convertDateToUTC, getDateWithDayOffset, getMonday } from '$lib/utils/datetime-util';
     import { getWeekAvailabilityTable } from '$lib/utils/time-table-util';
-    import { redirect } from '@sveltejs/kit';
+
     import {
         Checkbox,
         Form,
@@ -119,6 +120,12 @@
         console.log('Submit everything and go to the other page after the request is done');
     }
 
+    let autoCompleteTimer: NodeJS.Timeout;
+    function getAutoCompleteAddress() {
+        clearTimeout(autoCompleteTimer);
+        autoCompleteTimer = setTimeout(() => console.log('fetch'), WAIT_TIME_BEFORE_AUTO_COMPLETE);
+    }
+
     function handleEdit(event: Event) {
         if (event.detail.status == TimeSlotStatus.PASTDUE || currentIndex == 2) {
             return;
@@ -190,6 +197,7 @@
             <p class="spot-form-header">Location and Utilities</p>
             <Form on:submit={handleSubmitLocation}>
                 <TextInput
+                    on:keyup={getAutoCompleteAddress}
                     required
                     labelText="Street address"
                     name="street-address"
