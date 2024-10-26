@@ -1,3 +1,5 @@
+import { DAY_IN_A_WEEK } from "$lib/constants";
+
 //Return the monday of the week corresponding to the input date
 export function getMonday(d: Date) {
     const this_week_monday = new Date(d);
@@ -17,3 +19,5 @@ export function getDateWithDayOffset(d: Date, offset: number) {
     result.setUTCDate(result.getUTCDate() + offset);
     return result;
 }
+
+

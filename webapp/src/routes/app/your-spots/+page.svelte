@@ -6,7 +6,6 @@
     import SpotAddModal from '$lib/components/spot-component/spot-add-modal.svelte';
 
     let isAddModalOpen: boolean;
-    console.log();
     export let data: PageData;
 
     function handleSubmit(event: Event) {

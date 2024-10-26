@@ -8,14 +8,13 @@
     import { TimeSlotStatus } from '$lib/enum/timeslot-status';
     import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
     import { getMonday, getDateWithDayOffset } from '$lib/utils/datetime-util';
+    import { getWeekAvailabilityTable } from '$lib/utils/time-table-util';
 
     export let data: PageData;
     let is_edit_modal_open: boolean;
     let spot = data.spot;
 
-    let availability_table: TimeSlotStatus[][] = Array.from({ length: TOTAL_SEGMENTS_NUMBER }, () =>
-        Array(DAY_IN_A_WEEK).fill(0)
-    );
+    let availability_table: TimeSlotStatus[][];
 
     //reminder to change these to now()
     let today: Date;
@@ -25,85 +24,36 @@
     //This array contain all edit history
     let time_slot_edit_records = [];
 
-    //These array contain exactly 7 days of data we want to display
-    let time_slots_display = [];
-    let time_slot_edit_display = [];
-
     today = new Date(Date.UTC(2024, 9, 15, 3, 24, 0));
     currentMonday = getMonday(today);
     nextMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
-    time_slots_display = extractRelevantTimeSlot(data.time_slots, currentMonday, nextMonday);
-    updateTimeTable();
-
-    function extractRelevantTimeSlot(full_time_slot: [], startDate: Date, endDate: Date) {
-        let relevant_time_slots = [];
-        full_time_slot?.forEach((slot) => {
-            if (slot.date >= startDate && slot.date < endDate) {
-                relevant_time_slots = [...relevant_time_slots, slot];
-            }
-        });
-        return relevant_time_slots;
-    }
-
-    function updateTimeTable() {
-        let current_seg = today.getUTCHours() * 2 + Math.ceil(today.getUTCMinutes() / 30);
-        let cutoff_date = new Date(
-            Date.UTC(today.getFullYear(), today.getUTCMonth(), today.getUTCDate())
-        );
-
-        console.log('cutoff: ' + cutoff_date.toUTCString());
-
-        for (let day = 0; day < DAY_IN_A_WEEK; day++) {
-            let currentDate = new Date(currentMonday);
-            currentDate.setUTCDate(currentMonday.getUTCDate() + day);
-            currentDate.setUTCHours(0, 0, 0, 0);
-            for (let seg = 0; seg < TOTAL_SEGMENTS_NUMBER; seg++) {
-                if (
-                    currentDate.getTime() < cutoff_date.getTime() ||
-                    (currentDate.getTime() == cutoff_date.getTime() && seg < current_seg)
-                ) {
-                    availability_table[seg][day] = TimeSlotStatus.PASTDUE;
-                } else {
-                    availability_table[seg][day] = TimeSlotStatus.NONE;
-                }
-            }
-        }
-
-        time_slots_display.forEach((slot) => {
-            let day = (slot.date.getUTCDay() || 7) - 1;
-            availability_table[slot.segment][day] = slot.status;
-        });
-
-        time_slot_edit_display.forEach((slot) => {
-            let day = (slot.date.getUTCDay() || 7) - 1;
-            availability_table[slot.segment][day] = slot.status;
-        });
-    }
+    availability_table = getWeekAvailabilityTable(
+        today,
+        currentMonday,
+        data.time_slots,
+        time_slot_edit_records
+    );
 
     function toNextWeek() {
         currentMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
         nextMonday = getDateWithDayOffset(nextMonday, DAY_IN_A_WEEK);
-        time_slots_display = extractRelevantTimeSlot(data.time_slots, currentMonday, nextMonday);
-        time_slot_edit_display = extractRelevantTimeSlot(
-            time_slot_edit_records,
+        availability_table = getWeekAvailabilityTable(
+            today,
             currentMonday,
-            nextMonday
+            data.time_slots,
+            time_slot_edit_records
         );
-        console.log(time_slot_edit_display);
-        updateTimeTable();
     }
 
     function toPrevWeek() {
         currentMonday = getDateWithDayOffset(currentMonday, -DAY_IN_A_WEEK);
         nextMonday = getDateWithDayOffset(nextMonday, -DAY_IN_A_WEEK);
-        time_slots_display = extractRelevantTimeSlot(data.time_slots, currentMonday, nextMonday);
-        time_slot_edit_display = extractRelevantTimeSlot(
-            time_slot_edit_records,
+        availability_table = getWeekAvailabilityTable(
+            today,
             currentMonday,
-            nextMonday
+            data.time_slots,
+            time_slot_edit_records
         );
-        console.log(time_slot_edit_display);
-        updateTimeTable();
     }
 
     function handleSubmit(event: Event) {
@@ -135,13 +85,12 @@
     append the new event if no event happens to that time slot
     */
 
-    function handleEdit(event: Event) {
+    function handleEdit(event: Event, records) {
         if (
             [TimeSlotStatus.BOOKED, TimeSlotStatus.PASTDUE, TimeSlotStatus.AUCTIONED].includes(
                 event.detail.status
             )
         ) {
-            console.log('Can not modify this slot');
         } else {
             let date = new Date(currentMonday);
             date.setUTCDate(currentMonday.getUTCDate() + event.detail.day);
@@ -155,31 +104,21 @@
             } else {
                 new_time_slot.status = TimeSlotStatus.NONE;
             }
-            let match_display_index = time_slot_edit_display.findIndex((slot) => {
+
+            let match_record_index = records.findIndex((slot) => {
                 return (
                     slot.date.getTime() == new_time_slot.date.getTime() &&
                     slot.segment == new_time_slot.segment
                 );
             });
-            if (match_display_index !== -1) {
-                time_slot_edit_display = [
-                    ...time_slot_edit_display.slice(0, match_display_index),
-                    ...time_slot_edit_display.slice(match_display_index + 1)
-                ];
 
-                let match_record_index = time_slot_edit_records.findIndex((slot) => {
-                    return (
-                        slot.date.getTime() == new_time_slot.date.getTime() &&
-                        slot.segment == new_time_slot.segment
-                    );
-                });
-                time_slot_edit_records = [
-                    ...time_slot_edit_records.slice(0, match_record_index),
-                    ...time_slot_edit_records.slice(match_record_index + 1)
+            if (match_record_index !== -1) {
+                records = [
+                    ...records.slice(0, match_record_index),
+                    ...records.slice(match_record_index + 1)
                 ];
             } else {
-                time_slot_edit_display = [...time_slot_edit_display, new_time_slot];
-                time_slot_edit_records = [...time_slot_edit_records, new_time_slot];
+                time_slot_edit_records = [...records, new_time_slot];
             }
 
             availability_table[event.detail.segment][event.detail.day] = new_time_slot.status;
@@ -243,7 +182,7 @@
 
     <div class="date-controller">
         <p>
-            From {currentMonday.toUTCString()} to {nextMonday.toUTCString()}
+            From {currentMonday?.toUTCString()} to {nextMonday?.toUTCString()}
         </p>
         <Button
             kind="secondary"
@@ -261,7 +200,10 @@
         >
     </div>
 
-    <AvailabilityTable bind:availability_table on:edit={(e) => handleEdit(e)} />
+    <AvailabilityTable
+        bind:availability_table
+        on:edit={(e) => handleEdit(e, time_slot_edit_records)}
+    />
 </Content>
 
 <style>
