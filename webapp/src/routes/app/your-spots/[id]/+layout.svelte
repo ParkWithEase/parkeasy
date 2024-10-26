@@ -1,7 +1,7 @@
 <script lang="ts">
     import { page } from '$app/stores';
     import { SideNav, SideNavDivider, SideNavItems, SideNavLink } from 'carbon-components-svelte';
-    import { ChartLineSmooth, Fade, Information, Money } from 'carbon-icons-svelte';
+    import { ChartLineSmooth, Information, Money } from 'carbon-icons-svelte';
     let currentSpotID: string = $page.params['id'];
     let spot_info_link = `/app/your-spots/${currentSpotID}/spot-info`;
     let spot_performance_link = `/app/your-spots/${currentSpotID}/spot-performance`;
@@ -9,7 +9,7 @@
     console.log($page.url.pathname);
 </script>
 
-<SideNav isOpen>
+<SideNav isOpen fixed>
     <SideNavItems>
         <SideNavLink
             text="General Information"
