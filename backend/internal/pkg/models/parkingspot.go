@@ -41,7 +41,7 @@ type ParkingSpotFeatures struct {
 type TimeUnit struct {
 	StartTime time.Time `json:"start_time" doc:"The start time for slot"`
 	EndTime   time.Time `json:"end_time" doc:"The end time for slot"`
-	Status    string    `json:"status,omitempty" enum:"booked,available" doc:""`
+	Status    string    `json:"status,omitempty" enum:"booked,available" doc:"status of the parking spot"`
 }
 
 type ParkingSpot struct {

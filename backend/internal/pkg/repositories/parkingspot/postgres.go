@@ -192,6 +192,7 @@ func (p *PostgresRepository) GetAvalByUUID(ctx context.Context, spotID uuid.UUID
 	timeUnitResult, err := dbmodels.Timeunits.Query(
 		ctx, p.db,
 		sm.Columns(dbmodels.TimeunitColumns.Timerange),
+		sm.Columns(dbmodels.TimeunitColumns.Bookingid),
 		psql.WhereAnd(
 			dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
 			sm.Where(dbmodels.TimeunitColumns.Timerange.OP("&&", psql.Arg(dbtype.Tstzrange{
@@ -213,9 +214,19 @@ func (p *PostgresRepository) GetAvalByUUID(ctx context.Context, spotID uuid.UUID
 	availability := make([]models.TimeUnit, 0, len(timeUnitResult)) // Initialize slice
 
 	for _, timeslot := range timeUnitResult {
+		var status string
+		_, err := timeslot.Bookingid.Value()
+
+		if err != nil {
+			status = "booked"
+		} else {
+			status = "available"
+		}
+
 		availability = append(availability, models.TimeUnit{
 			StartTime: timeslot.Timerange.Start,
 			EndTime:   timeslot.Timerange.End,
+			Status:    status,
 		})
 	}
 
