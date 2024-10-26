@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"regexp"
 	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/geocoding"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/aarondl/opt/omit"
 	"github.com/fxamacker/cbor/v2"
@@ -19,26 +21,41 @@ import (
 const MaximumCount = 1000
 
 type Service struct {
-	repo parkingspot.Repository
+	repo     parkingspot.Repository
+	geocoder geocoding.Geocoder
 }
 
-func New(repo parkingspot.Repository) *Service {
+func New(repo parkingspot.Repository, geocoder geocoding.Geocoder) *Service {
 	return &Service{
-		repo: repo,
+		repo:     repo,
+		geocoder: geocoder,
 	}
 }
 
 func isValidProvinceCode(code string) bool {
-	validProvinceCodes := []string{
-		"AB", "BC", "MB", "NB", "NL", "NT", "NS", "NU", "ON", "PE", "QC", "SK", "YT",
+	switch code {
+	case "AB", "BC", "MB", "NB", "NL", "NT", "NS", "NU", "ON", "PE", "QC", "SK", "YT":
+		return true
+	default:
+		return false
 	}
+}
 
-	for _, validCode := range validProvinceCodes {
-		if code == validCode {
-			return true
-		}
-	}
-	return false
+// Map between province and IANA time zone names
+var provinceToTz = map[string]string{
+	"AB": "America/Edmonton",
+	"BC": "America/Vancouver",
+	"MB": "America/Winnipeg",
+	"NB": "America/Moncton",
+	"NL": "America/St_Johns",
+	"NS": "America/Halifax",
+	"NU": "America/Iqaluit",
+	"ON": "America/Toronto",
+	"PE": "America/Halifax",
+	"QC": "America/Montreal",
+	"SK": "America/Regina",
+	"YT": "America/Whitehorse",
+	"NT": "America/Yellowknife",
 }
 
 func (s *Service) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpot, error) {
@@ -56,16 +73,40 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 	if spot.Location.StreetAddress == "" {
 		return 0, models.ParkingSpot{}, models.ErrInvalidStreetAddress
 	}
-	if spot.Location.Longitude.IsZero() || spot.Location.Latitude.IsZero() {
-		return 0, models.ParkingSpot{}, models.ErrInvalidCoordinate
+
+	insertSpot := *spot
+	gcr, err := s.geocoder.Geocode(geocoding.Address{
+		Street:     spot.Location.StreetAddress,
+		City:       spot.Location.City,
+		State:      spot.Location.State,
+		PostalCode: spot.Location.PostalCode,
+		Country:    spot.Location.CountryCode,
+	})
+	if err != nil {
+		return 0, models.ParkingSpot{}, fmt.Errorf("geocoding failed for: %+v: %w", spot.Location, err)
 	}
-	// FIXME: Figure out how to normalize street addresses
-	//
-	// Right now we can add the same address by just changing the casing or the number of spaces
-	//
-	// FIXME: We are putting total trust on to the client about Long/Lat
-	//
-	// The potential way to do this is via Geocoding the address and ignore the client's Long/Lat
+	if len(gcr) == 0 || gcr[0].Accuracy < 1 {
+		return 0, models.ParkingSpot{}, models.ErrInvalidAddress
+	}
+
+	long, err := decimal.NewFromFloat64(gcr[0].Longitude)
+	if err != nil {
+		return 0, models.ParkingSpot{}, fmt.Errorf("could not interpret longitude: %w", err)
+	}
+	lat, err := decimal.NewFromFloat64(gcr[0].Latitude)
+	if err != nil {
+		return 0, models.ParkingSpot{}, fmt.Errorf("could not interpret latitude: %w", err)
+	}
+
+	insertSpot.Location = models.ParkingSpotLocation{
+		PostalCode:    gcr[0].Address.PostalCode,
+		City:          gcr[0].Address.City,
+		State:         gcr[0].Address.State,
+		StreetAddress: gcr[0].Address.Street,
+		CountryCode:   gcr[0].Address.Country,
+		Longitude:     long,
+		Latitude:      lat,
+	}
 	result, err := s.repo.Create(ctx, userID, spot)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrDuplicatedAddress) {
@@ -76,20 +117,14 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 	return result.InternalID, result.ParkingSpot, nil
 }
 
-func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID, startDate time.Time, endDate time.Time) (models.ParkingSpot, error) {
-	if endDate.Before(startDate) {
-		return models.ParkingSpot{}, models.ErrInvalidTimeWindow
-	}
+func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error) {
 
-	result, err := s.repo.GetByUUID(ctx, spotID, startDate, endDate)
+	result, err := s.repo.GetByUUID(ctx, spotID)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrNotFound) {
 			err = models.ErrParkingSpotNotFound
 		}
 		return models.ParkingSpot{}, err
-	}
-	if result.OwnerID != userID {
-		return models.ParkingSpot{}, models.ErrParkingSpotNotFound
 	}
 	return result.ParkingSpot, nil
 }
@@ -110,26 +145,85 @@ func (s *Service) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate
 	return result, nil
 }
 
-func (s *Service) GetMany(ctx context.Context, count int, longitude decimal.Decimal, latitude decimal.Decimal, distance int32, startDate time.Time, endDate time.Time) (spots []models.ParkingSpot, err error) {
+func (s *Service) GetMany(ctx context.Context, userID int64, count int, filter models.ParkingSpotFilter) (spots []models.ParkingSpotWithDistance, err error) {
 	if count <= 0 {
-		return []models.ParkingSpot{}, nil
+		return []models.ParkingSpotWithDistance{}, nil
 	}
-	if endDate.Before(startDate) {
-		return []models.ParkingSpot{}, models.ErrInvalidTimeWindow
+	if filter.AvailabilityEnd.Before(filter.AvailabilityStart) ||
+		(!filter.AvailabilityEnd.IsZero() && filter.AvailabilityStart.IsZero()) {
+		return nil, models.ErrInvalidTimeWindow
 	}
-	if longitude.IsZero() || latitude.IsZero() {
-		return []models.ParkingSpot{}, models.ErrInvalidCoordinate
+	if filter.Latitude == 0 || filter.Longitude == 0 {
+		return nil, models.ErrInvalidCoordinate
 	}
 
 	count = min(count, MaximumCount)
-	spotEntries, err := s.repo.GetMany(ctx, count, longitude, latitude, distance, startDate, endDate)
+	repoAvailFilter := parkingspot.FilterAvailability{
+		Start: filter.AvailabilityStart,
+		End:   filter.AvailabilityEnd,
+	}
+
+	if repoAvailFilter.Start.IsZero() {
+		repoAvailFilter.Start = time.Now()
+	}
+	if repoAvailFilter.End.IsZero() {
+		repoAvailFilter.End = repoAvailFilter.Start.AddDate(0, 0, 7)
+	}
+
+	lat, err := decimal.NewFromFloat64(filter.Latitude)
+	if err != nil {
+		return nil, models.ErrInvalidCoordinate
+	}
+
+	long, err := decimal.NewFromFloat64(filter.Longitude)
+	if err != nil {
+		return nil, models.ErrInvalidCoordinate
+	}
+
+	repoFilter := parkingspot.Filter{
+		Location: omit.From(parkingspot.FilterLocation{
+			Longitude: long,
+			Latitude:  lat,
+			Radius:    filter.Distance,
+		}),
+		Availability: omit.From(repoAvailFilter),
+	}
+	spotEntries, err := s.repo.GetMany(ctx, count, repoFilter)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]models.ParkingSpot, 0, len(spotEntries))
+	result := make([]models.ParkingSpotWithDistance, 0, len(spotEntries))
 	for _, entry := range spotEntries {
-		result = append(result, entry.ParkingSpot)
+		result = append(result, models.ParkingSpotWithDistance{
+			ParkingSpot:        entry.ParkingSpot,
+			DistanceToLocation: entry.DistanceToLocation,
+		})
+	}
+	return result, nil
+}
+
+func (s *Service) GetManyForUser(ctx context.Context, userID int64, count int) (spots []models.ParkingSpot, err error) {
+	if count <= 0 {
+		return []models.ParkingSpot{}, nil
+	}
+
+	count = min(count, MaximumCount)
+
+	repoFilter := parkingspot.Filter{
+		UserID: omit.From(userID),
+	}
+	spotEntries, err := s.repo.GetMany(ctx, count, repoFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]models.ParkingSpotWithDistance, 0, len(spotEntries))
+	for _, entry := range spotEntries {
+		result = append(result, models.ParkingSpotWithDistance{
+			ParkingSpot:        entry.ParkingSpot,
+			DistanceToLocation: entry.DistanceToLocation,
+		})
 	}
 	return result, nil
 }
