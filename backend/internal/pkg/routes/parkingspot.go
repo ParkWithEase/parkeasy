@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
+	"github.com/govalues/decimal"
 )
 
 // Service provider for `ParkingSpotRoute`
@@ -19,7 +21,7 @@ type ParkingSpotServicer interface {
 	// Get the parking spot with `spotID` if `userID` has enough permission to view the resource.
 	GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error)
 	// Get many parking spots
-	GetMany(ctx context.Context, userID int64, location *models.ParkingSpotGetInput) ([]models.ParkingSpot, error)
+	GetMany(ctx context.Context, count int, longitude decimal.Decimal, latitude decimal.Decimal, distance int32, startDate time.Time, endDate time.Time) (spots []models.ParkingSpot, err error)
 	// Delete the parking spot with `spotID` if `userID` owns the resource.
 	// DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
 }
@@ -146,25 +148,14 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		Summary:     "Get listings around a location",
 		Tags:        []string{ParkingSpotTag.Name},
 	}), func(ctx context.Context, input *struct {
-		postal_code    string `query:"postal_code" default:"R3C 4V9" doc:"postal code for the location"`
-		country_code   string `query:"country_code" default:"CA" doc:"country code for the location"`
-		city           string `query:"city" default:"Winnipeg" doc:"city of the location"`
-		state          string `query:"state" default:"MB" doc:"state of the location"`
-		street_address string `query:"street_address" default:"123 Main St" doc:"street address of the location"`
-		distance       int32  `query:"distance" minimum:"1" default:"250" doc:"distance in meters from location"`
+		Latitude  decimal.Decimal `query:"latitude" doc:"latitude of location"`
+		Longitude decimal.Decimal `query:"longitude" doc:"longitude of location"`
+		distance  int32           `query:"distance" minimum:"1" default:"250" doc:"distance in meters from location"`
 	},
 	) (*ParkingSpotListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 
-		location := models.ParkingSpotGetInput{
-			PostalCode:    input.postal_code,
-			CountryCode:   input.country_code,
-			City:          input.city,
-			State:         input.state,
-			StreetAddress: input.street_address,
-		}
-
-		spots, err := r.service.GetMany(ctx, userID, &location)
+		spots, err := r.service.GetMany(ctx, 50, input.Longitude.input.Latitude, input.distance)
 		if err != nil {
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}

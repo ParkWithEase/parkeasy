@@ -23,7 +23,7 @@ type Result struct {
 	Accuracy float32
 }
 
-type Repository interface {
+type Geocoder interface {
 	// Resolve an address into real location
 	Geocode(Address) ([]Result, error)
 }
