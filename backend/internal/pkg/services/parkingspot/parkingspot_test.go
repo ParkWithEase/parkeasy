@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/geocoding"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/google/uuid"
 	"github.com/govalues/decimal"
@@ -15,6 +16,10 @@ import (
 )
 
 type mockRepo struct {
+	mock.Mock
+}
+
+type mockGeocodingRepo struct {
 	mock.Mock
 }
 
@@ -32,16 +37,16 @@ var testEntry = parkingspot.Entry{
 
 var testSpotUUID = uuid.New()
 
+// Geocode implements geocoding.Geocoder.
+func (m *mockGeocodingRepo) Geocode(address geocoding.Address) ([]geocoding.Result, error) {
+	args := m.Called(address)
+	return args.Get(0).([]geocoding.Result), args.Error(1)
+}
+
 // Create implements parkingspot.Repository.
 func (m *mockRepo) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (parkingspot.Entry, error) {
 	args := m.Called(ctx, userID, spot)
 	return args.Get(0).(parkingspot.Entry), args.Error(1)
-}
-
-// DeleteByUUID implements parkingspot.Repository.
-func (m *mockRepo) DeleteByUUID(ctx context.Context, spotID uuid.UUID) error {
-	args := m.Called(ctx, spotID)
-	return args.Error(0)
 }
 
 // GetByUUID implements parkingspot.Repository.
@@ -62,13 +67,15 @@ func (m *mockRepo) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDat
 	return args.Get(0).([]models.TimeUnit), args.Error(1)
 }
 
-func (m *mockRepo) GetMany(ctx context.Context, limit int, longitude decimal.Decimal, latitude decimal.Decimal, distance int32, startDate time.Time, endDate time.Time) ([]parkingspot.Entry, error) {
-	args := m.Called(limit, longitude, latitude, distance, startDate, endDate)
-	return args.Get(0).([]parkingspot.Entry), args.Error(1)
+func (m *mockRepo) GetMany(ctx context.Context, limit int, filter parkingspot.Filter) ([]parkingspot.GetManyEntry, error) {
+	args := m.Called(limit, filter)
+	return args.Get(0).([]parkingspot.GetManyEntry), args.Error(1)
 }
 
-var sampleLatitude, _ = decimal.NewFromFloat64(43.07923)
-var sampleLongitude, _ = decimal.NewFromFloat64(-79.07887)
+var sampleLatitudeFloat = float64(43.07923)
+var sampleLongitudeFloat = float64(-79.07887)
+var sampleLatitude, _ = decimal.NewFromFloat64(sampleLatitudeFloat)
+var sampleLongitude, _ = decimal.NewFromFloat64(sampleLongitudeFloat)
 
 var sampleLocation = models.ParkingSpotLocation{
 	PostalCode:    "L2E6T2",
@@ -80,18 +87,46 @@ var sampleLocation = models.ParkingSpotLocation{
 	Longitude:     sampleLongitude,
 }
 
+var sampleGeocoderAddress = geocoding.Address{
+	PostalCode: sampleLocation.PostalCode,
+	Country:    sampleLocation.CountryCode,
+	Street:     sampleLocation.StreetAddress,
+	City:       sampleLocation.City,
+	State:      sampleLocation.State,
+}
+
+var sampleGeocoderResult = []geocoding.Result{
+	{
+		Address:          sampleGeocoderAddress,
+		FormattedAddress: sampleLocation.StreetAddress + " " + sampleLocation.City + " " + sampleLocation.State + " " + sampleLocation.CountryCode + " " + sampleLocation.PostalCode,
+		Latitude:         sampleLatitudeFloat,
+		Longitude:        sampleLongitudeFloat,
+		Accuracy:         5,
+	},
+}
+
+func (m *mockGeocodingRepo) AddGeocodeCall() *mock.Call {
+	return m.On("Geocode", sampleGeocoderAddress).
+		Return(sampleGeocoderResult, nil).Once()
+}
+
 func TestCreate(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
+	geoRepo := new(mockGeocodingRepo)
+	geoRepo.On("Geocode", sampleGeocoderAddress).
+		Return(sampleGeocoderResult, nil).Once()
+
 	t.Run("create okay", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := New(repo)
-
+		geoRepo := new(mockGeocodingRepo)
+		geoRepo.AddGeocodeCall()
+		srv := New(repo, geoRepo)
 		input := &models.ParkingSpotCreationInput{
 			Location: sampleLocation,
 		}
@@ -117,7 +152,9 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := New(repo)
+		geoRepo := new(mockGeocodingRepo)
+		geoRepo.AddGeocodeCall()
+		srv := New(repo, geoRepo)
 
 		input := &models.ParkingSpotCreationInput{
 			Location: sampleLocation,
@@ -139,7 +176,9 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := New(repo)
+		geoRepo := new(mockGeocodingRepo)
+		geoRepo.AddGeocodeCall()
+		srv := New(repo, geoRepo)
 
 		location := sampleLocation
 		location.CountryCode = "US"
@@ -156,7 +195,9 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := New(repo)
+		geoRepo := new(mockGeocodingRepo)
+		geoRepo.AddGeocodeCall()
+		srv := New(repo, geoRepo)
 
 		location := sampleLocation
 		location.PostalCode += " addon"
@@ -173,7 +214,9 @@ func TestCreate(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		srv := New(repo)
+		geoRepo := new(mockGeocodingRepo)
+		geoRepo.AddGeocodeCall()
+		srv := New(repo, geoRepo)
 
 		location := sampleLocation
 		location.StreetAddress = ""
@@ -185,28 +228,9 @@ func TestCreate(t *testing.T) {
 		}
 		repo.AssertNotCalled(t, "Create")
 	})
-
-	t.Run("longitude/latitude check", func(t *testing.T) {
-		t.Parallel()
-
-		repo := new(mockRepo)
-		srv := New(repo)
-
-		sampleLongitude, _ = decimal.NewFromFloat64(0)
-
-		location := sampleLocation
-		location.Longitude = sampleLongitude
-		_, _, err := srv.Create(ctx, 0, &models.ParkingSpotCreationInput{
-			Location: location,
-		})
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrInvalidCoordinate)
-		}
-		repo.AssertNotCalled(t, "Create")
-	})
 }
 
-func TestGet(t *testing.T) {
+func TestGetByUUID(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -217,7 +241,8 @@ func TestGet(t *testing.T) {
 		repo := new(mockRepo)
 		repo.On("GetByUUID", mock.Anything, uuid.Nil, mock.Anything, mock.Anything).
 			Return(parkingspot.Entry{}, parkingspot.ErrNotFound).Once()
-		srv := New(repo)
+		geoRepo := new(mockGeocodingRepo)
+		srv := New(repo, geoRepo)
 
 		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil)
 		if assert.Error(t, err) {
@@ -232,10 +257,13 @@ func TestGet(t *testing.T) {
 		repo := new(mockRepo)
 		repo.On("GetByUUID", mock.Anything, testSpotUUID, mock.Anything, mock.Anything).
 			Return(testEntry, nil).Once()
-		srv := New(repo)
+		geoRepo := new(mockGeocodingRepo)
+		srv := New(repo, geoRepo)
 
 		spot, err := srv.GetByUUID(ctx, testOwnerID, testSpotUUID)
 		require.NoError(t, err)
 		assert.Equal(t, testEntry.ParkingSpot, spot)
 	})
 }
+
+
