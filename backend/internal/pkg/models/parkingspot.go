@@ -19,6 +19,7 @@ var (
 	ErrInvalidCoordinate    = CodeSpotInvalid.WithMsg("the specified coordinate is invalid")
 	ErrTimeUnitDuplicate    = CodeDuplicate.WithMsg("time slot already exists")
 	ErrInvalidTimeWindow    = CodeInvalidTimeWindow.WithMsg("the specified start and/or end dates are invalid")
+	ErrInvalidAddress       = CodeInvalidAddress.WithMsg("the specified address is invalid")
 )
 
 type ParkingSpotLocation struct {
@@ -51,6 +52,11 @@ type ParkingSpot struct {
 	Availability []TimeUnit          `json:"availability,omitempty"`
 }
 
+type ParkingSpotWithDistance struct {
+	ParkingSpot
+	DistanceToLocation float64 `json:"distance_to_location" doc:"Distance to centre point"`
+}
+
 type ParkingSpotCreationInput struct {
 	Location     ParkingSpotLocation `json:"location"`
 	Features     ParkingSpotFeatures `json:"features,omitempty"`
@@ -58,10 +64,10 @@ type ParkingSpotCreationInput struct {
 	Availability []TimeUnit          `json:"availability,omitempty"`
 }
 
-type ParkingSpotGetInput struct {
-	PostalCode    string `json:"postal_code,omitempty" doc:"The postal code of location"`
-	CountryCode   string `json:"country_code" pattern:"[A-Z][A-Z]" doc:"The country code of location"`
-	City          string `json:"city" doc:"The city the location is in"`
-	State         string `json:"state" doc:"The province the location is in"`
-	StreetAddress string `json:"street_address" doc:"The street address of the location"`
+type ParkingSpotFilter struct {
+	Longitude         float64   `query:"longitude" doc:"Longitude of the centre point"`
+	Latitude          float64   `query:"latitude" doc:"Latitude of the centre point"`
+	Distance          int32     `query:"distance" default:"20" doc:"distance around the centre point"`
+	AvailabilityStart time.Time `query:"avail_start" doc:"Availability start (default to current time)"`
+	AvailabilityEnd   time.Time `query:"avail_end" doc:"Availability end (default to start + one week)"`
 }
