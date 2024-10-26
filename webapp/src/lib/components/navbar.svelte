@@ -37,11 +37,7 @@
             icon={Map}
             href="/#"
         />
-        <HeaderGlobalAction
-            iconDescription="Add your spot"
-            icon={MobileAdd}
-            href="/app/your-spots"
-        />
+        <HeaderGlobalAction iconDescription="your spot" icon={MobileAdd} href="/app/your-spots" />
         <HeaderGlobalAction iconDescription="Your Cars" icon={Car} href="/app/your-cars" />
         <HeaderGlobalAction
             iconDescription="Profile"

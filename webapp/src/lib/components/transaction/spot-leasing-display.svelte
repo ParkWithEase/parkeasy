@@ -7,7 +7,8 @@
         <p class="transaction-title">
             {transaction.spot.street_address}, {transaction.spot.postal_code}
         </p>
-        <span style="font-size: 1rem">{transaction.spot.city}, {transaction.spot.country_code}</span
+        <span style="font-size: 1rem"
+            >{transaction.spot.city}, {transaction.spot.state} {transaction.spot.country_code}</span
         >
     </div>
     <div>

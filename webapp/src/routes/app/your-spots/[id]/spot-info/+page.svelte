@@ -37,7 +37,6 @@
     function toNextWeek() {
         currentMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
         nextMonday = getDateWithDayOffset(nextMonday, DAY_IN_A_WEEK);
-        console.log(time_slot_edit_records);
         availability_table = getWeekAvailabilityTable(
             today,
             currentMonday,
@@ -70,6 +69,7 @@
             location: {
                 city: formData.get('city'),
                 country_code: formData.get('country-code'),
+                state: formData.get('state'),
                 latitude: 1,
                 longitude: 1,
                 postal_code: formData.get('postal-code'),
@@ -85,13 +85,13 @@
     this function should remove the edit event if there is already one event at that time slot. Or 
     append the new event if no event happens to that time slot
     */
-
-    function handleEdit(event: Event, records) {
+    function handleEdit(event: Event) {
         if (
             [TimeSlotStatus.BOOKED, TimeSlotStatus.PASTDUE, TimeSlotStatus.AUCTIONED].includes(
                 event.detail.status
             )
         ) {
+            return;
         } else {
             let date = new Date(currentMonday);
             date.setUTCDate(currentMonday.getUTCDate() + event.detail.day);
@@ -106,7 +106,7 @@
                 new_time_slot.status = TimeSlotStatus.NONE;
             }
 
-            let match_record_index = records.findIndex((slot) => {
+            let match_record_index = time_slot_edit_records.findIndex((slot) => {
                 return (
                     slot.date.getTime() == new_time_slot.date.getTime() &&
                     slot.segment == new_time_slot.segment
@@ -114,14 +114,10 @@
             });
 
             if (match_record_index !== -1) {
-                time_slot_edit_records = [
-                    ...time_slot_edit_records.slice(0, match_record_index),
-                    ...time_slot_edit_records.slice(match_record_index + 1)
-                ];
+                time_slot_edit_records.splice(match_record_index, 1);
             } else {
-                time_slot_edit_records = [...records, new_time_slot];
+                time_slot_edit_records.push(new_time_slot);
             }
-
             availability_table[event.detail.segment][event.detail.day] = new_time_slot.status;
         }
     }
@@ -138,6 +134,10 @@
         <div>
             <p class="spot-info-label">City</p>
             <p class="spot-info-content">{spot?.location.city}</p>
+        </div>
+        <div>
+            <p class="spot-info-label">State/Provice</p>
+            <p class="spot-info-content">{spot?.location.state}</p>
         </div>
         <div>
             <p class="spot-info-label">Country Code</p>
@@ -203,7 +203,9 @@
 
     <AvailabilityTable
         bind:availability_table
-        on:edit={(e) => handleEdit(e, time_slot_edit_records)}
+        on:edit={(e) => {
+            handleEdit(e);
+        }}
     />
 </Content>
 
@@ -230,9 +232,5 @@
         flex-direction: column;
         max-width: 20rem;
         margin-bottom: 1rem;
-    }
-
-    .date-controller {
-        margin: 1rem;
     }
 </style>

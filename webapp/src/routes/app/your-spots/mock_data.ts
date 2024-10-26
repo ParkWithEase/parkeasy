@@ -9,6 +9,7 @@ export const spots_data = [
         },
         location: {
             city: 'Winnipeg',
+            state: 'MB',
             country_code: 'CA',
             latitude: 1,
             longitude: 1,
@@ -26,6 +27,7 @@ export const spots_data = [
         },
         location: {
             city: 'Winnipeg',
+            state: 'MB',
             country_code: 'CA',
             latitude: 1,
             longitude: 1,
@@ -43,6 +45,7 @@ export const spots_data = [
         },
         location: {
             city: 'Winnipeg',
+            state: 'MB',
             country_code: 'CA',
             latitude: 1,
             longitude: 1,

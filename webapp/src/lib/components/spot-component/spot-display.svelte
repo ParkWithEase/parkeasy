@@ -18,7 +18,7 @@
                     {/if}
                 </p>
                 <span style="font-size: 1rem"
-                    >{spot.location.city}, {spot.location.country_code}</span
+                    >{spot.location.city}, {spot.location.state} {spot.location.country_code}</span
                 >
             </div>
             <div>

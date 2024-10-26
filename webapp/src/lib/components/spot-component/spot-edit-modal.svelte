@@ -29,6 +29,13 @@
         />
         <TextInput
             required
+            labelText="State/Province"
+            name="state"
+            placeholder="State/Province"
+            value={spotInfo.location.state}
+        />
+        <TextInput
+            required
             labelText="Country"
             name="country-code"
             placeholder="Country Code"

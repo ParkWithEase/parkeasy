@@ -6,7 +6,8 @@ const test_data = [
             street_address: '230 Portage',
             postal_code: 'RRRRRR',
             city: 'Winnipeg',
-            country_code: 'CA'
+            country_code: 'CA',
+            state: 'MB'
         },
         car: {
             license_plate: 'ABCDE',
@@ -27,7 +28,8 @@ const test_data = [
             street_address: '230 Portage',
             postal_code: 'RRRRRR',
             city: 'Winnipeg',
-            country_code: 'CA'
+            country_code: 'CA',
+            state: 'MB'
         },
         car: {
             license_plate: 'VCDES',
@@ -48,7 +50,8 @@ const test_data = [
             street_address: '230 Portage',
             postal_code: 'RRRRRR',
             city: 'Winnipeg',
-            country_code: 'CA'
+            country_code: 'CA',
+            state: 'MB'
         },
         car: {
             license_plate: 'RacerX',
