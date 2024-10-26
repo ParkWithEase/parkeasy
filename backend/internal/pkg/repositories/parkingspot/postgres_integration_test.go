@@ -19,7 +19,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-var epsilon, _ = decimal.NewFromFloat64(1e-5) // Acceptable cariance for longitude and latitude
+var epsilon = 1e-5 // Acceptable cariance for longitude and latitude
 
 func TestPostgresIntegration(t *testing.T) {
 	t.Parallel()
@@ -373,6 +373,7 @@ func TestPostgresIntegration(t *testing.T) {
 			assert.Equal(t, sampleWinnipegLocations[0].City, entries[0].Location.City)
 			assert.Equal(t, sampleWinnipegLocations[0].State, entries[0].Location.State)
 			assert.Equal(t, sampleWinnipegLocations[0].StreetAddress, entries[0].Location.StreetAddress)
+			assert.InEpsilon(t, sampleWinnipegLocations[0].Longitude.Float64())
 			assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Longitude, entries[0].Location.Longitude, epsilon), "Longitude not within epsilon")
 			assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Latitude, entries[0].Location.Latitude, epsilon), "Latitude not within epsilon")
 
@@ -457,8 +458,21 @@ func TestPostgresIntegration(t *testing.T) {
 
 }
 
-func floatsAreClose(a decimal.Decimal, b decimal.Decimal, epsilon decimal.Decimal) bool {
+func floatsAreClose(t *testing.T, a decimal.Decimal, b decimal.Decimal, epsilon decimal.Decimal) bool {
 	diff, _ := a.Sub(b)
 
 	return diff.Abs().Less(epsilon)
+}
+
+func sameEntry(t *testing.T, expected, actual Entry, msg string) {
+	t.Helper()
+
+	assert.Equal(t, sampleWinnipegLocations[0].PostalCode, entries[0].Location.PostalCode)
+	assert.Equal(t, sampleWinnipegLocations[0].CountryCode, entries[0].Location.CountryCode)
+	assert.Equal(t, sampleWinnipegLocations[0].City, entries[0].Location.City)
+	assert.Equal(t, sampleWinnipegLocations[0].State, entries[0].Location.State)
+	assert.Equal(t, sampleWinnipegLocations[0].StreetAddress, entries[0].Location.StreetAddress)
+	assert.InEpsilon(t, sampleWinnipegLocations[0].Longitude.Float64())
+	assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Longitude, entries[0].Location.Longitude, epsilon), "Longitude not within epsilon")
+	assert.True(t, floatsAreClose(sampleWinnipegLocations[0].Latitude, entries[0].Location.Latitude, epsilon), "Latitude not within epsilon")
 }

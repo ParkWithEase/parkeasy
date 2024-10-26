@@ -45,8 +45,8 @@ func (m *mockRepo) DeleteByUUID(ctx context.Context, spotID uuid.UUID) error {
 }
 
 // GetByUUID implements parkingspot.Repository.
-func (m *mockRepo) GetByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) (parkingspot.Entry, error) {
-	args := m.Called(ctx, spotID, startDate, endDate)
+func (m *mockRepo) GetByUUID(ctx context.Context, spotID uuid.UUID) (parkingspot.Entry, error) {
+	args := m.Called(ctx, spotID)
 	return args.Get(0).(parkingspot.Entry), args.Error(1)
 }
 
@@ -219,7 +219,7 @@ func TestGet(t *testing.T) {
 			Return(parkingspot.Entry{}, parkingspot.ErrNotFound).Once()
 		srv := New(repo)
 
-		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil, time.Now(), time.Now())
+		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil)
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
 		}
@@ -234,7 +234,7 @@ func TestGet(t *testing.T) {
 			Return(testEntry, nil).Once()
 		srv := New(repo)
 
-		spot, err := srv.GetByUUID(ctx, testOwnerID, testSpotUUID, time.Now(), time.Now())
+		spot, err := srv.GetByUUID(ctx, testOwnerID, testSpotUUID)
 		require.NoError(t, err)
 		assert.Equal(t, testEntry.ParkingSpot, spot)
 	})
