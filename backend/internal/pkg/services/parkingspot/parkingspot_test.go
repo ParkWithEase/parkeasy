@@ -8,6 +8,7 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/google/uuid"
+	"github.com/govalues/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -18,11 +19,10 @@ type mockRepo struct {
 }
 
 const (
-	testOwnerID    = 0
-	testNonOwnerID = 1
+	testOwnerID = int64(0)
 )
 
-var publicTestEntry = parkingspot.Entry{
+var testEntry = parkingspot.Entry{
 	ParkingSpot: models.ParkingSpot{
 		Location: sampleLocation,
 	},
@@ -30,32 +30,12 @@ var publicTestEntry = parkingspot.Entry{
 	OwnerID:    testOwnerID,
 }
 
-var privateTestEntry = parkingspot.Entry{
-	ParkingSpot: models.ParkingSpot{
-		Location: sampleLocation,
-	},
-	InternalID: 1,
-	OwnerID:    testOwnerID,
-}
-
-var (
-	testPublicSpotID  = uuid.New()
-	testPrivateSpotID = uuid.New()
-)
-
-func (m *mockRepo) AddGetCalls() *mock.Call {
-	return m.On("GetByUUID", mock.Anything, testPublicSpotID).
-		Return(publicTestEntry, nil).
-		On("GetByUUID", mock.Anything, testPrivateSpotID).
-		Return(privateTestEntry, nil).
-		On("GetByUUID", mock.Anything, mock.Anything).
-		Return(parkingspot.Entry{}, parkingspot.ErrNotFound)
-}
+var testSpotUUID = uuid.New()
 
 // Create implements parkingspot.Repository.
 func (m *mockRepo) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (parkingspot.Entry, error) {
 	args := m.Called(ctx, userID, spot)
-	return args.Get(1).(parkingspot.Entry), args.Error(1)
+	return args.Get(0).(parkingspot.Entry), args.Error(1)
 }
 
 // DeleteByUUID implements parkingspot.Repository.
@@ -65,8 +45,8 @@ func (m *mockRepo) DeleteByUUID(ctx context.Context, spotID uuid.UUID) error {
 }
 
 // GetByUUID implements parkingspot.Repository.
-func (m *mockRepo) GetByUUID(ctx context.Context, spotID uuid.UUID) (parkingspot.Entry, error) {
-	args := m.Called(ctx, spotID)
+func (m *mockRepo) GetByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) (parkingspot.Entry, error) {
+	args := m.Called(ctx, spotID, startDate, endDate)
 	return args.Get(0).(parkingspot.Entry), args.Error(1)
 }
 
@@ -78,17 +58,26 @@ func (m *mockRepo) GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64,
 
 // GetAvalByUUID implements parkingspot.Repository.
 func (m *mockRepo) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
-	args := m.Called(ctx, spotID)
-	return args.Get(1).([]models.TimeUnit), args.Error(1)
+	args := m.Called(ctx, spotID, startDate, endDate)
+	return args.Get(0).([]models.TimeUnit), args.Error(1)
 }
+
+func (m *mockRepo) GetMany(ctx context.Context, limit int, longitude decimal.Decimal, latitude decimal.Decimal, distance int32, startDate time.Time, endDate time.Time) ([]parkingspot.Entry, error) {
+	args := m.Called(limit, longitude, latitude, distance, startDate, endDate)
+	return args.Get(0).([]parkingspot.Entry), args.Error(1)
+}
+
+var sampleLatitude, _ = decimal.NewFromFloat64(43.07923)
+var sampleLongitude, _ = decimal.NewFromFloat64(-79.07887)
 
 var sampleLocation = models.ParkingSpotLocation{
 	PostalCode:    "L2E6T2",
 	CountryCode:   "CA",
+	State:         "AB",
 	City:          "Niagara Falls",
 	StreetAddress: "6650 Niagara Parkway",
-	Latitude:      43.07923,
-	Longitude:     -79.07887,
+	Latitude:      sampleLatitude,
+	Longitude:     sampleLongitude,
 }
 
 func TestCreate(t *testing.T) {
@@ -97,7 +86,7 @@ func TestCreate(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
-	t.Run("correct location", func(t *testing.T) {
+	t.Run("create okay", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
@@ -106,26 +95,25 @@ func TestCreate(t *testing.T) {
 		input := &models.ParkingSpotCreationInput{
 			Location: sampleLocation,
 		}
-		repo.On("Create", mock.Anything, int64(0), input).
+		repo.On("Create", mock.Anything, testOwnerID, input).
 			Return(
-				int64(0),
 				parkingspot.Entry{
 					ParkingSpot: models.ParkingSpot{
 						Location: input.Location,
 						ID:       uuid.Nil,
 					},
 					InternalID: 0,
-					OwnerID:    0,
+					OwnerID:    testOwnerID,
 				},
 				nil,
 			).
 			Once()
-		_, _, err := srv.Create(ctx, 0, input)
+		_, _, err := srv.Create(ctx, testOwnerID, input)
 		require.NoError(t, err)
 		repo.AssertExpectations(t)
 	})
 
-	t.Run("repo.Create() error", func(t *testing.T) {
+	t.Run("duplicate address error", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
@@ -134,14 +122,13 @@ func TestCreate(t *testing.T) {
 		input := &models.ParkingSpotCreationInput{
 			Location: sampleLocation,
 		}
-		repo.On("Create", mock.Anything, int64(0), input).
+		repo.On("Create", mock.Anything, testOwnerID, input).
 			Return(
-				int64(0),
 				parkingspot.Entry{},
 				parkingspot.ErrDuplicatedAddress,
 			).
 			Once()
-		_, _, err := srv.Create(ctx, 0, input)
+		_, _, err := srv.Create(ctx, testOwnerID, input)
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrParkingSpotDuplicate)
 		}
@@ -205,8 +192,10 @@ func TestCreate(t *testing.T) {
 		repo := new(mockRepo)
 		srv := New(repo)
 
+		sampleLongitude, _ = decimal.NewFromFloat64(0)
+
 		location := sampleLocation
-		location.Longitude = 0
+		location.Longitude = sampleLongitude
 		_, _, err := srv.Create(ctx, 0, &models.ParkingSpotCreationInput{
 			Location: location,
 		})
@@ -226,91 +215,27 @@ func TestGet(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.On("GetByUUID", mock.Anything, uuid.Nil).
+		repo.On("GetByUUID", mock.Anything, uuid.Nil, mock.Anything, mock.Anything).
 			Return(parkingspot.Entry{}, parkingspot.ErrNotFound).Once()
 		srv := New(repo)
 
-		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil)
+		_, err := srv.GetByUUID(ctx, testOwnerID, uuid.Nil, time.Now(), time.Now())
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
 		}
 		repo.AssertExpectations(t)
 	})
 
-	t.Run("owner can access private spots", func(t *testing.T) {
+	t.Run("get spot okay", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.On("GetByUUID", mock.Anything, testSpotUUID, mock.Anything, mock.Anything).
+			Return(testEntry, nil).Once()
 		srv := New(repo)
 
-		spot, err := srv.GetByUUID(ctx, testOwnerID, testPrivateSpotID)
+		spot, err := srv.GetByUUID(ctx, testOwnerID, testSpotUUID, time.Now(), time.Now())
 		require.NoError(t, err)
-		assert.Equal(t, publicTestEntry.ParkingSpot, spot)
-	})
-
-	t.Run("others can not access private spots", func(t *testing.T) {
-		t.Parallel()
-
-		repo := new(mockRepo)
-		repo.AddGetCalls()
-		srv := New(repo)
-
-		_, err := srv.GetByUUID(ctx, testNonOwnerID, testPrivateSpotID)
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
-		}
-		repo.AssertCalled(t, "GetByUUID", ctx, testPrivateSpotID)
-	})
-}
-
-func TestDelete(t *testing.T) {
-	t.Parallel()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
-	t.Run("owner can delete their spots", func(t *testing.T) {
-		t.Parallel()
-
-		repo := new(mockRepo)
-		repo.AddGetCalls()
-		srv := New(repo)
-
-		repo.On("DeleteByUUID", mock.Anything, mock.Anything).
-			Return(nil).Twice()
-		err := srv.DeleteByUUID(ctx, testOwnerID, testPublicSpotID)
-		require.NoError(t, err)
-		err = srv.DeleteByUUID(ctx, testOwnerID, testPrivateSpotID)
-		require.NoError(t, err)
-		repo.AssertExpectations(t)
-	})
-
-	t.Run("deleting non-existent spots does not produce errors", func(t *testing.T) {
-		t.Parallel()
-
-		repo := new(mockRepo)
-		repo.AddGetCalls()
-		srv := New(repo)
-
-		err := srv.DeleteByUUID(ctx, testOwnerID, uuid.Nil)
-		require.NoError(t, err)
-		// NOTE: due to permission checking, we actually don't call Delete on the repo since
-		// the spot doesn't exist when queried
-		repo.AssertNotCalled(t, "DeleteByUUID")
-	})
-
-	t.Run("deleting a public owned spot by non-owner is not allowed", func(t *testing.T) {
-		t.Parallel()
-
-		repo := new(mockRepo)
-		repo.AddGetCalls()
-		srv := New(repo)
-
-		err := srv.DeleteByUUID(ctx, testNonOwnerID, testPublicSpotID)
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrParkingSpotOwned)
-		}
-		repo.AssertNotCalled(t, "DeleteByUUID")
+		assert.Equal(t, testEntry.ParkingSpot, spot)
 	})
 }

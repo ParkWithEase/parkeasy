@@ -12,6 +12,7 @@ import (
 	"github.com/aarondl/opt/omit"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
+	"github.com/govalues/decimal"
 )
 
 // Largest number of entries returned per request
@@ -55,7 +56,7 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 	if spot.Location.StreetAddress == "" {
 		return 0, models.ParkingSpot{}, models.ErrInvalidStreetAddress
 	}
-	if spot.Location.Longitude == 0 || spot.Location.Latitude == 0 {
+	if spot.Location.Longitude.IsZero() || spot.Location.Latitude.IsZero() {
 		return 0, models.ParkingSpot{}, models.ErrInvalidCoordinate
 	}
 	// FIXME: Figure out how to normalize street addresses
@@ -109,14 +110,14 @@ func (s *Service) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate
 	return result, nil
 }
 
-func (s *Service) GetMany(ctx context.Context, count int, longitude float64, latitude float64, distance int32, startDate time.Time, endDate time.Time) (spots []models.ParkingSpot, err error) {
+func (s *Service) GetMany(ctx context.Context, count int, longitude decimal.Decimal, latitude decimal.Decimal, distance int32, startDate time.Time, endDate time.Time) (spots []models.ParkingSpot, err error) {
 	if count <= 0 {
 		return []models.ParkingSpot{}, nil
 	}
 	if endDate.Before(startDate) {
 		return []models.ParkingSpot{}, models.ErrInvalidTimeWindow
 	}
-	if longitude == 0 || latitude == 0 {
+	if longitude.IsZero() || latitude.IsZero() {
 		return []models.ParkingSpot{}, models.ErrInvalidCoordinate
 	}
 
