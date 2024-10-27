@@ -260,6 +260,46 @@ func TestCreate(t *testing.T) {
 		}
 		repo.AssertNotCalled(t, "Create")
 	})
+
+	t.Run("only Canadian province check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		geoRepo := new(mockGeocodingRepo)
+		geoRepo.AddGeocodeCall()
+		srv := New(repo, geoRepo)
+
+		location := sampleLocation
+		location.State = "Test"
+		_, _, err := srv.Create(ctx, 0, &models.ParkingSpotCreationInput{
+			Location: location,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrProvinceNotSupported)
+		}
+		repo.AssertNotCalled(t, "Create")
+	})
+
+	t.Run("invalid time unit check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		geoRepo := new(mockGeocodingRepo)
+		geoRepo.AddGeocodeCall()
+		srv := New(repo, geoRepo)
+
+		location := sampleLocation
+		availability := sampleAvailability
+		availability[0].StartTime = availability[0].StartTime.Add(time.Minute)
+		_, _, err := srv.Create(ctx, 0, &models.ParkingSpotCreationInput{
+			Location: location,
+			Availability: availability,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidTimeUnit)
+		}
+		repo.AssertNotCalled(t, "Create")
+	})
 }
 
 func TestGetByUUID(t *testing.T) {
