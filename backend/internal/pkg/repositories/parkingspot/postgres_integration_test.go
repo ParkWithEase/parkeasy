@@ -71,6 +71,34 @@ func TestPostgresIntegration(t *testing.T) {
 		},
 	}
 
+	testTimeUnits := []models.TimeUnit{
+		{
+			StartTime: time.Date(2024, time.October, 21, 14, 30, 0, 0, time.UTC),
+			EndTime:   time.Date(2024, time.October, 21, 15, 00, 0, 0, time.UTC),
+			Status:    "available",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 21, 17, 00, 0, 0, time.UTC),
+			EndTime:   time.Date(2024, time.October, 21, 17, 30, 0, 0, time.UTC),
+			Status:    "booked",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 21, 20, 00, 0, 0, time.UTC),
+			EndTime:   time.Date(2024, time.October, 21, 20, 30, 0, 0, time.UTC),
+			Status:    "available",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 22, 10, 00, 0, 0, time.UTC),
+			EndTime:   time.Date(2024, time.October, 22, 10, 30, 0, 0, time.UTC),
+			Status:    "booked",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 31, 14, 30, 0, 0, time.UTC),
+			EndTime:   time.Date(2024, time.October, 31, 15, 00, 0, 0, time.UTC),
+			Status:    "available",
+		},
+	}
+
 	sampleAvailability := make([]models.TimeUnit, 0, 2)
 
 	for _, timeunit := range sampleTimeUnit {
@@ -103,6 +131,13 @@ func TestPostgresIntegration(t *testing.T) {
 		Features:     sampleFeatures,
 		PricePerHour: samplePricePerHour,
 		Availability: sampleAvailability,
+	}
+
+	timeTestCreationInput := models.ParkingSpotCreationInput{
+		Location:     sampleLocation,
+		Features:     sampleFeatures,
+		PricePerHour: samplePricePerHour,
+		Availability: testTimeUnits,
 	}
 
 	// Test variables for GetMany
@@ -453,6 +488,48 @@ func TestPostgresIntegration(t *testing.T) {
 				assert.ErrorIs(t, err, ErrTimeUnitNotFound)
 			}
 		})
+	})
+
+	t.Run("get availability within range", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+
+			// clear all idle connections
+			// required since Restore() deletes the current DB
+			pool.Reset()
+		})
+
+		// Create an entry
+		createEntry, err := repo.Create(ctx, userID, &timeTestCreationInput)
+		require.NoError(t, err)
+
+		t.Run("get availability for a week", func(t *testing.T) {
+			t.Parallel()
+
+			timeunits, err := repo.GetAvalByUUID(ctx, createEntry.ID, testTimeUnits[0].StartTime, testTimeUnits[0].StartTime.AddDate(0, 0, 7))
+
+			require.NoError(t, err)
+			timesEqual(t, testTimeUnits[:4], timeunits)
+		})
+
+		t.Run("get availability for a two weeks", func(t *testing.T) {
+			t.Parallel()
+
+			timeunits, err := repo.GetAvalByUUID(ctx, createEntry.ID, testTimeUnits[0].StartTime, testTimeUnits[0].StartTime.AddDate(0, 0, 14))
+
+			require.NoError(t, err)
+			timesEqual(t, testTimeUnits, timeunits)
+		})
+
+		// t.Run("no availibility found non-existent spotID", func(t *testing.T) {
+		// 	t.Parallel()
+
+		// 	_, err := repo.GetAvalByUUID(ctx, uuid.Nil, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
+		// 	if assert.Error(t, err, "Trying to get availibility for time period that does not have any should fail") {
+		// 		assert.ErrorIs(t, err, ErrTimeUnitNotFound)
+		// 	}
+		// })
 	})
 
 }
