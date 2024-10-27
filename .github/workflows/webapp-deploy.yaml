@@ -40,7 +40,7 @@ jobs:
       - run: npm run build
         working-directory: webapp
         env:
-          VITE_API_SERVER_URL: ${{ env.PUBLIC_API_SERVER_URL }}
+          VITE_API_SERVER_URL: ${{ vars.PUBLIC_API_SERVER_URL }}
 
       - name: Deploy to Cloudflare Pages
         id: deploy
