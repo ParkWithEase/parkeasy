@@ -211,6 +211,11 @@ func (p *PostgresRepository) GetAvalByUUID(ctx context.Context, spotID uuid.UUID
 		return []models.TimeUnit{}, err
 	}
 
+	// Handle no rows found
+	if len(timeUnitResult) == 0 {
+		return []models.TimeUnit{}, ErrTimeUnitNotFound
+	}
+
 	availability := make([]models.TimeUnit, 0, len(timeUnitResult)) // Initialize slice
 
 	for _, timeslot := range timeUnitResult {

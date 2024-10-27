@@ -225,7 +225,7 @@ func TestPostgresIntegration(t *testing.T) {
 			},
 			OwnerID: userID,
 		}, createEntry, "created entry not the same")
-		assert.Equal(t, sampleAvailability, createEntry.Availability)
+		timesEqual(t, sampleAvailability, createEntry.Availability)
 
 		// Testing get spot
 		getEntry, err := repo.GetByUUID(ctx, createEntry.ParkingSpot.ID)
@@ -433,13 +433,13 @@ func TestPostgresIntegration(t *testing.T) {
 			timeunits, err := repo.GetAvalByUUID(ctx, createEntry.ID, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
 
 			require.NoError(t, err)
-			assert.Equal(t, sampleAvailability, timeunits)
+			timesEqual(t, sampleAvailability, timeunits)
 		})
 
 		t.Run("no availibility found bad window", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := repo.GetAvalByUUID(ctx, createEntry.ID, sampleTimeUnit[1].EndTime, sampleTimeUnit[1].EndTime.AddDate(0, 0, 1))
+			_, err := repo.GetAvalByUUID(ctx, createEntry.ID, sampleTimeUnit[1].EndTime.AddDate(0, 0, 1), sampleTimeUnit[1].EndTime.AddDate(0, 0, 2))
 			if assert.Error(t, err, "Trying to get availibility for time period that does not have any should fail") {
 				assert.ErrorIs(t, err, ErrTimeUnitNotFound)
 			}
@@ -481,4 +481,17 @@ func sameEntry(t *testing.T, expected, actual Entry, msg string) {
 	assert.Equal(t, expected.Features, actual.Features, msg)
 	assert.Equal(t, expected.PricePerHour, actual.PricePerHour, msg)
 	assert.Equal(t, expected.OwnerID, actual.OwnerID, msg)
+}
+
+func timesEqual(t *testing.T, expected, actual []models.TimeUnit) {
+
+	for i := range expected {
+		if !expected[i].StartTime.Equal(actual[i].StartTime) {
+			t.Fatalf("Expected start time %v at index %d, but got %v", expected[i], i, actual[i])
+		}
+
+		if !expected[i].EndTime.Equal(actual[i].EndTime) {
+			t.Fatalf("Expected end time %v at index %d, but got %v", expected[i], i, actual[i])
+		}
+	}
 }
