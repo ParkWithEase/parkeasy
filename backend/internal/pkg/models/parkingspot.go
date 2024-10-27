@@ -76,6 +76,14 @@ type ParkingSpotOutput struct {
 	ID           uuid.UUID                 `json:"id" doc:"ID of this resource"`
 }
 
+type ParkingSpotCreationOutput struct {
+	Location     ParkingSpotOutputLocation `json:"location"`
+	Features     ParkingSpotFeatures       `json:"features,omitempty"`
+	PricePerHour decimal.Decimal           `json:"price_per_hour" doc:"price per hour"`
+	ID           uuid.UUID                 `json:"id" doc:"ID of this resource"`
+	Availability []TimeUnit                `json:"availability" doc:"availability of the parking spot"`
+}
+
 type ParkingSpotCreationInput struct {
 	Location     ParkingSpotLocation `json:"location"`
 	Features     ParkingSpotFeatures `json:"features,omitempty"`

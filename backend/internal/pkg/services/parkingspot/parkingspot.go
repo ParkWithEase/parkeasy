@@ -58,26 +58,26 @@ var provinceToTz = map[string]string{
 	"NT": "America/Yellowknife",
 }
 
-func (s *Service) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpot, error) {
+func (s *Service) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpotCreationOutput, error) {
 	// NOTE: We only support Canadian spots at the moment
 	if spot.Location.CountryCode != "CA" {
-		return 0, models.ParkingSpot{}, models.ErrCountryNotSupported
+		return 0, models.ParkingSpotCreationOutput{}, models.ErrCountryNotSupported
 	}
 	if !isValidProvinceCode(spot.Location.State) {
-		return 0, models.ParkingSpot{}, models.ErrProvinceNotSupported
+		return 0, models.ParkingSpotCreationOutput{}, models.ErrProvinceNotSupported
 	}
 	canadianPostalCodeRegexp := regexp.MustCompile("^[A-Z][0-9][A-Z][0-9][A-Z][0-9]$")
 	if !canadianPostalCodeRegexp.MatchString(spot.Location.PostalCode) {
-		return 0, models.ParkingSpot{}, models.ErrInvalidPostalCode
+		return 0, models.ParkingSpotCreationOutput{}, models.ErrInvalidPostalCode
 	}
 	if spot.Location.StreetAddress == "" {
-		return 0, models.ParkingSpot{}, models.ErrInvalidStreetAddress
+		return 0, models.ParkingSpotCreationOutput{}, models.ErrInvalidStreetAddress
 	}
 
 	// All availability units must be 30 minutes
 	for _, unit := range spot.Availability {
 		if unit.EndTime != unit.StartTime.Add(30*time.Minute) {
-			return 0, models.ParkingSpot{}, models.ErrInvalidTimeUnit
+			return 0, models.ParkingSpotCreationOutput{}, models.ErrInvalidTimeUnit
 		}
 	}
 
@@ -90,19 +90,19 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 		Country:    spot.Location.CountryCode,
 	})
 	if err != nil {
-		return 0, models.ParkingSpot{}, fmt.Errorf("geocoding failed for: %+v: %w", spot.Location, err)
+		return 0, models.ParkingSpotCreationOutput{}, fmt.Errorf("geocoding failed for: %+v: %w", spot.Location, err)
 	}
 	if len(gcr) == 0 || gcr[0].Accuracy < 1 {
-		return 0, models.ParkingSpot{}, models.ErrInvalidAddress
+		return 0, models.ParkingSpotCreationOutput{}, models.ErrInvalidAddress
 	}
 
 	long, err := decimal.NewFromFloat64(gcr[0].Longitude)
 	if err != nil {
-		return 0, models.ParkingSpot{}, fmt.Errorf("could not interpret longitude: %w", err)
+		return 0, models.ParkingSpotCreationOutput{}, fmt.Errorf("could not interpret longitude: %w", err)
 	}
 	lat, err := decimal.NewFromFloat64(gcr[0].Latitude)
 	if err != nil {
-		return 0, models.ParkingSpot{}, fmt.Errorf("could not interpret latitude: %w", err)
+		return 0, models.ParkingSpotCreationOutput{}, fmt.Errorf("could not interpret latitude: %w", err)
 	}
 
 	insertSpot.Location = models.ParkingSpotLocation{
@@ -119,21 +119,60 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 		if errors.Is(err, parkingspot.ErrDuplicatedAddress) {
 			err = models.ErrParkingSpotDuplicate
 		}
-		return 0, models.ParkingSpot{}, err
+		return 0, models.ParkingSpotCreationOutput{}, err
 	}
-	return result.InternalID, result.ParkingSpot, nil
+
+	latFromRes, _ := result.Location.Longitude.Float64()
+	longFromRes, _ := result.Location.Latitude.Float64()
+
+	out := models.ParkingSpotCreationOutput{
+		Location: models.ParkingSpotOutputLocation{
+			PostalCode:    result.Location.PostalCode,
+			CountryCode:   result.Location.CountryCode,
+			State:         result.Location.State,
+			City:          result.Location.City,
+			StreetAddress: result.Location.StreetAddress,
+			Longitude:     longFromRes,
+			Latitude:      latFromRes,
+		},
+		Features:     result.Features,
+		PricePerHour: result.PricePerHour,
+		ID:           result.ID,
+		Availability: result.Availability,
+	}
+
+	return result.InternalID, out, nil
 }
 
-func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error) {
+func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpotOutput, error) {
 
 	result, err := s.repo.GetByUUID(ctx, spotID)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrNotFound) {
 			err = models.ErrParkingSpotNotFound
 		}
-		return models.ParkingSpot{}, err
+		return models.ParkingSpotOutput{}, err
 	}
-	return result.ParkingSpot, nil
+
+	lat, _ := result.Location.Longitude.Float64()
+	long, _ := result.Location.Latitude.Float64()
+
+	out := models.ParkingSpotOutput{
+		Location: models.ParkingSpotOutputLocation{
+			PostalCode:    result.Location.PostalCode,
+			CountryCode:   result.Location.CountryCode,
+			State:         result.Location.State,
+			City:          result.Location.City,
+			StreetAddress: result.Location.StreetAddress,
+			Longitude:     long,
+			Latitude:      lat,
+		},
+		Features:     result.Features,
+		PricePerHour: result.PricePerHour,
+		ID:           result.ID,
+	}
+
+	return out, nil
 }
 
 func (s *Service) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
