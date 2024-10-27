@@ -9,7 +9,6 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
-	"github.com/govalues/decimal"
 )
 
 // Service provider for `ParkingSpotRoute`
@@ -17,11 +16,13 @@ type ParkingSpotServicer interface {
 	// Creates a new parking spot attached to `userID`.
 	//
 	// Returns the spot internal ID and the model.
-	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpot, error)
+	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpotCreationOutput, error)
 	// Get the parking spot with `spotID` if `userID` has enough permission to view the resource.
-	GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error)
+	GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpotOutput, error)
 	// Get many parking spots
-	GetMany(ctx context.Context, count int, longitude decimal.Decimal, latitude decimal.Decimal, distance int32, startDate time.Time, endDate time.Time) (spots []models.ParkingSpot, err error)
+	GetMany(ctx context.Context, userID int64, count int, filter models.ParkingSpotFilter) (spots []models.ParkingSpotWithDistance, err error)
+	// Get a particular user's(seller's) parking spots
+	GetManyForUser(ctx context.Context, userID int64, count int) (spots []models.ParkingSpotOutput, err error)
 	// Delete the parking spot with `spotID` if `userID` owns the resource.
 	// DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
 }
@@ -31,13 +32,12 @@ type ParkingSpotRoute struct {
 	sessionGetter SessionDataGetter
 }
 
-type ParkingSpotOutput struct {
-	Link []string `header:"Link" doc:"Contains details on getting the next page of resources" example:"</spots?after=gQL>; rel=\"next\""`
-	Body models.ParkingSpot
+type ParkingSpotListOutput struct {
+	Body []models.ParkingSpotOutput
 }
 
-type ParkingSpotListOutput struct {
-	Body []models.ParkingSpot
+type ParkingSpotWithDistance struct {
+	Body []models.ParkingSpotWithDistance
 }
 
 var ParkingSpotTag = huma.Tag{
@@ -73,7 +73,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	}), func(ctx context.Context, input *struct {
 		Body models.ParkingSpotCreationInput
 	},
-	) (*ParkingSpotOutput, error) {
+	) (*models.ParkingSpotCreationOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
@@ -112,7 +112,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 			}
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
-		return &ParkingSpotOutput{Body: result}, nil
+		return &result, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
@@ -125,37 +125,85 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
-	) (*ParkingSpotOutput, error) {
+	) (*models.ParkingSpotOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		result, err := r.service.GetByUUID(ctx, userID, input.ID)
 		if err != nil {
-			if errors.Is(err, models.ErrParkingSpotNotFound) {
-				detail := &huma.ErrorDetail{
+			var detail error
+			switch {
+			case errors.Is(err, models.ErrParkingSpotNotFound):
+				detail = &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
 			}
-			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
-		return &ParkingSpotOutput{Body: result}, nil
+		return &result, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
-		OperationID: "list-spots",
+		OperationID: "get-spots",
 		Method:      http.MethodGet,
 		Path:        "/spots",
 		Summary:     "Get listings around a location",
 		Tags:        []string{ParkingSpotTag.Name},
 	}), func(ctx context.Context, input *struct {
-		Latitude  decimal.Decimal `query:"latitude" doc:"latitude of location"`
-		Longitude decimal.Decimal `query:"longitude" doc:"longitude of location"`
-		distance  int32           `query:"distance" minimum:"1" default:"250" doc:"distance in meters from location"`
+		Latitude          float64   `query:"latitude" doc:"latitude of location"`
+		Longitude         float64   `query:"longitude" doc:"longitude of location"`
+		Distance          int32     `query:"distance" minimum:"1" default:"250" doc:"distance in meters from location"`
+		AvailabilityStart time.Time `query:"availability_start,omitempty" doc:"the time from which the listed parking spot will be retrieved"`
+		AvailabilityEnd   time.Time `query:"availability_end,omitempty" doc:"the time to which the listed parking spot will be retrieved"`
+	},
+	) (*ParkingSpotWithDistance, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+
+		filter := models.ParkingSpotFilter{
+			Longitude:         input.Longitude,
+			Latitude:          input.Latitude,
+			Distance:          input.Distance,
+			AvailabilityStart: input.AvailabilityStart,
+			AvailabilityEnd:   input.AvailabilityEnd,
+		}
+
+		spots, err := r.service.GetMany(ctx, userID, 50, filter)
+		if err != nil {
+			var detail error
+			switch {
+			case errors.Is(err, models.ErrInvalidTimeWindow):
+				detail = &huma.ErrorDetail{
+					Location: "query.availability_end",
+					Value:    input.AvailabilityEnd,
+				}
+			case errors.Is(err, models.ErrInvalidCoordinate):
+				detail = &huma.ErrorDetail{
+					Location: "query.latitude",
+					Value:    input.Latitude,
+				}
+			}
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
+		}
+
+		result := ParkingSpotWithDistance{Body: spots}
+
+		return &result, nil
+	})
+
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID: "get-your-spots",
+		Method:      http.MethodGet,
+		Path:        "/my-spots",
+		Summary:     "Get your listed spots",
+		Tags:        []string{ParkingSpotTag.Name},
+	}), func(ctx context.Context, input *struct {
+		Latitude  float64 `query:"latitude" doc:"latitude of location"`
+		Longitude float64 `query:"longitude" doc:"longitude of location"`
+		Distance  int32   `query:"distance" minimum:"1" default:"250" doc:"distance in meters from location"`
 	},
 	) (*ParkingSpotListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 
-		spots, err := r.service.GetMany(ctx, 50, input.Longitude.input.Latitude, input.distance)
+		spots, err := r.service.GetManyForUser(ctx, userID, 50)
 		if err != nil {
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
@@ -164,7 +212,6 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 
 		return &result, nil
 	})
-
 	// huma.Register(api, *withUserID(&huma.Operation{
 	// 	OperationID: "create-listing-for-a-parking-spot",
 	// 	Method:      http.MethodPost,
