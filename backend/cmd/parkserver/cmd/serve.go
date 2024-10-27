@@ -90,10 +90,11 @@ func (s *ServeCmd) Run(ctx context.Context, l *zerolog.Logger, globals *Globals)
 	defer pool.Close()
 
 	config := parkserver.Config{
-		DBPool:    pool,
-		APIPrefix: s.getAPIPrefix(),
-		Addr:      net.JoinHostPort("", strconv.Itoa(int(s.Port))),
-		Insecure:  s.Insecure,
+		DBPool:     pool,
+		APIPrefix:  s.getAPIPrefix(),
+		Addr:       net.JoinHostPort("", strconv.Itoa(int(s.Port))),
+		Insecure:   s.Insecure,
+		CorsOrigin: s.CorsOrigin,
 	}
 
 	log.Info().Msg("running migrations")
