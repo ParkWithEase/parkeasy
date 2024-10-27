@@ -87,6 +87,19 @@ var sampleLocation = models.ParkingSpotLocation{
 	Longitude:     sampleLongitude,
 }
 
+var sampleAvailability = []models.TimeUnit{
+	{
+		StartTime: time.Date(2024, time.October, 26, 10, 0, 0, 0, time.UTC),  // 10:00 AM
+		EndTime:   time.Date(2024, time.October, 26, 10, 30, 0, 0, time.UTC), // 10:30 AM
+		Status:    "available",
+	},
+	{
+		StartTime: time.Date(2024, time.October, 26, 10, 30, 0, 0, time.UTC), // 10:30 AM
+		EndTime:   time.Date(2024, time.October, 26, 11, 0, 0, 0, time.UTC),  // 11:00 AM
+		Status:    "available",
+	},
+}
+
 var sampleGeocoderAddress = geocoding.Address{
 	PostalCode: sampleLocation.PostalCode,
 	Country:    sampleLocation.CountryCode,
@@ -266,4 +279,52 @@ func TestGetByUUID(t *testing.T) {
 	})
 }
 
+func TestGetAvalByUUID(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
 
+	t.Run("get availability okay", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.On("GetAvalByUUID", mock.Anything, testSpotUUID, sampleAvailability[0].StartTime, sampleAvailability[1].EndTime).
+			Return(sampleAvailability, nil).Once()
+		geoRepo := new(mockGeocodingRepo)
+		srv := New(repo, geoRepo)
+
+		_, err := srv.GetAvalByUUID(ctx, testSpotUUID, sampleAvailability[0].StartTime, sampleAvailability[1].EndTime)
+		require.NoError(t, err)
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("availability not found check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.On("GetAvalByUUID", mock.Anything, uuid.Nil, mock.Anything, mock.Anything).
+			Return([]models.TimeUnit{}, parkingspot.ErrTimeUnitNotFound).Once()
+		geoRepo := new(mockGeocodingRepo)
+		srv := New(repo, geoRepo)
+
+		_, err := srv.GetAvalByUUID(ctx, uuid.Nil, time.Now(), time.Now())
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrAvailabilityNotFound)
+		}
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("invalid time window check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		geoRepo := new(mockGeocodingRepo)
+		srv := New(repo, geoRepo)
+
+		_, err := srv.GetAvalByUUID(ctx, uuid.Nil, time.Now(), time.Now().Add(-1*time.Hour))
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidTimeWindow)
+		}
+		repo.AssertExpectations(t)
+	})
+}
