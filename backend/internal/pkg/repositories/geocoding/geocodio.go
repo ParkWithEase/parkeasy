@@ -18,8 +18,8 @@ type Geocodio struct {
 	apiKey string
 }
 
-func NewGeocodio(client *http.Client, apiKey string) Geocodio {
-	return Geocodio{
+func NewGeocodio(client *http.Client, apiKey string) *Geocodio {
+	return &Geocodio{
 		client: client,
 		apiKey: apiKey,
 	}

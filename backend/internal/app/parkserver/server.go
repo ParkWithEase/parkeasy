@@ -63,8 +63,10 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	userService := user.NewService(authService, userRepository)
 	userRoute := routes.NewUserRoute(userService, sessionManager)
 
+	geocodioRepository := geocoding.NewGeocodio(http.DefaultClient, c.GeocodioAPIKey)
+
 	parkingSpotRepository := parkingSpotRepo.NewPostgres(db)
-	parkingSpotService := parkingspot.New(parkingSpotRepository)
+	parkingSpotService := parkingspot.New(parkingSpotRepository, geocodioRepository)
 	parkingSpotRoute := routes.NewParkingSpotRoute(parkingSpotService, sessionManager)
 
 	carRepository := carRepo.NewPostgres(db)
@@ -73,9 +75,6 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 
 	healthService := health.New(c.DBPool)
 	healthRoute := routes.NewHealthRoute(healthService)
-
-	geocodioRepository := geocoding.NewGeocodio(http.DefaultClient, c.GeocodioAPIKey)
-	_ = geocodioRepository // FIXME: actually use the repository
 
 	routes.UseHumaMiddlewares(api, sessionManager, userService)
 	huma.AutoRegister(api, authRoute)
