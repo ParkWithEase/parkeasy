@@ -261,7 +261,7 @@ func TestCreate(t *testing.T) {
 		repo.AssertNotCalled(t, "Create")
 	})
 
-	t.Run("only Canadian province check", func(t *testing.T) {
+	t.Run("only canadian province check", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
@@ -332,9 +332,29 @@ func TestGetByUUID(t *testing.T) {
 		geoRepo := new(mockGeocodingRepo)
 		srv := New(repo, geoRepo)
 
+		outputLatitude, _ := testEntry.Location.Latitude.Float64()
+		outputLongitude, _ := testEntry.Location.Longitude.Float64()
+
+		outputLocation := models.ParkingSpotOutputLocation{
+			PostalCode: testEntry.Location.PostalCode,
+			CountryCode: testEntry.Location.CountryCode,
+			City: testEntry.Location.City,
+			State: testEntry.Location.State,
+			StreetAddress: testEntry.Location.StreetAddress,
+			Longitude: outputLongitude,
+			Latitude: outputLatitude,
+		}
+
+		output := models.ParkingSpotOutput{
+			Location: outputLocation,
+			Features: testEntry.Features,
+			PricePerHour: testEntry.PricePerHour,
+			ID: testEntry.ID,
+		}
+
 		spot, err := srv.GetByUUID(ctx, testOwnerID, testSpotUUID)
 		require.NoError(t, err)
-		assert.Equal(t, testEntry.ParkingSpot, spot)
+		assert.Equal(t, output, spot)
 		repo.AssertExpectations(t)
 	})
 }
@@ -429,24 +449,24 @@ func TestGetMany(t *testing.T) {
 			Longitude:         5,
 		}
 
-		sampleOutputLongitude, _ := sampleGetManyEntryOutput[0].Location.Longitude.Float64()
+		outputLongitude, _ := sampleGetManyEntryOutput[0].Location.Longitude.Float64()
 
-		sampleOutputLatitude, _ := sampleGetManyEntryOutput[0].Location.Latitude.Float64()
+		outputLatitude, _ := sampleGetManyEntryOutput[0].Location.Latitude.Float64()
 
-		sampleOutputLocation := models.ParkingSpotOutputLocation{
+		outputLocation := models.ParkingSpotOutputLocation{
 			PostalCode:    sampleGetManyEntryOutput[0].Location.PostalCode,
 			CountryCode:   sampleGetManyEntryOutput[0].Location.CountryCode,
 			City:          sampleGetManyEntryOutput[0].Location.City,
 			State:         sampleGetManyEntryOutput[0].Location.State,
 			StreetAddress: sampleGetManyEntryOutput[0].Location.StreetAddress,
-			Longitude:     sampleOutputLongitude,
-			Latitude:      sampleOutputLatitude,
+			Longitude:     outputLongitude,
+			Latitude:      outputLatitude,
 		}
 
 		expectedOutput := []models.ParkingSpotWithDistance{
 			{
 				ParkingSpotOutput: models.ParkingSpotOutput{
-					Location:     sampleOutputLocation,
+					Location:     outputLocation,
 					Features:     sampleEntry.Features,
 					PricePerHour: samplePricePerHour,
 					ID:           testSpotUUID,
