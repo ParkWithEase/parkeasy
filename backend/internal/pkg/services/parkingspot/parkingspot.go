@@ -154,8 +154,8 @@ func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID)
 		return models.ParkingSpotOutput{}, err
 	}
 
-	lat, _ := result.Location.Longitude.Float64()
-	long, _ := result.Location.Latitude.Float64()
+	lat, _ := result.Location.Latitude.Float64()
+	long, _ := result.Location.Longitude.Float64()
 
 	out := models.ParkingSpotOutput{
 		Location: models.ParkingSpotOutputLocation{
