@@ -96,7 +96,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 				}
 			case errors.Is(err, models.ErrProvinceNotSupported):
 				detail = &huma.ErrorDetail{
-					Location: "body.location.province",
+					Location: "body.location.state",
 					Value:    input.Body.Location.State,
 				}
 			case errors.Is(err, models.ErrInvalidPostalCode):
@@ -212,55 +212,4 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 
 		return &result, nil
 	})
-	// huma.Register(api, *withUserID(&huma.Operation{
-	// 	OperationID: "create-listing-for-a-parking-spot",
-	// 	Method:      http.MethodPost,
-	// 	Path:        "/spots/list",
-	// 	Summary:     "Create a new listing for a parking spot",
-	// 	Tags:        []string{ParkingSpotTag.Name},
-	// 	Errors:      []int{http.StatusNotFound},
-	// }), func(ctx context.Context, input *struct {
-	// 	Body models.ListingCreationInput
-	// },
-	// ) (*ListingOutput, error) {
-	// 	userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-	// 	result, err := r.listingService.Create(ctx, userID, input.ID)
-	// 	if err != nil {
-	// 		if errors.Is(err, models.ErrParkingSpotNotFound) {
-	// 			detail := &huma.ErrorDetail{
-	// 				Location: "path.id",
-	// 				Value:    input.ID,
-	// 			}
-	// 			return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
-	// 		}
-	// 		return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
-	// 	}
-	// 	return &ParkingSpotOutput{Body: result}, nil
-	// })
-
-	// huma.Register(api, *withUserID(&huma.Operation{
-	// 	OperationID: "delete-parking-spot",
-	// 	Method:      http.MethodDelete,
-	// 	Path:        "/spots/{id}",
-	// 	Summary:     "Delete the specified parking spot",
-	// 	Tags:        []string{ParkingSpotTag.Name},
-	// 	Errors:      []int{http.StatusForbidden},
-	// }), func(ctx context.Context, input *struct {
-	// 	ID uuid.UUID `path:"id"`
-	// },
-	// ) (*struct{}, error) {
-	// 	userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-	// 	err := r.spotService.DeleteByUUID(ctx, userID, input.ID)
-	// 	if err != nil {
-	// 		if errors.Is(err, models.ErrParkingSpotOwned) {
-	// 			detail := &huma.ErrorDetail{
-	// 				Location: "path.id",
-	// 				Value:    input.ID,
-	// 			}
-	// 			return nil, NewHumaError(ctx, http.StatusForbidden, err, detail)
-	// 		}
-	// 		return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
-	// 	}
-	// 	return nil, nil
-	// })
 }
