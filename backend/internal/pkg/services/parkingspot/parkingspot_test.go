@@ -502,7 +502,6 @@ func TestGetMany(t *testing.T) {
 
 		filter := models.ParkingSpotFilter{
 			AvailabilityStart: time.Date(2024, time.October, 26, 0, 0, 0, 0, time.UTC),
-			AvailabilityEnd:   time.Date(2024, time.October, 26, 0, 0, 0, 0, time.UTC),
 		}
 
 		_, err := srv.GetMany(ctx, testOwnerID, 1, filter)
