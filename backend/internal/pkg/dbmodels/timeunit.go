@@ -10,9 +10,7 @@ import (
 	"fmt"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbtype"
-	"github.com/aarondl/opt/null"
 	"github.com/aarondl/opt/omit"
-	"github.com/aarondl/opt/omitnull"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
@@ -28,7 +26,6 @@ import (
 type Timeunit struct {
 	Timerange     dbtype.Tstzrange `db:"timerange,pk" `
 	Parkingspotid int64            `db:"parkingspotid,pk" `
-	Bookingid     null.Val[int64]  `db:"bookingid" `
 
 	R timeunitR `db:"-" `
 }
@@ -48,7 +45,6 @@ type TimeunitsStmt = bob.QueryStmt[*Timeunit, TimeunitSlice]
 
 // timeunitR is where relationships are stored.
 type timeunitR struct {
-	BookingidBooking         *Booking     // timeunit.timeunit_bookingid_fkey
 	ParkingspotidParkingspot *Parkingspot // timeunit.timeunit_parkingspotid_fkey
 }
 
@@ -58,21 +54,16 @@ type timeunitR struct {
 type TimeunitSetter struct {
 	Timerange     omit.Val[dbtype.Tstzrange] `db:"timerange,pk" `
 	Parkingspotid omit.Val[int64]            `db:"parkingspotid,pk" `
-	Bookingid     omitnull.Val[int64]        `db:"bookingid" `
 }
 
 func (s TimeunitSetter) SetColumns() []string {
-	vals := make([]string, 0, 3)
+	vals := make([]string, 0, 2)
 	if !s.Timerange.IsUnset() {
 		vals = append(vals, "timerange")
 	}
 
 	if !s.Parkingspotid.IsUnset() {
 		vals = append(vals, "parkingspotid")
-	}
-
-	if !s.Bookingid.IsUnset() {
-		vals = append(vals, "bookingid")
 	}
 
 	return vals
@@ -85,13 +76,10 @@ func (s TimeunitSetter) Overwrite(t *Timeunit) {
 	if !s.Parkingspotid.IsUnset() {
 		t.Parkingspotid, _ = s.Parkingspotid.Get()
 	}
-	if !s.Bookingid.IsUnset() {
-		t.Bookingid, _ = s.Bookingid.GetNull()
-	}
 }
 
 func (s TimeunitSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 3)
+	vals := make([]bob.Expression, 2)
 	if s.Timerange.IsUnset() {
 		vals[0] = psql.Raw("DEFAULT")
 	} else {
@@ -104,12 +92,6 @@ func (s TimeunitSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
 		vals[1] = psql.Arg(s.Parkingspotid)
 	}
 
-	if s.Bookingid.IsUnset() {
-		vals[2] = psql.Raw("DEFAULT")
-	} else {
-		vals[2] = psql.Arg(s.Bookingid)
-	}
-
 	return im.Values(vals...)
 }
 
@@ -118,7 +100,7 @@ func (s TimeunitSetter) Apply(q *dialect.UpdateQuery) {
 }
 
 func (s TimeunitSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 3)
+	exprs := make([]bob.Expression, 0, 2)
 
 	if !s.Timerange.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -134,20 +116,12 @@ func (s TimeunitSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
-	if !s.Bookingid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "bookingid")...),
-			psql.Arg(s.Bookingid),
-		}})
-	}
-
 	return exprs
 }
 
 type timeunitColumnNames struct {
 	Timerange     string
 	Parkingspotid string
-	Bookingid     string
 }
 
 var TimeunitColumns = buildTimeunitColumns("timeunit")
@@ -156,7 +130,6 @@ type timeunitColumns struct {
 	tableAlias    string
 	Timerange     psql.Expression
 	Parkingspotid psql.Expression
-	Bookingid     psql.Expression
 }
 
 func (c timeunitColumns) Alias() string {
@@ -172,14 +145,12 @@ func buildTimeunitColumns(alias string) timeunitColumns {
 		tableAlias:    alias,
 		Timerange:     psql.Quote(alias, "timerange"),
 		Parkingspotid: psql.Quote(alias, "parkingspotid"),
-		Bookingid:     psql.Quote(alias, "bookingid"),
 	}
 }
 
 type timeunitWhere[Q psql.Filterable] struct {
 	Timerange     psql.WhereMod[Q, dbtype.Tstzrange]
 	Parkingspotid psql.WhereMod[Q, int64]
-	Bookingid     psql.WhereNullMod[Q, int64]
 }
 
 func (timeunitWhere[Q]) AliasedAs(alias string) timeunitWhere[Q] {
@@ -190,13 +161,11 @@ func buildTimeunitWhere[Q psql.Filterable](cols timeunitColumns) timeunitWhere[Q
 	return timeunitWhere[Q]{
 		Timerange:     psql.Where[Q, dbtype.Tstzrange](cols.Timerange),
 		Parkingspotid: psql.Where[Q, int64](cols.Parkingspotid),
-		Bookingid:     psql.WhereNull[Q, int64](cols.Bookingid),
 	}
 }
 
 type timeunitJoins[Q dialect.Joinable] struct {
 	typ                      string
-	BookingidBooking         func(context.Context) modAs[Q, bookingColumns]
 	ParkingspotidParkingspot func(context.Context) modAs[Q, parkingspotColumns]
 }
 
@@ -207,7 +176,6 @@ func (j timeunitJoins[Q]) aliasedAs(alias string) timeunitJoins[Q] {
 func buildTimeunitJoins[Q dialect.Joinable](cols timeunitColumns, typ string) timeunitJoins[Q] {
 	return timeunitJoins[Q]{
 		typ:                      typ,
-		BookingidBooking:         timeunitsJoinBookingidBooking[Q](cols, typ),
 		ParkingspotidParkingspot: timeunitsJoinParkingspotidParkingspot[Q](cols, typ),
 	}
 }
@@ -320,25 +288,6 @@ func (o TimeunitSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	return nil
 }
 
-func timeunitsJoinBookingidBooking[Q dialect.Joinable](from timeunitColumns, typ string) func(context.Context) modAs[Q, bookingColumns] {
-	return func(ctx context.Context) modAs[Q, bookingColumns] {
-		return modAs[Q, bookingColumns]{
-			c: BookingColumns,
-			f: func(to bookingColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Bookings.Name(ctx).As(to.Alias())).On(
-						to.Bookingid.EQ(from.Bookingid),
-					))
-				}
-
-				return mods
-			},
-		}
-	}
-}
-
 func timeunitsJoinParkingspotidParkingspot[Q dialect.Joinable](from timeunitColumns, typ string) func(context.Context) modAs[Q, parkingspotColumns] {
 	return func(ctx context.Context) modAs[Q, parkingspotColumns] {
 		return modAs[Q, parkingspotColumns]{
@@ -356,24 +305,6 @@ func timeunitsJoinParkingspotidParkingspot[Q dialect.Joinable](from timeunitColu
 			},
 		}
 	}
-}
-
-// BookingidBooking starts a query for related objects on booking
-func (o *Timeunit) BookingidBooking(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
-	return Bookings.Query(ctx, exec, append(mods,
-		sm.Where(BookingColumns.Bookingid.EQ(psql.Arg(o.Bookingid))),
-	)...)
-}
-
-func (os TimeunitSlice) BookingidBooking(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
-	PKArgs := make([]bob.Expression, len(os))
-	for i, o := range os {
-		PKArgs[i] = psql.ArgGroup(o.Bookingid)
-	}
-
-	return Bookings.Query(ctx, exec, append(mods,
-		sm.Where(psql.Group(BookingColumns.Bookingid).In(PKArgs...)),
-	)...)
 }
 
 // ParkingspotidParkingspot starts a query for related objects on parkingspot
@@ -400,18 +331,6 @@ func (o *Timeunit) Preload(name string, retrieved any) error {
 	}
 
 	switch name {
-	case "BookingidBooking":
-		rel, ok := retrieved.(*Booking)
-		if !ok {
-			return fmt.Errorf("timeunit cannot load %T as %q", retrieved, name)
-		}
-
-		o.R.BookingidBooking = rel
-
-		if rel != nil {
-			rel.R.BookingidTimeunits = TimeunitSlice{o}
-		}
-		return nil
 	case "ParkingspotidParkingspot":
 		rel, ok := retrieved.(*Parkingspot)
 		if !ok {
@@ -427,94 +346,6 @@ func (o *Timeunit) Preload(name string, retrieved any) error {
 	default:
 		return fmt.Errorf("timeunit has no relationship %q", name)
 	}
-}
-
-func PreloadTimeunitBookingidBooking(opts ...psql.PreloadOption) psql.Preloader {
-	return psql.Preload[*Booking, BookingSlice](orm.Relationship{
-		Name: "BookingidBooking",
-		Sides: []orm.RelSide{
-			{
-				From: "timeunit",
-				To:   TableNames.Bookings,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Bookings.Name(ctx)
-				},
-				FromColumns: []string{
-					ColumnNames.Timeunits.Bookingid,
-				},
-				ToColumns: []string{
-					ColumnNames.Bookings.Bookingid,
-				},
-			},
-		},
-	}, Bookings.Columns().Names(), opts...)
-}
-
-func ThenLoadTimeunitBookingidBooking(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
-	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
-		loader, isLoader := retrieved.(interface {
-			LoadTimeunitBookingidBooking(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
-		})
-		if !isLoader {
-			return fmt.Errorf("object %T cannot load TimeunitBookingidBooking", retrieved)
-		}
-
-		err := loader.LoadTimeunitBookingidBooking(ctx, exec, queryMods...)
-
-		// Don't cause an issue due to missing relationships
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil
-		}
-
-		return err
-	})
-}
-
-// LoadTimeunitBookingidBooking loads the timeunit's BookingidBooking into the .R struct
-func (o *Timeunit) LoadTimeunitBookingidBooking(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if o == nil {
-		return nil
-	}
-
-	// Reset the relationship
-	o.R.BookingidBooking = nil
-
-	related, err := o.BookingidBooking(ctx, exec, mods...).One()
-	if err != nil {
-		return err
-	}
-
-	related.R.BookingidTimeunits = TimeunitSlice{o}
-
-	o.R.BookingidBooking = related
-	return nil
-}
-
-// LoadTimeunitBookingidBooking loads the timeunit's BookingidBooking into the .R struct
-func (os TimeunitSlice) LoadTimeunitBookingidBooking(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if len(os) == 0 {
-		return nil
-	}
-
-	bookings, err := os.BookingidBooking(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, o := range os {
-		for _, rel := range bookings {
-			if o.Bookingid.GetOrZero() != rel.Bookingid {
-				continue
-			}
-
-			rel.R.BookingidTimeunits = append(rel.R.BookingidTimeunits, o)
-
-			o.R.BookingidBooking = rel
-			break
-		}
-	}
-
-	return nil
 }
 
 func PreloadTimeunitParkingspotidParkingspot(opts ...psql.PreloadOption) psql.Preloader {
@@ -601,52 +432,6 @@ func (os TimeunitSlice) LoadTimeunitParkingspotidParkingspot(ctx context.Context
 			break
 		}
 	}
-
-	return nil
-}
-
-func attachTimeunitBookingidBooking0(ctx context.Context, exec bob.Executor, count int, timeunit0 *Timeunit, booking1 *Booking) (*Timeunit, error) {
-	setter := &TimeunitSetter{
-		Bookingid: omitnull.From(booking1.Bookingid),
-	}
-
-	err := Timeunits.Update(ctx, exec, setter, timeunit0)
-	if err != nil {
-		return nil, fmt.Errorf("attachTimeunitBookingidBooking0: %w", err)
-	}
-
-	return timeunit0, nil
-}
-
-func (timeunit0 *Timeunit) InsertBookingidBooking(ctx context.Context, exec bob.Executor, related *BookingSetter) error {
-	booking1, err := Bookings.Insert(ctx, exec, related)
-	if err != nil {
-		return fmt.Errorf("inserting related objects: %w", err)
-	}
-
-	_, err = attachTimeunitBookingidBooking0(ctx, exec, 1, timeunit0, booking1)
-	if err != nil {
-		return err
-	}
-
-	timeunit0.R.BookingidBooking = booking1
-
-	booking1.R.BookingidTimeunits = append(booking1.R.BookingidTimeunits, timeunit0)
-
-	return nil
-}
-
-func (timeunit0 *Timeunit) AttachBookingidBooking(ctx context.Context, exec bob.Executor, booking1 *Booking) error {
-	var err error
-
-	_, err = attachTimeunitBookingidBooking0(ctx, exec, 1, timeunit0, booking1)
-	if err != nil {
-		return err
-	}
-
-	timeunit0.R.BookingidBooking = booking1
-
-	booking1.R.BookingidTimeunits = append(booking1.R.BookingidTimeunits, timeunit0)
 
 	return nil
 }
