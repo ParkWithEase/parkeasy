@@ -62,6 +62,7 @@ linters-settings:
       - anon
       - error
       - empty
+      - stdlib
 
       # no concrete types are exposed for huma.API
       - github.com\/danielgtaylor\/huma\/v2\.API
