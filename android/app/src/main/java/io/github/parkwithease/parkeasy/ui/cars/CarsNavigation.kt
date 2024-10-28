@@ -7,11 +7,8 @@ import io.github.parkwithease.parkeasy.model.Car
 
 private const val CarsRoute = "cars"
 
-fun NavGraphBuilder.carsScreen(
-    showSnackbar: suspend (String, String?) -> Boolean,
-    onSelectCar: (Car) -> Unit,
-) {
-    composable(CarsRoute) { CarsScreen(showSnackbar, onSelectCar) }
+fun NavGraphBuilder.carsScreen(onSelectCar: (Car) -> Unit) {
+    composable(CarsRoute) { CarsScreen(onSelectCar) }
 }
 
 fun NavController.navigateToCars() = this.navigate(CarsRoute)

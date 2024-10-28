@@ -62,7 +62,7 @@ fun MainNavGraph(
                 navController::navigateToCars,
                 navController::navigateToLogin,
             )
-            carsScreen(showSnackbar, {})
+            carsScreen {}
         }
     }
 }

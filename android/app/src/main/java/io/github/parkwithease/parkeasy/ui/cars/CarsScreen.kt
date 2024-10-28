@@ -28,13 +28,9 @@ import io.github.parkwithease.parkeasy.model.Car
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarsScreen(
-    showSnackbar: suspend (String, String?) -> Boolean,
     onSelectCar: (Car) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: CarsViewModel =
-        hiltViewModel<CarsViewModel, CarsViewModel.Factory>(
-            creationCallback = { factory -> factory.create(showSnackbar = showSnackbar) }
-        ),
+    viewModel: CarsViewModel = hiltViewModel(),
 ) {
     val cars by viewModel.cars.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
