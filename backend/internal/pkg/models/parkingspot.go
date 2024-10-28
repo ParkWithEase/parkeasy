@@ -41,7 +41,7 @@ type ParkingSpotFeatures struct {
 type TimeUnit struct {
 	StartTime time.Time `json:"start_time" doc:"The start time for slot"`
 	EndTime   time.Time `json:"end_time" doc:"The end time for slot"`
-	Status    string    `json:"status,omitempty" enum:"booked,available" doc:"status of the parking spot"`
+	Status    string    `json:"status,omitempty" readOnly:"true" enum:"booked,available" doc:"status of the parking spot"`
 }
 
 type ParkingSpot struct {
@@ -62,7 +62,7 @@ type ParkingSpotWithAvailability struct {
 }
 
 type ParkingSpotCreationInput struct {
-	Availability []TimeUnit          `json:"availability,omitempty"`
+	Availability []TimeUnit          `json:"availability" nullable:"false"`
 	Location     ParkingSpotLocation `json:"location"`
 	PricePerHour float64             `json:"price_per_hour" doc:"price per hour"`
 	Features     ParkingSpotFeatures `json:"features,omitempty"`
