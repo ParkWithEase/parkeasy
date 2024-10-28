@@ -9,7 +9,6 @@ import (
 var (
 	ErrParkingSpotOwned     = CodeForbidden.WithMsg("parking spot is owned by an another user")
 	ErrParkingSpotNotFound  = CodeNotFound.WithMsg("this parking spot does not exist")
-	ErrAvailabilityNotFound = CodeNotFound.WithMsg("availability for this parking spot does not exist")
 	ErrParkingSpotDuplicate = CodeDuplicate.WithMsg("parking spot already exists")
 	ErrCountryNotSupported  = CodeCountryNotSupported.WithMsg("the specified country is not supported")
 	ErrProvinceNotSupported = CodeProvinceNotSupported.WithMsg("the specified province is not supported")
@@ -20,6 +19,7 @@ var (
 	ErrInvalidTimeWindow    = CodeSpotInvalid.WithMsg("the specified start and/or end dates are invalid")
 	ErrInvalidAddress       = CodeSpotInvalid.WithMsg("the specified address is invalid")
 	ErrInvalidTimeUnit      = CodeSpotInvalid.WithMsg("passed time unit is not valid, start and end time must be exactly 30 min apart")
+	ErrNoAvailability       = CodeSpotInvalid.WithMsg("at least one time slot must be passed")
 	ErrInvalidPricePerHour  = CodeSpotInvalid.WithMsg("the specified price per hour is not valid")
 )
 

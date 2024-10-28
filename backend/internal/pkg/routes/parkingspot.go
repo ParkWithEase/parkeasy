@@ -118,6 +118,16 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 					Location: "body.location.postal_code",
 					Value:    input.Body.Location.PostalCode,
 				}
+			case errors.Is(err, models.ErrNoAvailability), errors.Is(err, models.ErrInvalidTimeUnit):
+				detail = &huma.ErrorDetail{
+					Location: "body.availability",
+					Value: input.Body.Availability,
+				}
+			case errors.Is(err, models.ErrInvalidPricePerHour):
+				detail = &huma.ErrorDetail{
+					Location: "body.price_per_hour",
+					Value: input.Body.PricePerHour,
+				}
 			}
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
@@ -164,26 +174,14 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	) (*parkingSpotAvailabilityListOutput, error) {
 		spots, err := r.service.GetAvailByUUID(ctx, input.ID, input.AvailabilityStart, input.AvailabilityEnd)
 		if err != nil {
-			errs := []error{err}
-			switch {
-			case errors.Is(err, models.ErrInvalidTimeWindow):
-				errs = append(errs,
-					&huma.ErrorDetail{
-						Location: "query.availability_end",
-						Value:    input.AvailabilityEnd,
-					},
-					&huma.ErrorDetail{
-						Location: "query.availability_start",
-						Value:    input.AvailabilityStart,
-					},
-				)
-			case errors.Is(err, models.ErrParkingSpotNotFound):
-				errs = append(errs, &huma.ErrorDetail{
-					Location: "query.id",
+			var detail error
+			if errors.Is(err, models.ErrParkingSpotNotFound) {
+				detail = &huma.ErrorDetail{
+					Location: "path.id",
 					Value: input.ID,
-				})
+				}
 			}
-			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, errs...)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 
 		result := parkingSpotAvailabilityListOutput{Body: spots}
@@ -202,32 +200,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 
 		spots, err := r.service.GetMany(ctx, userID, 50, *input)
 		if err != nil {
-			errs := []error{err}
-			switch {
-			case errors.Is(err, models.ErrInvalidTimeWindow):
-				errs = append(errs,
-					&huma.ErrorDetail{
-						Location: "query.availability_end",
-						Value:    input.AvailabilityEnd,
-					},
-					&huma.ErrorDetail{
-						Location: "query.availability_start",
-						Value:    input.AvailabilityStart,
-					},
-				)
-			case errors.Is(err, models.ErrInvalidCoordinate):
-				errs = append(errs,
-					&huma.ErrorDetail{
-						Location: "query.longitude",
-						Value:    input.Longitude,
-					},
-					&huma.ErrorDetail{
-						Location: "query.latitude",
-						Value:    input.Latitude,
-					},
-				)
-			}
-			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, errs...)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
 
 		result := parkingSpotWithDistance{Body: spots}

@@ -355,6 +355,90 @@ func TestCreateParkingSpot(t *testing.T) {
 
 		srv.AssertExpectations(t)
 	})
+
+	t.Run("time slot errors", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("Create", mock.Anything, testOwnerID, &testInput).
+			Return(testOwnerID, models.ParkingSpotWithAvailability{}, models.ErrInvalidTimeUnit).
+			Once()
+		resp := api.PostCtx(ctx, "/spots", testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+
+		testDetail := huma.ErrorDetail{
+			Location: "body.availability",
+			Value:    jsonAnyify(testInput.Availability),
+		}
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &testDetail)
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("no time slot", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("Create", mock.Anything, testOwnerID, &testInput).
+			Return(testOwnerID, models.ParkingSpotWithAvailability{}, models.ErrNoAvailability).
+			Once()
+		resp := api.PostCtx(ctx, "/spots", testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+
+		testDetail := huma.ErrorDetail{
+			Location: "body.availability",
+			Value:    jsonAnyify(testInput.Availability),
+		}
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &testDetail)
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("invalid price", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("Create", mock.Anything, testOwnerID, &testInput).
+			Return(testOwnerID, models.ParkingSpotWithAvailability{}, models.ErrInvalidPricePerHour).
+			Once()
+		resp := api.PostCtx(ctx, "/spots", testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+
+		testDetail := huma.ErrorDetail{
+			Location: "body.price_per_hour",
+			Value:    jsonAnyify(testInput.PricePerHour),
+		}
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &testDetail)
+
+		srv.AssertExpectations(t)
+	})
 }
 
 func TestGetParkingSpot(t *testing.T) {
@@ -432,18 +516,46 @@ func TestGetParkingSpotAvailability(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		srv.On("GetByUUID", mock.Anything, testOwnerID, testSpotUUID).
-			Return(sampleOutput, nil).
+		srv.On("GetAvailByUUID", mock.Anything, testSpotUUID, mock.Anything, mock.Anything).
+			Return(sampleAvailability, nil).
 			Once()
 
-		resp := api.GetCtx(ctx, "/spots/"+testSpotUUID.String())
+		resp := api.GetCtx(ctx, "/spots/"+testSpotUUID.String()+"/availability")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
-		var spot models.ParkingSpot
-		err := json.NewDecoder(resp.Result().Body).Decode(&spot)
+		var availability []models.TimeUnit
+		err := json.NewDecoder(resp.Result().Body).Decode(&availability)
 		require.NoError(t, err)
 
-		assert.Equal(t, testSpotUUID, spot.ID)
+		assert.Equal(t, sampleAvailability, availability)
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("all good with params", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("GetAvailByUUID", mock.Anything, testSpotUUID, sampleAvailability[0].StartTime, sampleAvailability[1].EndTime).
+			Return(sampleAvailability, nil).
+			Once()
+
+		reqURL := fmt.Sprintf("/spots/%s/availability?availability_start=%s&availability_end=%s",
+			testSpotUUID,
+			sampleAvailability[0].StartTime.Format(time.RFC3339),
+			sampleAvailability[1].EndTime.Format(time.RFC3339))
+		resp := api.GetCtx(ctx, reqURL)
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+
+		var availability []models.TimeUnit
+		err := json.NewDecoder(resp.Result().Body).Decode(&availability)
+		require.NoError(t, err)
+
+		assert.Equal(t, sampleAvailability, availability)
 
 		srv.AssertExpectations(t)
 	})
@@ -456,12 +568,12 @@ func TestGetParkingSpotAvailability(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		testUUID := uuid.New()
-		srv.On("GetByUUID", mock.Anything, testOwnerID, testUUID).
-			Return(models.ParkingSpot{}, models.ErrParkingSpotNotFound).
+		srv.On("GetAvailByUUID", mock.Anything, uuid.Nil, mock.Anything, mock.Anything).
+			Return([]models.TimeUnit(nil), models.ErrParkingSpotNotFound).
 			Once()
 
-		resp := api.GetCtx(ctx, "/spots/"+testUUID.String())
+		reqURL := fmt.Sprintf("/spots/%s/availability", uuid.Nil)
+		resp := api.GetCtx(ctx, reqURL)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
@@ -470,7 +582,7 @@ func TestGetParkingSpotAvailability(t *testing.T) {
 		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
 			Location: "path.id",
-			Value:    jsonAnyify(testUUID),
+			Value:    jsonAnyify(uuid.Nil),
 		})
 
 		srv.AssertExpectations(t)
@@ -503,14 +615,14 @@ func TestGetParkingSpotAroundLocation(t *testing.T) {
 			Return(testOutput, nil).
 			Once()
 
-		url := fmt.Sprintf("/spots?latitude=%f&longitude=%f&distance=%d&availability_start=%s&availability_end=%s",
+		reqURL := fmt.Sprintf("/spots?latitude=%f&longitude=%f&distance=%d&availability_start=%s&availability_end=%s",
 			sampleLatitudeFloat,
 			sampleLongitudeFloat,
 			int32(sampleDistanceToLocation),
 			sampleAvailability[0].StartTime.Format(time.RFC3339),
 			sampleAvailability[1].EndTime.Format(time.RFC3339))
 
-		resp := api.GetCtx(ctx, url)
+		resp := api.GetCtx(ctx, reqURL)
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
 		var spot []models.ParkingSpotWithDistance
@@ -521,7 +633,7 @@ func TestGetParkingSpotAroundLocation(t *testing.T) {
 		srv.AssertExpectations(t)
 	})
 
-	t.Run("invalid time window handling", func(t *testing.T) {
+	t.Run("no coordinate", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
@@ -529,72 +641,15 @@ func TestGetParkingSpotAroundLocation(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		filter := sampleFilter
-		filter.AvailabilityStart = sampleFilter.AvailabilityEnd
-		filter.AvailabilityEnd = sampleFilter.AvailabilityStart
-
-		srv.On("GetMany", mock.Anything, testOwnerID, 50, filter).
-			Return([]models.ParkingSpotWithDistance{}, models.ErrInvalidTimeWindow).
-			Once()
-
-		url := fmt.Sprintf("/spots?latitude=%f&longitude=%f&distance=%d&availability_start=%s&availability_end=%s",
-			sampleLatitudeFloat,
-			sampleLongitudeFloat,
-			int32(sampleDistanceToLocation),
-			sampleAvailability[1].EndTime.Format(time.RFC3339),
-			sampleAvailability[0].StartTime.Format(time.RFC3339))
-
-		resp := api.GetCtx(ctx, url)
-		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
-
-		var errModel huma.ErrorModel
-		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
-		require.NoError(t, err)
-		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
-		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Location: "query.availability_end",
-			Value:    jsonAnyify(sampleAvailability[0].StartTime.Format(time.RFC3339)),
-		})
-
-		srv.AssertExpectations(t)
-	})
-
-	t.Run("invalid coordinate handling", func(t *testing.T) {
-		t.Parallel()
-
-		srv := new(mockParkingSpotService)
-		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
-		_, api := humatest.New(t)
-		huma.AutoRegister(api, route)
-
-		filter := sampleFilter
-		filter.Longitude = 0
-		filter.Latitude = 0
-
-		srv.On("GetMany", mock.Anything, testOwnerID, 50, filter).
-			Return([]models.ParkingSpotWithDistance{}, models.ErrInvalidCoordinate).
-			Once()
-
-		url := fmt.Sprintf("/spots?latitude=%f&longitude=%f&distance=%d&availability_start=%s&availability_end=%s",
-			filter.Latitude,
-			filter.Longitude,
+		reqURL := fmt.Sprintf("/spots?&distance=%d&availability_start=%s&availability_end=%s",
 			int32(sampleDistanceToLocation),
 			sampleAvailability[0].StartTime.Format(time.RFC3339),
 			sampleAvailability[1].EndTime.Format(time.RFC3339))
 
-		resp := api.GetCtx(ctx, url)
+		resp := api.GetCtx(ctx, reqURL)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 
-		var errModel huma.ErrorModel
-		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
-		require.NoError(t, err)
-		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
-		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Location: "query.latitude",
-			Value:    jsonAnyify(filter.Longitude),
-		})
-
-		srv.AssertExpectations(t)
+		srv.AssertNotCalled(t, "GetMany")
 	})
 }
 

@@ -2,12 +2,14 @@ package parkingspot
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/geocoding"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
+	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
 	"github.com/govalues/decimal"
 	"github.com/stretchr/testify/assert"
@@ -160,6 +162,7 @@ func TestCreate(t *testing.T) {
 		srv := New(repo, geoRepo)
 		input := &models.ParkingSpotCreationInput{
 			Location: sampleLocation,
+			Availability: sampleAvailability,
 		}
 		repo.On("Create", mock.Anything, testOwnerID, input).
 			Return(
@@ -190,6 +193,7 @@ func TestCreate(t *testing.T) {
 
 		input := &models.ParkingSpotCreationInput{
 			Location: sampleLocation,
+			Availability: sampleAvailability,
 		}
 		repo.On("Create", mock.Anything, testOwnerID, input).
 			Return(
@@ -290,7 +294,7 @@ func TestCreate(t *testing.T) {
 		srv := New(repo, geoRepo)
 
 		location := sampleLocation
-		availability := sampleAvailability
+		availability := append([]models.TimeUnit(nil), sampleAvailability...)
 		availability[0].StartTime = availability[0].StartTime.Add(time.Minute)
 		_, _, err := srv.Create(ctx, 0, &models.ParkingSpotCreationInput{
 			Location:     location,
@@ -298,6 +302,62 @@ func TestCreate(t *testing.T) {
 		})
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrInvalidTimeUnit)
+		}
+		repo.AssertNotCalled(t, "Create")
+	})
+
+	t.Run("invalid price check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		geoRepo := new(mockGeocodingRepo)
+		geoRepo.AddGeocodeCall()
+		srv := New(repo, geoRepo)
+
+		_, _, err := srv.Create(ctx, 0, &models.ParkingSpotCreationInput{
+			Location:     sampleLocation,
+			Availability: sampleAvailability,
+			PricePerHour: -10,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidPricePerHour)
+		}
+		repo.AssertNotCalled(t, "Create")
+	})
+	
+	t.Run("not real price check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		geoRepo := new(mockGeocodingRepo)
+		geoRepo.AddGeocodeCall()
+		srv := New(repo, geoRepo)
+
+		_, _, err := srv.Create(ctx, 0, &models.ParkingSpotCreationInput{
+			Location:     sampleLocation,
+			Availability: sampleAvailability,
+			PricePerHour: math.Inf(1),
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidPricePerHour)
+		}
+		repo.AssertNotCalled(t, "Create")
+	})
+
+	t.Run("no availability check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		geoRepo := new(mockGeocodingRepo)
+		geoRepo.AddGeocodeCall()
+		srv := New(repo, geoRepo)
+
+		location := sampleLocation
+		_, _, err := srv.Create(ctx, 0, &models.ParkingSpotCreationInput{
+			Location: location,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrNoAvailability)
 		}
 		repo.AssertNotCalled(t, "Create")
 	})
@@ -366,7 +426,21 @@ func TestGetAvailByUUID(t *testing.T) {
 		repo.AssertExpectations(t)
 	})
 
-	t.Run("availability not found check", func(t *testing.T) {
+	t.Run("get availability with no end time", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.On("GetAvailByUUID", mock.Anything, testSpotUUID, sampleAvailability[0].StartTime, sampleAvailability[0].StartTime.AddDate(0, 0, 7)).
+			Return(sampleAvailability, nil).Once()
+		geoRepo := new(mockGeocodingRepo)
+		srv := New(repo, geoRepo)
+
+		_, err := srv.GetAvailByUUID(ctx, testSpotUUID, sampleAvailability[0].StartTime, time.Time{})
+		require.NoError(t, err)
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("invalid parking spot", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
@@ -378,20 +452,6 @@ func TestGetAvailByUUID(t *testing.T) {
 		_, err := srv.GetAvailByUUID(ctx, uuid.Nil, time.Now(), time.Now())
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
-		}
-		repo.AssertExpectations(t)
-	})
-
-	t.Run("invalid time window check", func(t *testing.T) {
-		t.Parallel()
-
-		repo := new(mockRepo)
-		geoRepo := new(mockGeocodingRepo)
-		srv := New(repo, geoRepo)
-
-		_, err := srv.GetAvailByUUID(ctx, uuid.Nil, time.Now(), time.Now().Add(-1*time.Hour))
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrInvalidTimeWindow)
 		}
 		repo.AssertExpectations(t)
 	})
@@ -470,68 +530,68 @@ func TestGetMany(t *testing.T) {
 		repo.AssertExpectations(t)
 	})
 
-	t.Run("invalid time window end time before start time check", func(t *testing.T) {
+
+	t.Run("empty end date", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		long, _ := decimal.NewFromFloat64(5)
+		lat, _ := decimal.NewFromFloat64(5)
+		repo.On("GetMany", 1, parkingspot.Filter{
+			Location: omit.From(parkingspot.FilterLocation{
+				Latitude: long,
+				Longitude: lat,
+			}),
+			Availability: omit.From(parkingspot.FilterAvailability{
+				Start: sampleAvailability[0].StartTime,
+				End: sampleAvailability[0].StartTime.AddDate(0, 0, 7),
+			}),
+		}).
+		Return([]parkingspot.GetManyEntry{}, nil).
+		Once()
+		geoRepo := new(mockGeocodingRepo)
+		srv := New(repo, geoRepo)
+
+		filter := models.ParkingSpotFilter{
+			ParkingSpotAvailabilityFilter: models.ParkingSpotAvailabilityFilter{
+				AvailabilityStart: sampleAvailability[0].StartTime,
+			},
+			Latitude:  5,
+			Longitude: 5,
+		}
+
+		_, err := srv.GetMany(ctx, testOwnerID, 1, filter)
+		require.NoError(t, err)
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("not real latitude", func (t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
 		geoRepo := new(mockGeocodingRepo)
 		srv := New(repo, geoRepo)
 
-		filter := models.ParkingSpotFilter{
-			ParkingSpotAvailabilityFilter: models.ParkingSpotAvailabilityFilter{
-				AvailabilityStart: time.Date(2024, time.October, 26, 10, 0, 0, 0, time.UTC),
-				AvailabilityEnd:   time.Date(2024, time.October, 26, 9, 0, 0, 0, time.UTC),
-			},
-		}
-
-		_, err := srv.GetMany(ctx, testOwnerID, 1, filter)
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrInvalidTimeWindow)
-		}
-		repo.AssertExpectations(t)
+		result, err := srv.GetMany(ctx, testOwnerID, 0, models.ParkingSpotFilter{
+			Latitude: math.NaN(),
+		})
+		assert.Equal(t, result, []models.ParkingSpotWithDistance{})
+		require.NoError(t, err)
+		repo.AssertNotCalled(t, "GetMany")
 	})
 
-	t.Run("invalid time window zero time check", func(t *testing.T) {
+	t.Run("not real longitude", func (t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
 		geoRepo := new(mockGeocodingRepo)
 		srv := New(repo, geoRepo)
 
-		filter := models.ParkingSpotFilter{
-			ParkingSpotAvailabilityFilter: models.ParkingSpotAvailabilityFilter{
-				AvailabilityStart: time.Date(2024, time.October, 26, 0, 0, 0, 0, time.UTC),
-			},
-		}
-
-		_, err := srv.GetMany(ctx, testOwnerID, 1, filter)
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrInvalidTimeWindow)
-		}
-		repo.AssertExpectations(t)
+		result, err := srv.GetMany(ctx, testOwnerID, 0, models.ParkingSpotFilter{
+			Longitude: math.Inf(1),
+		})
+		assert.Equal(t, result, []models.ParkingSpotWithDistance{})
+		require.NoError(t, err)
+		repo.AssertNotCalled(t, "GetMany")
 	})
-
-	t.Run("invalid coordinate check", func(t *testing.T) {
-		t.Parallel()
-
-		repo := new(mockRepo)
-		geoRepo := new(mockGeocodingRepo)
-		srv := New(repo, geoRepo)
-
-		filter := models.ParkingSpotFilter{
-			ParkingSpotAvailabilityFilter: models.ParkingSpotAvailabilityFilter{
-				AvailabilityStart: time.Date(2024, time.October, 26, 10, 0, 0, 0, time.UTC),
-				AvailabilityEnd:   time.Date(2024, time.October, 26, 11, 0, 0, 0, time.UTC),
-			},
-			Latitude:  0,
-			Longitude: 0,
-		}
-
-		_, err := srv.GetMany(ctx, testOwnerID, 1, filter)
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrInvalidCoordinate)
-		}
-		repo.AssertExpectations(t)
-	})
-
 }

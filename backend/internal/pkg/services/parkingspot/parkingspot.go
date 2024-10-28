@@ -75,6 +75,10 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 		return 0, models.ParkingSpotWithAvailability{}, models.ErrInvalidStreetAddress
 	}
 
+	// There must be at least one slot
+	if len(spot.Availability) == 0 {
+		return 0, models.ParkingSpotWithAvailability{}, models.ErrNoAvailability
+	}
 	// All availability units must be 30 minutes
 	for _, unit := range spot.Availability {
 		if unit.EndTime != unit.StartTime.Add(30*time.Minute) {
@@ -168,10 +172,6 @@ func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID)
 }
 
 func (s *Service) GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
-	if endDate.Before(startDate) {
-		return []models.TimeUnit{}, models.ErrInvalidTimeWindow
-	}
-
 	if startDate.IsZero() {
 		startDate = time.Now()
 	}
@@ -194,13 +194,6 @@ func (s *Service) GetMany(ctx context.Context, userID int64, count int, filter m
 	if count <= 0 {
 		return []models.ParkingSpotWithDistance{}, nil
 	}
-	if filter.AvailabilityEnd.Before(filter.AvailabilityStart) ||
-		(!filter.AvailabilityEnd.IsZero() && filter.AvailabilityStart.IsZero()) {
-		return nil, models.ErrInvalidTimeWindow
-	}
-	if filter.Latitude == 0 || filter.Longitude == 0 {
-		return nil, models.ErrInvalidCoordinate
-	}
 
 	count = min(count, MaximumCount)
 	repoAvailFilter := parkingspot.FilterAvailability{
@@ -217,12 +210,12 @@ func (s *Service) GetMany(ctx context.Context, userID int64, count int, filter m
 
 	lat, err := decimal.NewFromFloat64(filter.Latitude)
 	if err != nil {
-		return nil, models.ErrInvalidCoordinate
+		return []models.ParkingSpotWithDistance{}, nil
 	}
 
 	long, err := decimal.NewFromFloat64(filter.Longitude)
 	if err != nil {
-		return nil, models.ErrInvalidCoordinate
+		return []models.ParkingSpotWithDistance{}, nil
 	}
 
 	repoFilter := parkingspot.Filter{
