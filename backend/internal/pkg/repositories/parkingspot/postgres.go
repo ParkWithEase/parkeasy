@@ -56,7 +56,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		// Handle duplicate error
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
-			if pgErr.Code == pgerrcode.UniqueViolation {
+			if pgErr.Code == pgerrcode.ExclusionViolation && pgErr.ConstraintName == "latlon_overlap_exclude" {
 				err = ErrDuplicatedAddress
 			}
 		}

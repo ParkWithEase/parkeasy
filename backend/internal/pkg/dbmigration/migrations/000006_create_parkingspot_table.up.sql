@@ -1,3 +1,6 @@
+CREATE EXTENSION IF NOT EXISTS cube;
+CREATE EXTENSION IF NOT EXISTS earthdistance;
+
 -- Parking spot details
 CREATE TABLE IF NOT EXISTS ParkingSpot (
   ParkingSpotId BIGSERIAL PRIMARY KEY,
@@ -13,10 +16,10 @@ CREATE TABLE IF NOT EXISTS ParkingSpot (
   HasShelter BOOLEAN NOT NULL DEFAULT false,
   HasPlugIn BOOLEAN NOT NULL DEFAULT false,
   HasChargingStation BOOLEAN NOT NULL DEFAULT false,
-  PricePerHour DECIMAL NOT NULL
+  PricePerHour DECIMAL NOT NULL,
+  CONSTRAINT latlon_overlap_exclude EXCLUDE USING gist (earth_box(ll_to_earth(latitude, longitude), 3) with &&)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS ParkingSpotUUIDIdx ON ParkingSpot(ParkingSpotUUID);
-CREATE UNIQUE INDEX IF NOT EXISTS ParkingSpotCoordinateIdx ON ParkingSpot(Longitude, Latitude);
+CREATE INDEX IF NOT EXISTS ParkingSpotCoordinateIdx ON ParkingSpot USING gist (ll_to_earth(latitude, longitude));
 
-CREATE EXTENSION IF NOT EXISTS earthdistance CASCADE;
