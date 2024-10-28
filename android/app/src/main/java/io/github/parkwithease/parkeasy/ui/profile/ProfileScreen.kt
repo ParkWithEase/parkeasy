@@ -42,6 +42,7 @@ fun ProfileScreen(
             latestOnLogout()
         }
     }
+    LaunchedEffect(Unit) { viewModel.refresh() }
     val profile by viewModel.profile.collectAsState()
     ProfileScreen(profile, navigateCars, viewModel::onLogoutClick, modifier)
 }

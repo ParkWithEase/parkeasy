@@ -28,14 +28,10 @@ constructor(
 
     private val _profile = MutableStateFlow(Profile("", ""))
     val profile = _profile.asStateFlow()
-        get() {
-            refresh()
-            return field
-        }
 
     val loggedIn = authRepo.statusFlow
 
-    private fun refresh() {
+    fun refresh() {
         viewModelScope.launch {
             val profile = userRepo.getUser()
             if (profile != null) {
