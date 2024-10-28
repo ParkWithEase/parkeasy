@@ -47,11 +47,11 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 	}
 	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
 
-	setter, err := setterFromCreateInput(userID, spot)
+	spotSetter, unitSetters, err := settersFromCreateInput(userID, spot)
 	if err != nil {
 		return Entry{}, nil, err
 	}
-	inserted, err := dbmodels.Parkingspots.Insert(ctx, tx, &setter)
+	inserted, err := dbmodels.Parkingspots.Insert(ctx, tx, &spotSetter)
 	if err != nil {
 		// Handle duplicate error
 		var pgErr *pgconn.PgError
@@ -63,18 +63,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		return Entry{}, nil, err
 	}
 
-	availabilitySetters := make([]*dbmodels.TimeunitSetter, 0, len(spot.Availability))
-	for _, timeslot := range spot.Availability {
-		availabilitySetters = append(availabilitySetters, &dbmodels.TimeunitSetter{
-			Timerange: omit.From(dbtype.Tstzrange{
-				Start: timeslot.StartTime,
-				End:   timeslot.EndTime,
-			}),
-			Parkingspotid: omit.From(inserted.Parkingspotid),
-		})
-	}
-
-	units, err := dbmodels.Timeunits.InsertMany(ctx, tx, availabilitySetters...)
+	err = inserted.InsertParkingspotidTimeunits(ctx, tx, unitSetters...)
 	if err != nil {
 		return Entry{}, nil, err
 	}
@@ -84,12 +73,12 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		return Entry{}, nil, fmt.Errorf("could not commit transaction: %w", err)
 	}
 
-	availability := timeUnitsFromDB(units)
-
 	entry, err := entryFromDB(inserted)
 	if err != nil {
 		return Entry{}, nil, fmt.Errorf("could not adapt dbmodels.Parkingspot: %w", err)
 	}
+	availability := timeUnitsFromDB(inserted.R.ParkingspotidTimeunits)
+
 	return entry, availability, nil
 }
 
@@ -333,18 +322,27 @@ func timeUnitsFromDB(model []*dbmodels.Timeunit) []models.TimeUnit {
 	return result
 }
 
-func setterFromCreateInput(userID int64, input *models.ParkingSpotCreationInput) (dbmodels.ParkingspotSetter, error) {
+func settersFromCreateInput(userID int64, input *models.ParkingSpotCreationInput) (dbmodels.ParkingspotSetter, []*dbmodels.TimeunitSetter, error) {
 	lon, err := decimal.NewFromFloat64(input.Location.Longitude)
 	if err != nil {
-		return dbmodels.ParkingspotSetter{}, ErrInvalidCoordinate
+		return dbmodels.ParkingspotSetter{}, nil, ErrInvalidCoordinate
 	}
 	lat, err := decimal.NewFromFloat64(input.Location.Latitude)
 	if err != nil {
-		return dbmodels.ParkingspotSetter{}, ErrInvalidCoordinate
+		return dbmodels.ParkingspotSetter{}, nil, ErrInvalidCoordinate
 	}
 	price, err := decimal.NewFromFloat64(input.PricePerHour)
 	if err != nil {
-		return dbmodels.ParkingspotSetter{}, ErrInvalidPrice
+		return dbmodels.ParkingspotSetter{}, nil, ErrInvalidPrice
+	}
+	timeunits := make([]*dbmodels.TimeunitSetter, 0, len(input.Availability))
+	for _, timeslot := range input.Availability {
+		timeunits = append(timeunits, &dbmodels.TimeunitSetter{
+			Timerange: omit.From(dbtype.Tstzrange{
+				Start: timeslot.StartTime,
+				End:   timeslot.EndTime,
+			}),
+		})
 	}
 
 	return dbmodels.ParkingspotSetter{
@@ -360,5 +358,5 @@ func setterFromCreateInput(userID int64, input *models.ParkingSpotCreationInput)
 		Hasplugin:          omit.From(input.Features.PlugIn),
 		Haschargingstation: omit.From(input.Features.ChargingStation),
 		Priceperhour:       omit.From(price),
-	}, nil
+	}, timeunits, nil
 }
