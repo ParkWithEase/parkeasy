@@ -62,6 +62,7 @@ linters-settings:
       - anon
       - error
       - empty
+      - stdlib
 
       # no concrete types are exposed for huma.API
       - github.com\/danielgtaylor\/huma\/v2\.API
@@ -132,9 +133,9 @@ issues:
       linters:
         - revive
 
-    # Exempt integration tests from complexity checks as they will be huge due to
-    # having multiple levels of subtests.
-    - text: "function Test.*Integration has (cognitive|cyclomatic) complexity"
+    # Exempt tests from complexity checks as they will be huge due to subtests
+    # inflating complexity
+    - text: "function Test.* has (cognitive|cyclomatic) complexity"
       linters:
         - revive
 

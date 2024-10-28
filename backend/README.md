@@ -4,9 +4,12 @@ API server for ParkEasy
 
 ### Getting started
 
+Get a free [geocod.io](https://geocod.io) API key. This is required for listing APIs to work.
+
 Start a local cluster for development
 
     cp example.env .env
+    # edit .env and add your geocod.io API key
     docker compose -f compose.yaml up --build
 
 The API server is exposed on port `8080`.
