@@ -64,7 +64,7 @@ func (m *mockRepo) GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64,
 }
 
 // GetAvalByUUID implements parkingspot.Repository.
-func (m *mockRepo) GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
+func (m *mockRepo) GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate, endDate time.Time) ([]models.TimeUnit, error) {
 	args := m.Called(ctx, spotID, startDate, endDate)
 	return args.Get(0).([]models.TimeUnit), args.Error(1)
 }
@@ -74,11 +74,9 @@ func (m *mockRepo) GetMany(ctx context.Context, limit int, filter parkingspot.Fi
 	return args.Get(0).([]parkingspot.GetManyEntry), args.Error(1)
 }
 
-var (
+const (
 	sampleLatitudeFloat  = float64(43.07923)
 	sampleLongitudeFloat = float64(-79.07887)
-	sampleLatitude, _    = decimal.NewFromFloat64(sampleLatitudeFloat)
-	sampleLongitude, _   = decimal.NewFromFloat64(sampleLongitudeFloat)
 )
 
 var sampleLocation = models.ParkingSpotLocation{
@@ -472,7 +470,7 @@ func TestGetManyForUser(t *testing.T) {
 		srv := New(repo, geoRepo)
 
 		result, err := srv.GetManyForUser(ctx, testOwnerID, 0)
-		assert.Equal(t, result, []models.ParkingSpot{})
+		assert.Empty(t, result)
 		require.NoError(t, err)
 		repo.AssertExpectations(t)
 	})
@@ -514,7 +512,7 @@ func TestGetMany(t *testing.T) {
 		}
 
 		result, err := srv.GetMany(ctx, testOwnerID, 1, filter)
-		assert.Equal(t, result, expectedOutput)
+		assert.Equal(t, expectedOutput, result)
 		require.NoError(t, err)
 		repo.AssertExpectations(t)
 	})
@@ -527,7 +525,7 @@ func TestGetMany(t *testing.T) {
 		srv := New(repo, geoRepo)
 
 		result, err := srv.GetMany(ctx, testOwnerID, 0, models.ParkingSpotFilter{})
-		assert.Equal(t, result, []models.ParkingSpotWithDistance{})
+		assert.Empty(t, result)
 		require.NoError(t, err)
 		repo.AssertExpectations(t)
 	})
@@ -576,7 +574,7 @@ func TestGetMany(t *testing.T) {
 		result, err := srv.GetMany(ctx, testOwnerID, 0, models.ParkingSpotFilter{
 			Latitude: math.NaN(),
 		})
-		assert.Equal(t, result, []models.ParkingSpotWithDistance{})
+		assert.Empty(t, result)
 		require.NoError(t, err)
 		repo.AssertNotCalled(t, "GetMany")
 	})
@@ -591,7 +589,7 @@ func TestGetMany(t *testing.T) {
 		result, err := srv.GetMany(ctx, testOwnerID, 0, models.ParkingSpotFilter{
 			Longitude: math.Inf(1),
 		})
-		assert.Equal(t, result, []models.ParkingSpotWithDistance{})
+		assert.Empty(t, result)
 		require.NoError(t, err)
 		repo.AssertNotCalled(t, "GetMany")
 	})

@@ -58,15 +58,15 @@ type ParkingSpotWithDistance struct {
 }
 
 type ParkingSpotWithAvailability struct {
-	ParkingSpot
 	Availability []TimeUnit `json:"availability,omitempty"`
+	ParkingSpot
 }
 
 type ParkingSpotCreationInput struct {
-	Location     ParkingSpotLocation `json:"location"`
-	Features     ParkingSpotFeatures `json:"features,omitempty"`
-	PricePerHour float64             `json:"price_per_hour" doc:"price per hour"`
 	Availability []TimeUnit          `json:"availability,omitempty"`
+	Location     ParkingSpotLocation `json:"location"`
+	PricePerHour float64             `json:"price_per_hour" doc:"price per hour"`
+	Features     ParkingSpotFeatures `json:"features,omitempty"`
 }
 
 type ParkingSpotAvailabilityFilter struct {
@@ -75,8 +75,8 @@ type ParkingSpotAvailabilityFilter struct {
 }
 
 type ParkingSpotFilter struct {
+	ParkingSpotAvailabilityFilter
 	Longitude float64 `query:"longitude" required:"true" doc:"Longitude of the centre point"`
 	Latitude  float64 `query:"latitude" required:"true" doc:"Latitude of the centre point"`
 	Distance  int32   `query:"distance" default:"20" doc:"distance around the centre point"`
-	ParkingSpotAvailabilityFilter
 }

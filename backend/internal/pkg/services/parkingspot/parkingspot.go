@@ -2,7 +2,6 @@ package parkingspot
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"math"
@@ -13,7 +12,6 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/geocoding"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/aarondl/opt/omit"
-	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
 	"github.com/govalues/decimal"
 )
@@ -43,7 +41,7 @@ func isValidProvinceCode(code string) bool {
 }
 
 // Map between province and IANA time zone names
-var provinceToTz = map[string]string{
+var provinceToTz = map[string]string{ //nolint // This won't be used until later
 	"AB": "America/Edmonton",
 	"BC": "America/Vancouver",
 	"MB": "America/Winnipeg",
@@ -59,52 +57,27 @@ var provinceToTz = map[string]string{
 	"NT": "America/Yellowknife",
 }
 
-func (s *Service) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpotWithAvailability, error) {
-	// NOTE: We only support Canadian spots at the moment
-	if spot.Location.CountryCode != "CA" {
-		return 0, models.ParkingSpotWithAvailability{}, models.ErrCountryNotSupported
-	}
-	if !isValidProvinceCode(spot.Location.State) {
-		return 0, models.ParkingSpotWithAvailability{}, models.ErrProvinceNotSupported
-	}
-	canadianPostalCodeRegexp := regexp.MustCompile("^[A-Z][0-9][A-Z][0-9][A-Z][0-9]$")
-	if !canadianPostalCodeRegexp.MatchString(spot.Location.PostalCode) {
-		return 0, models.ParkingSpotWithAvailability{}, models.ErrInvalidPostalCode
-	}
-	if spot.Location.StreetAddress == "" {
-		return 0, models.ParkingSpotWithAvailability{}, models.ErrInvalidStreetAddress
+func (s *Service) Create(ctx context.Context, userID int64, input *models.ParkingSpotCreationInput) (int64, models.ParkingSpotWithAvailability, error) {
+	err := validateCreationInput(input)
+	if err != nil {
+		return 0, models.ParkingSpotWithAvailability{}, err
 	}
 
-	// There must be at least one slot
-	if len(spot.Availability) == 0 {
-		return 0, models.ParkingSpotWithAvailability{}, models.ErrNoAvailability
-	}
-	// All availability units must be 30 minutes
-	for _, unit := range spot.Availability {
-		if unit.EndTime != unit.StartTime.Add(30*time.Minute) {
-			return 0, models.ParkingSpotWithAvailability{}, models.ErrInvalidTimeUnit
-		}
-	}
-
-	insertSpot := *spot
 	gcr, err := s.geocoder.Geocode(ctx, &geocoding.Address{
-		Street:     spot.Location.StreetAddress,
-		City:       spot.Location.City,
-		State:      spot.Location.State,
-		PostalCode: spot.Location.PostalCode,
-		Country:    spot.Location.CountryCode,
+		Street:     input.Location.StreetAddress,
+		City:       input.Location.City,
+		State:      input.Location.State,
+		PostalCode: input.Location.PostalCode,
+		Country:    input.Location.CountryCode,
 	})
 	if err != nil {
-		return 0, models.ParkingSpotWithAvailability{}, fmt.Errorf("geocoding failed for: %+v: %w", spot.Location, err)
+		return 0, models.ParkingSpotWithAvailability{}, fmt.Errorf("geocoding failed for: %+v: %w", input.Location, err)
 	}
 	if len(gcr) == 0 || gcr[0].Accuracy < 1 {
 		return 0, models.ParkingSpotWithAvailability{}, models.ErrInvalidAddress
 	}
 
-	if spot.PricePerHour < 0 || math.IsNaN(spot.PricePerHour) || math.IsInf(spot.PricePerHour, 0) {
-		return 0, models.ParkingSpotWithAvailability{}, models.ErrInvalidPricePerHour
-	}
-
+	insertSpot := *input
 	insertSpot.Location = models.ParkingSpotLocation{
 		PostalCode:    gcr[0].Address.PostalCode,
 		City:          gcr[0].Address.City,
@@ -114,7 +87,7 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 		Longitude:     gcr[0].Longitude,
 		Latitude:      gcr[0].Latitude,
 	}
-	result, availability, err := s.repo.Create(ctx, userID, spot)
+	result, availability, err := s.repo.Create(ctx, userID, &insertSpot)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrDuplicatedAddress) {
 			err = models.ErrParkingSpotDuplicate
@@ -170,7 +143,7 @@ func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID)
 	return out, nil
 }
 
-func (s *Service) GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
+func (s *Service) GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate, endDate time.Time) ([]models.TimeUnit, error) {
 	if startDate.IsZero() {
 		startDate = time.Now()
 	}
@@ -231,7 +204,8 @@ func (s *Service) GetMany(ctx context.Context, userID int64, count int, filter m
 	}
 
 	result := make([]models.ParkingSpotWithDistance, 0, len(spotEntries))
-	for _, entry := range spotEntries {
+	for i := range spotEntries {
+		entry := &spotEntries[i]
 		result = append(result, models.ParkingSpotWithDistance{
 			ParkingSpot:        entry.ParkingSpot,
 			DistanceToLocation: entry.DistanceToLocation,
@@ -256,32 +230,52 @@ func (s *Service) GetManyForUser(ctx context.Context, userID int64, count int) (
 	}
 
 	result := make([]models.ParkingSpot, 0, len(spotEntries))
-	for _, entry := range spotEntries {
+	for i := range spotEntries {
+		entry := &spotEntries[i]
 		result = append(result, entry.ParkingSpot)
 	}
 	return result, nil
 }
 
-func decodeCursor(cursor models.Cursor) omit.Val[parkingspot.Cursor] {
-	raw, err := base64.RawURLEncoding.DecodeString(string(cursor))
+// Validate parking spot static rules
+func validateCreationInput(input *models.ParkingSpotCreationInput) error {
+	err := validateSpotLocation(&input.Location)
 	if err != nil {
-		return omit.Val[parkingspot.Cursor]{}
+		return err
 	}
 
-	var result parkingspot.Cursor
-	err = cbor.Unmarshal(raw, &result)
-	if err != nil {
-		return omit.Val[parkingspot.Cursor]{}
+	// There must be at least one slot
+	if len(input.Availability) == 0 {
+		return models.ErrNoAvailability
+	}
+	// All availability units must be 30 minutes
+	for _, unit := range input.Availability {
+		if unit.EndTime != unit.StartTime.Add(30*time.Minute) {
+			return models.ErrInvalidTimeUnit
+		}
+	}
+	if input.PricePerHour < 0 || math.IsNaN(input.PricePerHour) || math.IsInf(input.PricePerHour, 0) {
+		return models.ErrInvalidPricePerHour
 	}
 
-	return omit.From(result)
+	return nil
 }
 
-func encodeCursor(cursor parkingspot.Cursor) (models.Cursor, error) {
-	raw, err := cbor.Marshal(cursor)
-	if err != nil {
-		return "", err
+// Validate location input static rules
+func validateSpotLocation(location *models.ParkingSpotLocation) error {
+	// NOTE: We only support Canadian spots at the moment
+	if location.CountryCode != "CA" {
+		return models.ErrCountryNotSupported
 	}
-
-	return models.Cursor(base64.RawURLEncoding.EncodeToString(raw)), nil
+	if !isValidProvinceCode(location.State) {
+		return models.ErrProvinceNotSupported
+	}
+	canadianPostalCodeRegexp := regexp.MustCompile("^[A-Z][0-9][A-Z][0-9][A-Z][0-9]$")
+	if !canadianPostalCodeRegexp.MatchString(location.PostalCode) {
+		return models.ErrInvalidPostalCode
+	}
+	if location.StreetAddress == "" {
+		return models.ErrInvalidStreetAddress
+	}
+	return nil
 }
