@@ -3,7 +3,6 @@ package io.github.parkwithease.parkeasy.data.remote
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
 import io.github.parkwithease.parkeasy.model.Car
-import io.github.parkwithease.parkeasy.model.CarDetails
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.cookie
@@ -24,7 +23,7 @@ constructor(
 ) : CarRepository {
     override suspend fun getCars(): List<Car> {
         val authCookie = authRepo.sessionFlow.firstOrNull()
-        var cars = List(0) { _ -> Car(CarDetails("", "", "", ""), "") }
+        var cars = emptyList<Car>()
         if (authCookie != null) {
             val response =
                 withContext(ioDispatcher) {

@@ -8,7 +8,6 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.parkwithease.parkeasy.data.remote.CarRepository
 import io.github.parkwithease.parkeasy.model.Car
-import io.github.parkwithease.parkeasy.model.CarDetails
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -25,7 +24,7 @@ constructor(
         fun create(showSnackbar: suspend (String, String?) -> Boolean): CarsViewModel
     }
 
-    private val _cars = MutableStateFlow(List(0) { _ -> Car(CarDetails("", "", "", ""), "") })
+    private val _cars = MutableStateFlow(emptyList<Car>())
     val cars = _cars.asStateFlow()
 
     private val _isRefreshing = MutableStateFlow(false)
