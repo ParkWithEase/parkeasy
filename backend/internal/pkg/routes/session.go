@@ -134,6 +134,8 @@ func newSessionCookie(ctx context.Context, manager *scs.SessionManager, token st
 		Secure:   manager.Cookie.Secure,
 		HttpOnly: manager.Cookie.HttpOnly,
 		SameSite: manager.Cookie.SameSite,
+		// Set partitioned in None mode to prevent browsers from dropping the cookie
+		Partitioned: manager.Cookie.SameSite == http.SameSiteNoneMode,
 	}
 
 	if expiry.IsZero() {
