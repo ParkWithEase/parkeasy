@@ -51,8 +51,10 @@ func (m *mockParkingSpotService) GetManyForUser(ctx context.Context, userID int6
 	return args.Get(0).([]models.ParkingSpot), args.Error(1)
 }
 
-var sampleLatitudeFloat = float64(43.07923)
-var sampleLongitudeFloat = float64(-79.07887)
+var (
+	sampleLatitudeFloat  = float64(43.07923)
+	sampleLongitudeFloat = float64(-79.07887)
+)
 
 var sampleLocation = models.ParkingSpotLocation{
 	PostalCode:    "L2E6T2",

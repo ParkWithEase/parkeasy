@@ -240,7 +240,6 @@ func (p *PostgresRepository) GetAvailByUUID(ctx context.Context, spotID uuid.UUI
 		dbmodels.SelectJoins.Timeunits.InnerJoin.ParkingspotidParkingspot(ctx),
 		sm.OrderBy(psql.F("lower", dbmodels.TimeunitColumns.Timerange)),
 	).All()
-
 	if err != nil {
 		return nil, err
 	}

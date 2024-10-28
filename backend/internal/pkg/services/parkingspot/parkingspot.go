@@ -144,7 +144,6 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 }
 
 func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error) {
-
 	result, err := s.repo.GetByUUID(ctx, spotID)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrNotFound) {
@@ -233,7 +232,6 @@ func (s *Service) GetMany(ctx context.Context, userID int64, count int, filter m
 
 	result := make([]models.ParkingSpotWithDistance, 0, len(spotEntries))
 	for _, entry := range spotEntries {
-
 		result = append(result, models.ParkingSpotWithDistance{
 			ParkingSpot:        entry.ParkingSpot,
 			DistanceToLocation: entry.DistanceToLocation,

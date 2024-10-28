@@ -121,12 +121,12 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 			case errors.Is(err, models.ErrNoAvailability), errors.Is(err, models.ErrInvalidTimeUnit):
 				detail = &huma.ErrorDetail{
 					Location: "body.availability",
-					Value: input.Body.Availability,
+					Value:    input.Body.Availability,
 				}
 			case errors.Is(err, models.ErrInvalidPricePerHour):
 				detail = &huma.ErrorDetail{
 					Location: "body.price_per_hour",
-					Value: input.Body.PricePerHour,
+					Value:    input.Body.PricePerHour,
 				}
 			}
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
@@ -178,7 +178,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 			if errors.Is(err, models.ErrParkingSpotNotFound) {
 				detail = &huma.ErrorDetail{
 					Location: "path.id",
-					Value: input.ID,
+					Value:    input.ID,
 				}
 			}
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)

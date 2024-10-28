@@ -74,10 +74,12 @@ func (m *mockRepo) GetMany(ctx context.Context, limit int, filter parkingspot.Fi
 	return args.Get(0).([]parkingspot.GetManyEntry), args.Error(1)
 }
 
-var sampleLatitudeFloat = float64(43.07923)
-var sampleLongitudeFloat = float64(-79.07887)
-var sampleLatitude, _ = decimal.NewFromFloat64(sampleLatitudeFloat)
-var sampleLongitude, _ = decimal.NewFromFloat64(sampleLongitudeFloat)
+var (
+	sampleLatitudeFloat  = float64(43.07923)
+	sampleLongitudeFloat = float64(-79.07887)
+	sampleLatitude, _    = decimal.NewFromFloat64(sampleLatitudeFloat)
+	sampleLongitude, _   = decimal.NewFromFloat64(sampleLongitudeFloat)
+)
 
 var sampleLocation = models.ParkingSpotLocation{
 	PostalCode:    "L2E6T2",
@@ -161,7 +163,7 @@ func TestCreate(t *testing.T) {
 		geoRepo.AddGeocodeCall()
 		srv := New(repo, geoRepo)
 		input := &models.ParkingSpotCreationInput{
-			Location: sampleLocation,
+			Location:     sampleLocation,
 			Availability: sampleAvailability,
 		}
 		repo.On("Create", mock.Anything, testOwnerID, input).
@@ -192,7 +194,7 @@ func TestCreate(t *testing.T) {
 		srv := New(repo, geoRepo)
 
 		input := &models.ParkingSpotCreationInput{
-			Location: sampleLocation,
+			Location:     sampleLocation,
 			Availability: sampleAvailability,
 		}
 		repo.On("Create", mock.Anything, testOwnerID, input).
@@ -324,7 +326,7 @@ func TestCreate(t *testing.T) {
 		}
 		repo.AssertNotCalled(t, "Create")
 	})
-	
+
 	t.Run("not real price check", func(t *testing.T) {
 		t.Parallel()
 
@@ -530,7 +532,6 @@ func TestGetMany(t *testing.T) {
 		repo.AssertExpectations(t)
 	})
 
-
 	t.Run("empty end date", func(t *testing.T) {
 		t.Parallel()
 
@@ -539,16 +540,16 @@ func TestGetMany(t *testing.T) {
 		lat, _ := decimal.NewFromFloat64(5)
 		repo.On("GetMany", 1, parkingspot.Filter{
 			Location: omit.From(parkingspot.FilterLocation{
-				Latitude: long,
+				Latitude:  long,
 				Longitude: lat,
 			}),
 			Availability: omit.From(parkingspot.FilterAvailability{
 				Start: sampleAvailability[0].StartTime,
-				End: sampleAvailability[0].StartTime.AddDate(0, 0, 7),
+				End:   sampleAvailability[0].StartTime.AddDate(0, 0, 7),
 			}),
 		}).
-		Return([]parkingspot.GetManyEntry{}, nil).
-		Once()
+			Return([]parkingspot.GetManyEntry{}, nil).
+			Once()
 		geoRepo := new(mockGeocodingRepo)
 		srv := New(repo, geoRepo)
 
@@ -565,7 +566,7 @@ func TestGetMany(t *testing.T) {
 		repo.AssertExpectations(t)
 	})
 
-	t.Run("not real latitude", func (t *testing.T) {
+	t.Run("not real latitude", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
@@ -580,7 +581,7 @@ func TestGetMany(t *testing.T) {
 		repo.AssertNotCalled(t, "GetMany")
 	})
 
-	t.Run("not real longitude", func (t *testing.T) {
+	t.Run("not real longitude", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
