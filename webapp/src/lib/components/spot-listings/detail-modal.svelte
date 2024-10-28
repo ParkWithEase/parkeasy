@@ -25,7 +25,7 @@
                 <li>Shelter: {listing.features.shelter ? 'Yes' : 'No'}</li>
             </ul>
         </div>
-        <div>
+        <div class="pin-location">
             <MapLibre
                 center={[listing.location.longitude, listing.location.latitude]}
                 zoom={13}
@@ -41,9 +41,15 @@
 <style>
     .modal-content{
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
+        justify-content: space-around;
     }
     .listing-content {
         padding: 1rem;
+    }
+    .pin-location{
+        min-height: 100%;
+        width: 60%;
+        border: 1px solid black;
     }
 </style>
