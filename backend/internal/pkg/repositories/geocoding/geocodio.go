@@ -1,6 +1,7 @@
 package geocoding
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -25,7 +26,7 @@ func NewGeocodio(client *http.Client, apiKey string) *Geocodio {
 	}
 }
 
-func (g *Geocodio) Geocode(address Address) ([]Result, error) {
+func (g *Geocodio) Geocode(ctx context.Context, address *Address) ([]Result, error) {
 	reqURL := geocodioBaseURL.JoinPath("geocode")
 	queryParams := make(url.Values)
 	queryParams.Set("api_key", g.apiKey)
@@ -37,7 +38,11 @@ func (g *Geocodio) Geocode(address Address) ([]Result, error) {
 	queryParams.Set("country", address.Country)
 	reqURL.RawQuery = queryParams.Encode()
 
-	resp, err := g.client.Get(reqURL.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not create request: %w", err)
+	}
+	resp, err := g.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("could not send request: %w", err)
 	}
@@ -76,7 +81,8 @@ func (g *Geocodio) Geocode(address Address) ([]Result, error) {
 	}
 
 	result := make([]Result, 0, len(apiResult.Results))
-	for _, r := range apiResult.Results {
+	for i := range apiResult.Results {
+		r := &apiResult.Results[i]
 		// geocod.io split street name and number, so rejoin them here
 		street := r.AddressComponents.Number
 		if street != "" {

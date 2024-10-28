@@ -40,7 +40,7 @@ var testEntry = parkingspot.Entry{
 var testSpotUUID = uuid.New()
 
 // Geocode implements geocoding.Geocoder.
-func (m *mockGeocodingRepo) Geocode(address geocoding.Address) ([]geocoding.Result, error) {
+func (m *mockGeocodingRepo) Geocode(ctx context.Context, address *geocoding.Address) ([]geocoding.Result, error) {
 	args := m.Called(address)
 	return args.Get(0).([]geocoding.Result), args.Error(1)
 }
@@ -141,7 +141,7 @@ var sampleGetManyEntryOutput = []parkingspot.GetManyEntry{
 }
 
 func (m *mockGeocodingRepo) AddGeocodeCall() *mock.Call {
-	return m.On("Geocode", sampleGeocoderAddress).
+	return m.On("Geocode", &sampleGeocoderAddress).
 		Return(sampleGeocoderResult, nil).Once()
 }
 
@@ -152,7 +152,7 @@ func TestCreate(t *testing.T) {
 	t.Cleanup(cancel)
 
 	geoRepo := new(mockGeocodingRepo)
-	geoRepo.On("Geocode", sampleGeocoderAddress).
+	geoRepo.On("Geocode", &sampleGeocoderAddress).
 		Return(sampleGeocoderResult, nil).Once()
 
 	t.Run("create okay", func(t *testing.T) {

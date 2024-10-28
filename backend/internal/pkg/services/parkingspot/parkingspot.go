@@ -87,7 +87,7 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 	}
 
 	insertSpot := *spot
-	gcr, err := s.geocoder.Geocode(geocoding.Address{
+	gcr, err := s.geocoder.Geocode(ctx, &geocoding.Address{
 		Street:     spot.Location.StreetAddress,
 		City:       spot.Location.City,
 		State:      spot.Location.State,

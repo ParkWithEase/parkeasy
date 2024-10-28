@@ -1,5 +1,7 @@
 package geocoding
 
+import "context"
+
 // An address, splitted into components
 type Address struct {
 	Street     string
@@ -25,5 +27,5 @@ type Result struct {
 
 type Geocoder interface {
 	// Resolve an address into real location
-	Geocode(Address) ([]Result, error)
+	Geocode(ctx context.Context, address *Address) ([]Result, error)
 }
