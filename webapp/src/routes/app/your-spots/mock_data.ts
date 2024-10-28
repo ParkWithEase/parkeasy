@@ -11,10 +11,10 @@ export const spots_data = [
             city: 'Winnipeg',
             state: 'MB',
             country_code: 'CA',
-            latitude: 1,
-            longitude: 1,
+            latitude: 49.808856,
+            longitude: -97.133290,
             postal_code: 'RRRRRR',
-            street_address: '230 Portage Avenue'
+            street_address: 'Engineering Building'
         },
         isListed: true
     },
@@ -29,8 +29,8 @@ export const spots_data = [
             city: 'Winnipeg',
             state: 'MB',
             country_code: 'CA',
-            latitude: 1,
-            longitude: 1,
+            latitude: 49.811791,
+            longitude: -97.199808,
             postal_code: 'RRRRRR',
             street_address: '230 Portage Avenue'
         },
@@ -47,8 +47,26 @@ export const spots_data = [
             city: 'Winnipeg',
             state: 'MB',
             country_code: 'CA',
-            latitude: 1,
-            longitude: 1,
+            latitude: 49.9,
+            longitude: -97,
+            postal_code: 'RRRRRR',
+            street_address: '230 Portage Avenue'
+        },
+        isListed: true
+    },
+    {
+        id: '4',
+        features: {
+            charging_station: true,
+            plug_in: false,
+            shelter: true
+        },
+        location: {
+            city: 'Winnipeg',
+            state: 'MB',
+            country_code: 'CA',
+            latitude: 49.9,
+            longitude: -97.2,
             postal_code: 'RRRRRR',
             street_address: '230 Portage Avenue'
         },

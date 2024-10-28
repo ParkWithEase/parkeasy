@@ -2,27 +2,7 @@
     import Navbar from '$lib/components/navbar.svelte';
     import { MapLibre, DefaultMarker, Popup, GeolocateControl } from 'svelte-maplibre';
     import ListingsListComponent from '$lib/components/spot-listings/listings-list-component.svelte';
-    import { MapLibreSearchControl } from "@stadiamaps/maplibre-search-box";
-
-    const coordsList: number[][] = [
-        [-97.133290, 49.808856],
-        [-97.199808, 49.811791]
-    ];
-
-    const lngLatList: [number, number][] = coordsList as [number, number][];
-    let listings= [
-        {
-        lngLat: lngLatList[0],
-        label: 'Engineering Building',
-        name: 'Engineering Building UofM',
-        },
-        {
-        lngLat: lngLatList[1],
-        label: 'Whyte Ridge',
-        name: 'Whyte Ridge',
-        }
-    ];
-
+    import { spots_data } from './your-spots/mock_data';
 </script>
 
 <Navbar />
@@ -30,10 +10,10 @@
 <body>
     <div class="container">
         <div class="listings">
-            {#key listings}
-                {#each listings as listing}
+            {#key spots_data}
+                {#each spots_data as listing}
                     <div class="booking-info-container">
-                        <ListingsListComponent {listing}></ListingsListComponent>
+                        <ListingsListComponent {listing} />
                     </div>
                 {/each}
             {/key}
@@ -46,16 +26,12 @@
                 style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
             >
                 <GeolocateControl position="top-left" fitBoundsOptions={{ maxZoom: 12 }} />
-                {#each listings as { lngLat, label, name }}
-                    <DefaultMarker {lngLat} draggable>
+                {#each spots_data as { id, features, location, isListed }}
+                    <DefaultMarker lngLat={[location.longitude, location.latitude]} draggable>
                         <Popup
                             offset={[0, -10]}
-                            on:open={async () => {
-                                const resp = await fetch(`/examples/popup_remote/${name}`);
-                                const result = await resp.json();
-                            }}
                         >
-                            <div class="text-lg font-bold">{name}</div>
+                            <div class="text-lg font-bold">{location.street_address}</div>
                             <h1>Listing data here</h1>
                         </Popup>
                     </DefaultMarker>
@@ -74,8 +50,9 @@
 
     .listings {
         display: flex;
-        width: 30%;
-        min-height: 100%;
+        width: 35%;
+        max-height: 80vh;
+        overflow-y: auto;
         flex-direction: column;
         padding: 0.5rem;
         background-color: rgb(186, 214, 183);
