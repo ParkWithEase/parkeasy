@@ -7,7 +7,7 @@
         WAIT_TIME_BEFORE_AUTO_COMPLETE
     } from '$lib/constants';
     import { TimeSlotStatus } from '$lib/enum/timeslot-status';
-    import { convertDateToUTC, getDateWithDayOffset, getMonday } from '$lib/utils/datetime-util';
+    import { getDateWithDayOffset, getMonday } from '$lib/utils/datetime-util';
     import { getWeekAvailabilityTable } from '$lib/utils/time-table-util';
 
     import {
@@ -45,7 +45,8 @@
     let errorMessage: string = '';
     $: showToast = toastTimeOut !== 0;
 
-    today = convertDateToUTC(new Date(Date.now()));
+    today = new Date(Date.now());
+    console.log(today);
     currentMonday = getMonday(today);
     nextMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
     availability_table = getWeekAvailabilityTable(today, currentMonday, [], time_slot_edit_records);
@@ -136,7 +137,7 @@
             return;
         } else {
             let date = new Date(currentMonday);
-            date.setUTCDate(currentMonday.getUTCDate() + event.detail.day);
+            date.setDate(currentMonday.getDate() + event.detail.day);
             let new_time_slot = {
                 date: date,
                 segment: event.detail.segment,
@@ -270,7 +271,7 @@
             <p class="spot-form-header">Availability</p>
             <div class="date-controller">
                 <p>
-                    From {currentMonday?.toUTCString()} to {nextMonday?.toUTCString()}
+                    From {currentMonday?.toString()} to {nextMonday?.toString()}
                 </p>
                 <Button
                     kind="secondary"

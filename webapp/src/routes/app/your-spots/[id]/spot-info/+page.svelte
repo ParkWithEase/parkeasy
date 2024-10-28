@@ -30,7 +30,7 @@
     $: isAvailablilityChanged =
         time_slot_edit_records.length != 0 || new_price_per_hour !== spot?.price_per_hour;
 
-    today = new Date(Date.UTC(2024, 9, 15, 3, 24, 0));
+    today = new Date(2024, 9, 15, 3, 24, 0);
     currentMonday = getMonday(today);
     nextMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
     availability_table = getWeekAvailabilityTable(
@@ -123,7 +123,7 @@
             return;
         } else {
             let date = new Date(currentMonday);
-            date.setUTCDate(currentMonday.getUTCDate() + event.detail.day);
+            date.setDate(currentMonday.getDate() + event.detail.day);
             let new_time_slot = {
                 date: date,
                 segment: event.detail.segment,
@@ -219,7 +219,7 @@
 
     <div class="date-controller">
         <p>
-            From {currentMonday?.toUTCString()} to {nextMonday?.toUTCString()}
+            From {currentMonday?.toString()} to {nextMonday?.toString()}
         </p>
         <Button
             kind="secondary"

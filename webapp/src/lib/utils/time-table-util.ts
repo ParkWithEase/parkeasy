@@ -23,28 +23,27 @@ export function constructAvailabilityTable(
         { length: TOTAL_SEGMENTS_NUMBER },
         () => Array(DAY_IN_A_WEEK).fill(TimeSlotStatus.NONE)
     );
-    const current_seg = today.getUTCHours() * 2 + Math.ceil(today.getUTCMinutes() / 30);
-    const cutoff_date = new Date(
-        Date.UTC(today.getFullYear(), today.getUTCMonth(), today.getUTCDate())
-    );
+    const current_seg = today.getHours() * 2 + Math.floor(today.getMinutes() / 30);
+    const cutoff_date = new Date(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
+
     original_slot_data.forEach((slot) => {
-        const day = (slot.date.getUTCDay() || 7) - 1;
+        const day = (slot.date.getDay() || 7) - 1;
         availability_table[slot.segment][day] = slot.status;
     });
 
     edit_records.forEach((slot) => {
-        const day = (slot.date.getUTCDay() || 7) - 1;
+        const day = (slot.date.getDay() || 7) - 1;
         availability_table[slot.segment][day] = slot.status;
     });
 
     for (let day = 0; day < DAY_IN_A_WEEK; day++) {
         const currentDate = new Date(weekStart);
-        currentDate.setUTCDate(weekStart.getUTCDate() + day);
-        currentDate.setUTCHours(0, 0, 0, 0);
+        currentDate.setDate(weekStart.getDate() + day);
+        currentDate.setHours(0, 0, 0, 0);
         for (let seg = 0; seg < TOTAL_SEGMENTS_NUMBER; seg++) {
             if (
                 currentDate.getTime() < cutoff_date.getTime() ||
-                (currentDate.getTime() == cutoff_date.getTime() && seg < current_seg)
+                (currentDate.getTime() == cutoff_date.getTime() && seg <= current_seg)
             ) {
                 availability_table[seg][day] = TimeSlotStatus.PASTDUE;
             }
