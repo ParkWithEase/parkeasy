@@ -154,7 +154,7 @@ button:focus:not(:focus-visible) {
     margin: 1rem 0 1rem 0;
 }
 
-.price-field{
-    margin: 1rem 0 1rem 0; 
+.price-field {
+    margin: 1rem 0 1rem 0;
     max-width: 6rem;
 }

@@ -6,7 +6,7 @@
     import SpotEditModal from '$lib/components/spot-component/spot-edit-modal.svelte';
     import AvailabilityTable from '$lib/components/spot-component/availability-table.svelte';
     import { TimeSlotStatus } from '$lib/enum/timeslot-status';
-    import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
+    import { DAY_IN_A_WEEK } from '$lib/constants';
     import { getMonday, getDateWithDayOffset } from '$lib/utils/datetime-util';
     import { getWeekAvailabilityTable } from '$lib/utils/time-table-util';
 

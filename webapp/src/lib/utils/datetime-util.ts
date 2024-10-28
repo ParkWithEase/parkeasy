@@ -10,7 +10,6 @@ export function getMonday(d: Date) {
     return this_week_monday;
 }
 
-
 //Return a date that is <offset> number days from the input date
 export function getDateWithDayOffset(d: Date, offset: number) {
     const result = new Date(d);
@@ -18,11 +17,16 @@ export function getDateWithDayOffset(d: Date, offset: number) {
     return result;
 }
 
-
-export function convertDateToUTC(currentDate: Date)
-{
-    const utcDate = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(),
-    currentDate.getUTCDate(), currentDate.getUTCHours(),
-    currentDate.getUTCMinutes(), currentDate.getUTCSeconds()));
+export function convertDateToUTC(currentDate: Date) {
+    const utcDate = new Date(
+        Date.UTC(
+            currentDate.getUTCFullYear(),
+            currentDate.getUTCMonth(),
+            currentDate.getUTCDate(),
+            currentDate.getUTCHours(),
+            currentDate.getUTCMinutes(),
+            currentDate.getUTCSeconds()
+        )
+    );
     return utcDate;
 }

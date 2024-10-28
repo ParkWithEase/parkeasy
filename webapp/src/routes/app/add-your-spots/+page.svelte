@@ -121,10 +121,14 @@
         console.log('Submit everything and go to the other page after the request is done');
     }
 
-    let autoCompleteTimer: NodeJS.Timeout;
+    let autoCompleteTimer: number;
     function getAutoCompleteAddress() {
-        clearTimeout(autoCompleteTimer);
-        autoCompleteTimer = setTimeout(() => console.log('fetch'), WAIT_TIME_BEFORE_AUTO_COMPLETE);
+        window.clearTimeout(autoCompleteTimer);
+        autoCompleteTimer = window.setTimeout(
+            (address: string) => console.log(address),
+            WAIT_TIME_BEFORE_AUTO_COMPLETE,
+            'Address'
+        );
     }
 
     function handleEdit(event: Event) {

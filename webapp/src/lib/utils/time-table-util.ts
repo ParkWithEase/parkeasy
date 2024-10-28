@@ -1,7 +1,6 @@
-import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from "$lib/constants";
-import { TimeSlotStatus } from "$lib/enum/timeslot-status";
-import { getDateWithDayOffset } from "./datetime-util";
-
+import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
+import { TimeSlotStatus } from '$lib/enum/timeslot-status';
+import { getDateWithDayOffset } from './datetime-util';
 
 //Need to define type when intergrate with backend
 export function extractRelevantTimeSlot(full_time_slot: [], startDate: Date, endDate: Date) {
@@ -18,11 +17,12 @@ export function constructAvailabilityTable(
     today: Date,
     weekStart: Date,
     original_slot_data,
-    edit_records,
+    edit_records
 ) {
-    const availability_table : TimeSlotStatus[][] = Array.from({ length: TOTAL_SEGMENTS_NUMBER }, () =>
-        Array(DAY_IN_A_WEEK).fill(TimeSlotStatus.NONE)
-    ); 
+    const availability_table: TimeSlotStatus[][] = Array.from(
+        { length: TOTAL_SEGMENTS_NUMBER },
+        () => Array(DAY_IN_A_WEEK).fill(TimeSlotStatus.NONE)
+    );
     const current_seg = today.getUTCHours() * 2 + Math.ceil(today.getUTCMinutes() / 30);
     const cutoff_date = new Date(
         Date.UTC(today.getFullYear(), today.getUTCMonth(), today.getUTCDate())
@@ -36,7 +36,7 @@ export function constructAvailabilityTable(
         const day = (slot.date.getUTCDay() || 7) - 1;
         availability_table[slot.segment][day] = slot.status;
     });
-    
+
     for (let day = 0; day < DAY_IN_A_WEEK; day++) {
         const currentDate = new Date(weekStart);
         currentDate.setUTCDate(weekStart.getUTCDate() + day);
@@ -47,18 +47,26 @@ export function constructAvailabilityTable(
                 (currentDate.getTime() == cutoff_date.getTime() && seg < current_seg)
             ) {
                 availability_table[seg][day] = TimeSlotStatus.PASTDUE;
-            } 
+            }
         }
     }
-
 
     return availability_table;
 }
 
-export function getWeekAvailabilityTable(currentTime: Date, weekStart: Date, time_slots_data, edit_records)
-{
+export function getWeekAvailabilityTable(
+    currentTime: Date,
+    weekStart: Date,
+    time_slots_data,
+    edit_records
+) {
     const weekEnd = getDateWithDayOffset(weekStart, DAY_IN_A_WEEK);
     const relevantTimeData = extractRelevantTimeSlot(time_slots_data, weekStart, weekEnd);
     const relevateEditRecords = extractRelevantTimeSlot(edit_records, weekStart, weekEnd);
-    return constructAvailabilityTable(currentTime, weekStart, relevantTimeData, relevateEditRecords);
+    return constructAvailabilityTable(
+        currentTime,
+        weekStart,
+        relevantTimeData,
+        relevateEditRecords
+    );
 }

@@ -68,7 +68,7 @@ const test_data = [
     }
 ];
 
-export const load: PageLoad = async ({ fetch }) => {
+export const load: PageLoad = async () => {
     return {
         transactions: test_data,
         hasNext: undefined,
