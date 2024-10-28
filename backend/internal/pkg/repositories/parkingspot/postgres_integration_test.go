@@ -105,17 +105,14 @@ func TestPostgresIntegration(t *testing.T) {
 		sampleAvailability = append(sampleAvailability, timeunit)
 	}
 
-	lat, _ := decimal.NewFromFloat64(43.07923126220703)
-	long, _ := decimal.NewFromFloat64(-79.07887268066406)
-
 	sampleLocation := models.ParkingSpotLocation{
 		PostalCode:    "L2E6T2",
 		CountryCode:   "CA",
 		City:          "Niagara Falls",
 		StreetAddress: "6650 Niagara Parkway",
 		State:         "MB",
-		Latitude:      lat,
-		Longitude:     long,
+		Latitude:      43.07923,
+		Longitude:     -79.07887,
 	}
 
 	sampleFeatures := models.ParkingSpotFeatures{
@@ -124,7 +121,7 @@ func TestPostgresIntegration(t *testing.T) {
 		ChargingStation: true,
 	}
 
-	samplePricePerHour, _ := decimal.NewFromFloat64(10.50)
+	samplePricePerHour := 10.50
 
 	creationInput := models.ParkingSpotCreationInput{
 		Location:     sampleLocation,
@@ -141,26 +138,15 @@ func TestPostgresIntegration(t *testing.T) {
 	}
 
 	// Test variables for GetMany
-	sampleUserLatitude, _ := decimal.NewFromFloat64(43.079)
-	sampleUserLongitude, _ := decimal.NewFromFloat64(-79.078)
+	sampleUserLatitude, err := decimal.NewFromFloat64(43.079)
+	require.NoError(t, err)
+	sampleUserLongitude, err := decimal.NewFromFloat64(-79.078)
+	require.NoError(t, err)
 
-	sampleShortDistLatitute, _ := decimal.NewFromFloat64(49.888870)
-	sampleShortDistLongitude, _ := decimal.NewFromFloat64(-97.134490)
-
-	lat_1, _ := decimal.NewFromFloat64(43.07923126220703)
-	long_1, _ := decimal.NewFromFloat64(-79.07887268066406)
-
-	lat_2, _ := decimal.NewFromFloat64(43.07823181152344)
-	long_2, _ := decimal.NewFromFloat64(-79.07887268066406)
-
-	lat_3, _ := decimal.NewFromFloat64(43.077232360839844)
-	long_3, _ := decimal.NewFromFloat64(-79.07887268066406)
-
-	lat_4, _ := decimal.NewFromFloat64(43.07623291015625)
-	long_4, _ := decimal.NewFromFloat64(-79.07887268066406)
-
-	lat_5, _ := decimal.NewFromFloat64(43.07522964477539)
-	long_5, _ := decimal.NewFromFloat64(-79.07887268066406)
+	sampleShortDistLatitute, err := decimal.NewFromFloat64(49.888870)
+	require.NoError(t, err)
+	sampleShortDistLongitude, err := decimal.NewFromFloat64(-97.134490)
+	require.NoError(t, err)
 
 	sampleLocations := []models.ParkingSpotLocation{
 		{
@@ -169,8 +155,8 @@ func TestPostgresIntegration(t *testing.T) {
 			City:          "Niagara Falls",
 			StreetAddress: "5 Niagara Parkway",
 			State:         "ON",
-			Latitude:      lat_1,
-			Longitude:     long_1,
+			Latitude:      43.07923,
+			Longitude:     -79.07887,
 		},
 		{
 			PostalCode:    "L2E6T2",
@@ -178,8 +164,8 @@ func TestPostgresIntegration(t *testing.T) {
 			City:          "Niagara Falls",
 			StreetAddress: "4 Niagara Parkway",
 			State:         "ON",
-			Latitude:      lat_2,
-			Longitude:     long_2,
+			Latitude:      43.07823,
+			Longitude:     -79.07887,
 		},
 		{
 			PostalCode:    "L2E6T2",
@@ -187,8 +173,8 @@ func TestPostgresIntegration(t *testing.T) {
 			City:          "Niagara Falls",
 			StreetAddress: "3 Niagara Parkway",
 			State:         "ON",
-			Latitude:      lat_3,
-			Longitude:     long_3,
+			Latitude:      43.07723,
+			Longitude:     -79.07887,
 		},
 		{
 			PostalCode:    "L2E6T2",
@@ -196,8 +182,8 @@ func TestPostgresIntegration(t *testing.T) {
 			City:          "Niagara Falls",
 			StreetAddress: "2 Niagara Parkway",
 			State:         "ON",
-			Latitude:      lat_4,
-			Longitude:     long_4,
+			Latitude:      43.07623,
+			Longitude:     -79.07887,
 		},
 		{
 			PostalCode:    "L2E6T2",
@@ -205,16 +191,10 @@ func TestPostgresIntegration(t *testing.T) {
 			City:          "Niagara Falls",
 			StreetAddress: "1 Niagara Parkway",
 			State:         "ON",
-			Latitude:      lat_5,
-			Longitude:     long_5,
+			Latitude:      43.07522,
+			Longitude:     -79.07887,
 		},
 	}
-
-	lat_6, _ := decimal.NewFromFloat64(49.889900)
-	long_6, _ := decimal.NewFromFloat64(-97.135990)
-
-	lat_7, _ := decimal.NewFromFloat64(49.888850)
-	long_7, _ := decimal.NewFromFloat64(-97.141930)
 
 	sampleWinnipegLocations := []models.ParkingSpotLocation{
 		{
@@ -223,8 +203,8 @@ func TestPostgresIntegration(t *testing.T) {
 			City:          "Winnipeg",
 			StreetAddress: "180 Main St",
 			State:         "MB",
-			Latitude:      lat_6,
-			Longitude:     long_6,
+			Latitude:      49.88990,
+			Longitude:     -97.13599,
 		},
 		{
 			PostalCode:    "R3C0N9",
@@ -232,8 +212,8 @@ func TestPostgresIntegration(t *testing.T) {
 			City:          "Winnipeg",
 			StreetAddress: "330 York Ave",
 			State:         "MB",
-			Latitude:      lat_7,
-			Longitude:     long_7,
+			Latitude:      49.88885,
+			Longitude:     -97.14193,
 		},
 	}
 
@@ -248,7 +228,7 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		// Testing create
-		createEntry, err := repo.Create(ctx, userID, &creationInput)
+		createEntry, availability, err := repo.Create(ctx, userID, &creationInput)
 		require.NoError(t, err)
 		assert.NotEqual(t, -1, createEntry.InternalID)
 		assert.NotEqual(t, uuid.Nil, createEntry.ParkingSpot.ID)
@@ -260,7 +240,7 @@ func TestPostgresIntegration(t *testing.T) {
 			},
 			OwnerID: userID,
 		}, createEntry, "created entry not the same")
-		timesEqual(t, sampleAvailability, createEntry.Availability)
+		assertTimesEqual(t, sampleAvailability, availability)
 
 		// Testing get spot
 		getEntry, err := repo.GetByUUID(ctx, createEntry.ParkingSpot.ID)
@@ -305,11 +285,11 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		// Create the first parkingspot
-		_, err := repo.Create(ctx, userID, &creationInput)
+		_, _, err := repo.Create(ctx, userID, &creationInput)
 		require.NoError(t, err)
 
 		// Attempt to create another parkingspot with same address
-		_, err = repo.Create(ctx, userID, &creationInput)
+		_, _, err = repo.Create(ctx, userID, &creationInput)
 		if assert.Error(t, err, "Creating a parkingspot with duplicate address should fail") {
 			assert.ErrorIs(t, err, ErrDuplicatedAddress)
 		}
@@ -334,7 +314,7 @@ func TestPostgresIntegration(t *testing.T) {
 				Availability: sampleAvailability,
 			}
 
-			_, err := repo.Create(ctx, userID, &spot)
+			_, _, err := repo.Create(ctx, userID, &spot)
 			require.NoError(t, err)
 		}
 
@@ -347,7 +327,7 @@ func TestPostgresIntegration(t *testing.T) {
 				Availability: sampleAvailability,
 			}
 
-			_, err := repo.Create(ctx, userID, &spot)
+			_, _, err := repo.Create(ctx, userID, &spot)
 			require.NoError(t, err)
 		}
 
@@ -459,33 +439,32 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		// Create an entry
-		createEntry, err := repo.Create(ctx, userID, &creationInput)
+		createEntry, _, err := repo.Create(ctx, userID, &creationInput)
 		require.NoError(t, err)
 
 		t.Run("okay get availability", func(t *testing.T) {
 			t.Parallel()
 
-			timeunits, err := repo.GetAvalByUUID(ctx, createEntry.ID, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
+			timeunits, err := repo.GetAvailByUUID(ctx, createEntry.ID, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
 
 			require.NoError(t, err)
-			timesEqual(t, sampleAvailability, timeunits)
+			assertTimesEqual(t, sampleAvailability, timeunits)
 		})
 
-		t.Run("no availibility found bad window", func(t *testing.T) {
+		t.Run("no availibility found is not an error", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := repo.GetAvalByUUID(ctx, createEntry.ID, sampleTimeUnit[1].EndTime.AddDate(0, 0, 1), sampleTimeUnit[1].EndTime.AddDate(0, 0, 2))
-			if assert.Error(t, err, "Trying to get availibility for time period that does not have any should fail") {
-				assert.ErrorIs(t, err, ErrTimeUnitNotFound)
-			}
+			units, err := repo.GetAvailByUUID(ctx, createEntry.ID, sampleTimeUnit[1].EndTime.AddDate(0, 0, 1), sampleTimeUnit[1].EndTime.AddDate(0, 0, 2))
+			require.NoError(t, err)
+			assert.Empty(t, units)
 		})
 
 		t.Run("no availibility found non-existent spotID", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := repo.GetAvalByUUID(ctx, uuid.Nil, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
+			_, err := repo.GetAvailByUUID(ctx, uuid.Nil, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
 			if assert.Error(t, err, "Trying to get availibility for time period that does not have any should fail") {
-				assert.ErrorIs(t, err, ErrTimeUnitNotFound)
+				assert.ErrorIs(t, err, ErrNotFound)
 			}
 		})
 	})
@@ -501,74 +480,73 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		// Create an entry
-		createEntry, err := repo.Create(ctx, userID, &timeTestCreationInput)
+		createEntry, _, err := repo.Create(ctx, userID, &timeTestCreationInput)
 		require.NoError(t, err)
 
 		t.Run("get availability for a week", func(t *testing.T) {
 			t.Parallel()
 
-			timeunits, err := repo.GetAvalByUUID(ctx, createEntry.ID, testTimeUnits[0].StartTime, testTimeUnits[0].StartTime.AddDate(0, 0, 7))
+			timeunits, err := repo.GetAvailByUUID(ctx, createEntry.ID, testTimeUnits[0].StartTime, testTimeUnits[0].StartTime.AddDate(0, 0, 7))
 
 			require.NoError(t, err)
-			timesEqual(t, testTimeUnits[:4], timeunits)
+			assertTimesEqual(t, testTimeUnits[:4], timeunits)
 		})
 
 		t.Run("get availability for a two weeks", func(t *testing.T) {
 			t.Parallel()
 
-			timeunits, err := repo.GetAvalByUUID(ctx, createEntry.ID, testTimeUnits[0].StartTime, testTimeUnits[0].StartTime.AddDate(0, 0, 14))
+			timeunits, err := repo.GetAvailByUUID(ctx, createEntry.ID, testTimeUnits[0].StartTime, testTimeUnits[0].StartTime.AddDate(0, 0, 14))
 
 			require.NoError(t, err)
-			timesEqual(t, testTimeUnits, timeunits)
+			assertTimesEqual(t, testTimeUnits, timeunits)
 		})
 
-		// t.Run("no availibility found non-existent spotID", func(t *testing.T) {
-		// 	t.Parallel()
+		t.Run("no availibility found non-existent spotID", func(t *testing.T) {
+			t.Parallel()
 
-		// 	_, err := repo.GetAvalByUUID(ctx, uuid.Nil, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
-		// 	if assert.Error(t, err, "Trying to get availibility for time period that does not have any should fail") {
-		// 		assert.ErrorIs(t, err, ErrTimeUnitNotFound)
-		// 	}
-		// })
+			_, err := repo.GetAvailByUUID(ctx, uuid.Nil, sampleTimeUnit[0].StartTime, sampleTimeUnit[1].EndTime)
+			if assert.Error(t, err, "Trying to get availibility for time period that does not have any should fail") {
+				assert.ErrorIs(t, err, ErrNotFound)
+			}
+		})
 	})
 
 }
 
 func sameEntry(t *testing.T, expected, actual Entry, msg string) {
 	t.Helper()
-	exp_long, err := expected.Location.Longitude.Float64()
-	assert.True(t, err)
 
-	exp_lat, err := expected.Location.Latitude.Float64()
-	assert.True(t, err)
-
-	act_long, err := actual.Location.Longitude.Float64()
-	assert.True(t, err)
-
-	act_lat, err := actual.Location.Latitude.Float64()
-	assert.True(t, err)
-
+	assert.InEpsilon(t, expected.Location.Latitude, actual.Location.Latitude, epsilon, msg)
+	assert.InEpsilon(t, expected.Location.Longitude, actual.Location.Longitude, epsilon, msg)
 	assert.Equal(t, expected.Location.PostalCode, actual.Location.PostalCode, msg)
 	assert.Equal(t, expected.Location.CountryCode, actual.Location.CountryCode, msg)
 	assert.Equal(t, expected.Location.City, actual.Location.City, msg)
 	assert.Equal(t, expected.Location.State, actual.Location.State, msg)
 	assert.Equal(t, expected.Location.StreetAddress, actual.Location.StreetAddress, msg)
-	assert.InEpsilon(t, exp_long, act_long, epsilon, msg)
-	assert.InEpsilon(t, exp_lat, act_lat, epsilon, msg)
 	assert.Equal(t, expected.Features, actual.Features, msg)
 	assert.Equal(t, expected.PricePerHour, actual.PricePerHour, msg)
 	assert.Equal(t, expected.OwnerID, actual.OwnerID, msg)
 }
 
-func timesEqual(t *testing.T, expected, actual []models.TimeUnit) {
+func assertTimesEqual(t *testing.T, expected, actual []models.TimeUnit) bool {
+	t.Helper()
+
+	fail := func() {
+		assert.Failf(t, "time slices are not equal", "expected %v but got %v", expected, actual)
+	}
+
+	if len(expected) != len(actual) {
+		fail()
+		return false
+	}
 
 	for i := range expected {
-		if !expected[i].StartTime.Equal(actual[i].StartTime) {
-			t.Fatalf("Expected start time %v at index %d, but got %v", expected[i], i, actual[i])
-		}
-
-		if !expected[i].EndTime.Equal(actual[i].EndTime) {
-			t.Fatalf("Expected end time %v at index %d, but got %v", expected[i], i, actual[i])
+		if !expected[i].StartTime.Equal(actual[i].StartTime) ||
+			!expected[i].EndTime.Equal(actual[i].EndTime) {
+			fail()
+			return false
 		}
 	}
+
+	return true
 }

@@ -48,14 +48,15 @@ var (
 	ErrDuplicatedAddress  = errors.New("address already exist in the database")
 	ErrNotFound           = errors.New("no parking spot found")
 	ErrDuplicatedTimeUnit = errors.New("time unit already exist in the database")
-	ErrTimeUnitNotFound   = errors.New("no time units found")
 	ErrNoConstraint       = errors.New("no constraint provided for get many")
+	ErrInvalidCoordinate  = errors.New("invalid coordinates")
+	ErrInvalidPrice       = errors.New("price not valid")
 )
 
 type Repository interface {
-	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, error)
+	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error)
 	GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error)
 	GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error)
 	GetMany(ctx context.Context, limit int, filter Filter) ([]GetManyEntry, error)
-	GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error)
+	GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error)
 }

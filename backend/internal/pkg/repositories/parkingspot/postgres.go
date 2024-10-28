@@ -12,8 +12,10 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
+	"github.com/govalues/decimal"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/rs/zerolog"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
@@ -38,15 +40,25 @@ type result struct {
 	DistanceToOrigin float64 `db:"distance_to_origin"`
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, error) {
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
-		return Entry{}, fmt.Errorf("could not start a transaction: %w", err)
+		return Entry{}, nil, fmt.Errorf("could not start a transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
 
-	longitude := spot.Location.Longitude
-	latitude := spot.Location.Latitude
+	longitude, err := decimal.NewFromFloat64(spot.Location.Longitude)
+	if err != nil {
+		return Entry{}, nil, ErrInvalidCoordinate
+	}
+	latitude, err := decimal.NewFromFloat64(spot.Location.Latitude)
+	if err != nil {
+		return Entry{}, nil, ErrInvalidCoordinate
+	}
+	price, err := decimal.NewFromFloat64(spot.PricePerHour)
+	if err != nil {
+		return Entry{}, nil, ErrInvalidPrice
+	}
 
 	inserted, err := dbmodels.Parkingspots.Insert(ctx, tx, &dbmodels.ParkingspotSetter{
 		Userid:             omit.From(userID),
@@ -60,7 +72,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		Hasshelter:         omit.From(spot.Features.Shelter),
 		Hasplugin:          omit.From(spot.Features.PlugIn),
 		Haschargingstation: omit.From(spot.Features.ChargingStation),
-		Priceperhour:       omit.From(spot.PricePerHour),
+		Priceperhour:       omit.From(price),
 	})
 	if err != nil {
 		// Handle duplicate error
@@ -70,7 +82,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 				err = ErrDuplicatedAddress
 			}
 		}
-		return Entry{}, err
+		return Entry{}, nil, err
 	}
 
 	availabilitySetters := make([]*dbmodels.TimeunitSetter, 0, len(spot.Availability))
@@ -96,7 +108,20 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 
 	err = tx.Commit()
 	if err != nil {
-		return Entry{}, fmt.Errorf("could not commit transaction: %w", err)
+		return Entry{}, nil, fmt.Errorf("could not commit transaction: %w", err)
+	}
+
+	insertedLat, ok := inserted.Latitude.Float64()
+	if !ok {
+		return Entry{}, nil, fmt.Errorf("could not convert %v to float64", inserted.Latitude)
+	}
+	insertedLong, _ := inserted.Longitude.Float64()
+	if !ok {
+		return Entry{}, nil, fmt.Errorf("could not convert %v to float64", inserted.Longitude)
+	}
+	insertedPrice, _ := inserted.Priceperhour.Float64()
+	if !ok {
+		return Entry{}, nil, fmt.Errorf("could not convert %v to float64", inserted.Priceperhour)
 	}
 
 	location := models.ParkingSpotLocation{
@@ -105,8 +130,8 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		City:          inserted.City,
 		State:         inserted.State,
 		StreetAddress: inserted.Streetaddress,
-		Longitude:     inserted.Longitude,
-		Latitude:      inserted.Latitude,
+		Longitude:     insertedLong,
+		Latitude:      insertedLat,
 	}
 
 	features := models.ParkingSpotFeatures{
@@ -119,8 +144,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		Location:     location,
 		Features:     features,
 		ID:           inserted.Parkingspotuuid,
-		PricePerHour: inserted.Priceperhour,
-		Availability: availability,
+		PricePerHour: insertedPrice,
 	}
 
 	entry := Entry{
@@ -128,7 +152,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 		InternalID:  inserted.Parkingspotid,
 		OwnerID:     inserted.Userid,
 	}
-	return entry, nil
+	return entry, availability, nil
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error) {
@@ -158,14 +182,27 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (E
 		return Entry{}, err
 	}
 
+	resultLat, ok := spotResult.Latitude.Float64()
+	if !ok {
+		return Entry{}, fmt.Errorf("could not convert %v to float64", spotResult.Latitude)
+	}
+	resultLong, _ := spotResult.Longitude.Float64()
+	if !ok {
+		return Entry{}, fmt.Errorf("could not convert %v to float64", spotResult.Longitude)
+	}
+	resultPrice, _ := spotResult.Priceperhour.Float64()
+	if !ok {
+		return Entry{}, fmt.Errorf("could not convert %v to float64", spotResult.Priceperhour)
+	}
+
 	location := models.ParkingSpotLocation{
 		PostalCode:    spotResult.Postalcode,
 		CountryCode:   spotResult.Countrycode,
 		City:          spotResult.City,
 		State:         spotResult.State,
 		StreetAddress: spotResult.Streetaddress,
-		Longitude:     spotResult.Longitude,
-		Latitude:      spotResult.Latitude,
+		Longitude:     resultLong,
+		Latitude:      resultLat,
 	}
 
 	features := models.ParkingSpotFeatures{
@@ -178,7 +215,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (E
 		Location:     location,
 		Features:     features,
 		ID:           spotID,
-		PricePerHour: spotResult.Priceperhour,
+		PricePerHour: resultPrice,
 	}
 
 	return Entry{
@@ -188,7 +225,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (E
 	}, nil
 }
 
-func (p *PostgresRepository) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
+func (p *PostgresRepository) GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
 	timeUnitResult, err := dbmodels.Timeunits.Query(
 		ctx, p.db,
 		sm.Columns(dbmodels.TimeunitColumns.Timerange),
@@ -205,15 +242,24 @@ func (p *PostgresRepository) GetAvalByUUID(ctx context.Context, spotID uuid.UUID
 	).All()
 
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			err = ErrTimeUnitNotFound
-		}
-		return []models.TimeUnit{}, err
+		return nil, err
 	}
 
-	// Handle no rows found
+	// If no rows found
 	if len(timeUnitResult) == 0 {
-		return []models.TimeUnit{}, ErrTimeUnitNotFound
+		// Ignore errors here, just treat it as not existing
+		exists, _ := dbmodels.Parkingspots.Query(
+			ctx, p.db,
+			sm.Columns(1),
+			dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
+		).Exists()
+
+		if !exists {
+			return nil, ErrNotFound
+		}
+
+		// No time units are not an error
+		return []models.TimeUnit{}, nil
 	}
 
 	availability := make([]models.TimeUnit, 0, len(timeUnitResult)) // Initialize slice
@@ -257,6 +303,11 @@ func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUI
 }
 
 func (p *PostgresRepository) GetMany(ctx context.Context, limit int, filter Filter) ([]GetManyEntry, error) {
+	log := zerolog.Ctx(ctx).
+		With().
+		Str("component", "parkingspot.Postgres").
+		Logger()
+
 	smods := []bob.Mod[*dialect.SelectQuery]{sm.Columns(dbmodels.Parkingspots.Columns())}
 	var where mods.Where[*dialect.SelectQuery]
 
@@ -346,12 +397,31 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, filter Filt
 			break
 		}
 
-		result = append(result, r.ToEntry())
+		res, err := r.ToEntry()
+		if err != nil { // if there is an error converting lat, long or price to float, then log and skip this entry
+			log.Err(err).Msg("error while converting DB entry")
+			continue
+		}
+
+		result = append(result, res)
 	}
 	return result, nil
 }
 
-func (r *result) ToEntry() GetManyEntry {
+func (r *result) ToEntry() (GetManyEntry, error) {
+	resultLat, ok := r.Latitude.Float64()
+	if !ok {
+		return GetManyEntry{}, fmt.Errorf("could not convert %v to float64", r.Latitude)
+	}
+	resultLong, _ := r.Longitude.Float64()
+	if !ok {
+		return GetManyEntry{}, fmt.Errorf("could not convert %v to float64", r.Longitude)
+	}
+	resultPrice, _ := r.Priceperhour.Float64()
+	if !ok {
+		return GetManyEntry{}, fmt.Errorf("could not convert %v to float64", r.Priceperhour)
+	}
+
 	return GetManyEntry{
 		Entry: Entry{
 			ParkingSpot: models.ParkingSpot{
@@ -361,20 +431,20 @@ func (r *result) ToEntry() GetManyEntry {
 					City:          r.City,
 					State:         r.State,
 					StreetAddress: r.Streetaddress,
-					Longitude:     r.Longitude,
-					Latitude:      r.Latitude,
+					Longitude:     resultLong,
+					Latitude:      resultLat,
 				},
 				Features: models.ParkingSpotFeatures{
 					Shelter:         r.Hasshelter,
 					PlugIn:          r.Hasplugin,
 					ChargingStation: r.Haschargingstation,
 				},
-				PricePerHour: r.Priceperhour,
+				PricePerHour: resultPrice,
 				ID:           r.Parkingspotuuid,
 			},
 			InternalID: r.Parkingspotid,
 			OwnerID:    r.Userid,
 		},
 		DistanceToLocation: r.DistanceToOrigin,
-	}
+	}, nil
 }
