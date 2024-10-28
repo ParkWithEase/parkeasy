@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"time"
 
@@ -58,26 +59,26 @@ var provinceToTz = map[string]string{
 	"NT": "America/Yellowknife",
 }
 
-func (s *Service) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpotCreationOutput, error) {
+func (s *Service) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpotWithAvailability, error) {
 	// NOTE: We only support Canadian spots at the moment
 	if spot.Location.CountryCode != "CA" {
-		return 0, models.ParkingSpotCreationOutput{}, models.ErrCountryNotSupported
+		return 0, models.ParkingSpotWithAvailability{}, models.ErrCountryNotSupported
 	}
 	if !isValidProvinceCode(spot.Location.State) {
-		return 0, models.ParkingSpotCreationOutput{}, models.ErrProvinceNotSupported
+		return 0, models.ParkingSpotWithAvailability{}, models.ErrProvinceNotSupported
 	}
 	canadianPostalCodeRegexp := regexp.MustCompile("^[A-Z][0-9][A-Z][0-9][A-Z][0-9]$")
 	if !canadianPostalCodeRegexp.MatchString(spot.Location.PostalCode) {
-		return 0, models.ParkingSpotCreationOutput{}, models.ErrInvalidPostalCode
+		return 0, models.ParkingSpotWithAvailability{}, models.ErrInvalidPostalCode
 	}
 	if spot.Location.StreetAddress == "" {
-		return 0, models.ParkingSpotCreationOutput{}, models.ErrInvalidStreetAddress
+		return 0, models.ParkingSpotWithAvailability{}, models.ErrInvalidStreetAddress
 	}
 
 	// All availability units must be 30 minutes
 	for _, unit := range spot.Availability {
 		if unit.EndTime != unit.StartTime.Add(30*time.Minute) {
-			return 0, models.ParkingSpotCreationOutput{}, models.ErrInvalidTimeUnit
+			return 0, models.ParkingSpotWithAvailability{}, models.ErrInvalidTimeUnit
 		}
 	}
 
@@ -90,19 +91,14 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 		Country:    spot.Location.CountryCode,
 	})
 	if err != nil {
-		return 0, models.ParkingSpotCreationOutput{}, fmt.Errorf("geocoding failed for: %+v: %w", spot.Location, err)
+		return 0, models.ParkingSpotWithAvailability{}, fmt.Errorf("geocoding failed for: %+v: %w", spot.Location, err)
 	}
 	if len(gcr) == 0 || gcr[0].Accuracy < 1 {
-		return 0, models.ParkingSpotCreationOutput{}, models.ErrInvalidAddress
+		return 0, models.ParkingSpotWithAvailability{}, models.ErrInvalidAddress
 	}
 
-	long, err := decimal.NewFromFloat64(gcr[0].Longitude)
-	if err != nil {
-		return 0, models.ParkingSpotCreationOutput{}, fmt.Errorf("could not interpret longitude: %w", err)
-	}
-	lat, err := decimal.NewFromFloat64(gcr[0].Latitude)
-	if err != nil {
-		return 0, models.ParkingSpotCreationOutput{}, fmt.Errorf("could not interpret latitude: %w", err)
+	if spot.PricePerHour < 0 || math.IsNaN(spot.PricePerHour) || math.IsInf(spot.PricePerHour, 0) {
+		return 0, models.ParkingSpotWithAvailability{}, models.ErrInvalidPricePerHour
 	}
 
 	insertSpot.Location = models.ParkingSpotLocation{
@@ -111,61 +107,57 @@ func (s *Service) Create(ctx context.Context, userID int64, spot *models.Parking
 		State:         gcr[0].Address.State,
 		StreetAddress: gcr[0].Address.Street,
 		CountryCode:   gcr[0].Address.Country,
-		Longitude:     long,
-		Latitude:      lat,
+		Longitude:     gcr[0].Longitude,
+		Latitude:      gcr[0].Latitude,
 	}
-	result, err := s.repo.Create(ctx, userID, spot)
+	result, availability, err := s.repo.Create(ctx, userID, spot)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrDuplicatedAddress) {
 			err = models.ErrParkingSpotDuplicate
 		}
-		return 0, models.ParkingSpotCreationOutput{}, err
+		return 0, models.ParkingSpotWithAvailability{}, err
 	}
 
-	latFromRes, _ := result.Location.Longitude.Float64()
-	longFromRes, _ := result.Location.Latitude.Float64()
-
-	out := models.ParkingSpotCreationOutput{
-		Location: models.ParkingSpotOutputLocation{
-			PostalCode:    result.Location.PostalCode,
-			CountryCode:   result.Location.CountryCode,
-			State:         result.Location.State,
-			City:          result.Location.City,
-			StreetAddress: result.Location.StreetAddress,
-			Longitude:     longFromRes,
-			Latitude:      latFromRes,
+	out := models.ParkingSpotWithAvailability{
+		ParkingSpot: models.ParkingSpot{
+			Location: models.ParkingSpotLocation{
+				PostalCode:    result.Location.PostalCode,
+				CountryCode:   result.Location.CountryCode,
+				State:         result.Location.State,
+				City:          result.Location.City,
+				StreetAddress: result.Location.StreetAddress,
+				Longitude:     result.Location.Longitude,
+				Latitude:      result.Location.Latitude,
+			},
+			Features:     result.Features,
+			PricePerHour: result.PricePerHour,
+			ID:           result.ID,
 		},
-		Features:     result.Features,
-		PricePerHour: result.PricePerHour,
-		ID:           result.ID,
-		Availability: result.Availability,
+		Availability: availability,
 	}
 
 	return result.InternalID, out, nil
 }
 
-func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpotOutput, error) {
+func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error) {
 
 	result, err := s.repo.GetByUUID(ctx, spotID)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrNotFound) {
 			err = models.ErrParkingSpotNotFound
 		}
-		return models.ParkingSpotOutput{}, err
+		return models.ParkingSpot{}, err
 	}
 
-	lat, _ := result.Location.Latitude.Float64()
-	long, _ := result.Location.Longitude.Float64()
-
-	out := models.ParkingSpotOutput{
-		Location: models.ParkingSpotOutputLocation{
+	out := models.ParkingSpot{
+		Location: models.ParkingSpotLocation{
 			PostalCode:    result.Location.PostalCode,
 			CountryCode:   result.Location.CountryCode,
 			State:         result.Location.State,
 			City:          result.Location.City,
 			StreetAddress: result.Location.StreetAddress,
-			Longitude:     long,
-			Latitude:      lat,
+			Longitude:     result.Location.Longitude,
+			Latitude:      result.Location.Latitude,
 		},
 		Features:     result.Features,
 		PricePerHour: result.PricePerHour,
@@ -175,15 +167,22 @@ func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID)
 	return out, nil
 }
 
-func (s *Service) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
+func (s *Service) GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
 	if endDate.Before(startDate) {
 		return []models.TimeUnit{}, models.ErrInvalidTimeWindow
 	}
 
-	result, err := s.repo.GetAvalByUUID(ctx, spotID, startDate, endDate)
+	if startDate.IsZero() {
+		startDate = time.Now()
+	}
+	if endDate.IsZero() {
+		endDate = startDate.AddDate(0, 0, 7)
+	}
+
+	result, err := s.repo.GetAvailByUUID(ctx, spotID, startDate, endDate)
 	if err != nil {
-		if errors.Is(err, parkingspot.ErrTimeUnitNotFound) {
-			err = models.ErrAvailabilityNotFound
+		if errors.Is(err, parkingspot.ErrNotFound) {
+			err = models.ErrParkingSpotNotFound
 		}
 		return []models.TimeUnit{}, err
 	}
@@ -241,42 +240,18 @@ func (s *Service) GetMany(ctx context.Context, userID int64, count int, filter m
 
 	result := make([]models.ParkingSpotWithDistance, 0, len(spotEntries))
 	for _, entry := range spotEntries {
-		lat, ok := entry.Location.Latitude.Float64()
-		if !ok {
-			//FIXME: just skip the entry for now
-			continue
-		}
-
-		long, ok := entry.Location.Longitude.Float64()
-		if !ok {
-			//FIXME: just skip the entry for now
-			continue
-		}
 
 		result = append(result, models.ParkingSpotWithDistance{
-			ParkingSpotOutput: models.ParkingSpotOutput{
-				Location: models.ParkingSpotOutputLocation{
-					PostalCode:    entry.Location.PostalCode,
-					CountryCode:   entry.Location.CountryCode,
-					City:          entry.Location.City,
-					State:         entry.Location.State,
-					StreetAddress: entry.Location.StreetAddress,
-					Longitude:     long,
-					Latitude:      lat,
-				},
-				Features:     entry.ParkingSpot.Features,
-				PricePerHour: entry.ParkingSpot.PricePerHour,
-				ID:           entry.ParkingSpot.ID,
-			},
+			ParkingSpot:        entry.ParkingSpot,
 			DistanceToLocation: entry.DistanceToLocation,
 		})
 	}
 	return result, nil
 }
 
-func (s *Service) GetManyForUser(ctx context.Context, userID int64, count int) (spots []models.ParkingSpotOutput, err error) {
+func (s *Service) GetManyForUser(ctx context.Context, userID int64, count int) (spots []models.ParkingSpot, err error) {
 	if count <= 0 {
-		return []models.ParkingSpotOutput{}, nil
+		return []models.ParkingSpot{}, nil
 	}
 
 	count = min(count, MaximumCount)
@@ -289,34 +264,9 @@ func (s *Service) GetManyForUser(ctx context.Context, userID int64, count int) (
 		return nil, err
 	}
 
-	result := make([]models.ParkingSpotOutput, 0, len(spotEntries))
+	result := make([]models.ParkingSpot, 0, len(spotEntries))
 	for _, entry := range spotEntries {
-		lat, ok := entry.Location.Latitude.Float64()
-		if !ok {
-			//FIXME: just skip the entry for now
-			continue
-		}
-
-		long, ok := entry.Location.Longitude.Float64()
-		if !ok {
-			//FIXME: just skip the entry for now
-			continue
-		}
-
-		result = append(result, models.ParkingSpotOutput{
-			Location: models.ParkingSpotOutputLocation{
-				PostalCode:    entry.Location.PostalCode,
-				CountryCode:   entry.Location.CountryCode,
-				City:          entry.Location.City,
-				State:         entry.Location.State,
-				StreetAddress: entry.Location.StreetAddress,
-				Longitude:     long,
-				Latitude:      lat,
-			},
-			Features:     entry.ParkingSpot.Features,
-			PricePerHour: entry.ParkingSpot.PricePerHour,
-			ID:           entry.ParkingSpot.ID,
-		})
+		result = append(result, entry.ParkingSpot)
 	}
 	return result, nil
 }
