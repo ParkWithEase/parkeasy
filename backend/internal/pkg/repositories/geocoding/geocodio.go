@@ -50,11 +50,11 @@ func (g *Geocodio) Geocode(ctx context.Context, address *Address) ([]Result, err
 
 	if resp.StatusCode < 200 || resp.StatusCode > 300 {
 		var gerr GeocodioError
-		err := json.NewDecoder(resp.Body).Decode(&gerr)
-		if err != nil {
+		_ = json.NewDecoder(resp.Body).Decode(&gerr)
+		if gerr.Message == "" {
 			gerr.Message = resp.Status
 		}
-		return nil, err
+		return nil, gerr
 	}
 
 	var apiResult struct {
