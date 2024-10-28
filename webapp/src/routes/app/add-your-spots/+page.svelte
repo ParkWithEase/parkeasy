@@ -32,6 +32,7 @@
     let time_slot_edit_records = [];
     //This contain spot info history to be submitted to the server
     let spotInfo;
+    let new_price_per_hour: number | null;
 
     //control form flow
     let currentIndex: number = 0;
@@ -52,7 +53,6 @@
     function toNextWeek() {
         currentMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
         nextMonday = getDateWithDayOffset(nextMonday, DAY_IN_A_WEEK);
-        console.log(time_slot_edit_records);
         availability_table = getWeekAvailabilityTable(
             today,
             currentMonday,
@@ -97,6 +97,7 @@
 
     function clearEditRecords() {
         time_slot_edit_records = [];
+        new_price_per_hour = null;
         availability_table = getWeekAvailabilityTable(
             today,
             currentMonday,
@@ -282,14 +283,26 @@
                     icon={ArrowRight}>Next Week</Button
                 >
             </div>
-            <div style="margin: 1rem">
-                <AvailabilityTable bind:availability_table on:edit={handleEdit} />
-            </div>
-
-            {#if currentIndex == 1}
-                <Button kind="secondary" on:click={clearEditRecords}>Clear</Button>
-                <Button on:click={handleSubmitAvailability}>Submit</Button>
-            {/if}
+            <Form on:submit={handleSubmitAvailability}>
+                <div>
+                    <AvailabilityTable bind:availability_table on:edit={handleEdit} />
+                </div>
+                <div class="price-field">
+                    <TextInput
+                        labelText="Price per hour"
+                        name="price-per-hour"
+                        helperText="Price in CAD"
+                        type="number"
+                        required
+                        readonly={currentIndex == 2}
+                        bind:value={new_price_per_hour}
+                    />
+                </div>
+                {#if currentIndex == 1}
+                    <Button kind="secondary" on:click={clearEditRecords}>Clear</Button>
+                    <Button type="submit">Submit</Button>
+                {/if}
+            </Form>
         {/if}
 
         {#if currentIndex == 2}

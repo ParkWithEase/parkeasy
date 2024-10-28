@@ -16,6 +16,7 @@ export const spots_data = [
             postal_code: 'RRRRRR',
             street_address: '230 Portage Avenue'
         },
+        price_per_hour: 10,
         isListed: true
     },
     {
@@ -34,6 +35,7 @@ export const spots_data = [
             postal_code: 'RRRRRR',
             street_address: '230 Portage Avenue'
         },
+        price_per_hour: 20,
         isListed: false
     },
     {
@@ -52,6 +54,7 @@ export const spots_data = [
             postal_code: 'RRRRRR',
             street_address: '230 Portage Avenue'
         },
+        price_per_hour: 30,
         isListed: true
     }
 ];

@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { PageData } from './$types';
     import Background from '$lib/images/background.png';
-    import { Content, Checkbox, Button } from 'carbon-components-svelte';
+    import { Content, Checkbox, Button, TextInput, Form } from 'carbon-components-svelte';
     import { Edit, ArrowLeft, ArrowRight } from 'carbon-icons-svelte';
     import SpotEditModal from '$lib/components/spot-component/spot-edit-modal.svelte';
     import AvailabilityTable from '$lib/components/spot-component/availability-table.svelte';
@@ -11,18 +11,24 @@
     import { getWeekAvailabilityTable } from '$lib/utils/time-table-util';
 
     export let data: PageData;
+
+    //Variable for location edit section
     let is_edit_modal_open: boolean;
     let spot = data.spot;
 
+    //These are Variables for availability edit section
     let availability_table: TimeSlotStatus[][];
+    let new_price_per_hour: number | undefined = data.spot?.price_per_hour;
+    //This array contain all edit history
+    let time_slot_edit_records = [];
 
     //reminder to change these to now()
     let today: Date;
     let currentMonday: Date;
     let nextMonday: Date;
 
-    //This array contain all edit history
-    let time_slot_edit_records = [];
+    $: isAvailablilityChanged =
+        time_slot_edit_records.length != 0 || new_price_per_hour !== spot?.price_per_hour;
 
     today = new Date(Date.UTC(2024, 9, 15, 3, 24, 0));
     currentMonday = getMonday(today);
@@ -56,7 +62,7 @@
         );
     }
 
-    function handleSubmit(event: Event) {
+    function handleSubmitLocation(event: Event) {
         event.preventDefault();
         const formData = new FormData(event.target as HTMLFormElement);
         let new_spot = {
@@ -75,10 +81,33 @@
                 postal_code: formData.get('postal-code'),
                 street_address: formData.get('street-address')
             },
-            isListed: false
+            isListed: false,
+            price_per_hour: spot?.price_per_hour
         };
         is_edit_modal_open = false;
         spot = new_spot;
+    }
+
+    function handleSubmitAvailability(event: Event) {
+        event.preventDefault();
+        //TODO: change parking spot price + availability using the edit records.
+        // Clear the edit records on success
+        // Might need to check if anything actually change and
+        const formData = new FormData(event.target as HTMLFormElement);
+        console.log(formData.get('price-per-hour'));
+        spot.price_per_hour = formData.get('price-per-hour');
+        new_price_per_hour = spot?.price_per_hour;
+    }
+
+    function resetAvailabilityEdit() {
+        time_slot_edit_records = [];
+        new_price_per_hour = spot?.price_per_hour;
+        availability_table = getWeekAvailabilityTable(
+            today,
+            currentMonday,
+            data.time_slots,
+            time_slot_edit_records
+        );
     }
 
     /*
@@ -118,6 +147,10 @@
             } else {
                 time_slot_edit_records.push(new_time_slot);
             }
+
+            //trigger reactivity by reassigning object
+            time_slot_edit_records = time_slot_edit_records;
+
             availability_table[event.detail.segment][event.detail.day] = new_time_slot.status;
         }
     }
@@ -154,18 +187,21 @@
                 name="shelter"
                 labelText="Shelter"
                 checked={spot?.features.shelter}
+                style="pointer-events: none;"
                 readonly
             />
             <Checkbox
                 name="plug-in"
                 labelText="Plug-in"
                 checked={spot?.features.plug_in}
+                style="pointer-events: none;"
                 readonly
             />
             <Checkbox
                 name="charging-station"
                 labelText="Charging Station"
                 checked={spot?.features.charging_station}
+                style="pointer-events: none;"
                 readonly
             />
         </div>
@@ -176,7 +212,7 @@
     <SpotEditModal
         bind:openState={is_edit_modal_open}
         bind:spotInfo={spot}
-        on:submit={handleSubmit}
+        on:submit={handleSubmitLocation}
     />
 
     <p class="spot-info-header">Availability</p>
@@ -201,12 +237,29 @@
         >
     </div>
 
-    <AvailabilityTable
-        bind:availability_table
-        on:edit={(e) => {
-            handleEdit(e);
-        }}
-    />
+    <Form on:submit={handleSubmitAvailability}>
+        <AvailabilityTable
+            bind:availability_table
+            on:edit={(e) => {
+                handleEdit(e);
+            }}
+        />
+        <div class="price-field">
+            <TextInput
+                style="max-width: 6rem;"
+                labelText="Price per hour"
+                name="price-per-hour"
+                helperText="Price in CAD"
+                type="number"
+                required
+                bind:value={new_price_per_hour}
+            />
+        </div>
+        {#if isAvailablilityChanged}
+            <Button kind="secondary" on:click={resetAvailabilityEdit}>Reset</Button>
+            <Button type="submit">Submit</Button>
+        {/if}
+    </Form>
 </Content>
 
 <style>
