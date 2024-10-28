@@ -12,7 +12,6 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/uuid"
-	"github.com/govalues/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -23,19 +22,19 @@ type mockParkingSpotService struct {
 }
 
 // Create implements ParkingSpotServicer.
-func (m *mockParkingSpotService) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpotCreationOutput, error) {
+func (m *mockParkingSpotService) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpotWithAvailability, error) {
 	args := m.Called(ctx, userID, spot)
-	return args.Get(0).(int64), args.Get(1).(models.ParkingSpotCreationOutput), args.Error(2)
+	return args.Get(0).(int64), args.Get(1).(models.ParkingSpotWithAvailability), args.Error(2)
 }
 
 // GetByUUID implements ParkingSpotServicer.
-func (m *mockParkingSpotService) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpotOutput, error) {
+func (m *mockParkingSpotService) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error) {
 	args := m.Called(ctx, userID, spotID)
-	return args.Get(0).(models.ParkingSpotOutput), args.Error(1)
+	return args.Get(0).(models.ParkingSpot), args.Error(1)
 }
 
 // GetAvalByUUID implements ParkingSpotServicer.
-func (m *mockParkingSpotService) GetAvalByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
+func (m *mockParkingSpotService) GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
 	args := m.Called(ctx, spotID, startDate, endDate)
 	return args.Get(0).([]models.TimeUnit), args.Error(1)
 }
@@ -47,17 +46,15 @@ func (m *mockParkingSpotService) GetMany(ctx context.Context, userID int64, coun
 }
 
 // GetManyForUser implements ParkingSpotServicer.
-func (m *mockParkingSpotService) GetManyForUser(ctx context.Context, userID int64, count int) (spots []models.ParkingSpotOutput, err error) {
+func (m *mockParkingSpotService) GetManyForUser(ctx context.Context, userID int64, count int) (spots []models.ParkingSpot, err error) {
 	args := m.Called(ctx, userID, count)
-	return args.Get(0).([]models.ParkingSpotOutput), args.Error(1)
+	return args.Get(0).([]models.ParkingSpot), args.Error(1)
 }
 
 var sampleLatitudeFloat = float64(43.07923)
 var sampleLongitudeFloat = float64(-79.07887)
-var sampleLatitude, _ = decimal.NewFromFloat64(sampleLatitudeFloat)
-var sampleLongitude, _ = decimal.NewFromFloat64(sampleLongitudeFloat)
 
-var sampleLocation = models.ParkingSpotOutputLocation{
+var sampleLocation = models.ParkingSpotLocation{
 	PostalCode:    "L2E6T2",
 	CountryCode:   "CA",
 	State:         "AB",
@@ -73,7 +70,7 @@ var sampleFeatures = models.ParkingSpotFeatures{
 	ChargingStation: false,
 }
 
-var samplePricePerHour, _ = decimal.NewFromFloat64(float64(10.0))
+var samplePricePerHour = float64(10.0)
 
 var testSpotUUID = uuid.New()
 
@@ -90,7 +87,7 @@ var sampleAvailability = []models.TimeUnit{
 	},
 }
 
-var sampleOutput = models.ParkingSpotOutput{
+var sampleOutput = models.ParkingSpot{
 	Location:     sampleLocation,
 	Features:     sampleFeatures,
 	PricePerHour: samplePricePerHour,
@@ -100,11 +97,13 @@ var sampleOutput = models.ParkingSpotOutput{
 var sampleDistanceToLocation = float64(50)
 
 var sampleFilter = models.ParkingSpotFilter{
-	Longitude:         sampleLongitudeFloat,
-	Latitude:          sampleLatitudeFloat,
-	Distance:          int32(sampleDistanceToLocation),
-	AvailabilityStart: sampleAvailability[0].StartTime,
-	AvailabilityEnd:   sampleAvailability[1].EndTime,
+	Longitude: sampleLongitudeFloat,
+	Latitude:  sampleLatitudeFloat,
+	Distance:  int32(sampleDistanceToLocation),
+	ParkingSpotAvailabilityFilter: models.ParkingSpotAvailabilityFilter{
+		AvailabilityStart: sampleAvailability[0].StartTime,
+		AvailabilityEnd:   sampleAvailability[1].EndTime,
+	},
 }
 
 const testOwnerID = int64(1)
@@ -117,15 +116,7 @@ func TestCreateParkingSpot(t *testing.T) {
 	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testOwnerID)
 
 	testInput := models.ParkingSpotCreationInput{
-		Location: models.ParkingSpotLocation{
-			PostalCode:    sampleLocation.PostalCode,
-			CountryCode:   sampleLocation.CountryCode,
-			State:         sampleLocation.State,
-			City:          sampleLocation.City,
-			StreetAddress: sampleLocation.StreetAddress,
-			Latitude:      sampleLatitude,
-			Longitude:     sampleLongitude,
-		},
+		Location:     sampleLocation,
 		Features:     sampleFeatures,
 		PricePerHour: samplePricePerHour,
 		Availability: sampleAvailability,
@@ -141,11 +132,13 @@ func TestCreateParkingSpot(t *testing.T) {
 
 		spotUUID := uuid.New()
 		srv.On("Create", mock.Anything, testOwnerID, &testInput).
-			Return(testOwnerID, models.ParkingSpotCreationOutput{
-				Location:     sampleLocation,
-				Features:     sampleFeatures,
-				PricePerHour: samplePricePerHour,
-				ID:           testSpotUUID,
+			Return(testOwnerID, models.ParkingSpotWithAvailability{
+				ParkingSpot: models.ParkingSpot{
+					Location:     sampleLocation,
+					Features:     sampleFeatures,
+					PricePerHour: samplePricePerHour,
+					ID:           spotUUID,
+				},
 				Availability: sampleAvailability,
 			}, nil).
 			Once()
@@ -153,11 +146,12 @@ func TestCreateParkingSpot(t *testing.T) {
 		resp := api.PostCtx(ctx, "/spots", testInput)
 		assert.Equal(t, http.StatusCreated, resp.Result().StatusCode)
 
-		var spot models.ParkingSpotCreationOutput
+		var spot models.ParkingSpotWithAvailability
 		err := json.NewDecoder(resp.Result().Body).Decode(&spot)
 		require.NoError(t, err)
 
 		assert.Equal(t, testInput.Location, spot.Location)
+		assert.Equal(t, testInput.Availability, spot.Availability)
 		assert.Equal(t, spotUUID, spot.ID)
 
 		srv.AssertExpectations(t)
@@ -172,7 +166,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		handler := srv.On("Create", mock.Anything, testOwnerID, &testInput).
-			Return(testOwnerID, models.ParkingSpotCreationOutput{}, models.ErrParkingSpotDuplicate).
+			Return(testOwnerID, models.ParkingSpotWithAvailability{}, models.ErrParkingSpotDuplicate).
 			Once()
 
 		resp := api.PostCtx(ctx, "/spots", testInput)
@@ -191,7 +185,7 @@ func TestCreateParkingSpot(t *testing.T) {
 
 		handler.Unset().
 			On("Create", mock.Anything, testOwnerID, &testInput).
-			Return(testOwnerID, models.ParkingSpotCreationOutput{}, models.ErrParkingSpotOwned).
+			Return(testOwnerID, models.ParkingSpotWithAvailability{}, models.ErrParkingSpotOwned).
 			Once()
 
 		resp = api.PostCtx(ctx, "/spots", testInput)
@@ -215,7 +209,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		srv.On("Create", mock.Anything, testOwnerID, &testInput).
-			Return(testOwnerID, models.ParkingSpotCreationOutput{}, models.ErrInvalidStreetAddress).
+			Return(testOwnerID, models.ParkingSpotWithAvailability{}, models.ErrInvalidStreetAddress).
 			Once()
 
 		resp := api.PostCtx(ctx, "/spots", testInput)
@@ -259,7 +253,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		srv.On("Create", mock.Anything, testOwnerID, &testInput).
-			Return(testOwnerID, models.ParkingSpotCreationOutput{}, models.ErrCountryNotSupported).
+			Return(testOwnerID, models.ParkingSpotWithAvailability{}, models.ErrCountryNotSupported).
 			Once()
 		resp := api.PostCtx(ctx, "/spots", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
@@ -287,7 +281,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		srv.On("Create", mock.Anything, testOwnerID, &testInput).
-			Return(testOwnerID, models.ParkingSpotCreationOutput{}, models.ErrProvinceNotSupported).
+			Return(testOwnerID, models.ParkingSpotWithAvailability{}, models.ErrProvinceNotSupported).
 			Once()
 		resp := api.PostCtx(ctx, "/spots", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
@@ -315,7 +309,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		srv.On("Create", mock.Anything, testOwnerID, &testInput).
-			Return(testOwnerID, models.ParkingSpotCreationOutput{}, models.ErrInvalidPostalCode).
+			Return(testOwnerID, models.ParkingSpotWithAvailability{}, models.ErrInvalidPostalCode).
 			Once()
 		resp := api.PostCtx(ctx, "/spots", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
@@ -334,7 +328,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		srv.AssertExpectations(t)
 	})
 
-	t.Run("coordinate errors", func(t *testing.T) {
+	t.Run("address errors", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
@@ -343,7 +337,7 @@ func TestCreateParkingSpot(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		srv.On("Create", mock.Anything, testOwnerID, &testInput).
-			Return(testOwnerID, models.ParkingSpotCreationOutput{}, models.ErrInvalidCoordinate).
+			Return(testOwnerID, models.ParkingSpotWithAvailability{}, models.ErrInvalidAddress).
 			Once()
 		resp := api.PostCtx(ctx, "/spots", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
@@ -385,7 +379,7 @@ func TestGetParkingSpot(t *testing.T) {
 		resp := api.GetCtx(ctx, "/spots/"+testSpotUUID.String())
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
-		var spot models.ParkingSpotOutput
+		var spot models.ParkingSpot
 		err := json.NewDecoder(resp.Result().Body).Decode(&spot)
 		require.NoError(t, err)
 
@@ -404,7 +398,7 @@ func TestGetParkingSpot(t *testing.T) {
 
 		testUUID := uuid.New()
 		srv.On("GetByUUID", mock.Anything, testOwnerID, testUUID).
-			Return(models.ParkingSpotOutput{}, models.ErrParkingSpotNotFound).
+			Return(models.ParkingSpot{}, models.ErrParkingSpotNotFound).
 			Once()
 
 		resp := api.GetCtx(ctx, "/spots/"+testUUID.String())
@@ -423,7 +417,67 @@ func TestGetParkingSpot(t *testing.T) {
 	})
 }
 
-func TestGetParkingSpotAroundLoc(t *testing.T) {
+func TestGetParkingSpotAvailability(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testOwnerID)
+
+	t.Run("all good", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("GetByUUID", mock.Anything, testOwnerID, testSpotUUID).
+			Return(sampleOutput, nil).
+			Once()
+
+		resp := api.GetCtx(ctx, "/spots/"+testSpotUUID.String())
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+
+		var spot models.ParkingSpot
+		err := json.NewDecoder(resp.Result().Body).Decode(&spot)
+		require.NoError(t, err)
+
+		assert.Equal(t, testSpotUUID, spot.ID)
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("not found handling", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		testUUID := uuid.New()
+		srv.On("GetByUUID", mock.Anything, testOwnerID, testUUID).
+			Return(models.ParkingSpot{}, models.ErrParkingSpotNotFound).
+			Once()
+
+		resp := api.GetCtx(ctx, "/spots/"+testUUID.String())
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Location: "path.id",
+			Value:    jsonAnyify(testUUID),
+		})
+
+		srv.AssertExpectations(t)
+	})
+}
+
+func TestGetParkingSpotAroundLocation(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -432,7 +486,7 @@ func TestGetParkingSpotAroundLoc(t *testing.T) {
 
 	testOutput := []models.ParkingSpotWithDistance{
 		{
-			ParkingSpotOutput:  sampleOutput,
+			ParkingSpot:        sampleOutput,
 			DistanceToLocation: sampleDistanceToLocation,
 		},
 	}
@@ -496,7 +550,7 @@ func TestGetParkingSpotAroundLoc(t *testing.T) {
 		var errModel huma.ErrorModel
 		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
 		require.NoError(t, err)
-		assert.Equal(t, models.CodeInvalidTimeWindow.TypeURI(), errModel.Type)
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
 			Location: "query.availability_end",
 			Value:    jsonAnyify(sampleAvailability[0].StartTime.Format(time.RFC3339)),
@@ -551,7 +605,7 @@ func TestGetMySpots(t *testing.T) {
 	t.Cleanup(cancel)
 	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testOwnerID)
 
-	testOutput := []models.ParkingSpotOutput{
+	testOutput := []models.ParkingSpot{
 		sampleOutput,
 	}
 
@@ -567,14 +621,14 @@ func TestGetMySpots(t *testing.T) {
 			Return(testOutput, nil).
 			Once()
 
-		resp := api.GetCtx(ctx, "/my-spots")
+		resp := api.GetCtx(ctx, "/user/spots")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
-		var spot ParkingSpotListOutput
+		var spot []models.ParkingSpot
 		err := json.NewDecoder(resp.Result().Body).Decode(&spot)
 		require.NoError(t, err)
 
-		assert.Equal(t, testOutput, spot.Body)
+		assert.Equal(t, testOutput, spot)
 		srv.AssertExpectations(t)
 	})
 }
