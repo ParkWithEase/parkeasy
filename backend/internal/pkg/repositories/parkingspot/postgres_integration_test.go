@@ -406,22 +406,6 @@ func TestPostgresIntegration(t *testing.T) {
 			assertSameEntry(t, &entry, &entries[0].Entry, "get many entries for short distances do not match")
 			assertSameEntry(t, &entry_1, &entries[1].Entry, "get many entries for short distances do not match")
 		})
-
-		// t.Run("cursor too far", func(t *testing.T) {
-		// 	t.Parallel()
-
-		// 	entries, err := repo.GetMany(ctx, 100, omit.From(Cursor{ID: 10000000}), sampleUserLongitude, sampleUserLatitude, 500, sampleTimeUnit.StartTime, sampleTimeUnit.EndTime)
-		// 	require.NoError(t, err)
-		// 	assert.Empty(t, entries)
-		// })
-
-		// t.Run("non-existent user", func(t *testing.T) {
-		// 	t.Parallel()
-
-		// 	entries, err := repo.GetMany(ctx, userID+100, 100, omit.Val[Cursor]{})
-		// 	require.NoError(t, err)
-		// 	assert.Empty(t, entries)
-		// })
 	})
 
 	t.Run("get availability", func(t *testing.T) {
