@@ -83,6 +83,9 @@ func (s *ServeCmd) Run(ctx context.Context, l *zerolog.Logger, globals *Globals)
 		Logger()
 
 	ctx = log.WithContext(ctx)
+	if s.GeocodioAPIKey == "" {
+		log.Warn().Msg("no geocodio api key provided, some features might not work")
+	}
 
 	pool, err := pgxpool.New(ctx, s.DB.String())
 	if err != nil {
