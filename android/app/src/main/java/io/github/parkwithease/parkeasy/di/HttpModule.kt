@@ -16,6 +16,7 @@ import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.serialization.kotlinx.json.json
 import javax.inject.Singleton
+import kotlinx.serialization.json.Json
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -25,7 +26,7 @@ object HttpModule {
     fun provideHttpClient(app: Application): HttpClient =
         HttpClient(OkHttp) {
             defaultRequest { url(app.getString(R.string.api_host)) }
-            install(ContentNegotiation) { json() }
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
             install(Logging) {
                 logger =
                     object : Logger {
