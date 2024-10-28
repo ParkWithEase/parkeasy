@@ -40,6 +40,7 @@ fun ProfileScreen(
             latestOnLogout()
         }
     }
+    LaunchedEffect(Unit) { viewModel.refresh() }
     val profile by viewModel.profile.collectAsState()
     ProfileScreen(profile, viewModel::onLogoutClick, modifier)
 }
