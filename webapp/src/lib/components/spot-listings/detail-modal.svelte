@@ -25,21 +25,23 @@
                 <li>Shelter: {listing.features.shelter ? 'Yes' : 'No'}</li>
             </ul>
         </div>
-        <MapLibre
-            center={[listing.location.longitude, listing.location.latitude]}
-            zoom={13}
-            class="map"
-            style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-        >
-            <DefaultMarker lngLat={[listing.location.longitude, listing.location.latitude]} draggable/>
-        </MapLibre>
+        <div>
+            <MapLibre
+                center={[listing.location.longitude, listing.location.latitude]}
+                zoom={13}
+                style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+            >
+                <DefaultMarker lngLat={[listing.location.longitude, listing.location.latitude]} draggable/>
+            </MapLibre>
+        </div>
+        
     </div>
 </Modal>
 
 <style>
     .modal-content{
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
     }
     .listing-content {
         padding: 1rem;

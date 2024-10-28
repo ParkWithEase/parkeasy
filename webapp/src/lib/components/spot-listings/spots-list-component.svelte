@@ -1,7 +1,7 @@
 <script lang="ts">
     import { ChargingStation, PlugFilled, Home } from "carbon-icons-svelte";
     import { TooltipIcon } from 'carbon-components-svelte';
-    import DetailModal from "../listing-detail/detail-modal.svelte";
+    import DetailModal from "./detail-modal.svelte";
     export let listing;
 
     let modalOpen = false;
@@ -53,8 +53,8 @@
             {/if}
         </div>
     </div>
-    <DetailModal bind:open={modalOpen} listing={listing} />
 </div>
+<DetailModal bind:open={modalOpen} listing={listing} />
 <style>
     .listing-info {
         flex: 1;
