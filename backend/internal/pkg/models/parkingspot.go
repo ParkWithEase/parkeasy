@@ -16,7 +16,6 @@ var (
 	ErrInvalidStreetAddress = CodeSpotInvalid.WithMsg("the specified street address is invalid")
 	ErrInvalidCoordinate    = CodeSpotInvalid.WithMsg("the specified coordinate is invalid")
 	ErrTimeUnitDuplicate    = CodeDuplicate.WithMsg("time slot already exists")
-	ErrInvalidTimeWindow    = CodeSpotInvalid.WithMsg("the specified start and/or end dates are invalid")
 	ErrInvalidAddress       = CodeSpotInvalid.WithMsg("the specified address is invalid")
 	ErrInvalidTimeUnit      = CodeSpotInvalid.WithMsg("passed time unit is not valid, start and end time must be exactly 30 min apart")
 	ErrNoAvailability       = CodeSpotInvalid.WithMsg("at least one time slot must be passed")
