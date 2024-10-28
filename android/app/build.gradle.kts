@@ -97,6 +97,9 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.material3)
 
+    // MapLibre
+    implementation(libs.maplibre.compose)
+
     // Ktor
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
