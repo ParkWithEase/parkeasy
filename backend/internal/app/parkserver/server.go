@@ -96,6 +96,9 @@ func (c *Config) NewHumaAPI() huma.API {
 	api := humago.New(router, config)
 	sessionManager := routes.NewSessionManager(pgxstore.New(c.DBPool))
 	sessionManager.Cookie.Secure = !c.Insecure
+	if c.CorsOrigin != "" {
+		sessionManager.Cookie.SameSite = http.SameSiteNoneMode
+	}
 
 	if c.APIPrefix != "" {
 		api.OpenAPI().Servers = append(api.OpenAPI().Servers, &huma.Server{
