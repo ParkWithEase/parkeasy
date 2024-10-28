@@ -11,7 +11,6 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/testutils"
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
-	"github.com/govalues/decimal"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/stephenafamo/bob"
@@ -134,15 +133,11 @@ func TestPostgresIntegration(t *testing.T) {
 	}
 
 	// Test variables for GetMany
-	sampleUserLatitude, err := decimal.NewFromFloat64(43.079)
-	require.NoError(t, err)
-	sampleUserLongitude, err := decimal.NewFromFloat64(-79.078)
-	require.NoError(t, err)
+	sampleUserLatitude := 43.079
+	sampleUserLongitude := -79.078
 
-	sampleShortDistLatitute, err := decimal.NewFromFloat64(49.888870)
-	require.NoError(t, err)
-	sampleShortDistLongitude, err := decimal.NewFromFloat64(-97.134490)
-	require.NoError(t, err)
+	sampleShortDistLatitute := 49.888870
+	sampleShortDistLongitude := -97.134490
 
 	sampleLocations := []models.ParkingSpotLocation{
 		{

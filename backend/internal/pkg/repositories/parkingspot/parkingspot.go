@@ -8,7 +8,6 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
-	"github.com/govalues/decimal"
 )
 
 type Entry struct {
@@ -23,8 +22,8 @@ type GetManyEntry struct {
 }
 
 type FilterLocation struct {
-	Longitude decimal.Decimal
-	Latitude  decimal.Decimal
+	Longitude float64
+	Latitude  float64
 	Radius    int32
 }
 

@@ -11,7 +11,6 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
-	"github.com/govalues/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -534,12 +533,10 @@ func TestGetMany(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		long, _ := decimal.NewFromFloat64(5)
-		lat, _ := decimal.NewFromFloat64(5)
 		repo.On("GetMany", 1, &parkingspot.Filter{
 			Location: omit.From(parkingspot.FilterLocation{
-				Latitude:  long,
-				Longitude: lat,
+				Latitude:  5,
+				Longitude: 5,
 			}),
 			Availability: omit.From(parkingspot.FilterAvailability{
 				Start: sampleAvailability[0].StartTime,

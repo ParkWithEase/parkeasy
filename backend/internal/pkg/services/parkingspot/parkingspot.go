@@ -13,7 +13,6 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
-	"github.com/govalues/decimal"
 )
 
 // Largest number of entries returned per request
@@ -180,20 +179,10 @@ func (s *Service) GetMany(ctx context.Context, userID int64, count int, filter m
 		repoAvailFilter.End = repoAvailFilter.Start.AddDate(0, 0, 7)
 	}
 
-	lat, err := decimal.NewFromFloat64(filter.Latitude)
-	if err != nil {
-		return []models.ParkingSpotWithDistance{}, nil
-	}
-
-	long, err := decimal.NewFromFloat64(filter.Longitude)
-	if err != nil {
-		return []models.ParkingSpotWithDistance{}, nil
-	}
-
 	repoFilter := parkingspot.Filter{
 		Location: omit.From(parkingspot.FilterLocation{
-			Longitude: long,
-			Latitude:  lat,
+			Longitude: filter.Longitude,
+			Latitude:  filter.Latitude,
 			Radius:    filter.Distance,
 		}),
 		Availability: omit.From(repoAvailFilter),
