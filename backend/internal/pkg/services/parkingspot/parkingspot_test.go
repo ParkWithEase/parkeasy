@@ -69,7 +69,7 @@ func (m *mockRepo) GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDa
 	return args.Get(0).([]models.TimeUnit), args.Error(1)
 }
 
-func (m *mockRepo) GetMany(ctx context.Context, limit int, filter parkingspot.Filter) ([]parkingspot.GetManyEntry, error) {
+func (m *mockRepo) GetMany(ctx context.Context, limit int, filter *parkingspot.Filter) ([]parkingspot.GetManyEntry, error) {
 	args := m.Called(limit, filter)
 	return args.Get(0).([]parkingspot.GetManyEntry), args.Error(1)
 }
@@ -536,7 +536,7 @@ func TestGetMany(t *testing.T) {
 		repo := new(mockRepo)
 		long, _ := decimal.NewFromFloat64(5)
 		lat, _ := decimal.NewFromFloat64(5)
-		repo.On("GetMany", 1, parkingspot.Filter{
+		repo.On("GetMany", 1, &parkingspot.Filter{
 			Location: omit.From(parkingspot.FilterLocation{
 				Latitude:  long,
 				Longitude: lat,

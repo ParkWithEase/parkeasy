@@ -99,11 +99,7 @@ func TestPostgresIntegration(t *testing.T) {
 		},
 	}
 
-	sampleAvailability := make([]models.TimeUnit, 0, 2)
-
-	for _, timeunit := range sampleTimeUnit {
-		sampleAvailability = append(sampleAvailability, timeunit)
-	}
+	sampleAvailability := append([]models.TimeUnit(nil), sampleTimeUnit...)
 
 	sampleLocation := models.ParkingSpotLocation{
 		PostalCode:    "L2E6T2",
@@ -231,31 +227,31 @@ func TestPostgresIntegration(t *testing.T) {
 		createEntry, availability, err := repo.Create(ctx, userID, &creationInput)
 		require.NoError(t, err)
 		assert.NotEqual(t, -1, createEntry.InternalID)
-		assert.NotEqual(t, uuid.Nil, createEntry.ParkingSpot.ID)
-		sameEntry(t, Entry{
+		assert.NotEqual(t, uuid.Nil, createEntry.ID)
+		assertSameEntry(t, &Entry{
 			ParkingSpot: models.ParkingSpot{
 				Location:     sampleLocation,
 				Features:     sampleFeatures,
 				PricePerHour: samplePricePerHour,
 			},
 			OwnerID: userID,
-		}, createEntry, "created entry not the same")
+		}, &createEntry, "created entry not the same")
 		assertTimesEqual(t, sampleAvailability, availability)
 
 		// Testing get spot
-		getEntry, err := repo.GetByUUID(ctx, createEntry.ParkingSpot.ID)
+		getEntry, err := repo.GetByUUID(ctx, createEntry.ID)
 		require.NoError(t, err)
-		sameEntry(t, Entry{
+		assertSameEntry(t, &Entry{
 			ParkingSpot: models.ParkingSpot{
 				Location:     sampleLocation,
 				Features:     sampleFeatures,
 				PricePerHour: samplePricePerHour,
 			},
 			OwnerID: userID,
-		}, getEntry, "entry retirieved not the same")
+		}, &getEntry, "entry retirieved not the same")
 
 		// Testing get owner id
-		ownerID, err := repo.GetOwnerByUUID(ctx, createEntry.ParkingSpot.ID)
+		ownerID, err := repo.GetOwnerByUUID(ctx, createEntry.ID)
 		require.NoError(t, err)
 		assert.Equal(t, userID, ownerID)
 	})
@@ -343,7 +339,7 @@ func TestPostgresIntegration(t *testing.T) {
 					Radius:    500,
 				}),
 			}
-			entries, err := repo.GetMany(ctx, 5, filter)
+			entries, err := repo.GetMany(ctx, 5, &filter)
 			require.NoError(t, err)
 
 			for eidx, entry := range entries {
@@ -358,7 +354,7 @@ func TestPostgresIntegration(t *testing.T) {
 						OwnerID: userID,
 					}
 
-					sameEntry(t, currEntry, entry.Entry, "get many entries do not match")
+					assertSameEntry(t, &currEntry, &entry.Entry, "get many entries do not match")
 				}
 			}
 		})
@@ -375,7 +371,7 @@ func TestPostgresIntegration(t *testing.T) {
 					Radius:    200,
 				}),
 			}
-			entries, err := repo.GetMany(ctx, 5, filter)
+			entries, err := repo.GetMany(ctx, 5, &filter)
 			require.NoError(t, err)
 			require.Len(t, entries, 1)
 
@@ -387,7 +383,7 @@ func TestPostgresIntegration(t *testing.T) {
 				},
 				OwnerID: userID,
 			}
-			sameEntry(t, entry, entries[0].Entry, "get many entries for short distances do not match")
+			assertSameEntry(t, &entry, &entries[0].Entry, "get many entries for short distances do not match")
 
 			filter = Filter{
 				Location: omit.From(FilterLocation{
@@ -404,11 +400,11 @@ func TestPostgresIntegration(t *testing.T) {
 				},
 				OwnerID: userID,
 			}
-			entries, err = repo.GetMany(ctx, 5, filter)
+			entries, err = repo.GetMany(ctx, 5, &filter)
 			require.NoError(t, err)
 			require.Len(t, entries, 2)
-			sameEntry(t, entry, entries[0].Entry, "get many entries for short distances do not match")
-			sameEntry(t, entry_1, entries[1].Entry, "get many entries for short distances do not match")
+			assertSameEntry(t, &entry, &entries[0].Entry, "get many entries for short distances do not match")
+			assertSameEntry(t, &entry_1, &entries[1].Entry, "get many entries for short distances do not match")
 		})
 
 		// t.Run("cursor too far", func(t *testing.T) {
@@ -512,7 +508,7 @@ func TestPostgresIntegration(t *testing.T) {
 	})
 }
 
-func sameEntry(t *testing.T, expected, actual Entry, msg string) {
+func assertSameEntry(t *testing.T, expected, actual *Entry, msg string) {
 	t.Helper()
 
 	assert.InEpsilon(t, expected.Location.Latitude, actual.Location.Latitude, epsilon, msg)
@@ -523,7 +519,7 @@ func sameEntry(t *testing.T, expected, actual Entry, msg string) {
 	assert.Equal(t, expected.Location.State, actual.Location.State, msg)
 	assert.Equal(t, expected.Location.StreetAddress, actual.Location.StreetAddress, msg)
 	assert.Equal(t, expected.Features, actual.Features, msg)
-	assert.Equal(t, expected.PricePerHour, actual.PricePerHour, msg)
+	assert.InEpsilon(t, expected.PricePerHour, actual.PricePerHour, epsilon, msg)
 	assert.Equal(t, expected.OwnerID, actual.OwnerID, msg)
 }
 

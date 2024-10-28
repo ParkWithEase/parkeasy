@@ -198,7 +198,7 @@ func (s *Service) GetMany(ctx context.Context, userID int64, count int, filter m
 		}),
 		Availability: omit.From(repoAvailFilter),
 	}
-	spotEntries, err := s.repo.GetMany(ctx, count, repoFilter)
+	spotEntries, err := s.repo.GetMany(ctx, count, &repoFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (s *Service) GetManyForUser(ctx context.Context, userID int64, count int) (
 	repoFilter := parkingspot.Filter{
 		UserID: omit.From(userID),
 	}
-	spotEntries, err := s.repo.GetMany(ctx, count, repoFilter)
+	spotEntries, err := s.repo.GetMany(ctx, count, &repoFilter)
 	if err != nil {
 		return nil, err
 	}

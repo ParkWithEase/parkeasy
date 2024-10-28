@@ -34,7 +34,7 @@ func (m *mockParkingSpotService) GetByUUID(ctx context.Context, userID int64, sp
 }
 
 // GetAvalByUUID implements ParkingSpotServicer.
-func (m *mockParkingSpotService) GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error) {
+func (m *mockParkingSpotService) GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate, endDate time.Time) ([]models.TimeUnit, error) {
 	args := m.Called(ctx, spotID, startDate, endDate)
 	return args.Get(0).([]models.TimeUnit), args.Error(1)
 }

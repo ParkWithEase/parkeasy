@@ -149,8 +149,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		result, err := r.service.GetByUUID(ctx, userID, input.ID)
 		if err != nil {
 			var detail error
-			switch {
-			case errors.Is(err, models.ErrParkingSpotNotFound):
+			if errors.Is(err, models.ErrParkingSpotNotFound) {
 				detail = &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
@@ -168,8 +167,8 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		Summary:     "Get the current user listed spots",
 		Tags:        []string{ParkingSpotTag.Name},
 	}), func(ctx context.Context, input *struct {
-		ID uuid.UUID `path:"id"`
 		models.ParkingSpotAvailabilityFilter
+		ID uuid.UUID `path:"id"`
 	},
 	) (*parkingSpotAvailabilityListOutput, error) {
 		spots, err := r.service.GetAvailByUUID(ctx, input.ID, input.AvailabilityStart, input.AvailabilityEnd)

@@ -34,8 +34,8 @@ type FilterAvailability struct {
 }
 
 type Filter struct {
-	Location     omit.Val[FilterLocation]
 	Availability omit.Val[FilterAvailability]
+	Location     omit.Val[FilterLocation]
 	UserID       omit.Val[int64]
 }
 
@@ -57,6 +57,6 @@ type Repository interface {
 	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error)
 	GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error)
 	GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error)
-	GetMany(ctx context.Context, limit int, filter Filter) ([]GetManyEntry, error)
+	GetMany(ctx context.Context, limit int, filter *Filter) ([]GetManyEntry, error)
 	GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error)
 }
