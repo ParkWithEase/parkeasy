@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Card
@@ -70,26 +71,16 @@ fun CarsScreen(
                     Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    items(cars.count()) { index ->
+                    items(cars) { car ->
                         ListItem({
                             Card(
-                                modifier =
-                                    Modifier.fillMaxWidth().clickable { onSelectCar(cars[index]) }
+                                modifier = Modifier.fillMaxWidth().clickable { onSelectCar(car) }
                             ) {
+                                Text(car.details.color, Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp))
+                                Text(car.details.model, Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp))
+                                Text(car.details.make, Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp))
                                 Text(
-                                    cars[index].details.color,
-                                    Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp),
-                                )
-                                Text(
-                                    cars[index].details.model,
-                                    Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp),
-                                )
-                                Text(
-                                    cars[index].details.make,
-                                    Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp),
-                                )
-                                Text(
-                                    cars[index].details.licensePlate,
+                                    car.details.licensePlate,
                                     Modifier.padding(8.dp, 8.dp, 0.dp, 8.dp),
                                 )
                             }
