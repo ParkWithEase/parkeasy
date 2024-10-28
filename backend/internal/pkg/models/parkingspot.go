@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/govalues/decimal"
 )
 
 var (
@@ -18,19 +17,20 @@ var (
 	ErrInvalidStreetAddress = CodeSpotInvalid.WithMsg("the specified street address is invalid")
 	ErrInvalidCoordinate    = CodeSpotInvalid.WithMsg("the specified coordinate is invalid")
 	ErrTimeUnitDuplicate    = CodeDuplicate.WithMsg("time slot already exists")
-	ErrInvalidTimeWindow    = CodeInvalidTimeWindow.WithMsg("the specified start and/or end dates are invalid")
-	ErrInvalidAddress       = CodeInvalidAddress.WithMsg("the specified address is invalid")
-	ErrInvalidTimeUnit      = CodeInvalidTimeUnit.WithMsg("passed time unit is not valid, start and end time must be exactly 30 min apart")
+	ErrInvalidTimeWindow    = CodeSpotInvalid.WithMsg("the specified start and/or end dates are invalid")
+	ErrInvalidAddress       = CodeSpotInvalid.WithMsg("the specified address is invalid")
+	ErrInvalidTimeUnit      = CodeSpotInvalid.WithMsg("passed time unit is not valid, start and end time must be exactly 30 min apart")
+	ErrInvalidPricePerHour  = CodeSpotInvalid.WithMsg("the specified price per hour is not valid")
 )
 
 type ParkingSpotLocation struct {
-	PostalCode    string          `json:"postal_code,omitempty" doc:"The postal code of the parking spot"`
-	CountryCode   string          `json:"country_code" pattern:"[A-Z][A-Z]" doc:"The country code of a parking spot"`
-	City          string          `json:"city" doc:"The city the parking spot is in"`
-	State         string          `json:"state" doc:"The province the parking spot is in"`
-	StreetAddress string          `json:"street_address" doc:"The street address of the parking spot"`
-	Longitude     decimal.Decimal `json:"longitude,omitempty" readOnly:"true" doc:"The longitude of the parking spot"`
-	Latitude      decimal.Decimal `json:"latitude,omitempty" readOnly:"true" doc:"The latitude of the parking spot"`
+	PostalCode    string  `json:"postal_code,omitempty" doc:"The postal code of the parking spot"`
+	CountryCode   string  `json:"country_code" pattern:"[A-Z][A-Z]" doc:"The country code of a parking spot"`
+	City          string  `json:"city" doc:"The city the parking spot is in"`
+	State         string  `json:"state" doc:"The province the parking spot is in"`
+	StreetAddress string  `json:"street_address" doc:"The street address of the parking spot"`
+	Longitude     float64 `json:"longitude,omitempty" readOnly:"true" doc:"The longitude of the parking spot"`
+	Latitude      float64 `json:"latitude,omitempty" readOnly:"true" doc:"The latitude of the parking spot"`
 }
 
 type ParkingSpotFeatures struct {
@@ -48,53 +48,35 @@ type TimeUnit struct {
 type ParkingSpot struct {
 	Location     ParkingSpotLocation `json:"location"`
 	Features     ParkingSpotFeatures `json:"features,omitempty"`
-	PricePerHour decimal.Decimal     `json:"price_per_hour" doc:"price per hour"`
+	PricePerHour float64             `json:"price_per_hour" doc:"price per hour"`
 	ID           uuid.UUID           `json:"id" doc:"ID of this resource"`
-	Availability []TimeUnit          `json:"availability,omitempty"`
 }
 
 type ParkingSpotWithDistance struct {
-	ParkingSpotOutput
+	ParkingSpot
 	DistanceToLocation float64 `json:"distance_to_location" doc:"Distance to centre point"`
 }
 
-// We will output lat and long as floats
-type ParkingSpotOutputLocation struct {
-	PostalCode    string  `json:"postal_code,omitempty" doc:"The postal code of the parking spot"`
-	CountryCode   string  `json:"country_code" pattern:"[A-Z][A-Z]" doc:"The country code of a parking spot"`
-	City          string  `json:"city" doc:"The city the parking spot is in"`
-	State         string  `json:"state" doc:"The province the parking spot is in"`
-	StreetAddress string  `json:"street_address" doc:"The street address of the parking spot"`
-	Longitude     float64 `json:"longitude,omitempty" readOnly:"true" doc:"The longitude of the parking spot"`
-	Latitude      float64 `json:"latitude,omitempty" readOnly:"true" doc:"The latitude of the parking spot"`
-}
-
-type ParkingSpotOutput struct {
-	Location     ParkingSpotOutputLocation `json:"location"`
-	Features     ParkingSpotFeatures       `json:"features,omitempty"`
-	PricePerHour decimal.Decimal           `json:"price_per_hour" doc:"price per hour"`
-	ID           uuid.UUID                 `json:"id" doc:"ID of this resource"`
-}
-
-type ParkingSpotCreationOutput struct {
-	Location     ParkingSpotOutputLocation `json:"location"`
-	Features     ParkingSpotFeatures       `json:"features,omitempty"`
-	PricePerHour decimal.Decimal           `json:"price_per_hour" doc:"price per hour"`
-	ID           uuid.UUID                 `json:"id" doc:"ID of this resource"`
-	Availability []TimeUnit                `json:"availability" doc:"availability of the parking spot"`
+type ParkingSpotWithAvailability struct {
+	ParkingSpot
+	Availability []TimeUnit `json:"availability,omitempty"`
 }
 
 type ParkingSpotCreationInput struct {
 	Location     ParkingSpotLocation `json:"location"`
 	Features     ParkingSpotFeatures `json:"features,omitempty"`
-	PricePerHour decimal.Decimal     `json:"price_per_hour" doc:"price per hour"`
+	PricePerHour float64             `json:"price_per_hour" doc:"price per hour"`
 	Availability []TimeUnit          `json:"availability,omitempty"`
 }
 
+type ParkingSpotAvailabilityFilter struct {
+	AvailabilityStart time.Time `query:"availability_start" doc:"Availability start (default to current time)"`
+	AvailabilityEnd   time.Time `query:"availability_end" doc:"Availability end (default to start + one week)"`
+}
+
 type ParkingSpotFilter struct {
-	Longitude         float64   `query:"longitude" doc:"Longitude of the centre point"`
-	Latitude          float64   `query:"latitude" doc:"Latitude of the centre point"`
-	Distance          int32     `query:"distance" default:"20" doc:"distance around the centre point"`
-	AvailabilityStart time.Time `query:"avail_start" doc:"Availability start (default to current time)"`
-	AvailabilityEnd   time.Time `query:"avail_end" doc:"Availability end (default to start + one week)"`
+	Longitude float64 `query:"longitude" required:"true" doc:"Longitude of the centre point"`
+	Latitude  float64 `query:"latitude" required:"true" doc:"Latitude of the centre point"`
+	Distance  int32   `query:"distance" default:"20" doc:"distance around the centre point"`
+	ParkingSpotAvailabilityFilter
 }
