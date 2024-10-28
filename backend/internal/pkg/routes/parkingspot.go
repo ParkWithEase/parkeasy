@@ -164,7 +164,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		OperationID: "get-parking-spot-availability",
 		Method:      http.MethodGet,
 		Path:        "/spots/{id}/availability",
-		Summary:     "Get the current user listed spots",
+		Summary:     "Get availability of the spot",
 		Tags:        []string{ParkingSpotTag.Name},
 	}), func(ctx context.Context, input *struct {
 		models.ParkingSpotAvailabilityFilter
