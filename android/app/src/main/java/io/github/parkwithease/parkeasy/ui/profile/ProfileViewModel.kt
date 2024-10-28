@@ -26,7 +26,7 @@ constructor(
         fun create(showSnackbar: suspend (String, String?) -> Boolean): ProfileViewModel
     }
 
-    private val _profile = MutableStateFlow(Profile("", "", ""))
+    private val _profile = MutableStateFlow(Profile("", ""))
     val profile = _profile.asStateFlow()
         get() {
             refresh()
