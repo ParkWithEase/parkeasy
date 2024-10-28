@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/danielgtaylor/huma/v2"
@@ -15,11 +16,17 @@ type ParkingSpotServicer interface {
 	// Creates a new parking spot attached to `userID`.
 	//
 	// Returns the spot internal ID and the model.
-	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpot, error)
+	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpotWithAvailability, error)
 	// Get the parking spot with `spotID` if `userID` has enough permission to view the resource.
 	GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error)
+	// Get many parking spots
+	GetMany(ctx context.Context, userID int64, count int, filter models.ParkingSpotFilter) (spots []models.ParkingSpotWithDistance, err error)
+	// Get a particular user's(seller's) parking spots
+	GetManyForUser(ctx context.Context, userID int64, count int) (spots []models.ParkingSpot, err error)
+	// Get the availability from start time to end time for a parking spot
+	GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error)
 	// Delete the parking spot with `spotID` if `userID` owns the resource.
-	DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
+	// DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
 }
 
 type ParkingSpotRoute struct {
@@ -27,8 +34,24 @@ type ParkingSpotRoute struct {
 	sessionGetter SessionDataGetter
 }
 
-type ParkingSpotOutput struct {
+type parkingSpotListOutput struct {
+	Body []models.ParkingSpot `nullable:"false"`
+}
+
+type parkingSpotWithDistance struct {
+	Body []models.ParkingSpotWithDistance `nullable:"false"`
+}
+
+type parkingSpotAvailabilityListOutput struct {
+	Body []models.TimeUnit `nullable:"false"`
+}
+
+type parkingSpotOutput struct {
 	Body models.ParkingSpot
+}
+
+type parkingSpotCreationOutput struct {
+	Body models.ParkingSpotWithAvailability
 }
 
 var ParkingSpotTag = huma.Tag{
@@ -64,13 +87,13 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	}), func(ctx context.Context, input *struct {
 		Body models.ParkingSpotCreationInput
 	},
-	) (*ParkingSpotOutput, error) {
+	) (*parkingSpotCreationOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
 			var detail error
 			switch {
-			case errors.Is(err, models.ErrParkingSpotDuplicate), errors.Is(err, models.ErrParkingSpotOwned):
+			case errors.Is(err, models.ErrParkingSpotDuplicate), errors.Is(err, models.ErrParkingSpotOwned), errors.Is(err, models.ErrInvalidAddress):
 				detail = &huma.ErrorDetail{
 					Location: "body.location",
 					Value:    input.Body.Location,
@@ -85,20 +108,30 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 					Location: "body.location.country",
 					Value:    input.Body.Location.CountryCode,
 				}
+			case errors.Is(err, models.ErrProvinceNotSupported):
+				detail = &huma.ErrorDetail{
+					Location: "body.location.state",
+					Value:    input.Body.Location.State,
+				}
 			case errors.Is(err, models.ErrInvalidPostalCode):
 				detail = &huma.ErrorDetail{
 					Location: "body.location.postal_code",
 					Value:    input.Body.Location.PostalCode,
 				}
-			case errors.Is(err, models.ErrInvalidCoordinate):
+			case errors.Is(err, models.ErrNoAvailability), errors.Is(err, models.ErrInvalidTimeUnit):
 				detail = &huma.ErrorDetail{
-					Location: "body.location",
-					Value:    input.Body.Location,
+					Location: "body.availability",
+					Value:    input.Body.Availability,
+				}
+			case errors.Is(err, models.ErrInvalidPricePerHour):
+				detail = &huma.ErrorDetail{
+					Location: "body.price_per_hour",
+					Value:    input.Body.PricePerHour,
 				}
 			}
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
-		return &ParkingSpotOutput{Body: result}, nil
+		return &parkingSpotCreationOutput{Body: result}, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
@@ -107,49 +140,90 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		Path:        "/spots/{id}",
 		Summary:     "Get information about a parking spot",
 		Tags:        []string{ParkingSpotTag.Name},
-		Errors:      []int{http.StatusNotFound},
+		Errors:      []int{http.StatusUnprocessableEntity},
 	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
-	) (*ParkingSpotOutput, error) {
+	) (*parkingSpotOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		result, err := r.service.GetByUUID(ctx, userID, input.ID)
 		if err != nil {
+			var detail error
 			if errors.Is(err, models.ErrParkingSpotNotFound) {
-				detail := &huma.ErrorDetail{
+				detail = &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
 			}
-			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
-		return &ParkingSpotOutput{Body: result}, nil
+		return &parkingSpotOutput{Body: result}, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
-		OperationID: "delete-parking-spot",
-		Method:      http.MethodDelete,
-		Path:        "/spots/{id}",
-		Summary:     "Delete the specified parking spot",
+		OperationID: "get-parking-spot-availability",
+		Method:      http.MethodGet,
+		Path:        "/spots/{id}/availability",
+		Summary:     "Get availability of the spot",
 		Tags:        []string{ParkingSpotTag.Name},
-		Errors:      []int{http.StatusForbidden},
 	}), func(ctx context.Context, input *struct {
+		models.ParkingSpotAvailabilityFilter
 		ID uuid.UUID `path:"id"`
 	},
-	) (*struct{}, error) {
-		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		err := r.service.DeleteByUUID(ctx, userID, input.ID)
+	) (*parkingSpotAvailabilityListOutput, error) {
+		spots, err := r.service.GetAvailByUUID(ctx, input.ID, input.AvailabilityStart, input.AvailabilityEnd)
 		if err != nil {
-			if errors.Is(err, models.ErrParkingSpotOwned) {
-				detail := &huma.ErrorDetail{
+			var detail error
+			if errors.Is(err, models.ErrParkingSpotNotFound) {
+				detail = &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(ctx, http.StatusForbidden, err, detail)
 			}
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
+		}
+
+		result := parkingSpotAvailabilityListOutput{Body: spots}
+
+		return &result, nil
+	})
+
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID: "get-spots",
+		Method:      http.MethodGet,
+		Path:        "/spots",
+		Summary:     "Get listings around a location",
+		Tags:        []string{ParkingSpotTag.Name},
+	}), func(ctx context.Context, input *models.ParkingSpotFilter) (*parkingSpotWithDistance, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+
+		spots, err := r.service.GetMany(ctx, userID, 50, *input)
+		if err != nil {
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
-		return nil, nil
+
+		result := parkingSpotWithDistance{Body: spots}
+
+		return &result, nil
+	})
+
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID: "get-user-parking-spots",
+		Method:      http.MethodGet,
+		Path:        "/user/spots",
+		Summary:     "Get the current user listed spots",
+		Tags:        []string{ParkingSpotTag.Name},
+	}), func(ctx context.Context, input *struct{},
+	) (*parkingSpotListOutput, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+
+		spots, err := r.service.GetManyForUser(ctx, userID, 50)
+		if err != nil {
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
+		}
+
+		result := parkingSpotListOutput{Body: spots}
+
+		return &result, nil
 	})
 }
