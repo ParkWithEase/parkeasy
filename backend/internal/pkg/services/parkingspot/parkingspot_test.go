@@ -473,6 +473,30 @@ func TestGetManyForUser(t *testing.T) {
 		require.NoError(t, err)
 		repo.AssertExpectations(t)
 	})
+
+	t.Run("get many for user okay", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		geoRepo := new(mockGeocodingRepo)
+		repo.On("GetMany", 1, mock.Anything).
+			Return(sampleGetManyEntryOutput, nil).Once()
+		srv := New(repo, geoRepo)
+
+		result, err := srv.GetManyForUser(ctx, testOwnerID, 1)
+		expectedOutput := []models.ParkingSpot{
+			{
+				Location:     sampleGetManyEntryOutput[0].Location,
+				Features:     sampleEntry.Features,
+				PricePerHour: samplePricePerHour,
+				ID:           testSpotUUID,
+			},
+		}
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedOutput, result)
+		repo.AssertExpectations(t)
+	})
 }
 
 func TestGetMany(t *testing.T) {

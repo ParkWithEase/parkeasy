@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// A custom type for mapping postgres timerange to a go struct
 type Tstzrange struct {
 	Start time.Time
 	End   time.Time
