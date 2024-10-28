@@ -25,7 +25,7 @@ constructor(
         fun create(showSnackbar: suspend (String, String?) -> Boolean): CarsViewModel
     }
 
-    private val _cars = MutableStateFlow(List(0) { _ -> Car(CarDetails("", "", "", ""), "", "") })
+    private val _cars = MutableStateFlow(List(0) { _ -> Car(CarDetails("", "", "", ""), "") })
     val cars = _cars.asStateFlow()
 
     private val _isRefreshing = MutableStateFlow(false)

@@ -24,7 +24,7 @@ constructor(
 ) : CarRepository {
     override suspend fun getCars(): List<Car> {
         val authCookie = authRepo.sessionFlow.firstOrNull()
-        var cars = List(0) { _ -> Car(CarDetails("", "", "", ""), "", "") }
+        var cars = List(0) { _ -> Car(CarDetails("", "", "", ""), "") }
         if (authCookie != null) {
             val response =
                 withContext(ioDispatcher) {
