@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "io.github.parkwithease.parkeasy"
-        minSdk = 24
+        minSdk = 25
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -96,6 +96,9 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.material3)
+
+    // MapLibre
+    implementation(libs.maplibre.compose)
 
     // Ktor
     implementation(libs.ktor.client.core)

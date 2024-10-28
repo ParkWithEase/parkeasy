@@ -56,11 +56,12 @@ func (c *DBConfig) String() string {
 }
 
 type ServeCmd struct {
-	APIPrefix  *url.URL `env:"API_PREFIX" placeholder:"PREFIX" help:"Specify the base prefix of the API server (example: http://localhost:8080/). If not specified, will be set to localhost at serve port."`
-	CorsOrigin string   `placeholder:"ORIGIN" env:"CORS_ORIGIN" help:"Allow pages from ORIGIN to access the API server."`
-	DB         DBConfig `embed:"" group:"db" prefix:"db-" envprefix:"DB_"`
-	Port       uint16   `short:"p" placeholder:"PORT" env:"PORT" default:"8080" help:"Port to serve the server on (default: ${default})."`
-	Insecure   bool     `env:"INSECURE" help:"Run in insecure mode for development (ie. CORS allow-all, HTTP cookies)."`
+	APIPrefix      *url.URL `env:"API_PREFIX" placeholder:"PREFIX" help:"Specify the base prefix of the API server (example: http://localhost:8080/). If not specified, will be set to localhost at serve port."`
+	CorsOrigin     string   `placeholder:"ORIGIN" env:"CORS_ORIGIN" help:"Allow pages from ORIGIN to access the API server."`
+	GeocodioAPIKey string   `placeholder:"API-KEY" env:"GEOCODIO_API_KEY" help:"API key for geocod.io service."`
+	DB             DBConfig `embed:"" group:"db" prefix:"db-" envprefix:"DB_"`
+	Port           uint16   `short:"p" placeholder:"PORT" env:"PORT" default:"8080" help:"Port to serve the server on (default: ${default})."`
+	Insecure       bool     `env:"INSECURE" help:"Run in insecure mode for development (ie. CORS allow-all, HTTP cookies)."`
 }
 
 func (s *ServeCmd) getAPIPrefix() string {
@@ -82,6 +83,9 @@ func (s *ServeCmd) Run(ctx context.Context, l *zerolog.Logger, globals *Globals)
 		Logger()
 
 	ctx = log.WithContext(ctx)
+	if s.GeocodioAPIKey == "" {
+		log.Warn().Msg("no geocodio api key provided, some features might not work")
+	}
 
 	pool, err := pgxpool.New(ctx, s.DB.String())
 	if err != nil {
@@ -90,10 +94,12 @@ func (s *ServeCmd) Run(ctx context.Context, l *zerolog.Logger, globals *Globals)
 	defer pool.Close()
 
 	config := parkserver.Config{
-		DBPool:    pool,
-		APIPrefix: s.getAPIPrefix(),
-		Addr:      net.JoinHostPort("", strconv.Itoa(int(s.Port))),
-		Insecure:  s.Insecure,
+		DBPool:         pool,
+		APIPrefix:      s.getAPIPrefix(),
+		GeocodioAPIKey: s.GeocodioAPIKey,
+		Addr:           net.JoinHostPort("", strconv.Itoa(int(s.Port))),
+		Insecure:       s.Insecure,
+		CorsOrigin:     s.CorsOrigin,
 	}
 
 	log.Info().Msg("running migrations")
