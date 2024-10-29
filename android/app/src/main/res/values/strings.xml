@@ -17,4 +17,6 @@
     <string name="return_register">Return to Registering</string>
     <string name="return_login">Return to Login</string>
     <string name="logout">Logout</string>
+    <string name="refresh">Refresh</string>
+    <string name="cars">Cars</string>
 </resources>
