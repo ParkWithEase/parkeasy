@@ -1,4 +1,4 @@
--- Master table of bookings with fields that are common to standard and auction bookings
+-- Booking details
 CREATE TABLE IF NOT EXISTS Booking (
   BookingId BIGSERIAL PRIMARY KEY,
   BookingUUID UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
