@@ -85,21 +85,6 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error) {
 	spotResult, err := dbmodels.Parkingspots.Query(
 		ctx, p.db,
-		sm.Columns(
-			dbmodels.ParkingspotColumns.Postalcode,
-			dbmodels.ParkingspotColumns.Countrycode,
-			dbmodels.ParkingspotColumns.City,
-			dbmodels.ParkingspotColumns.State,
-			dbmodels.ParkingspotColumns.Streetaddress,
-			dbmodels.ParkingspotColumns.Longitude,
-			dbmodels.ParkingspotColumns.Latitude,
-			dbmodels.ParkingspotColumns.Hasshelter,
-			dbmodels.ParkingspotColumns.Hasplugin,
-			dbmodels.ParkingspotColumns.Haschargingstation,
-			dbmodels.ParkingspotColumns.Parkingspotid,
-			dbmodels.ParkingspotColumns.Userid,
-			dbmodels.ParkingspotColumns.Priceperhour,
-		),
 		dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
 	).One()
 	if err != nil {
