@@ -58,6 +58,7 @@ type ParkingspotsStmt = bob.QueryStmt[*Parkingspot, ParkingspotSlice]
 
 // parkingspotR is where relationships are stored.
 type parkingspotR struct {
+	ParkingspotidBookings  BookingSlice  // booking.booking_parkingspotid_fkey
 	UseridUser             *User         // parkingspot.parkingspot_userid_fkey
 	ParkingspotidTimeunits TimeunitSlice // timeunit.timeunit_parkingspotid_fkey
 }
@@ -492,6 +493,7 @@ func buildParkingspotWhere[Q psql.Filterable](cols parkingspotColumns) parkingsp
 
 type parkingspotJoins[Q dialect.Joinable] struct {
 	typ                    string
+	ParkingspotidBookings  func(context.Context) modAs[Q, bookingColumns]
 	UseridUser             func(context.Context) modAs[Q, userColumns]
 	ParkingspotidTimeunits func(context.Context) modAs[Q, timeunitColumns]
 }
@@ -503,6 +505,7 @@ func (j parkingspotJoins[Q]) aliasedAs(alias string) parkingspotJoins[Q] {
 func buildParkingspotJoins[Q dialect.Joinable](cols parkingspotColumns, typ string) parkingspotJoins[Q] {
 	return parkingspotJoins[Q]{
 		typ:                    typ,
+		ParkingspotidBookings:  parkingspotsJoinParkingspotidBookings[Q](cols, typ),
 		UseridUser:             parkingspotsJoinUseridUser[Q](cols, typ),
 		ParkingspotidTimeunits: parkingspotsJoinParkingspotidTimeunits[Q](cols, typ),
 	}
@@ -603,6 +606,25 @@ func (o ParkingspotSlice) ReloadAll(ctx context.Context, exec bob.Executor) erro
 	return nil
 }
 
+func parkingspotsJoinParkingspotidBookings[Q dialect.Joinable](from parkingspotColumns, typ string) func(context.Context) modAs[Q, bookingColumns] {
+	return func(ctx context.Context) modAs[Q, bookingColumns] {
+		return modAs[Q, bookingColumns]{
+			c: BookingColumns,
+			f: func(to bookingColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Bookings.Name(ctx).As(to.Alias())).On(
+						to.Parkingspotid.EQ(from.Parkingspotid),
+					))
+				}
+
+				return mods
+			},
+		}
+	}
+}
+
 func parkingspotsJoinUseridUser[Q dialect.Joinable](from parkingspotColumns, typ string) func(context.Context) modAs[Q, userColumns] {
 	return func(ctx context.Context) modAs[Q, userColumns] {
 		return modAs[Q, userColumns]{
@@ -639,6 +661,24 @@ func parkingspotsJoinParkingspotidTimeunits[Q dialect.Joinable](from parkingspot
 			},
 		}
 	}
+}
+
+// ParkingspotidBookings starts a query for related objects on booking
+func (o *Parkingspot) ParkingspotidBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
+	return Bookings.Query(ctx, exec, append(mods,
+		sm.Where(BookingColumns.Parkingspotid.EQ(psql.Arg(o.Parkingspotid))),
+	)...)
+}
+
+func (os ParkingspotSlice) ParkingspotidBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
+	PKArgs := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgs[i] = psql.ArgGroup(o.Parkingspotid)
+	}
+
+	return Bookings.Query(ctx, exec, append(mods,
+		sm.Where(psql.Group(BookingColumns.Parkingspotid).In(PKArgs...)),
+	)...)
 }
 
 // UseridUser starts a query for related objects on users
@@ -683,6 +723,20 @@ func (o *Parkingspot) Preload(name string, retrieved any) error {
 	}
 
 	switch name {
+	case "ParkingspotidBookings":
+		rels, ok := retrieved.(BookingSlice)
+		if !ok {
+			return fmt.Errorf("parkingspot cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.ParkingspotidBookings = rels
+
+		for _, rel := range rels {
+			if rel != nil {
+				rel.R.ParkingspotidParkingspot = o
+			}
+		}
+		return nil
 	case "UseridUser":
 		rel, ok := retrieved.(*User)
 		if !ok {
@@ -712,6 +766,78 @@ func (o *Parkingspot) Preload(name string, retrieved any) error {
 	default:
 		return fmt.Errorf("parkingspot has no relationship %q", name)
 	}
+}
+
+func ThenLoadParkingspotParkingspotidBookings(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
+	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+		loader, isLoader := retrieved.(interface {
+			LoadParkingspotParkingspotidBookings(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+		})
+		if !isLoader {
+			return fmt.Errorf("object %T cannot load ParkingspotParkingspotidBookings", retrieved)
+		}
+
+		err := loader.LoadParkingspotParkingspotidBookings(ctx, exec, queryMods...)
+
+		// Don't cause an issue due to missing relationships
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+
+		return err
+	})
+}
+
+// LoadParkingspotParkingspotidBookings loads the parkingspot's ParkingspotidBookings into the .R struct
+func (o *Parkingspot) LoadParkingspotParkingspotidBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.ParkingspotidBookings = nil
+
+	related, err := o.ParkingspotidBookings(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, rel := range related {
+		rel.R.ParkingspotidParkingspot = o
+	}
+
+	o.R.ParkingspotidBookings = related
+	return nil
+}
+
+// LoadParkingspotParkingspotidBookings loads the parkingspot's ParkingspotidBookings into the .R struct
+func (os ParkingspotSlice) LoadParkingspotParkingspotidBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	bookings, err := os.ParkingspotidBookings(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		o.R.ParkingspotidBookings = nil
+	}
+
+	for _, o := range os {
+		for _, rel := range bookings {
+			if o.Parkingspotid != rel.Parkingspotid {
+				continue
+			}
+
+			rel.R.ParkingspotidParkingspot = o
+
+			o.R.ParkingspotidBookings = append(o.R.ParkingspotidBookings, rel)
+		}
+	}
+
+	return nil
 }
 
 func PreloadParkingspotUseridUser(opts ...psql.PreloadOption) psql.Preloader {
@@ -869,6 +995,72 @@ func (os ParkingspotSlice) LoadParkingspotParkingspotidTimeunits(ctx context.Con
 
 			o.R.ParkingspotidTimeunits = append(o.R.ParkingspotidTimeunits, rel)
 		}
+	}
+
+	return nil
+}
+
+func insertParkingspotParkingspotidBookings0(ctx context.Context, exec bob.Executor, bookings1 []*BookingSetter, parkingspot0 *Parkingspot) (BookingSlice, error) {
+	for i := range bookings1 {
+		bookings1[i].Parkingspotid = omit.From(parkingspot0.Parkingspotid)
+	}
+
+	ret, err := Bookings.InsertMany(ctx, exec, bookings1...)
+	if err != nil {
+		return ret, fmt.Errorf("insertParkingspotParkingspotidBookings0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachParkingspotParkingspotidBookings0(ctx context.Context, exec bob.Executor, count int, bookings1 BookingSlice, parkingspot0 *Parkingspot) (BookingSlice, error) {
+	setter := &BookingSetter{
+		Parkingspotid: omit.From(parkingspot0.Parkingspotid),
+	}
+
+	err := Bookings.Update(ctx, exec, setter, bookings1...)
+	if err != nil {
+		return nil, fmt.Errorf("attachParkingspotParkingspotidBookings0: %w", err)
+	}
+
+	return bookings1, nil
+}
+
+func (parkingspot0 *Parkingspot) InsertParkingspotidBookings(ctx context.Context, exec bob.Executor, related ...*BookingSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	bookings1, err := insertParkingspotParkingspotidBookings0(ctx, exec, related, parkingspot0)
+	if err != nil {
+		return err
+	}
+
+	parkingspot0.R.ParkingspotidBookings = append(parkingspot0.R.ParkingspotidBookings, bookings1...)
+
+	for _, rel := range bookings1 {
+		rel.R.ParkingspotidParkingspot = parkingspot0
+	}
+	return nil
+}
+
+func (parkingspot0 *Parkingspot) AttachParkingspotidBookings(ctx context.Context, exec bob.Executor, related ...*Booking) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	bookings1 := BookingSlice(related)
+
+	_, err = attachParkingspotParkingspotidBookings0(ctx, exec, len(related), bookings1, parkingspot0)
+	if err != nil {
+		return err
+	}
+
+	parkingspot0.R.ParkingspotidBookings = append(parkingspot0.R.ParkingspotidBookings, bookings1...)
+
+	for _, rel := range related {
+		rel.R.ParkingspotidParkingspot = parkingspot0
 	}
 
 	return nil
