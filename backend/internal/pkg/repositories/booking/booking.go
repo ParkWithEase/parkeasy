@@ -3,7 +3,6 @@ package booking
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/aarondl/opt/omit"
@@ -12,10 +11,8 @@ import (
 
 type Entry struct {
 	models.Booking
-	InternalID int64     // The internal ID of this booking
-	OwnerID    int64     // The user ID who made this booking
-	Start      time.Time // The start time of this booking
-	End        time.Time // The end time of this booking
+	InternalID int64 // The internal ID of this booking
+	OwnerID    int64 // The user ID who made this booking
 }
 
 type Filter struct {
