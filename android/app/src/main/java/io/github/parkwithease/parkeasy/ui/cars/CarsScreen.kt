@@ -1,6 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.cars
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,8 +34,8 @@ fun CarsScreen(
 ) {
     val cars by viewModel.cars.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val state = rememberPullToRefreshState()
-    CarsScreen(cars, isRefreshing, state, viewModel::onRefresh, onSelectCar, modifier)
+    val pullToRefreshState = rememberPullToRefreshState()
+    CarsScreen(cars, isRefreshing, viewModel::onRefresh, onSelectCar, modifier, pullToRefreshState)
     LaunchedEffect(Unit) { viewModel.onRefresh() }
 }
 
@@ -44,35 +44,34 @@ fun CarsScreen(
 fun CarsScreen(
     cars: List<Car>,
     isRefreshing: Boolean,
-    state: PullToRefreshState,
     onRefresh: () -> Unit,
     onSelectCar: (Car) -> Unit,
     modifier: Modifier = Modifier,
+    pullToRefreshState: PullToRefreshState = rememberPullToRefreshState(),
 ) {
     Surface(modifier) {
         Box {
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = onRefresh,
-                state = state,
+                state = pullToRefreshState,
                 modifier = Modifier.padding(4.dp),
             ) {
                 LazyColumn(
                     Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(cars) { car ->
                         ListItem({
                             Card(
-                                modifier = Modifier.fillMaxWidth().clickable { onSelectCar(car) }
+                                onClick = { onSelectCar(car) },
+                                modifier = Modifier.fillMaxWidth().padding(8.dp, 0.dp),
                             ) {
-                                Text(car.details.color, Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp))
-                                Text(car.details.model, Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp))
-                                Text(car.details.make, Modifier.padding(8.dp, 8.dp, 0.dp, 0.dp))
-                                Text(
-                                    car.details.licensePlate,
-                                    Modifier.padding(8.dp, 8.dp, 0.dp, 8.dp),
-                                )
+                                Text(car.details.color)
+                                Text(car.details.model)
+                                Text(car.details.make)
+                                Text(car.details.licensePlate)
                             }
                         })
                     }
