@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { goto } from '$app/navigation';
     import AvailabilityTable from '$lib/components/spot-component/availability-table.svelte';
     import {
         CREATE_WITH_EMPTY_AVAILABILITY_TABLE_ERROR,
@@ -7,8 +8,10 @@
         WAIT_TIME_BEFORE_AUTO_COMPLETE
     } from '$lib/constants';
     import { TimeSlotStatus } from '$lib/enum/timeslot-status';
+    import { newClient } from '$lib/utils/client';
     import { getDateWithDayOffset, getMonday } from '$lib/utils/datetime-util';
-    import { getWeekAvailabilityTable } from '$lib/utils/time-table-util';
+    import { getErrorMessage } from '$lib/utils/error-handler';
+    import { initializeAvailabilityTables, toTimeUnits } from '$lib/utils/time-table-util';
 
     import {
         Checkbox,
@@ -17,111 +20,113 @@
         ProgressStep,
         TextInput,
         Button,
-        ToastNotification
+        ToastNotification,
+        Select,
+        SelectItem
     } from 'carbon-components-svelte';
     import { ArrowLeft, ArrowRight } from 'carbon-icons-svelte';
     import { fade } from 'svelte/transition';
-    let availability_table: TimeSlotStatus[][];
 
-    //reminder to change these to now()
-    let today: Date;
-    let currentMonday: Date;
-    let nextMonday: Date;
+    let client = newClient();
 
-    //This array contain all edit history
-    let time_slot_edit_records = [];
+    let today = new Date(Date.now());
+    let currentMonday = getMonday(today);
+
+    let availabilityTablesInitial = new Map<number, TimeSlotStatus[][]>();
+    initializeAvailabilityTables(availabilityTablesInitial, currentMonday, today);
+    let availabilityTables = structuredClone(availabilityTablesInitial);
+    let availabilityTable: TimeSlotStatus[][];
+
+    $: availabilityTable = availabilityTables.get(currentMonday.getTime()) || [];
+    let next_monday: Date;
+    $: next_monday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
+
     //This contain spot info history to be submitted to the server
-    let spotInfo;
-    let new_price_per_hour: number | null;
+    let new_price_per_hour: number;
+    let city: string;
+    let country_code: string;
+    let postal_code: string;
+    let state: string;
+    let street_address: string;
+
+    let has_shelter: boolean;
+    let has_plug_in: boolean;
+    let has_charing_station: boolean;
 
     //control form flow
     let currentIndex: number = 0;
     let isLocationStepCompleted: boolean = false;
-    let isAvailablityStepCompleted: boolean = false;
+    let isAvailabilityStepCompleted: boolean = false;
 
     //Error message toast
-
     let toastTimeOut: number = 0;
     let errorMessage: string = '';
     $: showToast = toastTimeOut !== 0;
 
-    today = new Date(Date.now());
-    console.log(today);
-    currentMonday = getMonday(today);
-    nextMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
-    availability_table = getWeekAvailabilityTable(today, currentMonday, [], time_slot_edit_records);
-
     function toNextWeek() {
         currentMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
-        nextMonday = getDateWithDayOffset(nextMonday, DAY_IN_A_WEEK);
-        availability_table = getWeekAvailabilityTable(
-            today,
-            currentMonday,
-            [],
-            time_slot_edit_records
-        );
     }
 
     function toPrevWeek() {
+        if (availabilityTable?.[0]?.[0] === TimeSlotStatus.PASTDUE) {
+            return;
+        }
         currentMonday = getDateWithDayOffset(currentMonday, -DAY_IN_A_WEEK);
-        nextMonday = getDateWithDayOffset(nextMonday, -DAY_IN_A_WEEK);
-        availability_table = getWeekAvailabilityTable(
-            today,
-            currentMonday,
-            [],
-            time_slot_edit_records
-        );
     }
 
     function handleSubmitLocation(event: Event) {
         event.preventDefault();
-        const formData = new FormData(event.target as HTMLFormElement);
-        spotInfo = {
-            features: {
-                charging_station: formData.get('charging-station') == null ? false : true,
-                plug_in: formData.get('plug-in') == null ? false : true,
-                shelter: formData.get('shelter') == null ? false : true
-            },
-            location: {
-                city: formData.get('city'),
-                country_code: formData.get('country-code'),
-                state: formData.get('state'),
-                latitude: 1,
-                longitude: 1,
-                postal_code: formData.get('postal-code'),
-                street_address: formData.get('street-address')
-            }
-        };
         currentIndex += 1;
         isLocationStepCompleted = true;
     }
 
     function clearEditRecords() {
-        time_slot_edit_records = [];
-        new_price_per_hour = null;
-        availability_table = getWeekAvailabilityTable(
-            today,
-            currentMonday,
-            [],
-            time_slot_edit_records
-        );
+        availabilityTables = structuredClone(availabilityTablesInitial);
+        new_price_per_hour = 0;
     }
 
     function handleSubmitAvailability() {
-        if (time_slot_edit_records.length !== 0) {
+        if (toTimeUnits(availabilityTables).length > 0) {
             currentIndex += 1;
-            isAvailablityStepCompleted = true;
+            isAvailabilityStepCompleted = true;
         } else {
-            isAvailablityStepCompleted = false;
+            isAvailabilityStepCompleted = false;
             errorMessage = CREATE_WITH_EMPTY_AVAILABILITY_TABLE_ERROR;
             toastTimeOut = ERROR_MESSAGE_TIME_OUT;
         }
     }
 
     function handleSubmitAll() {
-        console.log('Submit everything and go to the other page after the request is done');
+        client
+            .POST('/spots', {
+                body: {
+                    features: {
+                        charging_station: has_charing_station,
+                        plug_in: has_plug_in,
+                        shelter: has_shelter
+                    },
+                    location: {
+                        city: city,
+                        country_code: country_code,
+                        postal_code: postal_code,
+                        state: state,
+                        street_address: street_address
+                    },
+                    price_per_hour: new_price_per_hour,
+                    availability: toTimeUnits(availabilityTables)
+                }
+            })
+            .then(({ data, error: err }) => {
+                if (err) {
+                    errorMessage = getErrorMessage(err);
+                    toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+                } else {
+                    goto(`/app/your-spots/${data.id}/spot-info`, { replaceState: true });
+                }
+            });
     }
 
+    //Auto complete template setup
     let autoCompleteTimer: number;
     function getAutoCompleteAddress() {
         window.clearTimeout(autoCompleteTimer);
@@ -132,36 +137,17 @@
         );
     }
 
-    function handleEdit(event: Event) {
+    function handleEdit(event: CustomEvent) {
         if (event.detail.status == TimeSlotStatus.PASTDUE || currentIndex == 2) {
             return;
         } else {
-            let date = new Date(currentMonday);
-            date.setDate(currentMonday.getDate() + event.detail.day);
-            let new_time_slot = {
-                date: date,
-                segment: event.detail.segment,
-                status: event.detail.status
-            };
-            if (event.detail.status === TimeSlotStatus.NONE) {
-                new_time_slot.status = TimeSlotStatus.AVAILABLE;
-            } else {
-                new_time_slot.status = TimeSlotStatus.NONE;
-            }
-
-            let match_record_index = time_slot_edit_records.findIndex((slot) => {
-                return (
-                    slot.date.getTime() == new_time_slot.date.getTime() &&
-                    slot.segment == new_time_slot.segment
-                );
-            });
-
-            if (match_record_index !== -1) {
-                time_slot_edit_records.splice(match_record_index, 1);
-            } else {
-                time_slot_edit_records.push(new_time_slot);
-            }
-            availability_table[event.detail.segment][event.detail.day] = new_time_slot.status;
+            availabilityTable[event.detail.segment] ??= [];
+            availabilityTable[event.detail.segment][event.detail.day] =
+                event.detail.status === TimeSlotStatus.NONE
+                    ? TimeSlotStatus.AVAILABLE
+                    : TimeSlotStatus.NONE;
+            availabilityTables.set(currentMonday.getTime(), availabilityTable);
+            availabilityTables = availabilityTables;
         }
     }
 </script>
@@ -191,7 +177,7 @@
             ></ProgressStep>
             <ProgressStep
                 label="Availability Table"
-                bind:complete={isAvailablityStepCompleted}
+                bind:complete={isAvailabilityStepCompleted}
                 description="Info about your parking spot availability"
             ></ProgressStep>
             <ProgressStep label="Review" description="Review before submission"></ProgressStep>
@@ -209,7 +195,7 @@
                     name="street-address"
                     placeholder="Street Address"
                     readonly={currentIndex == 2}
-                    value={spotInfo?.location.street_address}
+                    bind:value={street_address}
                 />
                 <TextInput
                     required
@@ -217,50 +203,60 @@
                     name="city"
                     placeholder="City"
                     readonly={currentIndex == 2}
-                    value={spotInfo?.location.city}
+                    bind:value={city}
                 />
-                <TextInput
-                    required
-                    labelText="State/Province"
-                    name="state"
-                    placeholder="State/Province"
-                    readonly={currentIndex == 2}
-                    value={spotInfo?.location.state}
-                />
-                <TextInput
-                    required
-                    labelText="Country"
-                    name="country-code"
-                    placeholder="Country Code"
-                    readonly={currentIndex == 2}
-                    value={spotInfo?.location.country_code}
-                />
+                <Select
+                    style={currentIndex == 2 ? 'pointer-events: none;' : ' '}
+                    labelText="Province"
+                    bind:selected={state}
+                >
+                    <SelectItem value="MB" text="Manitoba" />
+                    <SelectItem value="ON" text="Ontario" />
+                    <SelectItem value="AB" text="Alberta" />
+                    <SelectItem value="QC" text="Quebec" />
+                    <SelectItem value="NS" text="Nova Scotia" />
+                    <SelectItem value="BC" text="British Columbia" />
+                    <SelectItem value="NL" text="Newfouundland and Labrador" />
+                    <SelectItem value="PE" text="Prince Edward Island" />
+                    <SelectItem value="SK" text="Saskatchewan" />
+                    <SelectItem value="YT" text="Yukon" />
+                    <SelectItem value="NU" text="Nunavut" />
+                    <SelectItem value="NT" text="Northwest Territories" />
+                </Select>
+
+                <Select
+                    style={currentIndex == 2 ? 'pointer-events: none;' : ' '}
+                    labelText="Country Code"
+                    bind:selected={country_code}
+                >
+                    <SelectItem value="CA" text="Canada" />
+                </Select>
                 <TextInput
                     required
                     labelText="Postal code"
                     name="postal-code"
                     placeholder="Postal code"
                     readonly={currentIndex == 2}
-                    value={spotInfo?.location.postal_code}
+                    bind:value={postal_code}
                 />
                 <p>Utilities</p>
                 <Checkbox
                     name="shelter"
                     style={currentIndex == 2 ? 'pointer-events: none;' : ' '}
                     labelText="shelter"
-                    checked={spotInfo?.features.shelter}
+                    bind:checked={has_shelter}
                 />
                 <Checkbox
                     name="plug-in"
                     labelText="Plug-in"
                     style={currentIndex == 2 ? 'pointer-events: none;' : ' '}
-                    checked={spotInfo?.features.plug_in}
+                    bind:checked={has_plug_in}
                 />
                 <Checkbox
                     name="charging-station"
                     labelText="Charging Station"
                     style={currentIndex == 2 ? 'pointer-events: none;' : ' '}
-                    checked={spotInfo?.features.charging_station}
+                    bind:checked={has_charing_station}
                 />
                 {#if currentIndex == 0}
                     <Button type="submit">Submit</Button>
@@ -271,7 +267,7 @@
             <p class="spot-form-header">Availability</p>
             <div class="date-controller">
                 <p>
-                    From {currentMonday?.toString()} to {nextMonday?.toString()}
+                    From {currentMonday?.toString()} to {next_monday?.toString()}
                 </p>
                 <Button
                     kind="secondary"
@@ -288,10 +284,13 @@
                     icon={ArrowRight}>Next Week</Button
                 >
             </div>
+            <div>
+                <AvailabilityTable
+                    bind:availability_table={availabilityTable}
+                    on:edit={handleEdit}
+                />
+            </div>
             <Form on:submit={handleSubmitAvailability}>
-                <div>
-                    <AvailabilityTable bind:availability_table on:edit={handleEdit} />
-                </div>
                 <div class="price-field">
                     <TextInput
                         labelText="Price per hour"
@@ -300,6 +299,7 @@
                         type="number"
                         required
                         readonly={currentIndex == 2}
+                        min={0}
                         bind:value={new_price_per_hour}
                     />
                 </div>
