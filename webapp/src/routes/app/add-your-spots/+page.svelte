@@ -126,17 +126,6 @@
             });
     }
 
-    //Auto complete template setup
-    let autoCompleteTimer: number;
-    function getAutoCompleteAddress() {
-        window.clearTimeout(autoCompleteTimer);
-        autoCompleteTimer = window.setTimeout(
-            (address: string) => console.log(address),
-            WAIT_TIME_BEFORE_AUTO_COMPLETE,
-            'Address'
-        );
-    }
-
     function handleEdit(event: CustomEvent) {
         if (event.detail.status == TimeSlotStatus.PASTDUE || currentIndex == 2) {
             return;
@@ -189,7 +178,6 @@
             <p class="spot-form-header">Location and Utilities</p>
             <Form on:submit={handleSubmitLocation}>
                 <TextInput
-                    on:keyup={getAutoCompleteAddress}
                     required
                     labelText="Street address"
                     name="street-address"

@@ -35,7 +35,6 @@ export const load: PageLoad = async ({ fetch, params }) => {
 
     return {
         spot: spot_info,
-        spot_id: params.id,
         time_slots: availability
     };
 };

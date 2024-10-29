@@ -111,7 +111,7 @@
                 .GET('/spots/{id}/availability', {
                     params: {
                         path: {
-                            id: data.spot_id
+                            id: spot?.id ?? '0'
                         },
                         query: {
                             availability_start: dayClone.toISOString()
@@ -167,7 +167,6 @@
         // Clear the edit records on success
         // Might need to check if anything actually change and
         console.log(checkAvailabilityChange());
-        spot.price_per_hour = new_price_per_hour;
     }
 
     function resetAvailabilityEdit() {
