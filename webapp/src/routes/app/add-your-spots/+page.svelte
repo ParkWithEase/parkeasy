@@ -4,8 +4,7 @@
     import {
         CREATE_WITH_EMPTY_AVAILABILITY_TABLE_ERROR,
         DAY_IN_A_WEEK,
-        ERROR_MESSAGE_TIME_OUT,
-        WAIT_TIME_BEFORE_AUTO_COMPLETE
+        ERROR_MESSAGE_TIME_OUT
     } from '$lib/constants';
     import { TimeSlotStatus } from '$lib/enum/timeslot-status';
     import { newClient } from '$lib/utils/client';
