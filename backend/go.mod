@@ -9,6 +9,8 @@ require (
 	github.com/danielgtaylor/huma/v2 v2.22.1
 	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/golang-migrate/migrate/v4 v4.18.1
+	github.com/google/go-cmp v0.6.0
+	github.com/govalues/decimal v0.1.32
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/peterhellberg/link v1.2.0
 	github.com/sourcegraph/conc v0.3.0
@@ -41,7 +43,6 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/huandu/xstrings v1.3.1 // indirect

@@ -12,7 +12,7 @@ import (
 
 const (
 	APIName    = "ParkEasy API"
-	APIVersion = "2024-10-13"
+	APIVersion = "2024-10-28"
 )
 
 // Creates a new Huma configuration with settings required to support all routes.
