@@ -27,13 +27,29 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    signingConfigs {
+        register("staging") {
+            keyAlias = System.getenv("PARKEASY_ANDROID_STAGING_KEYID")
+            keyPassword = System.getenv("PARKEASY_ANDROID_STAGING_KEYPWD")
+            storeFile = System.getenv("PARKEASY_ANDROID_STAGING_STORE")?.let { file(it) }
+            storePassword = System.getenv("PARKEASY_ANDROID_STAGING_STOREPWD")
+        }
+    }
+
     buildTypes {
-        release {
-            isMinifyEnabled = false
+        val release by getting {
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+        }
+
+        register("staging") {
+            initWith(release)
+            applicationIdSuffix = ".staging"
+            signingConfig = signingConfigs.getByName("staging")
         }
     }
     compileOptions {
@@ -54,18 +70,27 @@ android {
 }
 
 appVersioning {
+    enabled = providers.environmentVariable("DISABLE_APP_VERSIONING").map { false }.orElse(true)
     gitRootDirectory = rootProject.file("../")
 
     overrideVersionCode { tag, _, variant ->
         val semVer = tag.toSemVer()
         val baseVer = semVer.major * 1000000 + semVer.minor * 1000 + semVer.patch
         // Add commit number to debug builds
-        if (variant.isDebugBuild) baseVer * 1000 + min(999, tag.commitsSinceLatestTag) else baseVer
+        when (variant.buildType) {
+            "debug",
+            "staging" -> baseVer * 1000 + min(999, tag.commitsSinceLatestTag)
+            else -> baseVer
+        }
     }
 
     overrideVersionName { tag, _, variant ->
         val suffix =
-            if (variant.isDebugBuild) " (${variant.variantName}, ${tag.commitHash})" else ""
+            when (variant.buildType) {
+                "debug",
+                "staging" -> " (${variant.variantName}, ${tag.commitHash})"
+                else -> ""
+            }
         tag.toString().removePrefix("v") + suffix
     }
 }
