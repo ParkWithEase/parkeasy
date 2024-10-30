@@ -1,5 +1,20 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "semanticCommitScope": "{{baseDir}}/deps",
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "matchFileNames": ["backend/**"],
+      "addLabels": ["backend"]
+    },
+    {
+      "matchFileNames": ["webapp/**"],
+      "addLabels": ["frontend/webapp"]
+    },
+    {
+      "matchFileNames": ["android/**"],
+      "addLabels": ["frontend/android"]
+    }
+  ],
   "extends": ["config:recommended"]
 }
