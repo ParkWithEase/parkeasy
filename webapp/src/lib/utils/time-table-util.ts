@@ -19,17 +19,38 @@ export function toTimeUnits(map: Map<number, TimeSlotStatus[][]>): TimeUnit[] {
                     startTime.setHours(0, segment * 30, 0, 0);
                     const endTime = new Date(startTime);
                     endTime.setMinutes(endTime.getMinutes() + 30);
+                    const start_time = startTime.toISOString();
+                    let end_time = endTime.toISOString();
+                    if(startTime.getTimezoneOffset() < endTime.getTimezoneOffset())
+                    {
+                        end_time =  manualUTCConvert(endTime, -1)
+                    }
+                    else if (startTime.getTimezoneOffset() > endTime.getTimezoneOffset())
+                    {
+                        end_time = manualUTCConvert(startTime, 1)
+                    }
                     acc.push({
-                        start_time: startTime.toISOString(),
-                        end_time: endTime.toISOString()
+                        start_time: start_time,
+                        end_time: end_time
                     });
                     return acc;
                 }, new Array<TimeUnit>())
             )
         );
     }
+    console.log(result);
     return result;
 }
+function manualUTCConvert(date: Date, offset: number) {
+    return date.getUTCFullYear() +
+      '-' + `${date.getUTCMonth() + 1}`.padStart(2, "0") +
+      '-' + `${date.getUTCDate()}`.padStart(2, "0") +
+      'T' + `${date.getUTCHours() + offset}`.padStart(2, "0") +
+      ':' + `${date.getUTCMinutes()}`.padStart(2, "0") +
+      ':' + `${date.getUTCSeconds()}`.padStart(2, "0") +
+      '.' + String((date.getUTCMilliseconds() / 1000).toFixed(3)).slice(2, 5) +
+      'Z';
+  };
 
 export function initializeAvailabilityTables(
     availabilityTables: Map<number, TimeSlotStatus[][]>,

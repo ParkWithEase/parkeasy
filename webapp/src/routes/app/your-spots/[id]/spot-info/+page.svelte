@@ -9,8 +9,6 @@
         Form,
         ToastNotification
     } from 'carbon-components-svelte';
-    import { ArrowLeft, ArrowRight } from 'carbon-icons-svelte';
-    import AvailabilityTable from '$lib/components/spot-component/availability-table.svelte';
     import { TimeSlotStatus, TimeSlotStatusConverter } from '$lib/enum/timeslot-status';
     import { DAY_IN_A_WEEK, ERROR_MESSAGE_TIME_OUT, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
     import { getMonday, getDateWithDayOffset } from '$lib/utils/datetime-util';
@@ -19,6 +17,7 @@
     import type { components } from '$lib/sdk/schema';
     import { getErrorMessage } from '$lib/utils/error-handler';
     import { fade } from 'svelte/transition';
+    import AvailabilitySection from '$lib/components/spot-component/availability-section.svelte';
 
     export let data: PageData;
     type TimeUnit = components['schemas']['TimeUnit'];
@@ -175,7 +174,7 @@
     }
 
     /*
-    this function should remove the edit event if there is already one event at that time slot. Or 
+    this function  remove the edit event if there is already one event at that time slot. Or 
     append the new event if no event happens to that time slot
     */
     function handleEdit(event: CustomEvent) {
@@ -265,33 +264,16 @@
 
     <p class="spot-info-header">Availability</p>
 
-    <div class="date-controller">
-        <p>
-            From {currentMonday?.toString()} to {nextMonday?.toString()}
-        </p>
-        <Button
-            kind="secondary"
-            iconDescription="Last Week"
-            size="small"
-            on:click={toPrevWeek}
-            icon={ArrowLeft}>Last Week</Button
-        >
-        <Button
-            size="small"
-            iconDescription="Next Week"
-            kind="secondary"
-            on:click={toNextWeek}
-            icon={ArrowRight}>Next Week</Button
-        >
-    </div>
+    <AvailabilitySection
+        bind:currentMonday
+        bind:nextMonday
+        bind:availabilityTable
+        {toPrevWeek}
+        {toNextWeek}
+        {handleEdit}
+    />
 
     <Form on:submit={handleSubmitAvailability}>
-        <AvailabilityTable
-            bind:availability_table={availabilityTable}
-            on:edit={(e) => {
-                handleEdit(e);
-            }}
-        />
         <div class="price-field">
             <TextInput
                 style="max-width: 6rem;"
