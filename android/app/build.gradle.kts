@@ -1,3 +1,6 @@
+import io.github.reactivecircus.appversioning.toSemVer
+import kotlin.math.min
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlinx.kover)
+    alias(libs.plugins.app.versioning)
 }
 
 android {
@@ -20,9 +24,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
+        vectorDrawables { useSupportLibrary = true }
     }
 
     buildTypes {
@@ -30,7 +32,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -38,20 +40,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
-    buildFeatures {
-        compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
+    kotlinOptions { jvmTarget = "1.8" }
+    buildFeatures { compose = true }
+    composeOptions { kotlinCompilerExtensionVersion = "1.5.1" }
+    packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
     lint {
         sarifReport = true
         abortOnError = true
@@ -60,20 +52,30 @@ android {
     }
 }
 
+appVersioning {
+    gitRootDirectory = rootProject.file("../")
+
+    overrideVersionCode { tag, _, variant ->
+        val semVer = tag.toSemVer()
+        val baseVer = semVer.major * 1000000 + semVer.minor * 1000 + semVer.patch
+        // Add commit number to debug builds
+        if (variant.isDebugBuild) baseVer * 1000 + min(999, tag.commitsSinceLatestTag) else baseVer
+    }
+
+    overrideVersionName { tag, _, variant ->
+        val suffix =
+            if (variant.isDebugBuild) " (${variant.variantName}, ${tag.commitHash})" else ""
+        tag.toString().removePrefix("v") + suffix
+    }
+}
+
 kover {
     reports {
         filters {
             excludes {
                 annotatedBy("*Generated*")
-                classes(
-                    "*\$BindsModule",
-                    "*\$KeyModule",
-                    "*\$InstanceHolder"
-                )
-                packages(
-                    "hilt_aggregated_deps",
-                    "dagger.*"
-                )
+                classes("*\$BindsModule", "*\$KeyModule", "*\$InstanceHolder")
+                packages("hilt_aggregated_deps", "dagger.*")
             }
         }
     }
