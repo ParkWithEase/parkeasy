@@ -21,6 +21,8 @@ export function toTimeUnits(map: Map<number, TimeSlotStatus[][]>): TimeUnit[] {
                     endTime.setMinutes(endTime.getMinutes() + 30);
                     const start_time = startTime.toISOString();
                     let end_time = endTime.toISOString();
+
+                    //Handle daylight saving time by ensuring that the endtime is of the same zone as the startTime
                     if(startTime.getTimezoneOffset() < endTime.getTimezoneOffset())
                     {
                         end_time =  manualUTCConvert(endTime, -1)
