@@ -16,5 +16,6 @@
       "addLabels": ["frontend/android"]
     }
   ],
+  "rangeStrategy": "bump",
   "extends": ["config:recommended"]
 }
