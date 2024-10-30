@@ -17,11 +17,11 @@ type Booking struct {
 }
 
 type BookingDetails struct {
-	ParkingSpotID uuid.UUID  `json:"parking_spot_id" doc:"ID of the parking spot being booked"`
 	PaidAmount    float64    `json:"paid_amount" doc:"The amount paid for the standard booking"`
 	BookedTimes   []TimeUnit `json:"booked_times" doc:"The booked times of this booking"`
 }
 
 type BookingCreationInput struct {
+	ParkingSpotID uuid.UUID  `json:"parking_spot_id" doc:"ID of the parking spot being booked"`
 	BookingDetails
 }

@@ -27,6 +27,7 @@ type Cursor struct {
 var (
 	ErrDuplicatedBooking = errors.New("booking already exist in the database")
 	ErrNotFound          = errors.New("no booking found")
+	ErrInvalidPaidAmount = errors.New("paid amount not valid")
 )
 
 type Repository interface {
