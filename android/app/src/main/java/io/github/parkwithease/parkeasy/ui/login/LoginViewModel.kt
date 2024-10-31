@@ -1,5 +1,8 @@
 package io.github.parkwithease.parkeasy.ui.login
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.assisted.Assisted
@@ -7,10 +10,14 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
+import io.github.parkwithease.parkeasy.data.remote.APIException
 import io.github.parkwithease.parkeasy.data.remote.UserRepository
+import io.github.parkwithease.parkeasy.model.ErrorDetail
+import io.github.parkwithease.parkeasy.model.ErrorModel
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
 import io.github.parkwithease.parkeasy.model.ResetCredentials
+import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -30,40 +37,144 @@ constructor(
 
     val loggedIn = authRepo.statusFlow
 
+    var formState by mutableStateOf(LoginFormState())
+        private set
+
     private val _formEnabled = MutableStateFlow(true)
     val formEnabled = _formEnabled.asStateFlow()
 
-    fun onLoginPress(email: String, password: String) {
+    fun onLoginPress() {
         viewModelScope.launch {
             _formEnabled.value = false
-            val result: Boolean = userRepo.login(LoginCredentials(email, password))
+            userRepo
+                .login(LoginCredentials(formState.email.value, formState.password.value))
+                .onSuccess { showSnackbar("Logged in successfully", null) }
+                .recoverRequestErrors("Login failed")
             _formEnabled.value = true
-            showSnackbar(if (result) "Logged in successfully" else "Error logging in", null)
         }
     }
 
-    fun onRegisterPress(name: String, email: String, password: String, confirmPassword: String) {
-        if (password == confirmPassword) {
-            viewModelScope.launch {
-                _formEnabled.value = false
-                val result: Boolean =
-                    userRepo.register(RegistrationCredentials(name, email, password))
-                _formEnabled.value = true
-                showSnackbar(if (result) "Registered successfully" else "Error registering", null)
-            }
-        } else {
-            viewModelScope.launch { showSnackbar("Passwords don't match", null) }
-        }
-    }
+    fun onRegisterPress() {
+        if (formState.password.value != formState.confirmPassword.value) return
 
-    fun onRequestResetPress(email: String) {
         viewModelScope.launch {
-            val result = userRepo.requestReset(ResetCredentials(email))
-            showSnackbar(
-                if (result) "Reset email sent\nJk... we're working on it"
-                else "Error resetting password",
-                null,
-            )
+            _formEnabled.value = false
+            userRepo
+                .register(
+                    RegistrationCredentials(
+                        formState.name.value,
+                        formState.email.value,
+                        formState.password.value,
+                    )
+                )
+                .onSuccess { showSnackbar("Registered successfully", null) }
+                .recoverRequestErrors("Error registering")
+            _formEnabled.value = true
+        }
+    }
+
+    fun onRequestResetPress() {
+        viewModelScope.launch {
+            _formEnabled.value = false
+            userRepo
+                .requestReset(ResetCredentials(formState.email.value))
+                .onSuccess { showSnackbar("Reset email sent\nJk... we're working on it", null) }
+                .recoverRequestErrors("Error resetting password")
+            _formEnabled.value = true
+        }
+    }
+
+    fun onNameChange(value: String) {
+        formState = formState.run { copy(name = name.copy(value = value)) }
+    }
+
+    fun onEmailChange(value: String) {
+        formState = formState.run { copy(email = email.copy(value = value)) }
+    }
+
+    fun onPasswordChange(value: String) {
+        formState =
+            formState.run {
+                copy(
+                    password = password.copy(value = value),
+                    confirmPassword =
+                        confirmPassword.copy(
+                            error =
+                                if (value == confirmPassword.value) null
+                                else "Password does not match"
+                        ),
+                )
+            }
+    }
+
+    fun onConfirmPasswordChange(value: String) {
+        formState =
+            formState.run {
+                copy(
+                    confirmPassword =
+                        confirmPassword.copy(
+                            value = value,
+                            error = if (value == password.value) null else "Password does not match",
+                        )
+                )
+            }
+    }
+
+    private fun Result<Unit>.recoverRequestErrors(operationFailMsg: String): Result<Unit> =
+        recover {
+            when (it) {
+                is APIException -> {
+                    errorToForm(it.error)
+                    viewModelScope.launch { showSnackbar(operationFailMsg, null) }
+                }
+                is IOException -> {
+                    viewModelScope.launch {
+                        showSnackbar("Could not connect to server, are you online?", null)
+                    }
+                }
+                else -> throw it
+            }
+        }
+
+    private fun errorToForm(error: ErrorModel) {
+        when (error.type) {
+            ErrorModel.TYPE_INVALID_CREDENTIALS -> {
+                formState =
+                    formState.run {
+                        copy(email = email.copy(error = ""), password = password.copy(error = ""))
+                    }
+            }
+
+            ErrorModel.TYPE_PASSWORD_LENGTH ->
+                formState =
+                    formState.run {
+                        copy(password = password.copy(error = "Password too long or too short"))
+                    }
+
+            else -> annotateErrorLocation(error.errors)
+        }
+    }
+
+    private fun annotateErrorLocation(errors: List<ErrorDetail>) {
+        for (err in errors) {
+            when (err.location) {
+                "body.email" ->
+                    formState =
+                        formState.run { copy(email = email.copy(error = "Invalid email address")) }
+
+                "body.password" ->
+                    formState =
+                        formState.run { copy(password = password.copy(error = "Invalid password")) }
+            }
         }
     }
 }
+
+data class LoginFieldState(val value: String = "", val error: String? = null)
+
+data class LoginFormState(
+    val name: LoginFieldState = LoginFieldState(),
+    val email: LoginFieldState = LoginFieldState(),
+    val password: LoginFieldState = LoginFieldState(),
+    val confirmPassword: LoginFieldState = LoginFieldState(),
+)
