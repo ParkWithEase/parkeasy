@@ -25,15 +25,16 @@
                 <li>Shelter: {listing.features.shelter ? 'Yes' : 'No'}</li>
             </ul>
         </div>
-        <div class="pin-location">
+        <div>
             <MapLibre
                 center={[listing.location.longitude, listing.location.latitude]}
                 zoom={13}
                 style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
             >
-                <DefaultMarker lngLat={[listing.location.longitude, listing.location.latitude]} draggable/>
+                <DefaultMarker lngLat={[listing.location.longitude, listing.location.latitude]}/>
             </MapLibre>
         </div>
+        
         
     </div>
 </Modal>
@@ -42,14 +43,14 @@
     .modal-content{
         display: flex;
         flex-direction: row;
-        justify-content: space-around;
     }
     .listing-content {
         padding: 1rem;
-    }
-    .pin-location{
-        min-height: 100%;
-        width: 60%;
+        z-index: 1000;
+        width: 30%;
+        background-color: rgb(209, 209, 209);
         border: 1px solid black;
+        border-radius: 5px;
+        margin-left: 2rem;
     }
 </style>

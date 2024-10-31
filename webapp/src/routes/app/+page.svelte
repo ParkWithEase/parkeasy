@@ -1,78 +1,145 @@
 <script lang="ts">
+    import { onMount, onDestroy } from 'svelte';
     import Navbar from '$lib/components/navbar.svelte';
     import { MapLibre, DefaultMarker, Popup, GeolocateControl } from 'svelte-maplibre';
     import SpotsListComponent from '$lib/components/spot-listings/spots-list-component.svelte';
     import { spots_data } from './your-spots/mock_data';
     import { Search } from "carbon-components-svelte";
-    import { text } from 'stream/consumers';
 
-    let searchText = '';
+    let mapCenter = [-97.1, 49.9];
+    let zoom = 10;
+
+    let searchQuery = "";
     let results = [];
+    let selectedLocation = null;
+    let dropdownOpen = false;
+    let selectedListingId = null; // Track the selected listing for highlighting
 
-    var requestOptions = {
-        method: 'GET',
+    let showBackToTop = false;
+    let listingsContainer;
+
+    const searchLocation = async () => {
+        const apiKey = "4fc03e04196343548bf1d6d27e7bf6c0"; 
+        const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(searchQuery)}&apiKey=${apiKey}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            results = data.features || [];
+            dropdownOpen = true;
+            selectedLocation = null;
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
     };
 
-    // Function to fetch data from Geoapify API
-    async function fetchSpots() {
-        if (searchText) {
-            const apiKey = '4fc03e04196343548bf1d6d27e7bf6c0';
-            const apiUrl = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(searchText)}&apiKey=${apiKey}`;
-            try {
-                
-                const response = await fetch(apiUrl, requestOptions)
-                                .then(response => response.json())
-                                .then(result => console.log(result))
-                                .catch(error => console.log('error', error));
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            }
-        } else {
-            results = [];
+    const handleSelect = (location) => {
+        selectedLocation = location;
+        searchQuery = location.properties.formatted;
+        mapCenter = [location.geometry.coordinates[0], location.geometry.coordinates[1]];
+        zoom = 13;
+        results = [];
+        dropdownOpen = false;
+    };
+
+    $: if (searchQuery && searchQuery.length > 3) {
+        searchLocation();
+    }
+
+    function handleClickOutside(event) {
+        if (!event.target.closest('.dropdown') && !event.target.closest('.search-input')) {
+            dropdownOpen = false;
         }
     }
 
-    function handleSearchInput(event:any) {
-        fetchSpots();
-    }
+    onMount(() => {
+        document.addEventListener('click', handleClickOutside);
+        listingsContainer.addEventListener('scroll', handleScroll);
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+            listingsContainer.removeEventListener('scroll', handleScroll);
+        };
+    });
+
+    onDestroy(() => {
+        document.removeEventListener('click', handleClickOutside);
+        listingsContainer.removeEventListener('scroll', handleScroll);
+    });
+
+    const handleMarkerClick = (listingId) => {
+        selectedListingId = listingId;
+        document.getElementById(`listing-${listingId}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    const scrollToTop = () => {
+        if (listingsContainer) {
+            listingsContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    const handleScroll = () => {
+        showBackToTop = listingsContainer.scrollTop > 0;
+    };
 </script>
 
 <Navbar />
 
-<body>
-    <div class="container">
-        <div class="listings">
-            <Search placeholder = "Search for your destination... " bind:value={searchText} on:input={handleSearchInput} on:clear={() => console.log("clear")}/>
-            {#key spots_data}
-                {#each spots_data as listing}
-                    <div class="booking-info-container">
-                        <SpotsListComponent {listing} />
-                    </div>
+<div class="container">
+    <div class="listings" bind:this={listingsContainer}>
+        <Search  
+            class="search-input" 
+            type="text" 
+            bind:value={searchQuery} 
+            placeholder="Explore spots around this area..." 
+            name="search"
+            on:input={() => { dropdownOpen = true; }}
+        />
+
+        {#if results.length > 0 && dropdownOpen}
+            <ul class="dropdown">
+                {#each results as result}
+                    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
+                    <li on:click={() => handleSelect(result)}> 
+                        {result.properties.formatted}
+                    </li>
                 {/each}
-            {/key}
-        </div>
-        <div class="map-view">
-            <MapLibre
-                center={[-97.1, 49.9]}
-                zoom={10}
-                class="map"
-                style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+            </ul>
+        {/if}
+
+        {#each spots_data as listing}
+            <div 
+                class="booking-info-container {listing.id === selectedListingId ? 'highlight' : ''}" 
+                id={`listing-${listing.id}`}
             >
-                <GeolocateControl position="top-left" fitBoundsOptions={{ maxZoom: 12 }} />
-                {#each spots_data as { id, features, location, isListed }}
-                    <DefaultMarker lngLat={[location.longitude, location.latitude]} draggable>
-                        <Popup
-                            offset={[0, -10]}
-                        >
-                            <div class="text-lg font-bold">{location.street_address}</div>
-                            <h1>Listing data here</h1>
-                        </Popup>
-                    </DefaultMarker>
-                {/each}
-            </MapLibre>
-        </div>
+                <SpotsListComponent {listing} />
+            </div>
+        {/each}
+        
+        {#if showBackToTop}
+            <button class="back-to-top" on:click={scrollToTop}>
+                ↑ Back to Top
+            </button>
+        {/if}
     </div>
-</body>
+
+    <div class="map-view">
+        <MapLibre
+            center={mapCenter}
+            zoom={zoom}
+            style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+        >
+            <GeolocateControl position="bottom-left" fitBoundsOptions={{ maxZoom: 12 }} />
+            {#each spots_data as { id, features, location, isListed }}
+                <DefaultMarker lngLat={[location.longitude, location.latitude]} on:click={() => handleMarkerClick(id)}>
+                    <Popup offset={[0, -10]}>
+                        <div class="text-lg font-bold">{location.street_address}, {location.city}, {location.province}</div>
+                        <button on:click={() =>handleMarkerClick(id)}>Go to listing</button>
+                    </Popup>
+                </DefaultMarker>
+            {/each}
+        </MapLibre>
+    </div>
+</div>
 
 <style>
     .container {
@@ -83,20 +150,54 @@
 
     .listings {
         display: flex;
-        width: 35%;
-        max-height: 80vh;
+        width: 25%;
+        max-height: 82vh;
         overflow-y: auto;
         flex-direction: column;
         padding: 0.5rem;
         background-color: rgb(186, 214, 183);
+        position: fixed;
+        z-index: 999;
+        border: 1px solid rgb(104, 104, 104);
+        border-radius: 5px;
     }
 
-    .map-view {
-        width: 100%;
+    .dropdown {
+        position: absolute;
         background-color: white;
+        border: 1px solid #868686;
+        width: 100%;
+        max-height: 10rem;
+        overflow-y: auto;
+        z-index: 1000;
+        margin-top: 3rem;
+    }
+    .dropdown li {
+        padding: 0.5rem;
+        cursor: pointer;
+    }
+    .dropdown li:hover {
+        background-color: #f0f0f0;
     }
 
-    :global(.map) {
-        height: 80vh;
+    @keyframes smoothBlink {
+        0%, 100% { background-color: initial; opacity: 1; }
+        50% { background-color: #49da55; opacity: 0.5; }
+    }
+
+    .highlight {
+        animation: smoothBlink 0.75s linear 2;
+    }
+
+    .back-to-top {
+        position: fixed;
+        padding: 0.5rem 1rem;
+        background-color: #007BFF;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+        transition: background-color 0.8s ease;
     }
 </style>

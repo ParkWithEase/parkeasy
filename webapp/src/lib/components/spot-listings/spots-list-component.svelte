@@ -83,10 +83,6 @@
         display: flex;
         align-items: center;
         font-size: 1rem;
-        color: #1ac24c;
         margin: 0rem 0.2rem;
-    }
-    .icon {
-        color: #1ac24c; /* Adjust color as desired */
     }
 </style>

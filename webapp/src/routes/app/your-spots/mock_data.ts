@@ -74,6 +74,44 @@ export const spots_data = [
         },
         price_per_hour: 30,
         isListed: true
+    },
+    {
+        id: '5',
+        features: {
+            charging_station: true,
+            plug_in: true,
+            shelter: true
+        },
+        location: {
+            city: 'Winnipeg',
+            state: 'MB',
+            country_code: 'CA',
+            latitude: 49.808856,
+            longitude: -97.133290,
+            postal_code: 'RRRRRR',
+            street_address: 'Engineering Building'
+        },
+        price_per_hour: 10,
+        isListed: true
+    },
+    {
+        id: '6',
+        features: {
+            charging_station: true,
+            plug_in: true,
+            shelter: true
+        },
+        location: {
+            city: 'Winnipeg',
+            state: 'MB',
+            country_code: 'CA',
+            latitude: 49.808856,
+            longitude: -97.133290,
+            postal_code: 'RRRRRR',
+            street_address: 'Engineering Building'
+        },
+        price_per_hour: 10,
+        isListed: true
     }
 ];
 
