@@ -81,6 +81,7 @@ jobs:
 
     env:
       AVD_API_LEVEL: 34
+      DISABLE_APP_VERSIONING: 1 # Turn this off for tests
 
     steps:
       - uses: actions/checkout@v4
