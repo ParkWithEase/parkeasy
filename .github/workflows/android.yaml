@@ -81,6 +81,7 @@ jobs:
 
     env:
       AVD_API_LEVEL: 34
+      DISABLE_APP_VERSIONING: 1 # Turn this off for tests
 
     steps:
       - uses: actions/checkout@v4
@@ -101,7 +102,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: AVD cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         id: avd-cache
         with:
           path: |
