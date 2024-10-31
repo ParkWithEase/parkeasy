@@ -1,0 +1,64 @@
+name: Android cache populator
+
+on:
+  push:
+    branches:
+      - main
+
+    paths:
+      - .github/workflows/android.yaml
+      - .github/workflows/android-cache.yaml
+      - android/**
+      - "!android/.idea/**"
+      - "!android/docs/**"
+      - "!android/README.md"
+
+jobs:
+  build:
+    name: Populate android caches
+    runs-on: ubuntu-latest
+
+    env:
+      AVD_API_LEVEL: 34
+      DISABLE_APP_VERSIONING: 1
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: android-avd-${{ env.AVD_API_LEVEL }}
+
+      - name: Create AVD to cache
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.AVD_API_LEVEL }}
+          arch: x86_64
+          target: google_atd
+          profile: Nexus One
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated AVD snapshot"
+          working-directory: android
