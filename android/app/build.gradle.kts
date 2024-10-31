@@ -25,6 +25,9 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+
+        val apiHost = System.getenv("PARKEASY_ANDROID_API_HOST") ?: "http://10.0.2.2:8080"
+        resValue("string", "api_host", apiHost)
     }
 
     signingConfigs {
