@@ -47,6 +47,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
+          lookup-only: true
           key: android-avd-${{ env.AVD_API_LEVEL }}
 
       - name: Create AVD to cache
