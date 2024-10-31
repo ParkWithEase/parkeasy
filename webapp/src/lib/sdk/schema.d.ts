@@ -148,7 +148,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get listings around a location */
+        get: operations['get-spots'];
         put?: never;
         /** Create a new parking spot */
         post: operations['create-parking-spot'];
@@ -169,8 +170,24 @@ export interface paths {
         get: operations['get-parking-spot'];
         put?: never;
         post?: never;
-        /** Delete the specified parking spot */
-        delete: operations['delete-parking-spot'];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    '/spots/{id}/availability': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get availability of the spot */
+        get: operations['get-parking-spot-availability'];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -191,6 +208,23 @@ export interface paths {
          * @description Create a new user. The existing session, if any, will be invalidated regardless of whether this operation succeeds.
          */
         post: operations['create-user'];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    '/user/spots': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the current user listed spots */
+        get: operations['get-user-parking-spots'];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -303,6 +337,11 @@ export interface components {
             /** @description ID of this resource */
             id: string;
             location: components['schemas']['ParkingSpotLocation'];
+            /**
+             * Format: double
+             * @description price per hour
+             */
+            price_per_hour: number;
         };
         ParkingSpotCreationInput: {
             /**
@@ -310,8 +349,14 @@ export interface components {
              * @description A URL to the JSON Schema for this object.
              */
             readonly $schema?: string;
+            availability: components['schemas']['TimeUnit'][];
             features?: components['schemas']['ParkingSpotFeatures'];
             location: components['schemas']['ParkingSpotLocation'];
+            /**
+             * Format: double
+             * @description price per hour
+             */
+            price_per_hour: number;
         };
         ParkingSpotFeatures: {
             /** @description Whether parking spot has an EV charging station */
@@ -330,16 +375,51 @@ export interface components {
              * Format: double
              * @description The latitude of the parking spot
              */
-            latitude: number;
+            readonly latitude?: number;
             /**
              * Format: double
              * @description The longitude of the parking spot
              */
-            longitude: number;
+            readonly longitude?: number;
             /** @description The postal code of the parking spot */
             postal_code?: string;
+            /** @description The province the parking spot is in */
+            state: string;
             /** @description The street address of the parking spot */
             street_address: string;
+        };
+        ParkingSpotWithAvailability: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             */
+            readonly $schema?: string;
+            availability?: components['schemas']['TimeUnit'][] | null;
+            features?: components['schemas']['ParkingSpotFeatures'];
+            /** @description ID of this resource */
+            id: string;
+            location: components['schemas']['ParkingSpotLocation'];
+            /**
+             * Format: double
+             * @description price per hour
+             */
+            price_per_hour: number;
+        };
+        ParkingSpotWithDistance: {
+            /**
+             * Format: double
+             * @description Distance to centre point
+             */
+            distance_to_location: number;
+            features?: components['schemas']['ParkingSpotFeatures'];
+            /** @description ID of this resource */
+            id: string;
+            location: components['schemas']['ParkingSpotLocation'];
+            /**
+             * Format: double
+             * @description price per hour
+             */
+            price_per_hour: number;
         };
         PasswordResetInput: {
             /**
@@ -374,6 +454,23 @@ export interface components {
             new_password: string;
             /** @description The user previous password */
             old_password: string;
+        };
+        TimeUnit: {
+            /**
+             * Format: date-time
+             * @description The end time for slot
+             */
+            end_time: string;
+            /**
+             * Format: date-time
+             * @description The start time for slot
+             */
+            start_time: string;
+            /**
+             * @description status of the parking spot
+             * @enum {string}
+             */
+            readonly status?: 'booked' | 'available';
         };
         TokenMessageBody: {
             /**
@@ -732,7 +829,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['Car'][] | null;
+                    'application/json': components['schemas']['Car'][];
                 };
             };
             /** @description Unauthorized */
@@ -1018,6 +1115,64 @@ export interface operations {
             };
         };
     };
+    'get-spots': {
+        parameters: {
+            query: {
+                /** @description Availability start (default to current time) */
+                availability_start?: string;
+                /** @description Availability end (default to start + one week) */
+                availability_end?: string;
+                /** @description Longitude of the centre point */
+                longitude: number;
+                /** @description Latitude of the centre point */
+                latitude: number;
+                /** @description distance around the centre point */
+                distance?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['ParkingSpotWithDistance'][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
     'create-parking-spot': {
         parameters: {
             query?: never;
@@ -1037,7 +1192,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': components['schemas']['ParkingSpot'];
+                    'application/json': components['schemas']['ParkingSpotWithAvailability'];
                 };
             };
             /** @description Unauthorized */
@@ -1098,15 +1253,6 @@ export interface operations {
                     'application/problem+json': components['schemas']['ErrorModel'];
                 };
             };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/problem+json': components['schemas']['ErrorModel'];
-                };
-            };
             /** @description Unprocessable Entity */
             422: {
                 headers: {
@@ -1127,9 +1273,14 @@ export interface operations {
             };
         };
     };
-    'delete-parking-spot': {
+    'get-parking-spot-availability': {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Availability start (default to current time) */
+                availability_start?: string;
+                /** @description Availability end (default to start + one week) */
+                availability_end?: string;
+            };
             header?: never;
             path: {
                 id: string;
@@ -1138,24 +1289,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/problem+json': components['schemas']['ErrorModel'];
+                    'application/json': components['schemas']['TimeUnit'][];
                 };
             };
-            /** @description Forbidden */
-            403: {
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1256,6 +1400,44 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'get-user-parking-spots': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['ParkingSpot'][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

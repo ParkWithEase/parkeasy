@@ -1,64 +1,71 @@
-import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from "$lib/constants";
-import { TimeSlotStatus } from "$lib/enum/timeslot-status";
-import { getDateWithDayOffset } from "./datetime-util";
+import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
+import { TimeSlotStatus } from '$lib/enum/timeslot-status';
+import type { components } from '$lib/sdk/schema';
 
+type TimeUnit = components['schemas']['TimeUnit'];
 
-//Need to define type when intergrate with backend
-export function extractRelevantTimeSlot(full_time_slot: [], startDate: Date, endDate: Date) {
-    let relevant_time_slots = [];
-    full_time_slot?.forEach((slot) => {
-        if (slot.date >= startDate && slot.date < endDate) {
-            relevant_time_slots = [...relevant_time_slots, slot];
-        }
-    });
-    return relevant_time_slots;
+export function toTimeUnits(map: Map<number, TimeSlotStatus[][]>): TimeUnit[] {
+    const result = new Array<TimeUnit>();
+    for (const [week, value] of map.entries()) {
+        const weekDate = new Date(week);
+        result.push(
+            ...value.flatMap((infoday, segment) =>
+                infoday.reduce((acc, status, day) => {
+                    if (status !== TimeSlotStatus.AVAILABLE) {
+                        return acc;
+                    }
+                    const startTime = new Date(weekDate);
+                    startTime.setDate(weekDate.getDate() + day);
+                    startTime.setHours(0, segment * 30, 0, 0);
+                    const endTime = new Date(startTime);
+                    endTime.setMinutes(endTime.getMinutes() + 30);
+                    acc.push({
+                        start_time: startTime.toISOString(),
+                        end_time: endTime.toISOString()
+                    });
+                    return acc;
+                }, new Array<TimeUnit>())
+            )
+        );
+    }
+    return result;
 }
 
-export function constructAvailabilityTable(
-    today: Date,
-    weekStart: Date,
-    original_slot_data,
-    edit_records,
+export function initializeAvailabilityTables(
+    availabilityTables: Map<number, TimeSlotStatus[][]>,
+    current_monday: Date,
+    today: Date
 ) {
-    const availability_table : TimeSlotStatus[][] = Array.from({ length: TOTAL_SEGMENTS_NUMBER }, () =>
-        Array(DAY_IN_A_WEEK).fill(TimeSlotStatus.NONE)
-    ); 
-    const current_seg = today.getUTCHours() * 2 + Math.ceil(today.getUTCMinutes() / 30);
-    const cutoff_date = new Date(
-        Date.UTC(today.getFullYear(), today.getUTCMonth(), today.getUTCDate())
-    );
-    original_slot_data.forEach((slot) => {
-        const day = (slot.date.getUTCDay() || 7) - 1;
-        availability_table[slot.segment][day] = slot.status;
-    });
+    for (
+        let week = new Date(current_monday);
+        week.getTime() < today.getTime();
+        week.setDate(week.getDate() + 7)
+    ) {
+        const availability: TimeSlotStatus[][] = new Array(TOTAL_SEGMENTS_NUMBER);
+        availabilityTables.set(week.getTime(), availability);
 
-    edit_records.forEach((slot) => {
-        const day = (slot.date.getUTCDay() || 7) - 1;
-        availability_table[slot.segment][day] = slot.status;
-    });
-    
-    for (let day = 0; day < DAY_IN_A_WEEK; day++) {
-        const currentDate = new Date(weekStart);
-        currentDate.setUTCDate(weekStart.getUTCDate() + day);
-        currentDate.setUTCHours(0, 0, 0, 0);
-        for (let seg = 0; seg < TOTAL_SEGMENTS_NUMBER; seg++) {
-            if (
-                currentDate.getTime() < cutoff_date.getTime() ||
-                (currentDate.getTime() == cutoff_date.getTime() && seg < current_seg)
-            ) {
-                availability_table[seg][day] = TimeSlotStatus.PASTDUE;
-            } 
+        for (
+            let day = new Date(week);
+            day.getTime() < today.getTime();
+            day.setDate(day.getDate() + 1)
+        ) {
+            let total_segment_number = TOTAL_SEGMENTS_NUMBER;
+            const midnightToday = new Date(today);
+            midnightToday.setHours(0, 0, 0, 0);
+            if (day.getTime() >= midnightToday.getTime()) {
+                total_segment_number = today.getHours() * 2 + Math.ceil(today.getMinutes() / 30);
+                console.log(total_segment_number);
+            }
+            for (let segment = 0; segment < total_segment_number; segment++) {
+                availability[segment] ??= [];
+                availability[segment][day.getDate() - week.getDate()] = TimeSlotStatus.PASTDUE;
+            }
         }
     }
-
-
-    return availability_table;
 }
 
-export function getWeekAvailabilityTable(currentTime: Date, weekStart: Date, time_slots_data, edit_records)
-{
-    const weekEnd = getDateWithDayOffset(weekStart, DAY_IN_A_WEEK);
-    const relevantTimeData = extractRelevantTimeSlot(time_slots_data, weekStart, weekEnd);
-    const relevateEditRecords = extractRelevantTimeSlot(edit_records, weekStart, weekEnd);
-    return constructAvailabilityTable(currentTime, weekStart, relevantTimeData, relevateEditRecords);
+export function createEmptyTable(): TimeSlotStatus[][] {
+    return Array.from({ length: TOTAL_SEGMENTS_NUMBER }, () =>
+        Array(DAY_IN_A_WEEK).fill(TimeSlotStatus.NONE)
+    );
 }

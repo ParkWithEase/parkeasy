@@ -1,16 +1,12 @@
 <script lang="ts">
     import { DAY_IN_A_WEEK, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
     import { TimeSlotStatus } from '$lib/enum/timeslot-status';
-    import { isMouseEvent } from '@testing-library/user-event/dist/cjs/event/eventMap.js';
     import { createEventDispatcher } from 'svelte';
 
     let dispatcher = createEventDispatcher();
-    export let availability_table: TimeSlotStatus[][] = Array.from(
-        { length: TOTAL_SEGMENTS_NUMBER },
-        () => Array(DAY_IN_A_WEEK).fill(0)
-    );
+    export let availability_table: TimeSlotStatus[][] = [];
 
-    function handleEdit(event: Event, day: number, segment: number, status: TimeSlotStatus) {
+    function handleDrag(event: PointerEvent, day: number, segment: number, status: TimeSlotStatus) {
         event.preventDefault();
         if (event.buttons == 1 || (event.buttons == 0 && event.button == 0)) {
             dispatcher('edit', {
@@ -20,6 +16,18 @@
             });
         }
     }
+
+    function handleMouseDown(event: Event, day: number, segment: number, status: TimeSlotStatus) {
+        event.preventDefault();
+        dispatcher('edit', {
+            day: day,
+            segment: segment,
+            status: status
+        });
+    }
+
+    let segmentIndexArray: Array<number> = [...Array(Math.floor(TOTAL_SEGMENTS_NUMBER / 2)).keys()];
+    let dayIndexArray: Array<number> = [...Array(DAY_IN_A_WEEK).keys()];
 </script>
 
 <table class="availability-table" draggable="false">
@@ -33,15 +41,16 @@
         <th>Sat</th>
         <th>Sun</th>
     </tr>
-    {#each Array(24) as _, segment (segment)}
+
+    {#each segmentIndexArray as segment (segment)}
         <tr class="odd-row" draggable="false">
             <th rowspan="2" draggable="false"> {segment}:00 </th>
-            {#each Array(7) as _, day (day)}
-                {@const status = availability_table[segment * 2][day]}
+            {#each dayIndexArray as day (day)}
+                {@const status = availability_table[segment * 2]?.[day] ?? TimeSlotStatus.NONE}
                 <td
                     draggable="false"
-                    on:pointerenter={(e) => handleEdit(e, day, segment * 2, status)}
-                    on:mousedown={(e) => handleEdit(e, day, segment * 2, status)}
+                    on:pointerenter={(e) => handleDrag(e, day, segment * 2, status)}
+                    on:mousedown={(e) => handleMouseDown(e, day, segment * 2, status)}
                 >
                     {#if status == TimeSlotStatus.AVAILABLE}
                         <div class="available"></div>
@@ -58,12 +67,12 @@
             {/each}
         </tr>
         <tr draggable="false" class="even-row">
-            {#each Array(7) as _, day (day)}
-                {@const status = availability_table[segment * 2 + 1][day]}
+            {#each dayIndexArray as day (day)}
+                {@const status = availability_table[segment * 2 + 1]?.[day] ?? TimeSlotStatus.NONE}
                 <td
                     draggable="false"
-                    on:pointerenter={(e) => handleEdit(e, day, segment * 2 + 1, status)}
-                    on:mousedown={(e) => handleEdit(e, day, segment * 2 + 1, status)}
+                    on:pointerenter={(e) => handleDrag(e, day, segment * 2 + 1, status)}
+                    on:mousedown={(e) => handleMouseDown(e, day, segment * 2 + 1, status)}
                 >
                     {#if status == TimeSlotStatus.AVAILABLE}
                         <div class="available"></div>

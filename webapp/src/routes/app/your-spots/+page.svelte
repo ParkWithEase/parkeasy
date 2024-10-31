@@ -10,7 +10,7 @@
 <div>
     <Button style="margin: 1rem;" icon={Add} href="/app/add-your-spots">New Spot</Button>
     {#key data.spots}
-        {#each data?.spots as spot}
+        {#each data.spots as spot}
             <SpotDisplay {spot} />
         {/each}
     {/key}
