@@ -25,10 +25,10 @@ type Cursor struct {
 }
 
 var (
-	ErrDuplicatedBooking = errors.New("booking already exist in the database")
+	ErrTimeAlreadyBooked = errors.New("one or more times is already booked")
 	ErrNotFound          = errors.New("no booking found")
 	ErrInvalidPaidAmount = errors.New("paid amount not valid")
-	ErrNoConstraint       = errors.New("no constraint provided for get many")
+	ErrNoConstraint      = errors.New("no constraint provided for get many")
 )
 
 type Repository interface {

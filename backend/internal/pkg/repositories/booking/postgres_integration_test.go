@@ -159,6 +159,27 @@ func TestPostgresIntegration(t *testing.T) {
 		assertSameEntry(t, &getEntry, &expectedCreateEntry, "entry retrieved not the same")
 	})
 
+	t.Run("booking an already booked time should fail", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+
+			// clear all idle connections
+			// required since Restore() deletes the current DB
+			pool.Reset()
+		})
+
+		// Create a parking spot for testing
+		parkingSpotEntry, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput)
+
+		_, _ = repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
+
+		_, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
+		if assert.Error(t, err, "Creating a booking on an already booked time should fail") {
+			assert.ErrorIs(t, err, ErrTimeAlreadyBooked)
+		}
+	})
+
 	t.Run("get many bookings", func(t *testing.T) {
 		t.Cleanup(func() {
 			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))

@@ -100,6 +100,8 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 				return Entry{}, fmt.Errorf("could not fetch updated time: %w", err)
 			}
 			updatedTimes = append(updatedTimes, timeUnitFromDB(get))
+		} else {
+			return Entry{}, ErrTimeAlreadyBooked
 		}
 	}
 
