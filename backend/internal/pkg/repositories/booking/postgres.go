@@ -10,10 +10,12 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbtype"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/aarondl/opt/omit"
+	"github.com/google/uuid"
 	"github.com/govalues/decimal"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
+	"github.com/stephenafamo/bob/dialect/psql/sm"
 	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/mods"
 	"github.com/stephenafamo/scan"
@@ -42,22 +44,24 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	}
 
 	inserted, err := dbmodels.Bookings.Insert(ctx, p.db, &dbmodels.BookingSetter{
-		Userid:     omit.From(userID),
-		Paidamount: omit.From(paidAmount),
+		Userid:        omit.From(userID),
+		Parkingspotid: omit.From(spotID),
+		Paidamount:    omit.From(paidAmount),
 	})
 	if err != nil {
 		return Entry{}, fmt.Errorf("could not execute insert: %w", err)
 	}
 
-	result := make([]models.TimeUnit, 0, len(booking.BookedTimes))
+	updatedTimes := make([]models.TimeUnit, 0, len(booking.BookedTimes))
 
 	umods := []bob.Mod[*dialect.UpdateQuery]{
 		um.Table(dbmodels.Timeunits.Name(ctx)),
 		um.SetCol(dbmodels.ColumnNames.Timeunits.Bookingid).ToArg(inserted.Bookingid),
 	}
-	var whereMods []mods.Where[*dialect.UpdateQuery]
 
 	for _, time := range booking.BookedTimes {
+		var whereMods []mods.Where[*dialect.UpdateQuery]
+
 		whereMods = append(whereMods, um.Where(
 			dbmodels.TimeunitColumns.Timerange.OP(
 				"&&",
@@ -76,30 +80,35 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 
 		query := psql.Update(uWhereMod...)
 
-		entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[*dbmodels.Timeunit]())
+		updateCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[*dbmodels.Timeunit]())
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return Entry{}, nil
+				return Entry{}, err
 			}
 		}
-		defer entryCursor.Close()
+		defer updateCursor.Close()
 
-		if entryCursor.Next() {
-			get, _ := entryCursor.Get()
-			result = append(result, timeUnitsFromDB(get))
+		if updateCursor.Next() {
+			get, err := updateCursor.Get()
+			if err != nil {
+				return Entry{}, fmt.Errorf("could not fetch updated time: %w", err)
+			}
+			updatedTimes = append(updatedTimes, timeUnitFromDB(get))
 		}
-	
-		if err != nil {
-			return Entry{}, fmt.Errorf("could not execute update: %w", err)
-		}
+	}
+
+	amount, ok := inserted.Paidamount.Float64()
+	if !ok {
+		return Entry{}, fmt.Errorf("could not convert %v to float64", inserted.Paidamount)
 	}
 
 	entry := Entry{
 		Booking: models.Booking{
 			Details: models.BookingDetails{
-				PaidAmount:  float64(inserted.Bookingid),
-				BookedTimes: result,
+				PaidAmount:  amount,
+				BookedTimes: updatedTimes,
 			},
+			ID: inserted.Bookinguuid,
 		},
 		InternalID: inserted.Bookingid,
 		OwnerID:    inserted.Userid,
@@ -113,7 +122,69 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	return entry, nil
 }
 
-func timeUnitsFromDB(model *dbmodels.Timeunit) models.TimeUnit {
+func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID) (Entry, error) {
+	bookingResult, err := dbmodels.Bookings.Query(
+		ctx, p.db,
+		sm.Columns(
+			dbmodels.BookingColumns.Paidamount,
+			dbmodels.BookingColumns.Bookingid,
+			dbmodels.BookingColumns.Userid,
+		),
+		dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingID),
+	).One()
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = ErrNotFound
+		}
+		return Entry{}, err
+	}
+
+	timeResult, err := dbmodels.Timeunits.Query(
+		ctx, p.db,
+		sm.Columns(dbmodels.TimeunitColumns.Timerange),
+		sm.Columns(dbmodels.TimeunitColumns.Bookingid),
+		psql.WhereAnd(
+			dbmodels.SelectWhere.Timeunits.Bookingid.EQ(bookingResult.Bookingid),
+		),
+		dbmodels.SelectJoins.Timeunits.InnerJoin.ParkingspotidParkingspot(ctx),
+		sm.OrderBy(psql.F("lower", dbmodels.TimeunitColumns.Timerange)),
+	).All()
+	if err != nil {
+		return Entry{}, err
+	}
+
+	amount, ok := bookingResult.Paidamount.Float64()
+	if !ok {
+		return Entry{}, fmt.Errorf("could not convert %v to float64", bookingResult.Paidamount)
+	}
+
+	entry := Entry{
+		Booking: models.Booking{
+			Details: models.BookingDetails{
+				PaidAmount:  amount,
+				BookedTimes: timeUnitsFromDB(timeResult),
+			},
+			ID: bookingID,
+		},
+		InternalID: bookingResult.Bookingid,
+		OwnerID:    bookingResult.Userid,
+	}
+
+	return entry, nil
+}
+
+
+
+
+func timeUnitsFromDB(model []*dbmodels.Timeunit) []models.TimeUnit {
+	result := make([]models.TimeUnit, 0, len(model))
+	for _, unit := range model {
+		result = append(result, timeUnitFromDB(unit))
+	}
+	return result
+}
+
+func timeUnitFromDB(model *dbmodels.Timeunit) models.TimeUnit {
 	var status string
 	if _, ok := model.Bookingid.Get(); ok {
 		status = "booked"
