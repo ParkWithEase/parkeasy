@@ -31,12 +31,20 @@ export default async function* <
     const clonedOpts = { params: {}, ...options };
     clonedOpts.params.query ??= {};
     let nextCursor = extractNextCursor(response.headers.get('Link'));
-    yield { data, error, response, hasNext: !!nextCursor };
+    if (nextCursor) {
+        yield { data, error, response };
+    } else {
+        return { data, error, response };
+    }
 
-    while (nextCursor) {
+    while (true) {
         clonedOpts.params.query.after = nextCursor;
         ({ data, error, response } = await client.GET(path, clonedOpts));
         nextCursor = extractNextCursor(response.headers.get('Link'));
-        yield { data, error, response, hasNext: !!nextCursor };
+        if (nextCursor) {
+            yield { data, error, response };
+        } else {
+            return { data, error, response };
+        }
     }
 }

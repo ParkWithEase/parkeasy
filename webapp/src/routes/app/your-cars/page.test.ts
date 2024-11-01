@@ -7,6 +7,8 @@ import { BACKEND_SERVER } from '$lib/constants';
 import CarPage from './+page.svelte';
 import { test_data } from './test_data';
 import userEvent from '@testing-library/user-event';
+import type { PageData, PageLoadEvent } from './$types';
+import { mock } from 'vitest-mock-extended';
 
 const server = setupServer();
 const user = userEvent.setup();
@@ -31,7 +33,9 @@ describe('fetch cars information test', () => {
         server.use(
             http.get(`${BACKEND_SERVER}/cars`, () => HttpResponse.json(test_data, { status: 200 }))
         );
-        const data = await load({ fetch: global.fetch });
+
+        const loadEvent = mock<PageLoadEvent>({ fetch: global.fetch });
+        const data = (await load(loadEvent)) as PageData;
         expect(data.cars).toStrictEqual(test_data);
 
         render(CarPage, { data: data });
@@ -44,7 +48,7 @@ describe('fetch cars information test', () => {
     });
 
     test('test if cars create work correctly', async () => {
-        const data = { cars: test_data, hasNext: undefined, paging: undefined };
+        const data = mock<PageData>({ cars: test_data });
         const new_car_detail = {
             license_plate: 'lic-new',
             make: 'color-new',
@@ -133,7 +137,7 @@ describe('fetch cars information test', () => {
     });
 
     test('Test delete functionality', async () => {
-        const data = { cars: test_data, hasNext: undefined, paging: undefined };
+        const data = mock<PageData>({ cars: test_data });
         window.confirm = vi.fn(() => {
             console.log('confirm');
             return true;
@@ -155,7 +159,7 @@ describe('fetch cars information test', () => {
     });
 
     test('Test edit functionality', async () => {
-        const data = { cars: test_data, hasNext: undefined, paging: undefined };
+        const data = mock<PageData>({ cars: test_data });
         render(CarPage, { data: data });
         const car_to_edit = screen.getByText(test_data[0].details.license_plate);
         await user.click(car_to_edit);
