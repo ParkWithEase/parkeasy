@@ -206,10 +206,10 @@ func TestPostgresIntegration(t *testing.T) {
 func assertSameEntry(t *testing.T, expected, actual *Entry, msg string) {
 	t.Helper()
 
-	assert.InEpsilon(t, expected.Booking.Details.PaidAmount, actual.Booking.Details.PaidAmount, epsilon)
-	assert.Equal(t, expected.ID, actual.ID)
-	assert.Equal(t, expected.InternalID, actual.InternalID)
-	assert.Equal(t, expected.OwnerID, actual.OwnerID)
+	assert.InEpsilon(t, expected.Booking.Details.PaidAmount, actual.Booking.Details.PaidAmount, epsilon, msg)
+	assert.Equal(t, expected.ID, actual.ID, msg)
+	assert.Equal(t, expected.InternalID, actual.InternalID, msg)
+	assert.Equal(t, expected.OwnerID, actual.OwnerID, msg)
 	assertTimesEqual(t, expected.Details.BookedTimes, actual.Details.BookedTimes)
 }
 
