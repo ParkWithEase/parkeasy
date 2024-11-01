@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui
 
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -12,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import io.github.parkwithease.parkeasy.ui.cars.carsScreen
+import io.github.parkwithease.parkeasy.ui.cars.navigateToCars
 import io.github.parkwithease.parkeasy.ui.list.listScreen
 import io.github.parkwithease.parkeasy.ui.list.navigateToList
 import io.github.parkwithease.parkeasy.ui.login.loginScreen
@@ -50,12 +53,17 @@ fun MainNavGraph(
         NavHost(
             navController = navController,
             startDestination = "login",
-            modifier = Modifier.padding(innerPadding),
+            modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
         ) {
             loginScreen(showSnackbar, navController::navigateToProfile)
             listScreen()
             mapScreen()
-            profileScreen(showSnackbar, navController::navigateToLogin)
+            profileScreen(
+                showSnackbar,
+                navController::navigateToCars,
+                navController::navigateToLogin,
+            )
+            carsScreen {}
         }
     }
 }

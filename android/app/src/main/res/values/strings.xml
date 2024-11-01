@@ -1,5 +1,4 @@
 <resources>
-    <string name="api_host">http://10.0.2.2:8080</string>
     <string name="app_name">ParkEasy</string>
     <string name="logo">ParkEasy Logo</string>
     <string name="name">Name</string>
@@ -17,4 +16,8 @@
     <string name="return_register">Return to Registering</string>
     <string name="return_login">Return to Login</string>
     <string name="logout">Logout</string>
+    <string name="refresh">Refresh</string>
+    <string name="cars">Cars</string>
+    <string name="map_style_light_format">https://api.protomaps.com/styles/v2/light.json?key=%s</string>
+    <string name="map_style_dark_format">https://api.protomaps.com/styles/v2/dark.json?key=%s</string>
 </resources>
