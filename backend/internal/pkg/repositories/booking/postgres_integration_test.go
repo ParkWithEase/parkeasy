@@ -10,6 +10,7 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/testutils"
+	"github.com/aarondl/opt/omit"
 
 	// "github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
@@ -63,12 +64,32 @@ func TestPostgresIntegration(t *testing.T) {
 	sampleTimeUnit := []models.TimeUnit{
 		{
 			StartTime: time.Date(2024, time.October, 21, 14, 30, 0, 0, time.UTC), // 2:30 PM on October 21, 2024
-			EndTime:   time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 21, 2024),
+			EndTime:   time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 21, 2024
 			Status:    "available",
 		},
 		{
 			StartTime: time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 21, 2024
-			EndTime:   time.Date(2024, time.October, 21, 15, 30, 0, 0, time.UTC), // 3:30 PM on October 21, 2024),
+			EndTime:   time.Date(2024, time.October, 21, 15, 30, 0, 0, time.UTC), // 3:30 PM on October 21, 2024
+			Status:    "available",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 21, 15, 30, 0, 0, time.UTC), // 3:30 PM on October 21, 2024
+			EndTime:   time.Date(2024, time.October, 21, 16, 0, 0, 0, time.UTC),  // 4:00 PM on October 21, 2024
+			Status:    "available",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 21, 16, 0, 0, 0, time.UTC),  // 4:00 PM on October 21, 2024
+			EndTime:   time.Date(2024, time.October, 21, 16, 30, 0, 0, time.UTC), // 4:30 PM on October 21, 2024
+			Status:    "available",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 21, 16, 30, 0, 0, time.UTC), // 4:30 PM on October 21, 2024
+			EndTime:   time.Date(2024, time.October, 21, 17, 0, 0, 0, time.UTC),  // 5:00 PM on October 21, 2024
+			Status:    "available",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 21, 17, 0, 0, 0, time.UTC),  // 5:00 PM on October 21, 2024
+			EndTime:   time.Date(2024, time.October, 21, 17, 30, 0, 0, time.UTC), // 5:30 PM on October 21, 2024
 			Status:    "available",
 		},
 	}
@@ -100,89 +121,6 @@ func TestPostgresIntegration(t *testing.T) {
 		Availability: sampleAvailability,
 	}
 
-	// timeTestCreationInput := models.ParkingSpotCreationInput{
-	// 	Location:     sampleLocation,
-	// 	Features:     sampleFeatures,
-	// 	PricePerHour: samplePricePerHour,
-	// 	Availability: testTimeUnits,
-	// }
-
-	// // Test variables for GetMany
-	// sampleUserLatitude := 43.079
-	// sampleUserLongitude := -79.078
-
-	// sampleShortDistLatitute := 49.888870
-	// sampleShortDistLongitude := -97.134490
-
-	// sampleLocations := []models.ParkingSpotLocation{
-	// 	{
-	// 		PostalCode:    "L2E6T2",
-	// 		CountryCode:   "CA",
-	// 		City:          "Niagara Falls",
-	// 		StreetAddress: "5 Niagara Parkway",
-	// 		State:         "ON",
-	// 		Latitude:      43.07923,
-	// 		Longitude:     -79.07887,
-	// 	},
-	// 	{
-	// 		PostalCode:    "L2E6T2",
-	// 		CountryCode:   "CA",
-	// 		City:          "Niagara Falls",
-	// 		StreetAddress: "4 Niagara Parkway",
-	// 		State:         "ON",
-	// 		Latitude:      43.07823,
-	// 		Longitude:     -79.07887,
-	// 	},
-	// 	{
-	// 		PostalCode:    "L2E6T2",
-	// 		CountryCode:   "CA",
-	// 		City:          "Niagara Falls",
-	// 		StreetAddress: "3 Niagara Parkway",
-	// 		State:         "ON",
-	// 		Latitude:      43.07723,
-	// 		Longitude:     -79.07887,
-	// 	},
-	// 	{
-	// 		PostalCode:    "L2E6T2",
-	// 		CountryCode:   "CA",
-	// 		City:          "Niagara Falls",
-	// 		StreetAddress: "2 Niagara Parkway",
-	// 		State:         "ON",
-	// 		Latitude:      43.07623,
-	// 		Longitude:     -79.07887,
-	// 	},
-	// 	{
-	// 		PostalCode:    "L2E6T2",
-	// 		CountryCode:   "CA",
-	// 		City:          "Niagara Falls",
-	// 		StreetAddress: "1 Niagara Parkway",
-	// 		State:         "ON",
-	// 		Latitude:      43.07522,
-	// 		Longitude:     -79.07887,
-	// 	},
-	// }
-
-	// sampleWinnipegLocations := []models.ParkingSpotLocation{
-	// 	{
-	// 		PostalCode:    "R3C1A6",
-	// 		CountryCode:   "CA",
-	// 		City:          "Winnipeg",
-	// 		StreetAddress: "180 Main St",
-	// 		State:         "MB",
-	// 		Latitude:      49.88990,
-	// 		Longitude:     -97.13599,
-	// 	},
-	// 	{
-	// 		PostalCode:    "R3C0N9",
-	// 		CountryCode:   "CA",
-	// 		City:          "Winnipeg",
-	// 		StreetAddress: "330 York Ave",
-	// 		State:         "MB",
-	// 		Latitude:      49.88885,
-	// 		Longitude:     -97.14193,
-	// 	},
-	// }
-
 	parkingSpotUUID := uuid.New()
 	paidAmount := float64(100)
 
@@ -190,7 +128,7 @@ func TestPostgresIntegration(t *testing.T) {
 		ParkingSpotID: parkingSpotUUID,
 		BookingDetails: models.BookingDetails{
 			PaidAmount:  paidAmount,
-			BookedTimes: sampleTimeUnit,
+			BookedTimes: sampleTimeUnit[0:2],
 		},
 	}
 
@@ -204,7 +142,7 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		expectedBookedTimes := sampleTimeUnit
+		expectedBookedTimes := bookingCreationInput.BookedTimes
 
 		for i := range expectedBookedTimes {
 			expectedBookedTimes[i].Status = "booked"
@@ -227,6 +165,61 @@ func TestPostgresIntegration(t *testing.T) {
 		assertTimesEqual(t, getEntry.Details.BookedTimes, createEntry.Details.BookedTimes)
 		assert.Equal(t, getEntry.ID, createEntry.Booking.ID)
 
+		// Testing get many
+		expectedEntries := make([]Entry, 0, 8)
+		entry := Entry{
+			Booking: models.Booking{
+				Details: models.BookingDetails{
+					PaidAmount:  bookingCreationInput.PaidAmount,
+					BookedTimes: bookingCreationInput.BookedTimes,
+				},
+				ID: createEntry.ID,
+			},
+			InternalID: createEntry.InternalID,
+			OwnerID:    userID,
+		}
+		expectedEntries = append(expectedEntries, entry)
+		bookingCreationInput.BookedTimes = sampleTimeUnit[2:4]
+		createEntry, _ = repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
+		entry = Entry{
+			Booking: models.Booking{
+				Details: models.BookingDetails{
+					PaidAmount:  bookingCreationInput.PaidAmount,
+					BookedTimes: bookingCreationInput.BookedTimes,
+				},
+				ID: createEntry.ID,
+			},
+			InternalID: createEntry.InternalID,
+			OwnerID:    userID,
+		}
+		expectedEntries = append(expectedEntries, entry)
+		bookingCreationInput.BookedTimes = sampleTimeUnit[4:6]
+		createEntry, _ = repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
+		entry = Entry{
+			Booking: models.Booking{
+				Details: models.BookingDetails{
+					PaidAmount:  bookingCreationInput.PaidAmount,
+					BookedTimes: bookingCreationInput.BookedTimes,
+				},
+				ID: createEntry.ID,
+			},
+			InternalID: createEntry.InternalID,
+			OwnerID:    userID,
+		}
+		expectedEntries = append(expectedEntries, entry)
+
+		filter := Filter{
+			UserID: omit.From(userID),
+		}
+
+		getManyEntries, err := repo.GetMany(ctx, 5, &filter)
+		require.NoError(t, err)
+
+		for i := range getManyEntries {
+			assert.Equal(t, getManyEntries[i].Booking.Details.PaidAmount, expectedEntries[i].Booking.Details.PaidAmount)
+			assertTimesEqual(t, getManyEntries[i].Booking.Details.BookedTimes, expectedEntries[i].Booking.Details.BookedTimes)
+			assert.Equal(t, getManyEntries[i].ID, expectedEntries[i].ID)
+		}
 	})
 
 }

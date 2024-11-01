@@ -31,6 +31,10 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 	}
 }
 
+type getManyResult struct {
+	dbmodels.Booking
+}
+
 func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID int64, booking *models.BookingCreationInput) (Entry, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -146,10 +150,12 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 		psql.WhereAnd(
 			dbmodels.SelectWhere.Timeunits.Bookingid.EQ(bookingResult.Bookingid),
 		),
-		dbmodels.SelectJoins.Timeunits.InnerJoin.ParkingspotidParkingspot(ctx),
 		sm.OrderBy(psql.F("lower", dbmodels.TimeunitColumns.Timerange)),
 	).All()
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = ErrNotFound
+		}
 		return Entry{}, err
 	}
 
@@ -173,7 +179,75 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	return entry, nil
 }
 
+func (p *PostgresRepository) GetMany(ctx context.Context, limit int, filter *Filter) ([]Entry, error) {
+	smods := []bob.Mod[*dialect.SelectQuery]{sm.Columns(dbmodels.Bookings.Columns())}
+	var whereMods []mods.Where[*dialect.SelectQuery]
 
+	if userID, ok := filter.UserID.Get(); ok {
+		whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Userid.EQ(userID))
+	}
+
+	if len(whereMods) == 0 {
+		return nil, ErrNoConstraint
+	}
+
+	smods = append(
+		smods,
+		sm.From(dbmodels.Bookings.Name(ctx)),
+		sm.Limit(limit),
+		psql.WhereAnd(whereMods...),
+	)
+	query := psql.Select(smods...)
+
+	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []Entry{}, nil
+		}
+		return nil, err
+	}
+	defer entryCursor.Close()
+
+	result := make([]Entry, 0, 8)
+	
+	for entryCursor.Next() {
+		get, err := entryCursor.Get()
+		if err != nil {
+			return []Entry{}, fmt.Errorf("could not fetch booking details: %w", err)
+		}
+
+		timeResult, err := dbmodels.Timeunits.Query(
+			ctx, p.db,
+			sm.Columns(dbmodels.TimeunitColumns.Timerange),
+			sm.Columns(dbmodels.TimeunitColumns.Bookingid),
+			psql.WhereAnd(
+				dbmodels.SelectWhere.Timeunits.Bookingid.EQ(get.Bookingid),
+			),
+			sm.OrderBy(psql.F("lower", dbmodels.TimeunitColumns.Timerange)),
+		).All()
+
+		amount, ok := get.Paidamount.Float64()
+		if !ok {
+			return []Entry{}, fmt.Errorf("could not convert %v to float64", get.Paidamount)
+		}
+
+		entry := Entry{
+			Booking: models.Booking{
+				Details: models.BookingDetails{
+					PaidAmount:  amount,
+					BookedTimes: timeUnitsFromDB(timeResult),
+				},
+				ID: get.Bookinguuid,
+			},
+			InternalID: get.Bookingid,
+			OwnerID:    get.Userid,
+		}
+
+		result = append(result, entry)
+	}
+
+	return result, nil
+}
 
 
 func timeUnitsFromDB(model []*dbmodels.Timeunit) []models.TimeUnit {
