@@ -76,6 +76,8 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 			),
 		))
 
+		whereMods = append(whereMods, um.Where(dbmodels.TimeunitColumns.Bookingid.IsNull()))
+
 		uWhereMod := append(
 			umods,
 			psql.WhereAnd(whereMods...),
@@ -87,7 +89,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		updateCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[*dbmodels.Timeunit]())
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return Entry{}, err
+				return Entry{}, fmt.Errorf("update failed on time to reflect a booking: %w", err)
 			}
 		}
 		defer updateCursor.Close()
@@ -209,7 +211,7 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, filter *Fil
 	defer entryCursor.Close()
 
 	result := make([]Entry, 0, 8)
-	
+
 	for entryCursor.Next() {
 		get, err := entryCursor.Get()
 		if err != nil {
@@ -248,7 +250,6 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, filter *Fil
 
 	return result, nil
 }
-
 
 func timeUnitsFromDB(model []*dbmodels.Timeunit) []models.TimeUnit {
 	result := make([]models.TimeUnit, 0, len(model))
