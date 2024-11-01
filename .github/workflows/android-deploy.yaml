@@ -57,6 +57,7 @@ jobs:
           PARKEASY_ANDROID_STAGING_KEYPWD: ${{ secrets.ANDROID_STAGING_KEYPWD }}
           PARKEASY_ANDROID_STAGING_STOREPWD: ${{ secrets.ANDROID_STAGING_STOREPWD }}
           PARKEASY_ANDROID_STAGING_STORE: ${{ runner.temp }}/keystore.jks
+          PARKEASY_ANDROID_PROTOMAPS_API_KEY: ${{ secrets.ANDROID_PROTOMAPS_API_KEY }}
 
       - name: Build version tag (staging)
         if: env.BUILD_TYPE == 'staging'
