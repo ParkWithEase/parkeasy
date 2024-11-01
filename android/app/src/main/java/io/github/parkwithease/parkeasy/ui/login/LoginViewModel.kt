@@ -48,7 +48,9 @@ constructor(
             _formEnabled.value = false
             userRepo
                 .login(LoginCredentials(formState.email.value, formState.password.value))
-                .onSuccess { showSnackbar("Logged in successfully", null) }
+                .onSuccess {
+                    viewModelScope.launch { showSnackbar("Logged in successfully", null) }
+                }
                 .recoverRequestErrors("Login failed")
             _formEnabled.value = true
         }
@@ -67,7 +69,9 @@ constructor(
                         formState.password.value,
                     )
                 )
-                .onSuccess { showSnackbar("Registered successfully", null) }
+                .onSuccess {
+                    viewModelScope.launch { showSnackbar("Registered successfully", null) }
+                }
                 .recoverRequestErrors("Error registering")
             _formEnabled.value = true
         }
@@ -78,7 +82,11 @@ constructor(
             _formEnabled.value = false
             userRepo
                 .requestReset(ResetCredentials(formState.email.value))
-                .onSuccess { showSnackbar("Reset email sent\nJk... we're working on it", null) }
+                .onSuccess {
+                    viewModelScope.launch {
+                        showSnackbar("Reset email sent\nJk... we're working on it", null)
+                    }
+                }
                 .recoverRequestErrors("Error resetting password")
             _formEnabled.value = true
         }
