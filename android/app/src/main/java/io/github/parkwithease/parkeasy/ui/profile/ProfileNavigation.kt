@@ -8,9 +8,10 @@ private const val ProfileRoute = "profile"
 
 fun NavGraphBuilder.profileScreen(
     showSnackbar: suspend (String, String?) -> Boolean,
+    onNavigateToMyCars: () -> Unit,
     onLogout: () -> Unit,
 ) {
-    composable(ProfileRoute) { ProfileScreen(showSnackbar, onLogout) }
+    composable(ProfileRoute) { ProfileScreen(showSnackbar, onNavigateToMyCars, onLogout) }
 }
 
 fun NavController.navigateToProfile() = this.navigate(ProfileRoute)
