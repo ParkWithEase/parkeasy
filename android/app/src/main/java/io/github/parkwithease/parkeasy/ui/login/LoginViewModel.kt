@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 @HiltViewModel(assistedFactory = LoginViewModel.Factory::class)
+// XXX: Lots of handlers and transforms, consider consolidation or splitting
+@Suppress("detekt:TooManyFunctions")
 class LoginViewModel
 @AssistedInject
 constructor(
@@ -48,6 +50,7 @@ constructor(
             _formEnabled.value = false
             userRepo
                 .login(LoginCredentials(formState.email.value, formState.password.value))
+                .also { clearFieldErrors() }
                 .onSuccess {
                     viewModelScope.launch { showSnackbar("Logged in successfully", null) }
                 }
@@ -69,6 +72,7 @@ constructor(
                         formState.password.value,
                     )
                 )
+                .also { clearFieldErrors() }
                 .onSuccess {
                     viewModelScope.launch { showSnackbar("Registered successfully", null) }
                 }
@@ -82,6 +86,7 @@ constructor(
             _formEnabled.value = false
             userRepo
                 .requestReset(ResetCredentials(formState.email.value))
+                .also { clearFieldErrors() }
                 .onSuccess {
                     viewModelScope.launch {
                         showSnackbar("Reset email sent\nJk... we're working on it", null)
@@ -175,6 +180,18 @@ constructor(
                         formState.run { copy(password = password.copy(error = "Invalid password")) }
             }
         }
+    }
+
+    // Clear errors set via external services
+    private fun clearFieldErrors() {
+        formState =
+            formState.run {
+                copy(
+                    name = name.copy(error = null),
+                    email = email.copy(error = null),
+                    password = password.copy(error = null),
+                )
+            }
     }
 }
 
