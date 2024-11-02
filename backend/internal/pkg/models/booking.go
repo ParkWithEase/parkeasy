@@ -12,16 +12,17 @@ var (
 )
 
 type Booking struct {
-	Details BookingDetails
+	PaidAmount    float64    `json:"paid_amount" doc:"The amount paid for the booking"`
 	ID      uuid.UUID
 }
 
-type BookingDetails struct {
-	PaidAmount    float64    `json:"paid_amount" doc:"The amount paid for the standard booking"`
+type BookingWithTimes struct {
+	Booking
 	BookedTimes   []TimeUnit `json:"booked_times" doc:"The booked times of this booking"`
 }
 
 type BookingCreationInput struct {
 	ParkingSpotID uuid.UUID  `json:"parking_spot_id" doc:"ID of the parking spot being booked"`
-	BookingDetails
+	BookedTimes   []TimeUnit `json:"booked_times" doc:"The booked times of this booking"`
+	PaidAmount    float64    `json:"paid_amount" doc:"The amount paid for the booking"`
 }

@@ -35,16 +35,16 @@ type getManyResult struct {
 	dbmodels.Booking
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID int64, booking *models.BookingCreationInput) (Entry, error) {
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID int64, booking *models.BookingCreationInput) (EntryWithTimes, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
-		return Entry{}, fmt.Errorf("could not start a transaction: %w", err)
+		return EntryWithTimes{}, fmt.Errorf("could not start a transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
 
 	paidAmount, err := decimal.NewFromFloat64(booking.PaidAmount)
 	if err != nil {
-		return Entry{}, ErrInvalidPaidAmount
+		return EntryWithTimes{}, ErrInvalidPaidAmount
 	}
 
 	inserted, err := dbmodels.Bookings.Insert(ctx, p.db, &dbmodels.BookingSetter{
@@ -53,7 +53,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		Paidamount:    omit.From(paidAmount),
 	})
 	if err != nil {
-		return Entry{}, fmt.Errorf("could not execute insert: %w", err)
+		return EntryWithTimes{}, fmt.Errorf("could not execute insert: %w", err)
 	}
 
 	updatedTimes := make([]models.TimeUnit, 0, len(booking.BookedTimes))
@@ -89,7 +89,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		updateCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[*dbmodels.Timeunit]())
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return Entry{}, fmt.Errorf("update failed on time to reflect a booking: %w", err)
+				return EntryWithTimes{}, fmt.Errorf("update failed on time to reflect a booking: %w", err)
 			}
 		}
 		defer updateCursor.Close()
@@ -97,40 +97,38 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		if updateCursor.Next() {
 			get, err := updateCursor.Get()
 			if err != nil {
-				return Entry{}, fmt.Errorf("could not fetch updated time: %w", err)
+				return EntryWithTimes{}, fmt.Errorf("could not fetch updated time: %w", err)
 			}
 			updatedTimes = append(updatedTimes, timeUnitFromDB(get))
 		} else {
-			return Entry{}, ErrTimeAlreadyBooked
+			return EntryWithTimes{}, ErrTimeAlreadyBooked
 		}
 	}
 
 	amount, ok := inserted.Paidamount.Float64()
 	if !ok {
-		return Entry{}, fmt.Errorf("could not convert %v to float64", inserted.Paidamount)
+		return EntryWithTimes{}, fmt.Errorf("could not convert %v to float64", inserted.Paidamount)
 	}
 
-	entry := Entry{
-		Booking: models.Booking{
-			Details: models.BookingDetails{
-				PaidAmount:  amount,
-				BookedTimes: updatedTimes,
+	entry := EntryWithTimes{
+		Entry: Entry{
+			Booking: models.Booking{
+				PaidAmount: amount,
+				ID: inserted.Bookinguuid,
 			},
-			ID: inserted.Bookinguuid,
 		},
-		InternalID: inserted.Bookingid,
-		OwnerID:    inserted.Userid,
+		BookedTimes: updatedTimes,
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return Entry{}, fmt.Errorf("could not commit transaction: %w", err)
+		return EntryWithTimes{}, fmt.Errorf("could not commit transaction: %w", err)
 	}
 
 	return entry, nil
 }
 
-func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID) (Entry, error) {
+func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error) {
 	bookingResult, err := dbmodels.Bookings.Query(
 		ctx, p.db,
 		sm.Columns(
@@ -144,7 +142,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
 		}
-		return Entry{}, err
+		return EntryWithTimes{}, err
 	}
 
 	timeResult, err := dbmodels.Timeunits.Query(
@@ -160,30 +158,28 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
 		}
-		return Entry{}, err
+		return EntryWithTimes{}, err
 	}
 
 	amount, ok := bookingResult.Paidamount.Float64()
 	if !ok {
-		return Entry{}, fmt.Errorf("could not convert %v to float64", bookingResult.Paidamount)
+		return EntryWithTimes{}, fmt.Errorf("could not convert %v to float64", bookingResult.Paidamount)
 	}
 
-	entry := Entry{
-		Booking: models.Booking{
-			Details: models.BookingDetails{
-				PaidAmount:  amount,
-				BookedTimes: timeUnitsFromDB(timeResult),
+	entry := EntryWithTimes{
+		Entry: Entry{
+			Booking: models.Booking{
+				PaidAmount: amount,
+				ID: bookingResult.Bookinguuid,
 			},
-			ID: bookingID,
 		},
-		InternalID: bookingResult.Bookingid,
-		OwnerID:    bookingResult.Userid,
+		BookedTimes: timeUnitsFromDB(timeResult),
 	}
 
 	return entry, nil
 }
 
-func (p *PostgresRepository) GetMany(ctx context.Context, limit int, filter *Filter) ([]Entry, error) {
+func (p *PostgresRepository) GetManyForUser(ctx context.Context, limit int, userID int64, filter *Filter) ([]Entry, error) {
 	smods := []bob.Mod[*dialect.SelectQuery]{sm.Columns(dbmodels.Bookings.Columns())}
 	var whereMods []mods.Where[*dialect.SelectQuery]
 
