@@ -25,6 +25,7 @@ naming:
 
 complexity:
   LongParameterList:
+    functionThreshold: 15
     ignoreDefaultParameters: true
   TooManyFunctions:
     ignoreAnnotated:

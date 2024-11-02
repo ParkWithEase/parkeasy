@@ -1,6 +1,5 @@
 <script lang="ts">
     import type { PageData } from './$types';
-    import type { Car } from '$lib/types/car/car';
     import CarDisplay from '$lib/components/car-component/car-display.svelte';
     import CarAddModal from '$lib/components/car-component/car-add-modal.svelte';
     import CarViewEditModal from '$lib/components/car-component/car-view-edit-modal.svelte';
@@ -11,6 +10,9 @@
     import IntersectionObserver from 'svelte-intersection-observer';
     import { newClient } from '$lib/utils/client';
     import { CarModalState } from '$lib/enum/car-model';
+    import type { components } from '$lib/sdk/schema';
+
+    type Car = components['schemas']['CarDetails'];
 
     let currentModalState = CarModalState.NONE;
     let selectedCarID: string | null;
@@ -35,11 +37,11 @@
         loadLock = true;
         data.paging
             .next()
-            .then(({ value: { data: cars, hasNext } }) => {
-                if (cars) {
-                    data.cars = [...data.cars, ...cars];
+            .then(({ value }) => {
+                if (value?.data) {
+                    data.cars = [...data.cars, ...value.data];
                 }
-                canLoadMore = !!hasNext;
+                canLoadMore = !!value?.hasNext;
             })
             .finally(() => {
                 loadLock = false;
@@ -79,7 +81,7 @@
             client
                 .DELETE('/cars/{id}', {
                     params: {
-                        path: { id: selectedCarID }
+                        path: { id: selectedCarID ?? '0' }
                     }
                 })
                 .then(({ error }) => {
@@ -109,7 +111,7 @@
         client
             .PUT('/cars/{id}', {
                 params: {
-                    path: { id: selectedCarID }
+                    path: { id: selectedCarID ?? '0' }
                 },
                 body: {
                     license_plate: formData.get('license-plate') as string,
@@ -142,10 +144,9 @@
     }
 </script>
 
-<div class="button-container" style="">
+<div class="top-new-button-container" style="">
     <Button
         aria-label="new-car-button"
-        style="margin: 1rem;"
         icon={Add}
         on:click={() => (currentModalState = CarModalState.ADD)}>New Car</Button
     >
@@ -153,7 +154,7 @@
 
 <div>
     {#key data.cars}
-        {#each data?.cars as car}
+        {#each data.cars ?? [] as car}
             <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <div id={car.id} on:click={() => selectCarIndex(car.id, car.details)}>
                 <CarDisplay car={car.details}></CarDisplay>
@@ -178,11 +179,3 @@
 {:else if currentModalState == CarModalState.ADD}
     <CarAddModal bind:state={currentModalState} on:submit={handleCreate} bind:errorMessage />
 {/if}
-
-<style>
-    .button-container {
-        position: sticky;
-        top: 2.5rem;
-        background: white;
-    }
-</style>

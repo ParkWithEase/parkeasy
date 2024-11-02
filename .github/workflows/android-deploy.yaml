@@ -1,0 +1,85 @@
+name: Android CD
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - releases/**
+    paths:
+      - .github/workflows/android-deploy.yaml
+      - android/**/*
+
+concurrency:
+  group: android-deploy-${{ github.ref }}
+  cancel-in-progress: true # only deploy latest
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: ${{ (github.ref_type == 'branch' && 'android-staging') || 'android-production' }}
+      url: ${{ steps.deploy.outputs.url }}
+
+    name: Build and publish Android APK
+    runs-on: ubuntu-latest
+
+    env:
+      BUILD_TYPE: ${{ (github.ref_type == 'branch' && 'staging') || 'release' }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: android
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Save keystore
+        run: echo -n "$KEYSTORE" | openssl base64 -d -out "$RUNNER_TEMP/keystore.jks"
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_STAGING_STORE }}
+
+      - name: Build debug and ${{ env.BUILD_TYPE }} APK
+        run: |
+          ./gradlew :app:assembleDebug :app:assemble${BUILD_TYPE^}
+          cp app/build/outputs/apk/debug/{app-debug,io.github.parkwithease.parkeasy-debug}.apk
+          cp app/build/outputs/apk/${BUILD_TYPE}/{app-${BUILD_TYPE},io.github.parkwithease.parkeasy-${BUILD_TYPE}}.apk
+        working-directory: android
+        env:
+          PARKEASY_ANDROID_API_HOST: ${{ vars.ANDROID_API_HOST }}
+          PARKEASY_ANDROID_STAGING_KEYID: ${{ vars.ANDROID_STAGING_KEYID }}
+          PARKEASY_ANDROID_STAGING_KEYPWD: ${{ secrets.ANDROID_STAGING_KEYPWD }}
+          PARKEASY_ANDROID_STAGING_STOREPWD: ${{ secrets.ANDROID_STAGING_STOREPWD }}
+          PARKEASY_ANDROID_STAGING_STORE: ${{ runner.temp }}/keystore.jks
+          PARKEASY_ANDROID_PROTOMAPS_API_KEY: ${{ secrets.ANDROID_PROTOMAPS_API_KEY }}
+
+      - name: Build version tag (staging)
+        if: env.BUILD_TYPE == 'staging'
+        id: staging-version
+        run: echo "version=$(git describe --tags HEAD | sed -e 's/-/-alpha./' -e 's/-/+/')" >> "$GITHUB_OUTPUT"
+
+      - name: Create App Token for cross-repo uploads (staging)
+        if: env.BUILD_TYPE == 'staging'
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.CROSS_RELEASE_BOT_APPID }}
+          private-key: ${{ secrets.CROSS_RELEASE_BOT_KEY }}
+          repositories: android-staging-binaries
+
+      - name: Publish APKs (staging)
+        if: env.BUILD_TYPE == 'staging'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.staging-version.outputs.version }}
+          fail_on_unmatched_files: true
+          repository: parkwithease/android-staging-binaries
+          token: ${{ steps.app-token.outputs.token }}
+          files: |
+            android/app/build/**/io.github.parkwithease.parkeasy*.apk
