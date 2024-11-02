@@ -31,16 +31,14 @@
                 zoom={13}
                 style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
             >
-                <DefaultMarker lngLat={[listing.location.longitude, listing.location.latitude]}/>
+                <DefaultMarker lngLat={[listing.location.longitude, listing.location.latitude]} />
             </MapLibre>
         </div>
-        
-        
     </div>
 </Modal>
 
 <style>
-    .modal-content{
+    .modal-content {
         display: flex;
         flex-direction: row;
     }

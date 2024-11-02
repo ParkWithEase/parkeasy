@@ -4,22 +4,21 @@
     import { MapLibre, DefaultMarker, Popup, GeolocateControl } from 'svelte-maplibre';
     import SpotsListComponent from '$lib/components/spot-listings/spots-list-component.svelte';
     import { spots_data } from './your-spots/mock_data';
-    import { Search } from "carbon-components-svelte";
+    import { Search } from 'carbon-components-svelte';
 
-    let mapCenter = [-97.1, 49.9];
+    let mapCenter: [number, number] = [-97.1, 49.9];
     let zoom = 10;
 
-    let searchQuery = "";
+    let searchQuery = '';
     let results = [];
-    let selectedLocation = null;
     let dropdownOpen = false;
-    let selectedListingId = null; // Track the selected listing for highlighting
+    let selectedListingId: string | null = null; // to track the selected listing for highlighting
 
     let showBackToTop = false;
-    let listingsContainer;
+    let listingsContainer: HTMLDivElement;
 
     const searchLocation = async () => {
-        const apiKey = "4fc03e04196343548bf1d6d27e7bf6c0"; 
+        const apiKey = '4fc03e04196343548bf1d6d27e7bf6c0';
         const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(searchQuery)}&apiKey=${apiKey}`;
 
         try {
@@ -33,7 +32,10 @@
         }
     };
 
-    const handleSelect = (location) => {
+    const handleSelect = (location: {
+        properties: { formatted: string };
+        geometry: { coordinates: number[] };
+    }) => {
         selectedLocation = location;
         searchQuery = location.properties.formatted;
         mapCenter = [location.geometry.coordinates[0], location.geometry.coordinates[1]];
@@ -46,11 +48,14 @@
         searchLocation();
     }
 
-    function handleClickOutside(event) {
-        if (!event.target.closest('.dropdown') && !event.target.closest('.search-input')) {
+    const handleClickOutside = (event: Event) => {
+        if (
+            !(event.target as HTMLElement).closest('.dropdown') &&
+            !(event.target as HTMLElement).closest('.search-input')
+        ) {
             dropdownOpen = false;
         }
-    }
+    };
 
     onMount(() => {
         document.addEventListener('click', handleClickOutside);
@@ -66,9 +71,11 @@
         listingsContainer.removeEventListener('scroll', handleScroll);
     });
 
-    const handleMarkerClick = (listingId) => {
+    const handleMarkerClick = (listingId: string) => {
         selectedListingId = listingId;
-        document.getElementById(`listing-${listingId}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document
+            .getElementById(`listing-${listingId}`)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
     const scrollToTop = () => {
@@ -86,20 +93,22 @@
 
 <div class="container">
     <div class="listings" bind:this={listingsContainer}>
-        <Search  
-            class="search-input" 
-            type="text" 
-            bind:value={searchQuery} 
-            placeholder="Explore spots around this area..." 
+        <Search
+            class="search-input"
+            type="text"
+            bind:value={searchQuery}
+            placeholder="Explore spots around this area..."
             name="search"
-            on:input={() => { dropdownOpen = true; }}
+            on:input={() => {
+                dropdownOpen = true;
+            }}
         />
 
         {#if results.length > 0 && dropdownOpen}
             <ul class="dropdown">
                 {#each results as result}
                     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
-                    <li on:click={() => handleSelect(result)}> 
+                    <li on:click={() => handleSelect(result)}>
                         {result.properties.formatted}
                     </li>
                 {/each}
@@ -107,33 +116,36 @@
         {/if}
 
         {#each spots_data as listing}
-            <div 
-                class="booking-info-container {listing.id === selectedListingId ? 'highlight' : ''}" 
+            <div
+                class="booking-info-container {listing.id === selectedListingId ? 'highlight' : ''}"
                 id={`listing-${listing.id}`}
             >
                 <SpotsListComponent {listing} />
             </div>
         {/each}
-        
+
         {#if showBackToTop}
-            <button class="back-to-top" on:click={scrollToTop}>
-                ↑ Back to Top
-            </button>
+            <button class="back-to-top" on:click={scrollToTop}> ↑ Back to Top </button>
         {/if}
     </div>
 
     <div class="map-view">
         <MapLibre
             center={mapCenter}
-            zoom={zoom}
+            {zoom}
             style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
         >
             <GeolocateControl position="bottom-left" fitBoundsOptions={{ maxZoom: 12 }} />
-            {#each spots_data as { id, features, location, isListed }}
-                <DefaultMarker lngLat={[location.longitude, location.latitude]} on:click={() => handleMarkerClick(id)}>
+            {#each spots_data as { id, location }}
+                <DefaultMarker
+                    lngLat={[location.longitude, location.latitude]}
+                    on:click={() => handleMarkerClick(id)}
+                >
                     <Popup offset={[0, -10]}>
-                        <div class="text-lg font-bold">{location.street_address}, {location.city}, {location.province}</div>
-                        <button on:click={() =>handleMarkerClick(id)}>Go to listing</button>
+                        <div class="text-lg font-bold">
+                            {location.street_address}, {location.city}
+                        </div>
+                        <button on:click={() => handleMarkerClick(id)}>Go to listing</button>
                     </Popup>
                 </DefaultMarker>
             {/each}
@@ -181,8 +193,15 @@
     }
 
     @keyframes smoothBlink {
-        0%, 100% { background-color: initial; opacity: 1; }
-        50% { background-color: #49da55; opacity: 0.5; }
+        0%,
+        100% {
+            background-color: initial;
+            opacity: 1;
+        }
+        50% {
+            background-color: #49da55;
+            opacity: 0.5;
+        }
     }
 
     .highlight {
@@ -192,7 +211,7 @@
     .back-to-top {
         position: fixed;
         padding: 0.5rem 1rem;
-        background-color: #007BFF;
+        background-color: #007bff;
         color: white;
         border: none;
         border-radius: 5px;

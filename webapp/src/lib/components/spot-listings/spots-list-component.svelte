@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { ChargingStation, PlugFilled, Home } from "carbon-icons-svelte";
+    import { ChargingStation, PlugFilled, Home } from 'carbon-icons-svelte';
     import { TooltipIcon } from 'carbon-components-svelte';
-    import DetailModal from "./detail-modal.svelte";
+    import DetailModal from './detail-modal.svelte';
     export let listing;
 
     let modalOpen = false;
@@ -9,13 +9,15 @@
     const handleClick = () => {
         modalOpen = true;
     };
-
 </script>
 
-<div class="listing-info" on:click={() => handleClick()}
-                            on:keyup={() => {}}
-                            role="button"
-                            tabindex="0">
+<div
+    class="listing-info"
+    on:click={() => handleClick()}
+    on:keyup={() => {}}
+    role="button"
+    tabindex="0"
+>
     <div class="address">
         <p class="listing-head">{listing.location.street_address}</p>
         <p>{listing.location.postal_code}</p>
@@ -23,38 +25,29 @@
     <div class="features">
         <div class="feature">
             {#if listing.features.charging_station}
-                <TooltipIcon 
-                    tooltipText="Charging Station Available"
-                    direction="right"
-                    align="end">
-                    <i><ChargingStation size={20}/></i>
+                <TooltipIcon tooltipText="Charging Station Available" direction="right" align="end">
+                    <i><ChargingStation size={20} /></i>
                 </TooltipIcon>
             {/if}
         </div>
         <div class="feature">
             {#if listing.features.plug_in}
-                <TooltipIcon 
-                    tooltipText="Plug-in Available"
-                    direction="right"
-                    align="end">
-                    <i class="icon"><PlugFilled size={20}/></i>
+                <TooltipIcon tooltipText="Plug-in Available" direction="right" align="end">
+                    <i class="icon"><PlugFilled size={20} /></i>
                 </TooltipIcon>
-                
             {/if}
         </div>
         <div class="feature">
             {#if listing.features.shelter}
-            <TooltipIcon 
-                tooltipText="Shelter Available"
-                direction="right"
-                align="end">
-                <i class="icon"><Home size={20}/></i>
-            </TooltipIcon>
+                <TooltipIcon tooltipText="Shelter Available" direction="right" align="end">
+                    <i class="icon"><Home size={20} /></i>
+                </TooltipIcon>
             {/if}
         </div>
     </div>
 </div>
-<DetailModal bind:open={modalOpen} listing={listing} />
+<DetailModal bind:open={modalOpen} {listing} />
+
 <style>
     .listing-info {
         flex: 1;

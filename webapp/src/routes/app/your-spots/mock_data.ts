@@ -12,7 +12,7 @@ export const spots_data = [
             state: 'MB',
             country_code: 'CA',
             latitude: 49.808856,
-            longitude: -97.133290,
+            longitude: -97.13329,
             postal_code: 'RRRRRR',
             street_address: 'Engineering Building'
         },
@@ -87,7 +87,7 @@ export const spots_data = [
             state: 'MB',
             country_code: 'CA',
             latitude: 49.808856,
-            longitude: -97.133290,
+            longitude: -97.13329,
             postal_code: 'RRRRRR',
             street_address: 'Engineering Building'
         },
@@ -106,7 +106,7 @@ export const spots_data = [
             state: 'MB',
             country_code: 'CA',
             latitude: 49.808856,
-            longitude: -97.133290,
+            longitude: -97.13329,
             postal_code: 'RRRRRR',
             street_address: 'Engineering Building'
         },
