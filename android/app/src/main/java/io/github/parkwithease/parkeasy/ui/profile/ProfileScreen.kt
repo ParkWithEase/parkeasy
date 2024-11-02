@@ -31,33 +31,33 @@ import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 
 @Composable
 fun ProfileScreen(
-    navigateCars: () -> Unit,
-    onLogout: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    onNavigateToCars: () -> Unit,
     navController: NavHostController,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
+    val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
     val loggedIn by viewModel.loggedIn.collectAsState(true)
-    val latestOnLogout by rememberUpdatedState(onLogout)
-    LaunchedEffect(loggedIn) {
-        if (!loggedIn) {
-            latestOnLogout()
-        }
-    }
-    LaunchedEffect(Unit) { viewModel.refresh() }
-    val profile by viewModel.profile.collectAsState()
 
-    Scaffold(
-        modifier = modifier,
-        bottomBar = { NavBar(navController = navController) },
-        snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
-    ) { innerPadding ->
-        ProfileScreen(
-            profile,
-            navigateCars,
-            viewModel::onLogoutClick,
-            Modifier.padding(innerPadding),
-        )
+    if (!loggedIn) {
+        LaunchedEffect(Unit) { latestOnNavigateToLogin() }
+    } else {
+        LaunchedEffect(Unit) { viewModel.refresh() }
+        val profile by viewModel.profile.collectAsState()
+
+        Scaffold(
+            modifier = modifier,
+            bottomBar = { NavBar(navController = navController) },
+            snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
+        ) { innerPadding ->
+            ProfileScreen(
+                profile,
+                onNavigateToCars,
+                viewModel::onLogoutClick,
+                Modifier.padding(innerPadding),
+            )
+        }
     }
 }
 

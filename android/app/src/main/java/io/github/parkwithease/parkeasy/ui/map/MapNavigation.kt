@@ -7,8 +7,10 @@ import androidx.navigation.compose.composable
 
 const val MapRoute = "map"
 
-fun NavGraphBuilder.mapScreen(navController: NavHostController) {
-    composable(MapRoute) { MapScreen(navController = navController) }
+fun NavGraphBuilder.mapScreen(onNavigateToLogin: () -> Unit, navController: NavHostController) {
+    composable(MapRoute) {
+        MapScreen(onNavigateToLogin = onNavigateToLogin, navController = navController)
+    }
 }
 
 fun NavController.navigateToMap() = this.navigate(MapRoute)

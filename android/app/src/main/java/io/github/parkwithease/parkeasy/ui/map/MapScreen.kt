@@ -5,6 +5,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -17,23 +21,31 @@ import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 
 @Composable
 fun MapScreen(
+    onNavigateToLogin: () -> Unit,
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    @Suppress("unused") viewModel: MapViewModel = hiltViewModel<MapViewModel>(),
+    viewModel: MapViewModel = hiltViewModel<MapViewModel>(),
 ) {
-    val mapViewCamera =
-        rememberSaveableMapViewCamera(
-            // Somewhere above Winnipeg
-            MapViewCamera(state = CameraState.Centered(latitude = 49.9, longitude = -97.1))
-        )
-    Scaffold(modifier = modifier, bottomBar = { NavBar(navController = navController) }) {
-        innerPadding ->
-        Surface(modifier = Modifier.padding(innerPadding)) {
-            MapView(
-                modifier = Modifier.fillMaxSize(),
-                styleUrl = LocalMapLibreStyleProvider.current.getStyleUrl(),
-                camera = mapViewCamera,
+    val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
+    val loggedIn by viewModel.loggedIn.collectAsState(true)
+
+    if (!loggedIn) {
+        LaunchedEffect(Unit) { latestOnNavigateToLogin() }
+    } else {
+        val mapViewCamera =
+            rememberSaveableMapViewCamera(
+                // Somewhere above Winnipeg
+                MapViewCamera(state = CameraState.Centered(latitude = 49.9, longitude = -97.1))
             )
+        Scaffold(modifier = modifier, bottomBar = { NavBar(navController = navController) }) {
+            innerPadding ->
+            Surface(modifier = Modifier.padding(innerPadding)) {
+                MapView(
+                    modifier = Modifier.fillMaxSize(),
+                    styleUrl = LocalMapLibreStyleProvider.current.getStyleUrl(),
+                    camera = mapViewCamera,
+                )
+            }
         }
     }
 }
