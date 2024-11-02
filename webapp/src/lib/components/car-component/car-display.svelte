@@ -1,5 +1,7 @@
 <script lang="ts">
-    import type { Car } from '$lib/types/car/car';
+    import type { components } from '$lib/sdk/schema';
+
+    type Car = components['schemas']['CarDetails'];
     export let car: Car;
 </script>
 

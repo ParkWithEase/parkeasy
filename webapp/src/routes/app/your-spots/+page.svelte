@@ -8,7 +8,10 @@
 </script>
 
 <div>
-    <Button style="margin: 1rem;" icon={Add} href="/app/add-your-spots">New Spot</Button>
+    <div class="top-new-button-container">
+        <Button icon={Add} href="/app/add-your-spots">New Spot</Button>
+    </div>
+
     {#key data.spots}
         {#each data.spots as spot}
             <SpotDisplay {spot} />

@@ -1,4 +1,4 @@
-import { expect, test, describe, beforeAll, afterAll, afterEach, vi } from 'vitest';
+import { expect, test, describe, beforeAll, afterAll, afterEach, beforeEach, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { load } from './+page';
 import { render, screen } from '@testing-library/svelte';
@@ -7,9 +7,17 @@ import { BACKEND_SERVER } from '$lib/constants';
 import CarPage from './+page.svelte';
 import { test_data } from './test_data';
 import userEvent from '@testing-library/user-event';
+import paginate from '$lib/utils/paginate';
+import { newClient } from '$lib/utils/client';
 
 const server = setupServer();
 const user = userEvent.setup();
+const client = newClient({ fetch: global.fetch });
+let mockData = {
+    cars: test_data,
+    hasNext: false,
+    paging: paginate(client, '/cars', { params: { query: { count: 5 } } })
+};
 
 beforeAll(() => {
     // NOTE: server.listen must be called before `createClient` is used to ensure
@@ -19,6 +27,14 @@ beforeAll(() => {
             throw new Error(`No request handler found for ${request.method} ${request.url}`);
         }
     });
+});
+
+beforeEach(() => {
+    mockData = {
+        cars: test_data,
+        hasNext: false,
+        paging: paginate(client, '/cars', { params: { query: { count: 5 } } })
+    };
 });
 
 afterEach(() => server.resetHandlers());
@@ -32,7 +48,7 @@ describe('fetch cars information test', () => {
             http.get(`${BACKEND_SERVER}/cars`, () => HttpResponse.json(test_data, { status: 200 }))
         );
         const data = await load({ fetch: global.fetch });
-        expect(data.cars).toStrictEqual(test_data);
+        expect(data?.cars).toStrictEqual(test_data);
 
         render(CarPage, { data: data });
         test_data.forEach((car) => {
@@ -44,49 +60,48 @@ describe('fetch cars information test', () => {
     });
 
     test('test if cars create work correctly', async () => {
-        const data = { cars: test_data, hasNext: undefined, paging: undefined };
-        const new_car_detail = {
+        const newCarDetail = {
             license_plate: 'lic-new',
             make: 'color-new',
             model: 'model-new',
             color: 'make-new'
         };
-        render(CarPage, { data: data });
+        render(CarPage, { data: mockData });
 
         server.use(
             http.post(`${BACKEND_SERVER}/cars`, () =>
-                HttpResponse.json({ details: new_car_detail, id: 'random-id' }, { status: 201 })
+                HttpResponse.json({ details: newCarDetail, id: 'random-id' }, { status: 201 })
             )
         );
 
         const createButton = screen.getByRole('button', { name: 'new-car-button' });
         await user.click(createButton);
-        let license_plate_field = screen.getByRole('textbox', {
+        let licensePlateField = screen.getByRole('textbox', {
             name: 'License plate'
         });
-        let color_field = screen.getByRole('textbox', { name: 'Color' });
-        let model_field = screen.getByRole('textbox', { name: 'Model' });
-        let make_field = screen.getByRole('textbox', { name: 'Make' });
+        let colorField = screen.getByRole('textbox', { name: 'Color' });
+        let modelField = screen.getByRole('textbox', { name: 'Model' });
+        let makeField = screen.getByRole('textbox', { name: 'Make' });
 
         console.log('Test creating a new car with correct input');
-        await user.click(license_plate_field);
-        await user.keyboard(new_car_detail.license_plate);
+        await user.click(licensePlateField);
+        await user.keyboard(newCarDetail.license_plate);
 
-        await user.click(color_field);
-        await user.keyboard(new_car_detail.color);
+        await user.click(colorField);
+        await user.keyboard(newCarDetail.color);
 
-        await user.click(model_field);
-        await user.keyboard(new_car_detail.model);
+        await user.click(modelField);
+        await user.keyboard(newCarDetail.model);
 
-        await user.click(make_field);
-        await user.keyboard(new_car_detail.make);
+        await user.click(makeField);
+        await user.keyboard(newCarDetail.make);
 
         let confirmButton = screen.getByRole('button', { name: 'Confirm' });
         await user.click(confirmButton);
-        screen.getByText(new_car_detail.license_plate);
-        screen.getByText('Color: ' + new_car_detail.color);
-        screen.getByText('Make: ' + new_car_detail.make);
-        screen.getByText('Model: ' + new_car_detail.model);
+        screen.getByText(newCarDetail.license_plate);
+        screen.getByText('Color: ' + newCarDetail.color);
+        screen.getByText('Make: ' + newCarDetail.make);
+        screen.getByText('Model: ' + newCarDetail.model);
 
         server.use(
             http.post(`${BACKEND_SERVER}/cars`, () =>
@@ -107,23 +122,23 @@ describe('fetch cars information test', () => {
         console.log('Test creating a new car with incorrect input');
         await user.click(createButton);
 
-        license_plate_field = screen.getByRole('textbox', {
+        licensePlateField = screen.getByRole('textbox', {
             name: 'License plate'
         });
-        color_field = screen.getByRole('textbox', { name: 'Color' });
-        model_field = screen.getByRole('textbox', { name: 'Model' });
-        make_field = screen.getByRole('textbox', { name: 'Make' });
+        colorField = screen.getByRole('textbox', { name: 'Color' });
+        modelField = screen.getByRole('textbox', { name: 'Model' });
+        makeField = screen.getByRole('textbox', { name: 'Make' });
         confirmButton = screen.getByRole('button', { name: 'Confirm' });
-        await user.click(license_plate_field);
+        await user.click(licensePlateField);
         await user.keyboard('Very wrong license this is certainly invalid');
 
-        await user.click(color_field);
+        await user.click(colorField);
         await user.keyboard('wrong');
 
-        await user.click(model_field);
+        await user.click(modelField);
         await user.keyboard('wrong');
 
-        await user.click(make_field);
+        await user.click(makeField);
         await user.keyboard('wrong');
 
         await user.click(confirmButton);
@@ -133,21 +148,20 @@ describe('fetch cars information test', () => {
     });
 
     test('Test delete functionality', async () => {
-        const data = { cars: test_data, hasNext: undefined, paging: undefined };
         window.confirm = vi.fn(() => {
             console.log('confirm');
             return true;
         });
 
-        render(CarPage, { data: data });
+        render(CarPage, { data: mockData });
 
         server.use(
             http.delete(`${BACKEND_SERVER}/cars/:id`, () =>
                 HttpResponse.json({ data: 'random' }, { status: 204 })
             )
         );
-        const car_to_delete = screen.getByText(test_data[0].details.license_plate);
-        await user.click(car_to_delete);
+        const carToDelete = screen.getByText(test_data[0].details.license_plate);
+        await user.click(carToDelete);
         const deleteButton = screen.getByRole('button', { name: 'Delete' });
         await user.click(deleteButton);
         const deletedCar = screen.queryByText(test_data[0].details.license_plate);
@@ -155,14 +169,13 @@ describe('fetch cars information test', () => {
     });
 
     test('Test edit functionality', async () => {
-        const data = { cars: test_data, hasNext: undefined, paging: undefined };
-        render(CarPage, { data: data });
-        const car_to_edit = screen.getByText(test_data[0].details.license_plate);
-        await user.click(car_to_edit);
+        render(CarPage, { data: mockData });
+        const carToEdit = screen.getByText(test_data[0].details.license_plate);
+        await user.click(carToEdit);
         let editButton = screen.getByRole('button', { name: 'Edit' });
         await user.click(editButton);
 
-        const edit_car_detail = {
+        const editCarDetail = {
             license_plate: 'lic-edit',
             make: 'color-edit',
             model: 'model-edit',
@@ -171,39 +184,36 @@ describe('fetch cars information test', () => {
 
         server.use(
             http.put(`${BACKEND_SERVER}/cars/:id`, () =>
-                HttpResponse.json(
-                    { details: edit_car_detail, id: test_data[0].id },
-                    { status: 200 }
-                )
+                HttpResponse.json({ details: editCarDetail, id: test_data[0].id }, { status: 200 })
             )
         );
         console.log('Edit with correct input');
-        let license_plate_field = screen.getByRole('textbox', { name: 'License plate' });
-        let color_field = screen.getByRole('textbox', { name: 'Color' });
-        let model_field = screen.getByRole('textbox', { name: 'Model' });
-        let make_field = screen.getByRole('textbox', { name: 'Make' });
-        await user.click(license_plate_field);
-        await user.clear(license_plate_field);
-        await user.keyboard(edit_car_detail.license_plate);
+        let licensePlateField = screen.getByRole('textbox', { name: 'License plate' });
+        let colorField = screen.getByRole('textbox', { name: 'Color' });
+        let modelField = screen.getByRole('textbox', { name: 'Model' });
+        let makeField = screen.getByRole('textbox', { name: 'Make' });
+        await user.click(licensePlateField);
+        await user.clear(licensePlateField);
+        await user.keyboard(editCarDetail.license_plate);
 
-        await user.click(color_field);
-        await user.clear(color_field);
-        await user.keyboard(edit_car_detail.color);
+        await user.click(colorField);
+        await user.clear(colorField);
+        await user.keyboard(editCarDetail.color);
 
-        await user.click(model_field);
-        await user.clear(model_field);
-        await user.keyboard(edit_car_detail.model);
+        await user.click(modelField);
+        await user.clear(modelField);
+        await user.keyboard(editCarDetail.model);
 
-        await user.click(make_field);
-        await user.clear(make_field);
-        await user.keyboard(edit_car_detail.make);
+        await user.click(makeField);
+        await user.clear(makeField);
+        await user.keyboard(editCarDetail.make);
 
         let confirmButton = screen.getByRole('button', { name: 'Confirm' });
         await user.click(confirmButton);
-        screen.getAllByText(edit_car_detail.license_plate);
-        screen.getAllByText('Color: ' + edit_car_detail.color);
-        screen.getAllByText('Make: ' + edit_car_detail.make);
-        screen.getAllByText('Model: ' + edit_car_detail.model);
+        screen.getAllByText(editCarDetail.license_plate);
+        screen.getAllByText('Color: ' + editCarDetail.color);
+        screen.getAllByText('Make: ' + editCarDetail.make);
+        screen.getAllByText('Model: ' + editCarDetail.model);
 
         console.log('Edit with wrong input');
         server.use(
@@ -225,24 +235,24 @@ describe('fetch cars information test', () => {
 
         editButton = screen.getByRole('button', { name: 'Edit' });
         await user.click(editButton);
-        license_plate_field = screen.getByRole('textbox', { name: 'License plate' });
-        color_field = screen.getByRole('textbox', { name: 'Color' });
-        model_field = screen.getByRole('textbox', { name: 'Model' });
-        make_field = screen.getByRole('textbox', { name: 'Make' });
-        await user.click(license_plate_field);
-        await user.clear(license_plate_field);
+        licensePlateField = screen.getByRole('textbox', { name: 'License plate' });
+        colorField = screen.getByRole('textbox', { name: 'Color' });
+        modelField = screen.getByRole('textbox', { name: 'Model' });
+        makeField = screen.getByRole('textbox', { name: 'Make' });
+        await user.click(licensePlateField);
+        await user.clear(licensePlateField);
         await user.keyboard('1');
 
-        await user.click(color_field);
-        await user.clear(color_field);
+        await user.click(colorField);
+        await user.clear(colorField);
         await user.keyboard('1');
 
-        await user.click(model_field);
-        await user.clear(model_field);
+        await user.click(modelField);
+        await user.clear(modelField);
         await user.keyboard('1');
 
-        await user.click(make_field);
-        await user.clear(make_field);
+        await user.click(makeField);
+        await user.clear(makeField);
         await user.keyboard('1');
         confirmButton = screen.getByRole('button', { name: 'Confirm' });
 

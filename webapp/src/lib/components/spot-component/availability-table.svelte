@@ -4,7 +4,7 @@
     import { createEventDispatcher } from 'svelte';
 
     let dispatcher = createEventDispatcher();
-    export let availability_table: TimeSlotStatus[][] = [];
+    export let availabilityTable: TimeSlotStatus[][] = [];
 
     function handleDrag(event: PointerEvent, day: number, segment: number, status: TimeSlotStatus) {
         event.preventDefault();
@@ -46,7 +46,7 @@
         <tr class="odd-row" draggable="false">
             <th rowspan="2" draggable="false"> {segment}:00 </th>
             {#each dayIndexArray as day (day)}
-                {@const status = availability_table[segment * 2]?.[day] ?? TimeSlotStatus.NONE}
+                {@const status = availabilityTable[segment * 2]?.[day] ?? TimeSlotStatus.NONE}
                 <td
                     draggable="false"
                     on:pointerenter={(e) => handleDrag(e, day, segment * 2, status)}
@@ -68,7 +68,7 @@
         </tr>
         <tr draggable="false" class="even-row">
             {#each dayIndexArray as day (day)}
-                {@const status = availability_table[segment * 2 + 1]?.[day] ?? TimeSlotStatus.NONE}
+                {@const status = availabilityTable[segment * 2 + 1]?.[day] ?? TimeSlotStatus.NONE}
                 <td
                     draggable="false"
                     on:pointerenter={(e) => handleDrag(e, day, segment * 2 + 1, status)}

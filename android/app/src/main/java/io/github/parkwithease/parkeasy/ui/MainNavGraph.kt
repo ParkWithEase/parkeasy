@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui
 
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -52,7 +53,7 @@ fun MainNavGraph(
         NavHost(
             navController = navController,
             startDestination = "login",
-            modifier = Modifier.padding(innerPadding),
+            modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
         ) {
             loginScreen(showSnackbar, navController::navigateToProfile)
             listScreen()

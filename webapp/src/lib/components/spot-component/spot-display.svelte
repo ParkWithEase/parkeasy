@@ -25,7 +25,7 @@
                 <Checkbox labelText="Shelter" checked={spot.features.shelter} readonly />
                 <Checkbox labelText="Plug-in" checked={spot.features.plug_in} readonly />
                 <Checkbox
-                    labelText="Charing station"
+                    labelText="Charging station"
                     checked={spot.features.charging_station}
                     readonly
                 />

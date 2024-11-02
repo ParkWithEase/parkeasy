@@ -2,6 +2,7 @@ package io.github.parkwithease.parkeasy.data.remote
 
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
+import io.github.parkwithease.parkeasy.model.ErrorModel
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.Profile
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
@@ -13,8 +14,8 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
-import io.ktor.http.Cookie
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
@@ -32,65 +33,55 @@ constructor(
     private val authRepo: AuthRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : UserRepository {
-    override suspend fun login(credentials: LoginCredentials): Boolean {
-        val sessionCookie: Cookie?
-        var success = false
-        val response =
-            withContext(ioDispatcher) {
-                client.post("/auth") {
-                    contentType(ContentType.Application.Json)
-                    setBody(credentials)
-                }
-            }
-        sessionCookie = response.setCookie().firstOrNull()
-        if (sessionCookie != null) {
-            authRepo.set(sessionCookie)
-            success = true
-        }
-        return success
-    }
-
-    override suspend fun register(credentials: RegistrationCredentials): Boolean {
-        val sessionCookie: Cookie?
-        var success = false
-        val response =
-            withContext(ioDispatcher) {
-                client.post("/user") {
-                    contentType(ContentType.Application.Json)
-                    setBody(credentials)
-                }
-            }
-        sessionCookie = response.setCookie().firstOrNull()
-        if (sessionCookie != null) {
-            authRepo.set(sessionCookie)
-            success = true
-        }
-        return success
-    }
-
-    override suspend fun logout(): Boolean {
-        val authCookie = authRepo.sessionFlow.firstOrNull()
-        var success = false
-        if (authCookie != null) {
-            val response =
+    override suspend fun login(credentials: LoginCredentials): Result<Unit> =
+        runCatching {
                 withContext(ioDispatcher) {
-                    client.delete("/auth") { cookie(authCookie.name, authCookie.value) }
+                    client.post("/auth") {
+                        contentType(ContentType.Application.Json)
+                        setBody(credentials)
+                    }
                 }
-            if (response.status == HttpStatusCode.NoContent) {
-                authRepo.reset()
-                success = true
             }
-        }
-        return success
-    }
+            .mapAPIError()
+            .updateAuthCookie()
+            .map {}
 
-    override suspend fun requestReset(credentials: ResetCredentials): Boolean {
-        val response =
-            withContext(ioDispatcher) {
-                client.post("/auth/password:forgot") { setBody(credentials) }
+    override suspend fun register(credentials: RegistrationCredentials): Result<Unit> =
+        runCatching {
+                withContext(ioDispatcher) {
+                    client.post("/user") {
+                        contentType(ContentType.Application.Json)
+                        setBody(credentials)
+                    }
+                }
             }
-        return response.status.isSuccess()
-    }
+            .mapAPIError()
+            .updateAuthCookie()
+            .map {}
+
+    override suspend fun logout(): Boolean =
+        authRepo.sessionFlow
+            .firstOrNull()
+            ?.runCatching {
+                withContext(ioDispatcher) {
+                    client.delete("/auth") { cookie(name = name, value = value) }
+                }
+            }
+            ?.mapAPIError()
+            ?.updateAuthCookie()
+            .let { it == null || it.onFailure { e -> throw e }.isSuccess }
+
+    override suspend fun requestReset(credentials: ResetCredentials): Result<Unit> =
+        runCatching {
+                withContext(ioDispatcher) {
+                    client.post("/auth/password:forgot") {
+                        contentType(ContentType.Application.Json)
+                        setBody(credentials)
+                    }
+                }
+            }
+            .mapAPIError()
+            .map {}
 
     override suspend fun getUser(): Profile? {
         val authCookie = authRepo.sessionFlow.firstOrNull()
@@ -106,4 +97,21 @@ constructor(
         }
         return profile
     }
+
+    // Convert API error into a failing Result
+    private suspend fun Result<HttpResponse>.mapAPIError(): Result<HttpResponse> = mapCatching {
+        if (!it.status.isSuccess()) throw APIException(it.body<ErrorModel>())
+        it
+    }
+
+    // Update authentication status based on the response assuming that the request alters
+    // authentication status
+    private suspend fun Result<HttpResponse>.updateAuthCookie(): Result<HttpResponse> =
+        onSuccess { response ->
+                response
+                    .setCookie()
+                    .find { it.name == "session" && it.value != "" }
+                    .let { if (it != null) authRepo.set(it) else authRepo.reset() }
+            }
+            .onFailure { if (it is APIException) authRepo.reset() }
 }

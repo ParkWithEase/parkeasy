@@ -9,8 +9,6 @@
         Form,
         ToastNotification
     } from 'carbon-components-svelte';
-    import { ArrowLeft, ArrowRight } from 'carbon-icons-svelte';
-    import AvailabilityTable from '$lib/components/spot-component/availability-table.svelte';
     import { TimeSlotStatus, TimeSlotStatusConverter } from '$lib/enum/timeslot-status';
     import { DAY_IN_A_WEEK, ERROR_MESSAGE_TIME_OUT, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
     import { getMonday, getDateWithDayOffset } from '$lib/utils/datetime-util';
@@ -19,6 +17,7 @@
     import type { components } from '$lib/sdk/schema';
     import { getErrorMessage } from '$lib/utils/error-handler';
     import { fade } from 'svelte/transition';
+    import AvailabilitySection from '$lib/components/spot-component/availability-section.svelte';
 
     export let data: PageData;
     type TimeUnit = components['schemas']['TimeUnit'];
@@ -31,7 +30,7 @@
 
     //These are Variables for availability edit section
 
-    let new_price_per_hour: number = spot?.price_per_hour || 0;
+    let newPricePerHour: number = spot?.price_per_hour || 0;
     //This array contain all edit history
 
     let client = newClient();
@@ -105,8 +104,6 @@
     function toNextWeek() {
         currentMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
         if (!availabilityTablesInitial.get(currentMonday.getTime())) {
-            const dayClone = new Date(currentMonday);
-            dayClone.setHours(0, 0, 0, 0);
             client
                 .GET('/spots/{id}/availability', {
                     params: {
@@ -114,7 +111,11 @@
                             id: spot?.id ?? '0'
                         },
                         query: {
-                            availability_start: dayClone.toISOString()
+                            availability_start: currentMonday.toISOString(),
+                            availability_end: getDateWithDayOffset(
+                                currentMonday,
+                                DAY_IN_A_WEEK
+                            ).toISOString()
                         }
                     }
                 })
@@ -170,12 +171,12 @@
     }
 
     function resetAvailabilityEdit() {
-        new_price_per_hour = spot?.price_per_hour || 0;
+        newPricePerHour = spot?.price_per_hour || 0;
         availabilityTableEdit = structuredClone(availabilityTablesInitial);
     }
 
     /*
-    this function should remove the edit event if there is already one event at that time slot. Or 
+    this function  remove the edit event if there is already one event at that time slot. Or 
     append the new event if no event happens to that time slot
     */
     function handleEdit(event: CustomEvent) {
@@ -265,42 +266,24 @@
 
     <p class="spot-info-header">Availability</p>
 
-    <div class="date-controller">
-        <p>
-            From {currentMonday?.toString()} to {nextMonday?.toString()}
-        </p>
-        <Button
-            kind="secondary"
-            iconDescription="Last Week"
-            size="small"
-            on:click={toPrevWeek}
-            icon={ArrowLeft}>Last Week</Button
-        >
-        <Button
-            size="small"
-            iconDescription="Next Week"
-            kind="secondary"
-            on:click={toNextWeek}
-            icon={ArrowRight}>Next Week</Button
-        >
-    </div>
+    <AvailabilitySection
+        bind:currentMonday
+        bind:nextMonday
+        bind:availabilityTable
+        {toPrevWeek}
+        {toNextWeek}
+        {handleEdit}
+    />
 
     <Form on:submit={handleSubmitAvailability}>
-        <AvailabilityTable
-            bind:availability_table={availabilityTable}
-            on:edit={(e) => {
-                handleEdit(e);
-            }}
-        />
         <div class="price-field">
             <TextInput
-                style="max-width: 6rem;"
                 labelText="Price per hour"
                 name="price-per-hour"
                 helperText="Price in CAD"
                 type="number"
                 required
-                bind:value={new_price_per_hour}
+                bind:value={newPricePerHour}
             />
         </div>
         <Button kind="secondary" on:click={resetAvailabilityEdit}>Reset</Button>

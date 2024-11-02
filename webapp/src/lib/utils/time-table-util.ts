@@ -19,16 +19,44 @@ export function toTimeUnits(map: Map<number, TimeSlotStatus[][]>): TimeUnit[] {
                     startTime.setHours(0, segment * 30, 0, 0);
                     const endTime = new Date(startTime);
                     endTime.setMinutes(endTime.getMinutes() + 30);
+                    const start_time = startTime.toISOString();
+                    let end_time = endTime.toISOString();
+
+                    //Handle daylight saving time by ensuring that the endtime is of the same zone as the startTime
+                    if (startTime.getTimezoneOffset() < endTime.getTimezoneOffset()) {
+                        end_time = manualUTCConvert(endTime, -1);
+                    } else if (startTime.getTimezoneOffset() > endTime.getTimezoneOffset()) {
+                        end_time = manualUTCConvert(startTime, 1);
+                    }
                     acc.push({
-                        start_time: startTime.toISOString(),
-                        end_time: endTime.toISOString()
+                        start_time: start_time,
+                        end_time: end_time
                     });
                     return acc;
                 }, new Array<TimeUnit>())
             )
         );
     }
+    console.log(result);
     return result;
+}
+function manualUTCConvert(date: Date, offset: number) {
+    return (
+        date.getUTCFullYear() +
+        '-' +
+        `${date.getUTCMonth() + 1}`.padStart(2, '0') +
+        '-' +
+        `${date.getUTCDate()}`.padStart(2, '0') +
+        'T' +
+        `${date.getUTCHours() + offset}`.padStart(2, '0') +
+        ':' +
+        `${date.getUTCMinutes()}`.padStart(2, '0') +
+        ':' +
+        `${date.getUTCSeconds()}`.padStart(2, '0') +
+        '.' +
+        String((date.getUTCMilliseconds() / 1000).toFixed(3)).slice(2, 5) +
+        'Z'
+    );
 }
 
 export function initializeAvailabilityTables(
@@ -54,11 +82,10 @@ export function initializeAvailabilityTables(
             midnightToday.setHours(0, 0, 0, 0);
             if (day.getTime() >= midnightToday.getTime()) {
                 total_segment_number = today.getHours() * 2 + Math.ceil(today.getMinutes() / 30);
-                console.log(total_segment_number);
             }
             for (let segment = 0; segment < total_segment_number; segment++) {
                 availability[segment] ??= [];
-                availability[segment][day.getDate() - week.getDate()] = TimeSlotStatus.PASTDUE;
+                availability[segment][(day.getDay() || 7) - 1] = TimeSlotStatus.PASTDUE;
             }
         }
     }

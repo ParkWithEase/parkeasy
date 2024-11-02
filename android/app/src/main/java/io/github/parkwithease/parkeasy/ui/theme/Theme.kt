@@ -11,6 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.maplibre.compose.MapLibreStyleProviding
+import com.maplibre.compose.MapLibreSystemThemeStyleProvider
+import io.github.parkwithease.parkeasy.BuildConfig
+import io.github.parkwithease.parkeasy.R
 
 private val LightScheme =
     lightColorScheme(
@@ -280,5 +285,17 @@ fun ParkEasyTheme(
             else -> LightScheme
         }
 
-    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+    MaterialTheme(colorScheme = colorScheme, typography = Typography) {
+        MapLibreStyleProviding(
+            MapLibreSystemThemeStyleProvider(
+                lightModeStyleUrl =
+                    stringResource(R.string.map_style_light_format)
+                        .format(BuildConfig.PROTOMAPS_API_KEY),
+                darkModeStyleUrl =
+                    stringResource(R.string.map_style_dark_format)
+                        .format(BuildConfig.PROTOMAPS_API_KEY),
+            ),
+            content = content,
+        )
+    }
 }

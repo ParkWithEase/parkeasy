@@ -37,8 +37,8 @@
             icon={Map}
             href="/#"
         />
-        <HeaderGlobalAction iconDescription="your spot" icon={MobileAdd} href="/app/your-spots" />
-        <HeaderGlobalAction iconDescription="Your Cars" icon={Car} href="/app/your-cars" />
+        <HeaderGlobalAction iconDescription="Your spots" icon={MobileAdd} href="/app/your-spots" />
+        <HeaderGlobalAction iconDescription="Your cars" icon={Car} href="/app/your-cars" />
         <HeaderGlobalAction
             iconDescription="Profile"
             icon={User}
