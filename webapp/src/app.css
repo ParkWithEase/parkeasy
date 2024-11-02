@@ -122,6 +122,15 @@ a {
     background-color: rgb(51, 51, 51);
 }
 
+.top-new-button-container {
+    position: sticky;
+    top: 2.5rem;
+    background: white;
+    padding: 1rem;
+    width: 100%;
+    z-index: 2;
+}
+
 input,
 button {
     font-size: inherit;
@@ -148,4 +157,13 @@ button:focus:not(:focus-visible) {
     position: absolute;
     width: 1px;
     white-space: nowrap;
+}
+
+.date-controller {
+    margin: 1rem 0 1rem 0;
+}
+
+.price-field {
+    margin: 1rem 0 1rem 0;
+    max-width: 6rem;
 }
