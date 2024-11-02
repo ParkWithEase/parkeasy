@@ -16,12 +16,9 @@ import androidx.navigation.compose.rememberNavController
 import io.github.parkwithease.parkeasy.ui.cars.carsScreen
 import io.github.parkwithease.parkeasy.ui.cars.navigateToCars
 import io.github.parkwithease.parkeasy.ui.list.listScreen
-import io.github.parkwithease.parkeasy.ui.list.navigateToList
 import io.github.parkwithease.parkeasy.ui.login.loginScreen
 import io.github.parkwithease.parkeasy.ui.login.navigateToLogin
 import io.github.parkwithease.parkeasy.ui.map.mapScreen
-import io.github.parkwithease.parkeasy.ui.map.navigateToMap
-import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 import io.github.parkwithease.parkeasy.ui.profile.navigateToProfile
 import io.github.parkwithease.parkeasy.ui.profile.profileScreen
 
@@ -39,29 +36,21 @@ fun MainNavGraph(
                 duration = SnackbarDuration.Short,
             ) == SnackbarResult.ActionPerformed
         }
-    Scaffold(
-        bottomBar = {
-            NavBar(
-                navController::navigateToList,
-                navController::navigateToMap,
-                navController::navigateToProfile,
-            )
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        modifier = modifier,
-    ) { innerPadding ->
+    Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, modifier = modifier) {
+        innerPadding ->
         NavHost(
             navController = navController,
             startDestination = "login",
             modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
         ) {
             loginScreen(showSnackbar, navController::navigateToProfile)
-            listScreen()
-            mapScreen()
+            listScreen(navController = navController)
+            mapScreen(navController = navController)
             profileScreen(
                 showSnackbar,
                 navController::navigateToCars,
                 navController::navigateToLogin,
+                navController = navController,
             )
             carsScreen {}
         }

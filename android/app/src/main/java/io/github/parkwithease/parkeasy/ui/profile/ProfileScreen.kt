@@ -4,11 +4,13 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,14 +23,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.Profile
+import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 
 @Composable
 fun ProfileScreen(
     showSnackbar: suspend (String, String?) -> Boolean,
     navigateCars: () -> Unit,
     onLogout: () -> Unit,
+    navController: NavHostController,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel =
         hiltViewModel<ProfileViewModel, ProfileViewModel.Factory>(
@@ -44,7 +49,16 @@ fun ProfileScreen(
     }
     LaunchedEffect(Unit) { viewModel.refresh() }
     val profile by viewModel.profile.collectAsState()
-    ProfileScreen(profile, navigateCars, viewModel::onLogoutClick, modifier)
+
+    Scaffold(modifier = modifier, bottomBar = { NavBar(navController = navController) }) {
+        innerPadding ->
+        ProfileScreen(
+            profile,
+            navigateCars,
+            viewModel::onLogoutClick,
+            Modifier.padding(innerPadding),
+        )
+    }
 }
 
 @Composable
