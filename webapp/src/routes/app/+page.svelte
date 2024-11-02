@@ -6,6 +6,8 @@
     import { spots_data } from './your-spots/mock_data';
     import { Search } from 'carbon-components-svelte';
 
+    const apiKey = import.meta.env.VITE_API_KEY;
+
     let mapCenter: [number, number] = [-97.1, 49.9];
     let zoom = 10;
 
@@ -18,7 +20,6 @@
     let listingsContainer: HTMLDivElement;
 
     const searchLocation = async () => {
-        const apiKey = '4fc03e04196343548bf1d6d27e7bf6c0';
         const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(searchQuery)}&apiKey=${apiKey}`;
 
         try {
@@ -26,7 +27,6 @@
             const data = await response.json();
             results = data.features || [];
             dropdownOpen = true;
-            selectedLocation = null;
         } catch (error) {
             console.error('Error fetching data:', error);
         }
@@ -36,7 +36,6 @@
         properties: { formatted: string };
         geometry: { coordinates: number[] };
     }) => {
-        selectedLocation = location;
         searchQuery = location.properties.formatted;
         mapCenter = [location.geometry.coordinates[0], location.geometry.coordinates[1]];
         zoom = 13;
