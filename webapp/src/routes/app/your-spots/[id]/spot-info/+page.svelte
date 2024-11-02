@@ -30,7 +30,7 @@
 
     //These are Variables for availability edit section
 
-    let new_price_per_hour: number = spot?.price_per_hour || 0;
+    let newPricePerHour: number = spot?.price_per_hour || 0;
     //This array contain all edit history
 
     let client = newClient();
@@ -104,8 +104,6 @@
     function toNextWeek() {
         currentMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
         if (!availabilityTablesInitial.get(currentMonday.getTime())) {
-            const dayClone = new Date(currentMonday);
-            dayClone.setHours(0, 0, 0, 0);
             client
                 .GET('/spots/{id}/availability', {
                     params: {
@@ -113,7 +111,11 @@
                             id: spot?.id ?? '0'
                         },
                         query: {
-                            availability_start: dayClone.toISOString()
+                            availability_start: currentMonday.toISOString(),
+                            availability_end: getDateWithDayOffset(
+                                currentMonday,
+                                DAY_IN_A_WEEK
+                            ).toISOString()
                         }
                     }
                 })
@@ -169,7 +171,7 @@
     }
 
     function resetAvailabilityEdit() {
-        new_price_per_hour = spot?.price_per_hour || 0;
+        newPricePerHour = spot?.price_per_hour || 0;
         availabilityTableEdit = structuredClone(availabilityTablesInitial);
     }
 
@@ -276,13 +278,12 @@
     <Form on:submit={handleSubmitAvailability}>
         <div class="price-field">
             <TextInput
-                style="max-width: 6rem;"
                 labelText="Price per hour"
                 name="price-per-hour"
                 helperText="Price in CAD"
                 type="number"
                 required
-                bind:value={new_price_per_hour}
+                bind:value={newPricePerHour}
             />
         </div>
         <Button kind="secondary" on:click={resetAvailabilityEdit}>Reset</Button>

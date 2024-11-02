@@ -38,16 +38,16 @@
     $: nextMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
 
     //This contain spot info history to be submitted to the server
-    let new_price_per_hour: number;
+    let newPricePerHour: number;
     let city: string;
-    let country_code: string;
-    let postal_code: string;
+    let countryCode: string;
+    let postalCode: string;
     let state: string;
-    let street_address: string;
+    let streetAddress: string;
 
-    let has_shelter: boolean;
-    let has_plug_in: boolean;
-    let has_charging_station: boolean;
+    let hasShelter: boolean;
+    let hasPlugIn: boolean;
+    let hasChargingStation: boolean;
 
     //control form flow
     let currentIndex: number = 0;
@@ -79,7 +79,7 @@
 
     function clearEditRecords() {
         availabilityTables = structuredClone(availabilityTablesInitial);
-        new_price_per_hour = 0;
+        newPricePerHour = 0;
     }
 
     function handleSubmitAvailability() {
@@ -98,18 +98,18 @@
             .POST('/spots', {
                 body: {
                     features: {
-                        charging_station: has_charging_station,
-                        plug_in: has_plug_in,
-                        shelter: has_shelter
+                        charging_station: hasChargingStation,
+                        plug_in: hasPlugIn,
+                        shelter: hasShelter
                     },
                     location: {
                         city: city,
-                        country_code: country_code,
-                        postal_code: postal_code,
+                        country_code: countryCode,
+                        postal_code: postalCode,
                         state: state,
-                        street_address: street_address
+                        street_address: streetAddress
                     },
-                    price_per_hour: new_price_per_hour,
+                    price_per_hour: newPricePerHour,
                     availability: toTimeUnits(availabilityTables)
                 }
             })
@@ -175,14 +175,14 @@
             <p class="spot-form-header">Location and Utilities</p>
             <SpotLocationCreateForm
                 bind:isReadOnly={isLocationReadOnly}
-                bind:street_address
+                bind:streetAddress
                 bind:city
                 bind:state
-                bind:country_code
-                bind:postal_code
-                bind:has_shelter
-                bind:has_plug_in
-                bind:has_charging_station
+                bind:countryCode
+                bind:postalCode
+                bind:hasShelter
+                bind:hasPlugIn
+                bind:hasChargingStation
                 handleSubmit={handleSubmitLocation}
             />
         {/if}
@@ -206,7 +206,7 @@
                         required
                         readonly={currentIndex == 2}
                         min={0}
-                        bind:value={new_price_per_hour}
+                        bind:value={newPricePerHour}
                     />
                 </div>
                 {#if currentIndex == 1}

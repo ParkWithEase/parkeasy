@@ -1,5 +1,6 @@
+import { DAY_IN_A_WEEK } from '$lib/constants';
 import { newClient } from '$lib/utils/client';
-import { getMonday } from '$lib/utils/datetime-util';
+import { getDateWithDayOffset, getMonday } from '$lib/utils/datetime-util';
 import { handleGetError } from '$lib/utils/error-handler';
 import type { PageLoad } from './$types';
 
@@ -25,14 +26,18 @@ export const load: PageLoad = async ({ fetch, params }) => {
                     id: params.id
                 },
                 query: {
-                    availability_start: currentMonday.toISOString()
+                    availability_start: currentMonday.toISOString(),
+                    availability_end: getDateWithDayOffset(
+                        currentMonday,
+                        DAY_IN_A_WEEK
+                    ).toISOString()
                 }
             }
         }
     );
 
     handleGetError(errorAvailability);
-
+    console.log(availability);
     return {
         spot: spot_info,
         time_slots: availability

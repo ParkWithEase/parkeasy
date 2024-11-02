@@ -10,6 +10,8 @@
 
     export let toPrevWeek = () => {};
     export let toNextWeek = () => {};
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     export let handleEdit = (_: CustomEvent) => {};
 </script>
 
@@ -33,5 +35,5 @@
     >
 </div>
 <div>
-    <AvailabilityTable bind:availability_table={availabilityTable} on:edit={handleEdit} />
+    <AvailabilityTable bind:availabilityTable on:edit={handleEdit} />
 </div>

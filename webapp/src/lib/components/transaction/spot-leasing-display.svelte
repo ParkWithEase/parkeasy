@@ -7,7 +7,7 @@
         <p class="transaction-title">
             {transaction.spot.street_address}, {transaction.spot.postal_code}
         </p>
-        <span style="font-size: 1rem"
+        <span class="transaction-subtitle"
             >{transaction.spot.city}, {transaction.spot.state} {transaction.spot.country_code}</span
         >
     </div>
@@ -38,5 +38,9 @@
         line-height: 1;
         font-size: 1.5rem;
         padding-top: 0.5rem;
+    }
+
+    .transaction-subtitle {
+        font-size: 1rem;
     }
 </style>

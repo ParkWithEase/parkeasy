@@ -9,16 +9,17 @@
     } from 'carbon-components-svelte';
 
     export let isReadOnly: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     export let handleSubmit = (_: Event) => {};
 
-    export let street_address: string;
+    export let streetAddress: string;
     export let city: string;
     export let state: string;
-    export let country_code: string;
-    export let postal_code: string;
-    export let has_shelter: boolean;
-    export let has_plug_in: boolean;
-    export let has_charging_station: boolean;
+    export let countryCode: string;
+    export let postalCode: string;
+    export let hasShelter: boolean;
+    export let hasPlugIn: boolean;
+    export let hasChargingStation: boolean;
 
     const provinceData: Map<string, string> = new Map([
         ['MB', 'Manitoba'],
@@ -43,7 +44,7 @@
         name="street-address"
         placeholder="Street Address"
         readonly={isReadOnly}
-        bind:value={street_address}
+        bind:value={streetAddress}
     />
     <TextInput
         required
@@ -66,7 +67,7 @@
     <Select
         style={isReadOnly ? 'pointer-events: none;' : ' '}
         labelText="Country Code"
-        bind:selected={country_code}
+        bind:selected={countryCode}
     >
         <SelectItem value="CA" text="Canada" />
     </Select>
@@ -76,26 +77,26 @@
         name="postal-code"
         placeholder="Postal code"
         readonly={isReadOnly}
-        bind:value={postal_code}
+        bind:value={postalCode}
     />
     <p>Utilities</p>
     <Checkbox
         name="shelter"
         style={isReadOnly ? 'pointer-events: none;' : ' '}
         labelText="shelter"
-        bind:checked={has_shelter}
+        bind:checked={hasShelter}
     />
     <Checkbox
         name="plug-in"
         labelText="Plug-in"
         style={isReadOnly ? 'pointer-events: none;' : ' '}
-        bind:checked={has_plug_in}
+        bind:checked={hasPlugIn}
     />
     <Checkbox
         name="charging-station"
         labelText="Charging Station"
         style={isReadOnly ? 'pointer-events: none;' : ' '}
-        bind:checked={has_charging_station}
+        bind:checked={hasChargingStation}
     />
     {#if !isReadOnly}
         <Button type="submit">Submit</Button>

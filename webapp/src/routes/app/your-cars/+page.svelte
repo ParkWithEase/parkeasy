@@ -144,10 +144,9 @@
     }
 </script>
 
-<div class="button-container" style="">
+<div class="top-new-button-container" style="">
     <Button
         aria-label="new-car-button"
-        style="margin: 1rem;"
         icon={Add}
         on:click={() => (currentModalState = CarModalState.ADD)}>New Car</Button
     >
@@ -180,11 +179,3 @@
 {:else if currentModalState == CarModalState.ADD}
     <CarAddModal bind:state={currentModalState} on:submit={handleCreate} bind:errorMessage />
 {/if}
-
-<style>
-    .button-container {
-        position: sticky;
-        top: 2.5rem;
-        background: white;
-    }
-</style>

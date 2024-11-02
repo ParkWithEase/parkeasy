@@ -4,7 +4,6 @@ import type { PageLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import { INTERNAL_SERVER_ERROR } from '$lib/constants';
 
-
 export const load: PageLoad = async ({ fetch }) => {
     const client = newClient({ fetch });
     const { data, error: err } = await client.GET('/user/spots');

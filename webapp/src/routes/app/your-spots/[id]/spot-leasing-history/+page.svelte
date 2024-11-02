@@ -7,6 +7,7 @@
 </script>
 
 <Content>
+    <h1>Under construction</h1>
     <div>
         {#key data.transactions}
             {#each data?.transactions as transaction}
