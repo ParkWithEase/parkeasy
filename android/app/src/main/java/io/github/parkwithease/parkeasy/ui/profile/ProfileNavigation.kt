@@ -8,14 +8,11 @@ import androidx.navigation.compose.composable
 const val ProfileRoute = "profile"
 
 fun NavGraphBuilder.profileScreen(
-    showSnackbar: suspend (String, String?) -> Boolean,
     onNavigateToMyCars: () -> Unit,
     onLogout: () -> Unit,
     navController: NavHostController,
 ) {
-    composable(ProfileRoute) {
-        ProfileScreen(showSnackbar, onNavigateToMyCars, onLogout, navController)
-    }
+    composable(ProfileRoute) { ProfileScreen(onNavigateToMyCars, onLogout, navController) }
 }
 
 fun NavController.navigateToProfile() = this.navigate(ProfileRoute)

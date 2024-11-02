@@ -1,35 +1,28 @@
 package io.github.parkwithease.parkeasy.ui.profile
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedFactory
-import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.data.remote.UserRepository
 import io.github.parkwithease.parkeasy.model.Profile
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-@HiltViewModel(assistedFactory = ProfileViewModel.Factory::class)
+@HiltViewModel
 class ProfileViewModel
-@AssistedInject
-constructor(
-    authRepo: AuthRepository,
-    private val userRepo: UserRepository,
-    @Assisted val showSnackbar: suspend (String, String?) -> Boolean,
-) : ViewModel() {
-    @AssistedFactory
-    interface Factory {
-        fun create(showSnackbar: suspend (String, String?) -> Boolean): ProfileViewModel
-    }
+@Inject
+constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : ViewModel() {
 
     private val _profile = MutableStateFlow(Profile("", ""))
     val profile = _profile.asStateFlow()
 
     val loggedIn = authRepo.statusFlow
+
+    val snackbarState = SnackbarHostState()
 
     fun refresh() {
         viewModelScope.launch {
@@ -42,9 +35,8 @@ constructor(
 
     fun onLogoutClick() {
         viewModelScope.launch {
-            showSnackbar(
-                if (userRepo.logout()) "Logged out successfully" else "Error logging out",
-                null,
+            snackbarState.showSnackbar(
+                if (userRepo.logout()) "Logged out successfully" else "Error logging out"
             )
         }
     }

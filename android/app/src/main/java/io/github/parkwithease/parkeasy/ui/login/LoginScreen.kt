@@ -26,6 +26,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,11 +49,16 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.LoginMode
 
 @Composable
-fun LoginScreen(onLogin: () -> Unit, viewModel: LoginViewModel, modifier: Modifier = Modifier) {
+fun LoginScreen(
+    onLogin: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: LoginViewModel = hiltViewModel(),
+) {
     val loggedIn by viewModel.loggedIn.collectAsState(false)
     val formEnabled by viewModel.formEnabled.collectAsState()
     val latestOnLogin by rememberUpdatedState(onLogin)
@@ -61,18 +68,23 @@ fun LoginScreen(onLogin: () -> Unit, viewModel: LoginViewModel, modifier: Modifi
         }
     }
 
-    LoginScreenInner(
-        viewModel.formState,
-        viewModel::onNameChange,
-        viewModel::onEmailChange,
-        viewModel::onPasswordChange,
-        viewModel::onConfirmPasswordChange,
-        viewModel::onLoginPress,
-        viewModel::onRegisterPress,
-        viewModel::onRequestResetPress,
-        enabled = formEnabled,
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
         modifier = modifier,
-    )
+    ) { innerPadding ->
+        LoginScreenInner(
+            viewModel.formState,
+            viewModel::onNameChange,
+            viewModel::onEmailChange,
+            viewModel::onPasswordChange,
+            viewModel::onConfirmPasswordChange,
+            viewModel::onLoginPress,
+            viewModel::onRegisterPress,
+            viewModel::onRequestResetPress,
+            enabled = formEnabled,
+            modifier = Modifier.padding(innerPadding),
+        )
+    }
 }
 
 @Composable

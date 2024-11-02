@@ -11,6 +11,7 @@ import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,15 +31,11 @@ import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 
 @Composable
 fun ProfileScreen(
-    showSnackbar: suspend (String, String?) -> Boolean,
     navigateCars: () -> Unit,
     onLogout: () -> Unit,
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    viewModel: ProfileViewModel =
-        hiltViewModel<ProfileViewModel, ProfileViewModel.Factory>(
-            creationCallback = { factory -> factory.create(showSnackbar = showSnackbar) }
-        ),
+    viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val loggedIn by viewModel.loggedIn.collectAsState(true)
     val latestOnLogout by rememberUpdatedState(onLogout)
@@ -50,8 +47,11 @@ fun ProfileScreen(
     LaunchedEffect(Unit) { viewModel.refresh() }
     val profile by viewModel.profile.collectAsState()
 
-    Scaffold(modifier = modifier, bottomBar = { NavBar(navController = navController) }) {
-        innerPadding ->
+    Scaffold(
+        modifier = modifier,
+        bottomBar = { NavBar(navController = navController) },
+        snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
+    ) { innerPadding ->
         ProfileScreen(
             profile,
             navigateCars,

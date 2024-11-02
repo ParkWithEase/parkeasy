@@ -1,13 +1,11 @@
 package io.github.parkwithease.parkeasy.ui.login
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedFactory
-import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.data.remote.APIException
@@ -18,24 +16,17 @@ import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
 import io.github.parkwithease.parkeasy.model.ResetCredentials
 import java.io.IOException
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-@HiltViewModel(assistedFactory = LoginViewModel.Factory::class)
+@HiltViewModel
 // XXX: Lots of handlers and transforms, consider consolidation or splitting
 @Suppress("detekt:TooManyFunctions")
 class LoginViewModel
-@AssistedInject
-constructor(
-    authRepo: AuthRepository,
-    private val userRepo: UserRepository,
-    @Assisted val showSnackbar: suspend (String, String?) -> Boolean,
-) : ViewModel() {
-    @AssistedFactory
-    interface Factory {
-        fun create(showSnackbar: suspend (String, String?) -> Boolean): LoginViewModel
-    }
+@Inject
+constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : ViewModel() {
 
     val loggedIn = authRepo.statusFlow
 
@@ -45,6 +36,8 @@ constructor(
     private val _formEnabled = MutableStateFlow(true)
     val formEnabled = _formEnabled.asStateFlow()
 
+    val snackbarState = SnackbarHostState()
+
     fun onLoginPress() {
         viewModelScope.launch {
             _formEnabled.value = false
@@ -52,7 +45,7 @@ constructor(
                 .login(LoginCredentials(formState.email.value, formState.password.value))
                 .also { clearFieldErrors() }
                 .onSuccess {
-                    viewModelScope.launch { showSnackbar("Logged in successfully", null) }
+                    viewModelScope.launch { snackbarState.showSnackbar("Logged in successfully") }
                 }
                 .recoverRequestErrors("Login failed")
             _formEnabled.value = true
@@ -74,7 +67,7 @@ constructor(
                 )
                 .also { clearFieldErrors() }
                 .onSuccess {
-                    viewModelScope.launch { showSnackbar("Registered successfully", null) }
+                    viewModelScope.launch { snackbarState.showSnackbar("Registered successfully") }
                 }
                 .recoverRequestErrors("Error registering")
             _formEnabled.value = true
@@ -89,7 +82,7 @@ constructor(
                 .also { clearFieldErrors() }
                 .onSuccess {
                     viewModelScope.launch {
-                        showSnackbar("Reset email sent\nJk... we're working on it", null)
+                        snackbarState.showSnackbar("Reset email sent\nJk... we're working on it")
                     }
                 }
                 .recoverRequestErrors("Error resetting password")
@@ -138,11 +131,11 @@ constructor(
             when (it) {
                 is APIException -> {
                     errorToForm(it.error)
-                    viewModelScope.launch { showSnackbar(operationFailMsg, null) }
+                    viewModelScope.launch { snackbarState.showSnackbar(operationFailMsg) }
                 }
                 is IOException -> {
                     viewModelScope.launch {
-                        showSnackbar("Could not connect to server, are you online?", null)
+                        snackbarState.showSnackbar("Could not connect to server, are you online?")
                     }
                 }
                 else -> throw it
