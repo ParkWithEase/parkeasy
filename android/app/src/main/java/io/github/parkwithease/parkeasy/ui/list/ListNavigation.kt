@@ -5,7 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 
-private const val ListRoute = "list"
+const val ListRoute = "list"
 
 fun NavGraphBuilder.listScreen(navController: NavHostController) {
     composable(ListRoute) { ListScreen(navController = navController) }

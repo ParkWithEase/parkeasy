@@ -5,7 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 
-private const val ProfileRoute = "profile"
+const val ProfileRoute = "profile"
 
 fun NavGraphBuilder.profileScreen(
     showSnackbar: suspend (String, String?) -> Boolean,

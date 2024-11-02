@@ -16,20 +16,40 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import io.github.parkwithease.parkeasy.R
+import io.github.parkwithease.parkeasy.ui.list.ListRoute
+import io.github.parkwithease.parkeasy.ui.map.MapRoute
+import io.github.parkwithease.parkeasy.ui.profile.ProfileRoute
 
 @SuppressLint("RestrictedApi")
 @Composable
 fun NavBar(modifier: Modifier = Modifier, navController: NavController = rememberNavController()) {
     val topLevelRoutes =
         listOf(
-            TopLevelRoute("List", "list", Icons.Filled.Menu, Icons.Outlined.Menu),
-            TopLevelRoute("Map", "map", Icons.Filled.Place, Icons.Outlined.Place),
-            TopLevelRoute("Profile", "profile", Icons.Filled.Person, Icons.Outlined.Person),
+            TopLevelRoute(
+                stringResource(R.string.list),
+                ListRoute,
+                Icons.Filled.Menu,
+                Icons.Outlined.Menu,
+            ),
+            TopLevelRoute(
+                stringResource(R.string.map),
+                MapRoute,
+                Icons.Filled.Place,
+                Icons.Outlined.Place,
+            ),
+            TopLevelRoute(
+                stringResource(R.string.profile),
+                ProfileRoute,
+                Icons.Filled.Person,
+                Icons.Outlined.Person,
+            ),
         )
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination

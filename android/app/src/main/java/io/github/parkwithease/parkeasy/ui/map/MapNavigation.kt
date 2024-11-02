@@ -5,7 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 
-private const val MapRoute = "map"
+const val MapRoute = "map"
 
 fun NavGraphBuilder.mapScreen(navController: NavHostController) {
     composable(MapRoute) { MapScreen(navController = navController) }
