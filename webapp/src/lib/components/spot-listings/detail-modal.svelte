@@ -7,6 +7,8 @@
 
     export let listing : ParkingSpot;
 
+    const defaultZoom : number = 13;
+
 </script>
 
 <Modal
@@ -32,7 +34,7 @@
         <div>
             <MapLibre
                 center={[listing.location.longitude ?? 0, listing.location.latitude ?? 0]}
-                zoom={13}
+                zoom={defaultZoom}
                 style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
             >
                 <DefaultMarker lngLat={[listing.location.longitude ?? 0, listing.location.latitude ?? 0]} />
