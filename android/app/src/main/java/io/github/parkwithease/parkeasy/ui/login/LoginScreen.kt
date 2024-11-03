@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.login
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -26,6 +27,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,44 +50,59 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.LoginMode
 
 @Composable
-fun LoginScreen(onLogin: () -> Unit, viewModel: LoginViewModel, modifier: Modifier = Modifier) {
+fun LoginScreen(
+    onExitApp: () -> Unit,
+    onNavigateFromLogin: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: LoginViewModel = hiltViewModel(),
+) {
     val loggedIn by viewModel.loggedIn.collectAsState(false)
+    val latestOnNavigateFromLogin by rememberUpdatedState(onNavigateFromLogin)
+
     val formEnabled by viewModel.formEnabled.collectAsState()
-    val latestOnLogin by rememberUpdatedState(onLogin)
+
     LaunchedEffect(loggedIn) {
         if (loggedIn) {
-            latestOnLogin()
+            latestOnNavigateFromLogin()
         }
     }
 
-    LoginScreenInner(
-        viewModel.formState,
-        viewModel::onNameChange,
-        viewModel::onEmailChange,
-        viewModel::onPasswordChange,
-        viewModel::onConfirmPasswordChange,
-        viewModel::onLoginPress,
-        viewModel::onRegisterPress,
-        viewModel::onRequestResetPress,
-        enabled = formEnabled,
+    BackHandler(enabled = true) { onExitApp() }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
         modifier = modifier,
-    )
+    ) { innerPadding ->
+        LoginScreen(
+            viewModel.formState,
+            viewModel::onNameChange,
+            viewModel::onEmailChange,
+            viewModel::onPasswordChange,
+            viewModel::onConfirmPasswordChange,
+            viewModel::onLoginClick,
+            viewModel::onRegisterClick,
+            viewModel::onRequestResetClick,
+            enabled = formEnabled,
+            modifier = Modifier.padding(innerPadding),
+        )
+    }
 }
 
 @Composable
-private fun LoginScreenInner(
+private fun LoginScreen(
     formState: LoginFormState,
     onNameChange: (String) -> Unit,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onConfirmPasswordChange: (String) -> Unit,
-    onLogin: () -> Unit,
-    onRegister: () -> Unit,
-    onRequestReset: () -> Unit,
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit,
+    onRequestResetClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -111,9 +129,9 @@ private fun LoginScreenInner(
                 onEmailChange = onEmailChange,
                 onPasswordChange = onPasswordChange,
                 onConfirmPasswordChange = onConfirmPasswordChange,
-                onLogin = onLogin,
-                onRegister = onRegister,
-                onRequestReset = onRequestReset,
+                onLoginClick = onLoginClick,
+                onRegisterClick = onRegisterClick,
+                onRequestResetClick = onRequestResetClick,
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -129,9 +147,9 @@ private fun LoginForm(
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onConfirmPasswordChange: (String) -> Unit,
-    onLogin: () -> Unit,
-    onRegister: () -> Unit,
-    onRequestReset: () -> Unit,
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit,
+    onRequestResetClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -149,10 +167,10 @@ private fun LoginForm(
         )
         LoginButtons(
             loginMode,
-            onLogin = onLogin,
-            onRegister = onRegister,
-            onRequestReset = onRequestReset,
-            onSwitchMode = { loginMode = it },
+            onLoginClick = onLoginClick,
+            onRegisterClick = onRegisterClick,
+            onRequestResetClick = onRequestResetClick,
+            onSwitchModeClick = { loginMode = it },
             enabled = enabled,
             modifier = Modifier.widthIn(max = 320.dp),
         )
@@ -229,10 +247,10 @@ private fun LoginFields(
 @Composable
 private fun LoginButtons(
     mode: LoginMode,
-    onLogin: () -> Unit,
-    onRegister: () -> Unit,
-    onRequestReset: () -> Unit,
-    onSwitchMode: (LoginMode) -> Unit,
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit,
+    onRequestResetClick: () -> Unit,
+    onSwitchModeClick: (LoginMode) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -244,15 +262,15 @@ private fun LoginButtons(
                     else R.string.forgot_password
                 ),
                 if (mode == LoginMode.FORGOT) LoginMode.LOGIN else LoginMode.FORGOT,
-                onSwitchMode,
+                onSwitchModeClick,
             )
         }
         Button(
             onClick =
                 when (mode) {
-                    LoginMode.LOGIN -> onLogin
-                    LoginMode.REGISTER -> onRegister
-                    LoginMode.FORGOT -> onRequestReset
+                    LoginMode.LOGIN -> onLoginClick
+                    LoginMode.REGISTER -> onRegisterClick
+                    LoginMode.FORGOT -> onRequestResetClick
                 },
             enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
@@ -278,7 +296,7 @@ private fun LoginButtons(
                     else R.string.register_instead
                 ),
                 if (mode == LoginMode.REGISTER) LoginMode.LOGIN else LoginMode.REGISTER,
-                onSwitchMode,
+                onSwitchModeClick,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -352,13 +370,13 @@ private fun SwitchRegisterText(
 @Composable
 @Preview
 private fun PreviewLoginScreen() {
-    LoginScreenInner(LoginFormState(), {}, {}, {}, {}, {}, {}, {})
+    LoginScreen(LoginFormState(), {}, {}, {}, {}, {}, {}, {})
 }
 
 @Composable
 @Preview
 private fun PreviewLoginScreenError() {
-    LoginScreenInner(
+    LoginScreen(
         LoginFormState(
             email = LoginFieldState(value = "not-an-email", error = "Invalid email"),
             confirmPassword = LoginFieldState(error = "Password does not match"),

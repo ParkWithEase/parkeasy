@@ -1,17 +1,24 @@
 package io.github.parkwithease.parkeasy.ui.profile
 
+import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 
-private const val ProfileRoute = "profile"
+const val ProfileRoute = "profile"
 
 fun NavGraphBuilder.profileScreen(
-    showSnackbar: suspend (String, String?) -> Boolean,
-    onNavigateToMyCars: () -> Unit,
-    onLogout: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    onNavigateToCars: () -> Unit,
+    navBar: @Composable () -> Unit,
 ) {
-    composable(ProfileRoute) { ProfileScreen(showSnackbar, onNavigateToMyCars, onLogout) }
+    composable(ProfileRoute) {
+        ProfileScreen(
+            onNavigateToLogin = onNavigateToLogin,
+            onNavigateToCars = onNavigateToCars,
+            navBar = navBar,
+        )
+    }
 }
 
-fun NavController.navigateToProfile() = this.navigate(ProfileRoute)
+@Suppress("unused") fun NavController.navigateToProfile() = this.navigate(ProfileRoute)
