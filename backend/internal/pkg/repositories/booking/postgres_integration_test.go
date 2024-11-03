@@ -254,7 +254,7 @@ func TestPostgresIntegration(t *testing.T) {
 		expectedEntries_1 := make([]Entry, 0, 8)
 
 		// Create multiple bookings and expected get many output
-		for eidx, _ := range sampleTimeUnit {
+		for eidx := range sampleTimeUnit {
 			bookingCreationInput_1 := models.BookingCreationInput{
 				ParkingSpotID: parkingSpotEntry.ID,
 				PaidAmount:    paidAmount,
@@ -268,7 +268,7 @@ func TestPostgresIntegration(t *testing.T) {
 			expectedAllEntries = append(expectedAllEntries, expectedCreateEntry)
 		}
 
-		for eidx, _ := range sampleTimeUnit_1 {
+		for eidx := range sampleTimeUnit_1 {
 			bookingCreationInput_2 := models.BookingCreationInput{
 				ParkingSpotID: parkingSpotEntry_1.ID,
 				PaidAmount:    paidAmount_1,
