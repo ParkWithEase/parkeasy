@@ -12,13 +12,13 @@ var (
 )
 
 type Booking struct {
-	PaidAmount    float64    `json:"paid_amount" doc:"The amount paid for the booking"`
-	ID      uuid.UUID
+	PaidAmount float64   `json:"paid_amount" doc:"The amount paid for the booking"`
+	ID         uuid.UUID `json:"id" doc:"ID of this resource"`
 }
 
 type BookingWithTimes struct {
 	Booking
-	BookedTimes   []TimeUnit `json:"booked_times" doc:"The booked times of this booking"`
+	BookedTimes []TimeUnit `json:"booked_times" doc:"The booked times of this booking"`
 }
 
 type BookingCreationInput struct {
