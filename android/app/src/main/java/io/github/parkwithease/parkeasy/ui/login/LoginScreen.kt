@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.login
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -55,20 +56,23 @@ import io.github.parkwithease.parkeasy.model.LoginMode
 
 @Composable
 fun LoginScreen(
-    onLogin: () -> Unit,
+    onExitApp: () -> Unit,
+    onNavigateFromLogin: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val loggedIn by viewModel.loggedIn.collectAsState(false)
-    val latestOnLogin by rememberUpdatedState(onLogin)
+    val latestOnNavigateFromLogin by rememberUpdatedState(onNavigateFromLogin)
 
     val formEnabled by viewModel.formEnabled.collectAsState()
 
     LaunchedEffect(loggedIn) {
         if (loggedIn) {
-            latestOnLogin()
+            latestOnNavigateFromLogin()
         }
     }
+
+    BackHandler(enabled = true) { onExitApp() }
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },

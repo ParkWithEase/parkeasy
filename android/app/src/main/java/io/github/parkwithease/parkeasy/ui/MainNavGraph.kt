@@ -17,12 +17,13 @@ import io.github.parkwithease.parkeasy.ui.profile.profileScreen
 
 @Composable
 fun MainNavGraph(
+    onExitApp: () -> Unit,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
     val navBar = @Composable { NavBar(navController = navController) }
     NavHost(navController = navController, startDestination = ListRoute, modifier = modifier) {
-        loginScreen(onNavigateFromLogin = navController::popBackStack)
+        loginScreen(onExitApp = onExitApp, onNavigateFromLogin = navController::popBackStack)
         listScreen(onNavigateToLogin = navController::navigateToLogin, navBar = navBar)
         mapScreen(onNavigateToLogin = navController::navigateToLogin, navBar = navBar)
         profileScreen(
