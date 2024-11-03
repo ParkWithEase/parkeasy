@@ -3,40 +3,40 @@
     import Navbar from '$lib/components/navbar.svelte';
     import { MapLibre, DefaultMarker, Popup, GeolocateControl } from 'svelte-maplibre';
     import SpotsListComponent from '$lib/components/spot-listings/spots-list-component.svelte';
-    import { Button } from "carbon-components-svelte";
+    import { Button } from 'carbon-components-svelte';
     import { spots_data } from './your-spots/mock_data';
     import { Search } from 'carbon-components-svelte';
     import type { LocationResult } from '$lib/types/spot/location-result';
-    import BottomPanelOpen from "carbon-icons-svelte/lib/BottomPanelOpen.svelte";
+    import BottomPanelOpen from 'carbon-icons-svelte/lib/BottomPanelOpen.svelte';
 
     const apiKey = import.meta.env.VITE_GEOCODING_API_KEY;
-    const maxZoom : number = 12;
-    const initZoom : number= 13;
-    const offset : [number,number] = [0, -10];
+    const maxZoom: number = 12;
+    const initZoom: number = 13;
+    const offset: [number, number] = [0, -10];
 
     let mapCenter: [number, number] = [-97.1, 49.9];
-    let zoom : number= 10;
+    let zoom: number = 10;
 
     let searchQuery = '';
     let results: LocationResult[] = [];
     let dropdownOpen: boolean = false;
-    let selectedListingId: string | null = null; 
+    let selectedListingId: string | null = null;
 
-    let showBackToTop : boolean = false;
+    let showBackToTop: boolean = false;
     let listingsContainer: HTMLDivElement;
 
-    let debounceTimer: number | undefined; 
+    let debounceTimer: number | undefined;
 
     const searchLocation = () => {
         const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(searchQuery)}&apiKey=${apiKey}`;
 
         fetch(url)
-            .then(response => response.json())
-            .then(data => {
+            .then((response) => response.json())
+            .then((data) => {
                 results = data.features ?? [];
                 dropdownOpen = true;
             })
-            .catch(error => {
+            .catch((error) => {
                 console.error('Error fetching data:', error);
             });
     };
@@ -148,17 +148,19 @@
         >
             <GeolocateControl position="bottom-left" fitBoundsOptions={{ maxZoom: maxZoom }} />
             {#each spots_data as { id, location }}
-                <DefaultMarker
-                    lngLat={[location.longitude, location.latitude]}
-                >
-                    <Popup offset={offset}>
-                        <div class = 'popup-container'>
-                            <h2 class = 'popup-text'>
-                                {location.street_address} <br>
-                                {location.city},{location.state} <br>
-                                {location.postal_code} <br>
+                <DefaultMarker lngLat={[location.longitude, location.latitude]}>
+                    <Popup {offset}>
+                        <div class="popup-container">
+                            <h2 class="popup-text">
+                                {location.street_address} <br />
+                                {location.city},{location.state} <br />
+                                {location.postal_code} <br />
                             </h2>
-                            <Button kind="secondary" on:click={() => handleMarkerClick(id)} icon={BottomPanelOpen}>
+                            <Button
+                                kind="secondary"
+                                on:click={() => handleMarkerClick(id)}
+                                icon={BottomPanelOpen}
+                            >
                                 Go to listing
                             </Button>
                         </div>
@@ -236,15 +238,14 @@
         transition: background-color 0.8s ease;
     }
 
-    .popup-container{
+    .popup-container {
         display: flex;
         flex-direction: column;
-        padding: 0.5rem
+        padding: 0.5rem;
     }
 
-    .popup-text{
+    .popup-text {
         margin: 1rem;
         font-family: Fredoka, sans-serif;
     }
-    
 </style>
