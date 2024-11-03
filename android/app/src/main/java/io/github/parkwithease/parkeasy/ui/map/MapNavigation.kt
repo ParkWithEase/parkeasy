@@ -11,5 +11,4 @@ fun NavGraphBuilder.mapScreen(onNavigateToLogin: () -> Unit, navBar: @Composable
     composable(MapRoute) { MapScreen(onNavigateToLogin = onNavigateToLogin, navBar = navBar) }
 }
 
-@Suppress("unused")
-fun NavController.navigateToMap() = this.navigate(MapRoute)
+@Suppress("unused") fun NavController.navigateToMap() = this.navigate(MapRoute)

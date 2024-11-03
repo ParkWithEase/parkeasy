@@ -21,5 +21,4 @@ fun NavGraphBuilder.profileScreen(
     }
 }
 
-@Suppress("unused")
-fun NavController.navigateToProfile() = this.navigate(ProfileRoute)
+@Suppress("unused") fun NavController.navigateToProfile() = this.navigate(ProfileRoute)
