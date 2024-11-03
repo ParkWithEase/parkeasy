@@ -11,4 +11,5 @@ fun NavGraphBuilder.listScreen(onNavigateToLogin: () -> Unit, navBar: @Composabl
     composable(ListRoute) { ListScreen(onNavigateToLogin = onNavigateToLogin, navBar = navBar) }
 }
 
+@Suppress("unused")
 fun NavController.navigateToList() = this.navigate(ListRoute)
