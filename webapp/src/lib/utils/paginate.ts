@@ -24,7 +24,9 @@ function extractNextCursor(linkHeader: string | null): string | null {
 
 export default async function* <
     Path extends PathsWithMethod<paths, 'get'>,
-    Options extends FetchOptions<FilterKeys<paths[Path], 'get'>>
+    Options extends FetchOptions<FilterKeys<paths[Path], 'get'>> & {
+        params?: { query?: { after?: string } };
+    }
 >(client: Client<paths, `${string}/${string}`>, path: Path, options: Options) {
     let { data, error, response } = await client.GET(path, options);
 
