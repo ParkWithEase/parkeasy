@@ -3,33 +3,52 @@
     import Navbar from '$lib/components/navbar.svelte';
     import { MapLibre, DefaultMarker, Popup, GeolocateControl } from 'svelte-maplibre';
     import SpotsListComponent from '$lib/components/spot-listings/spots-list-component.svelte';
+    import { Button } from "carbon-components-svelte";
     import { spots_data } from './your-spots/mock_data';
     import { Search } from 'carbon-components-svelte';
+    import type { LocationResult } from '$lib/types/spot/location-result';
+    import BottomPanelOpen from "carbon-icons-svelte/lib/BottomPanelOpen.svelte";
 
-    const apiKey = import.meta.env.VITE_API_KEY;
+    const apiKey = import.meta.env.VITE_GEOCODING_API_KEY;
+    const maxZoom : number = 12;
+    const initZoom : number= 13;
+    const offset : [number,number] = [0, -10];
 
     let mapCenter: [number, number] = [-97.1, 49.9];
-    let zoom = 10;
+    let zoom : number= 10;
 
     let searchQuery = '';
-    let results = [];
-    let dropdownOpen = false;
-    let selectedListingId: string | null = null; // to track the selected listing for highlighting
+    let results: LocationResult[] = [];
+    let dropdownOpen: boolean = false;
+    let selectedListingId: string | null = null; 
 
-    let showBackToTop = false;
+    let showBackToTop : boolean = false;
     let listingsContainer: HTMLDivElement;
 
-    const searchLocation = async () => {
+    let debounceTimer: number | undefined; 
+
+    const searchLocation = () => {
         const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(searchQuery)}&apiKey=${apiKey}`;
 
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-            results = data.features || [];
-            dropdownOpen = true;
-        } catch (error) {
-            console.error('Error fetching data:', error);
-        }
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                results = data.features ?? [];
+                dropdownOpen = true;
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+            });
+    };
+
+    const handleInput = () => {
+        dropdownOpen = true;
+        clearTimeout(debounceTimer);
+        debounceTimer = window.setTimeout(() => {
+            if (searchQuery.length > 3) {
+                searchLocation();
+            }
+        }, 750); // 0.75s delay
     };
 
     const handleSelect = (location: {
@@ -38,14 +57,10 @@
     }) => {
         searchQuery = location.properties.formatted;
         mapCenter = [location.geometry.coordinates[0], location.geometry.coordinates[1]];
-        zoom = 13;
+        zoom = initZoom;
         results = [];
         dropdownOpen = false;
     };
-
-    $: if (searchQuery && searchQuery.length > 3) {
-        searchLocation();
-    }
 
     const handleClickOutside = (event: Event) => {
         if (
@@ -61,13 +76,12 @@
         listingsContainer.addEventListener('scroll', handleScroll);
         return () => {
             document.removeEventListener('click', handleClickOutside);
-            listingsContainer.removeEventListener('scroll', handleScroll);
         };
     });
 
     onDestroy(() => {
         document.removeEventListener('click', handleClickOutside);
-        listingsContainer.removeEventListener('scroll', handleScroll);
+        clearTimeout(debounceTimer);
     });
 
     const handleMarkerClick = (listingId: string) => {
@@ -91,16 +105,14 @@
 <Navbar />
 
 <div class="container">
-    <div class="listings" bind:this={listingsContainer}>
+    <div class="listings" bind:this={listingsContainer} on:scroll={handleScroll}>
         <Search
             class="search-input"
             type="text"
             bind:value={searchQuery}
-            placeholder="Explore spots around this area..."
+            placeholder="Explore spots... [Atleast 3 characters required]"
             name="search"
-            on:input={() => {
-                dropdownOpen = true;
-            }}
+            on:input={handleInput}
         />
 
         {#if results.length > 0 && dropdownOpen}
@@ -134,17 +146,22 @@
             {zoom}
             style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
         >
-            <GeolocateControl position="bottom-left" fitBoundsOptions={{ maxZoom: 12 }} />
+            <GeolocateControl position="bottom-left" fitBoundsOptions={{ maxZoom: maxZoom }} />
             {#each spots_data as { id, location }}
                 <DefaultMarker
                     lngLat={[location.longitude, location.latitude]}
-                    on:click={() => handleMarkerClick(id)}
                 >
-                    <Popup offset={[0, -10]}>
-                        <div class="text-lg font-bold">
-                            {location.street_address}, {location.city}
+                    <Popup offset={offset}>
+                        <div class = 'popup-container'>
+                            <h2 class = 'popup-text'>
+                                {location.street_address} <br>
+                                {location.city},{location.state} <br>
+                                {location.postal_code} <br>
+                            </h2>
+                            <Button kind="secondary" on:click={() => handleMarkerClick(id)} icon={BottomPanelOpen}>
+                                Go to listing
+                            </Button>
                         </div>
-                        <button on:click={() => handleMarkerClick(id)}>Go to listing</button>
                     </Popup>
                 </DefaultMarker>
             {/each}
@@ -166,10 +183,10 @@
         overflow-y: auto;
         flex-direction: column;
         padding: 0.5rem;
-        background-color: rgb(186, 214, 183);
+        background-color: #ffffff;
         position: fixed;
         z-index: 999;
-        border: 1px solid rgb(104, 104, 104);
+        border: 2px solid rgb(0, 0, 0);
         border-radius: 5px;
     }
 
@@ -198,13 +215,13 @@
             opacity: 1;
         }
         50% {
-            background-color: #49da55;
+            background-color: #007bff;
             opacity: 0.5;
         }
     }
 
     .highlight {
-        animation: smoothBlink 0.75s linear 2;
+        animation: smoothBlink 0.6s linear 4;
     }
 
     .back-to-top {
@@ -218,4 +235,16 @@
         box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
         transition: background-color 0.8s ease;
     }
+
+    .popup-container{
+        display: flex;
+        flex-direction: column;
+        padding: 0.5rem
+    }
+
+    .popup-text{
+        margin: 1rem;
+        font-family: Fredoka, sans-serif;
+    }
+    
 </style>
