@@ -12,7 +12,7 @@ interface UserRepository {
      * @param credentials the login credentials.
      * @return true if user login success, false otherwise.
      */
-    suspend fun login(credentials: LoginCredentials): Boolean
+    suspend fun login(credentials: LoginCredentials): Result<Unit>
 
     /**
      * Attempts to register a new user with the given credentials.
@@ -20,7 +20,7 @@ interface UserRepository {
      * @param credentials the registration credentials.
      * @return true the new user is registered, false otherwise.
      */
-    suspend fun register(credentials: RegistrationCredentials): Boolean
+    suspend fun register(credentials: RegistrationCredentials): Result<Unit>
 
     /**
      * Logs the user out.
@@ -34,7 +34,7 @@ interface UserRepository {
      *
      * @param credentials for the account which the password reset token is for.
      */
-    suspend fun requestReset(credentials: ResetCredentials): Boolean
+    suspend fun requestReset(credentials: ResetCredentials): Result<Unit>
 
     /**
      * Gets the user details.

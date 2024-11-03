@@ -1,5 +1,4 @@
 <script lang="ts">
-    import type { Car } from '$lib/types/car/car';
     import {
         ComposedModal,
         ModalBody,
@@ -12,11 +11,14 @@
     import { CarModalState } from '$lib/enum/car-model';
 
     import { createEventDispatcher } from 'svelte';
+    import type { components } from '$lib/sdk/schema';
 
     const dispatch = createEventDispatcher();
 
+    type Car = components['schemas']['CarDetails'];
     export let state: CarModalState;
     export let errorMessage: string;
+    export let carInfo: Car | null;
     function deleteCar() {
         dispatch('delete', {
             text: 'Delete'
@@ -41,8 +43,6 @@
             form.requestSubmit();
         }
     }
-
-    export let carInfo: Car;
 </script>
 
 {#if carInfo}

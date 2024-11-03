@@ -33,10 +33,6 @@
 </div>
 
 <style>
-    :global(.bx--content) {
-        padding: 0rem;
-    }
-
     .booking-info-container {
         display: flex;
         flex-direction: row;

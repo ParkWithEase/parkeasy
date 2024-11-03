@@ -69,9 +69,6 @@
 </div>
 
 <style>
-    :global(.bx--content) {
-        padding: 0rem;
-    }
     .leasing-info-container {
         display: flex;
         flex-direction: row;
