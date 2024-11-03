@@ -114,8 +114,9 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		Entry: Entry{
 			Booking: models.Booking{
 				PaidAmount: amount,
-				ID: inserted.Bookinguuid,
+				ID:         inserted.Bookinguuid,
 			},
+			InternalID: inserted.Bookingid,
 		},
 		BookedTimes: updatedTimes,
 	}
@@ -134,6 +135,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 		sm.Columns(
 			dbmodels.BookingColumns.Paidamount,
 			dbmodels.BookingColumns.Bookingid,
+			dbmodels.BookingColumns.Bookinguuid,
 			dbmodels.BookingColumns.Userid,
 		),
 		dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingID),
@@ -170,8 +172,9 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 		Entry: Entry{
 			Booking: models.Booking{
 				PaidAmount: amount,
-				ID: bookingResult.Bookinguuid,
+				ID:         bookingResult.Bookinguuid,
 			},
+			InternalID: bookingResult.Bookingid,
 		},
 		BookedTimes: timeUnitsFromDB(timeResult),
 	}
@@ -179,24 +182,24 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	return entry, nil
 }
 
-func (p *PostgresRepository) GetManyForUser(ctx context.Context, limit int, userID int64, filter *Filter) ([]Entry, error) {
+func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, userID int64, filter *Filter) ([]Entry, error) {
 	smods := []bob.Mod[*dialect.SelectQuery]{sm.Columns(dbmodels.Bookings.Columns())}
 	var whereMods []mods.Where[*dialect.SelectQuery]
 
-	if userID, ok := filter.UserID.Get(); ok {
-		whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Userid.EQ(userID))
-	}
-
-	if len(whereMods) == 0 {
-		return nil, ErrNoConstraint
+	if filter.SpotID != 0 {
+		whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Parkingspotid.EQ(filter.SpotID))
 	}
 
 	smods = append(
 		smods,
 		sm.From(dbmodels.Bookings.Name(ctx)),
 		sm.Limit(limit),
-		psql.WhereAnd(whereMods...),
+		sm.OrderBy(dbmodels.BookingColumns.Bookingid).Desc(),
 	)
+	// Only add the `WHERE` clause if `whereMods` has conditions
+	if len(whereMods) > 0 {
+		smods = append(smods, psql.WhereAnd(whereMods...))
+	}
 	query := psql.Select(smods...)
 
 	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
@@ -216,16 +219,6 @@ func (p *PostgresRepository) GetManyForUser(ctx context.Context, limit int, user
 			return []Entry{}, fmt.Errorf("could not fetch booking details: %w", err)
 		}
 
-		timeResult, err := dbmodels.Timeunits.Query(
-			ctx, p.db,
-			sm.Columns(dbmodels.TimeunitColumns.Timerange),
-			sm.Columns(dbmodels.TimeunitColumns.Bookingid),
-			psql.WhereAnd(
-				dbmodels.SelectWhere.Timeunits.Bookingid.EQ(get.Bookingid),
-			),
-			sm.OrderBy(psql.F("lower", dbmodels.TimeunitColumns.Timerange)),
-		).All()
-
 		amount, ok := get.Paidamount.Float64()
 		if !ok {
 			return []Entry{}, fmt.Errorf("could not convert %v to float64", get.Paidamount)
@@ -233,14 +226,10 @@ func (p *PostgresRepository) GetManyForUser(ctx context.Context, limit int, user
 
 		entry := Entry{
 			Booking: models.Booking{
-				Details: models.BookingDetails{
-					PaidAmount:  amount,
-					BookedTimes: timeUnitsFromDB(timeResult),
-				},
-				ID: get.Bookinguuid,
+				PaidAmount: amount,
+				ID:         get.Bookinguuid,
 			},
 			InternalID: get.Bookingid,
-			OwnerID:    get.Userid,
 		}
 
 		result = append(result, entry)

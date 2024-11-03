@@ -2,6 +2,7 @@ package booking
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/testutils"
-	"github.com/aarondl/opt/omit"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -65,36 +66,70 @@ func TestPostgresIntegration(t *testing.T) {
 		{
 			StartTime: time.Date(2024, time.October, 21, 14, 30, 0, 0, time.UTC), // 2:30 PM on October 21, 2024
 			EndTime:   time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 21, 2024
-			Status:    "available",
+			Status:    "booked",
 		},
 		{
 			StartTime: time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 21, 2024
 			EndTime:   time.Date(2024, time.October, 21, 15, 30, 0, 0, time.UTC), // 3:30 PM on October 21, 2024
-			Status:    "available",
+			Status:    "booked",
 		},
 		{
 			StartTime: time.Date(2024, time.October, 21, 15, 30, 0, 0, time.UTC), // 3:30 PM on October 21, 2024
 			EndTime:   time.Date(2024, time.October, 21, 16, 0, 0, 0, time.UTC),  // 4:00 PM on October 21, 2024
-			Status:    "available",
+			Status:    "booked",
 		},
 		{
 			StartTime: time.Date(2024, time.October, 21, 16, 0, 0, 0, time.UTC),  // 4:00 PM on October 21, 2024
 			EndTime:   time.Date(2024, time.October, 21, 16, 30, 0, 0, time.UTC), // 4:30 PM on October 21, 2024
-			Status:    "available",
+			Status:    "booked",
 		},
 		{
 			StartTime: time.Date(2024, time.October, 21, 16, 30, 0, 0, time.UTC), // 4:30 PM on October 21, 2024
 			EndTime:   time.Date(2024, time.October, 21, 17, 0, 0, 0, time.UTC),  // 5:00 PM on October 21, 2024
-			Status:    "available",
+			Status:    "booked",
 		},
 		{
 			StartTime: time.Date(2024, time.October, 21, 17, 0, 0, 0, time.UTC),  // 5:00 PM on October 21, 2024
 			EndTime:   time.Date(2024, time.October, 21, 17, 30, 0, 0, time.UTC), // 5:30 PM on October 21, 2024
-			Status:    "available",
+			Status:    "booked",
+		},
+	}
+
+	sampleTimeUnit_1 := []models.TimeUnit{
+		{
+			StartTime: time.Date(2024, time.October, 22, 14, 30, 0, 0, time.UTC), // 2:30 PM on October 22, 2024
+			EndTime:   time.Date(2024, time.October, 22, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 22, 2024
+			Status:    "booked",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 22, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 22, 2024
+			EndTime:   time.Date(2024, time.October, 22, 15, 30, 0, 0, time.UTC), // 3:30 PM on October 22, 2024
+			Status:    "booked",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 22, 15, 30, 0, 0, time.UTC), // 3:30 PM on October 22, 2024
+			EndTime:   time.Date(2024, time.October, 22, 16, 0, 0, 0, time.UTC),  // 4:00 PM on October 22, 2024
+			Status:    "booked",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 22, 16, 0, 0, 0, time.UTC),  // 4:00 PM on October 22, 2024
+			EndTime:   time.Date(2024, time.October, 22, 16, 30, 0, 0, time.UTC), // 4:30 PM on October 22, 2024
+			Status:    "booked",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 22, 16, 30, 0, 0, time.UTC), // 4:30 PM on October 22, 2024
+			EndTime:   time.Date(2024, time.October, 22, 17, 0, 0, 0, time.UTC),  // 5:00 PM on October 22, 2024
+			Status:    "booked",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 22, 17, 0, 0, 0, time.UTC),  // 5:00 PM on October 22, 2024
+			EndTime:   time.Date(2024, time.October, 22, 17, 30, 0, 0, time.UTC), // 5:30 PM on October 22, 2024
+			Status:    "booked",
 		},
 	}
 
 	sampleAvailability := append([]models.TimeUnit(nil), sampleTimeUnit...)
+	sampleAvailability_1 := append([]models.TimeUnit(nil), sampleTimeUnit_1...)
 
 	sampleLocation := models.ParkingSpotLocation{
 		PostalCode:    "L2E6T2",
@@ -104,6 +139,16 @@ func TestPostgresIntegration(t *testing.T) {
 		State:         "MB",
 		Latitude:      43.07923,
 		Longitude:     -79.07887,
+	}
+
+	sampleLocation_1 := models.ParkingSpotLocation{
+		PostalCode:    "R3C1A6",
+		CountryCode:   "CA",
+		City:          "Winnipeg",
+		StreetAddress: "180 Main St",
+		State:         "MB",
+		Latitude:      49.88990,
+		Longitude:     -97.13599,
 	}
 
 	sampleFeatures := models.ParkingSpotFeatures{
@@ -121,15 +166,21 @@ func TestPostgresIntegration(t *testing.T) {
 		Availability: sampleAvailability,
 	}
 
+	parkingSpotCreationInput_1 := models.ParkingSpotCreationInput{
+		Location:     sampleLocation_1,
+		Features:     sampleFeatures,
+		PricePerHour: samplePricePerHour,
+		Availability: sampleAvailability_1,
+	}
+
 	parkingSpotUUID := uuid.New()
 	paidAmount := float64(100)
+	paidAmount_1 := float64(50)
 
 	bookingCreationInput := models.BookingCreationInput{
 		ParkingSpotID: parkingSpotUUID,
-		BookingDetails: models.BookingDetails{
-			PaidAmount:  paidAmount,
-			BookedTimes: sampleTimeUnit[0:2],
-		},
+		PaidAmount:    paidAmount,
+		BookedTimes:   sampleTimeUnit[0:2],
 	}
 
 	t.Run("basic add & get", func(t *testing.T) {
@@ -148,15 +199,19 @@ func TestPostgresIntegration(t *testing.T) {
 		// Testing create
 		createEntry, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
 
-		expectedCreateEntry := createExpectedEntry(createEntry.InternalID, userID, createEntry.ID, createEntry.Details.PaidAmount, bookingCreationInput.BookedTimes)
+		expectedCreateEntry := createExpectedEntry(createEntry.Entry.InternalID, createEntry.Entry.Booking.ID, createEntry.PaidAmount)
 
-		assert.NoError(t, err)
-		assertSameEntry(t, &createEntry, &expectedCreateEntry, "created entry not the same")
+		require.NoError(t, err)
+		require.NotNil(t, createEntry.ID)
+		assert.Empty(t, cmp.Diff(expectedCreateEntry, createEntry.Entry))
+		assert.Empty(t, cmp.Diff(bookingCreationInput.BookedTimes, createEntry.BookedTimes))
 
 		// Testing get
 		getEntry, err := repo.GetByUUID(ctx, createEntry.ID)
-		assert.NoError(t, err)
-		assertSameEntry(t, &getEntry, &expectedCreateEntry, "entry retrieved not the same")
+		require.NoError(t, err)
+		require.NotNil(t, getEntry.ID)
+		assert.Empty(t, cmp.Diff(expectedCreateEntry, getEntry.Entry))
+		assert.Empty(t, cmp.Diff(bookingCreationInput.BookedTimes, getEntry.BookedTimes))
 	})
 
 	t.Run("booking an already booked time should fail", func(t *testing.T) {
@@ -180,7 +235,7 @@ func TestPostgresIntegration(t *testing.T) {
 		}
 	})
 
-	t.Run("get many bookings", func(t *testing.T) {
+	t.Run("get many bookings for buyer", func(t *testing.T) {
 		t.Cleanup(func() {
 			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
 			require.NoError(t, err, "could not restore db")
@@ -190,90 +245,99 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		// Create a parking spot for testing
+		// Create a parking spots for testing
 		parkingSpotEntry, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput)
+		parkingSpotEntry_1, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput_1)
 
-		expectedEntries := make([]Entry, 0, 8)
+		expectedAllEntries := make([]Entry, 0, 8)
+		// Create another to test for entries corresponding to a particular spot
+		expectedEntries_1 := make([]Entry, 0, 8)
 
 		// Create multiple bookings and expected get many output
-		for i := range sampleTimeUnit {
-			bookingCreationInput := models.BookingCreationInput{
-				ParkingSpotID: parkingSpotUUID,
-				BookingDetails: models.BookingDetails{
-					PaidAmount:  paidAmount,
-					BookedTimes: sampleTimeUnit[i:i],
-				},
+		for eidx, _ := range sampleTimeUnit {
+			bookingCreationInput_1 := models.BookingCreationInput{
+				ParkingSpotID: parkingSpotEntry.ID,
+				PaidAmount:    paidAmount,
+				BookedTimes:   []models.TimeUnit{sampleTimeUnit[eidx]},
 			}
 
-			createEntry, _ := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
+			createEntry_1, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput_1)
+			require.NoError(t, err)
 
-			expectedCreateEntry := createExpectedEntry(createEntry.InternalID, userID, createEntry.ID, bookingCreationInput.PaidAmount, bookingCreationInput.BookedTimes)
-			expectedEntries = append(expectedEntries, expectedCreateEntry)
+			expectedCreateEntry := createExpectedEntry(createEntry_1.Entry.InternalID, createEntry_1.Entry.Booking.ID, bookingCreationInput_1.PaidAmount)
+			expectedAllEntries = append(expectedAllEntries, expectedCreateEntry)
 		}
 
-		filter := Filter{
-			UserID: omit.From(userID),
+		for eidx, _ := range sampleTimeUnit_1 {
+			bookingCreationInput_2 := models.BookingCreationInput{
+				ParkingSpotID: parkingSpotEntry_1.ID,
+				PaidAmount:    paidAmount_1,
+				BookedTimes:   []models.TimeUnit{sampleTimeUnit_1[eidx]},
+			}
+
+			createEntry_2, err_1 := repo.Create(ctx, userID, parkingSpotEntry_1.InternalID, &bookingCreationInput_2)
+			require.NoError(t, err_1)
+
+			expectedCreateEntry_1 := createExpectedEntry(createEntry_2.Entry.InternalID, createEntry_2.Entry.Booking.ID, bookingCreationInput_2.PaidAmount)
+			expectedEntries_1 = append(expectedEntries_1, expectedCreateEntry_1)
 		}
 
-		getManyEntries, err := repo.GetMany(ctx, 6, &filter)
-		require.NoError(t, err)
+		expectedAllEntries = append(expectedAllEntries, expectedEntries_1...)
 
-		for i := range getManyEntries {
-			assertSameEntry(t, &getManyEntries[i], &expectedEntries[i], "get many entries do not match")
-		}
+		fmt.Println(expectedAllEntries)
+		fmt.Println(expectedEntries_1)
+
+		t.Run("get many for a buyer without any filter", func(t *testing.T) {
+			t.Parallel()
+			// TODO: Update when cursor is functional
+
+			// var cursor omit.Val[Cursor]
+			filter := Filter{}
+
+			getManyEntries, err := repo.GetManyForBuyer(ctx, 15, userID, &filter)
+			require.NoError(t, err)
+			require.Equal(t, len(expectedAllEntries), len(getManyEntries), "Unexpected number of entries returned")
+
+			for eidx, entry := range getManyEntries {
+				require.NotNil(t, getManyEntries[len(getManyEntries)-eidx-1].ID)
+				assert.Empty(t, cmp.Diff(expectedAllEntries[len(getManyEntries)-eidx-1], entry))
+			}
+		})
+
+		t.Run("get many for a buyer corresponding to a particular spot", func(t *testing.T) {
+			t.Parallel()
+			// TODO: Update when cursor is functional
+
+			// var cursor omit.Val[Cursor]
+			filter := Filter{
+				SpotID: parkingSpotEntry_1.InternalID,
+			}
+
+			getManyEntries, err := repo.GetManyForBuyer(ctx, 15, userID, &filter)
+			require.NoError(t, err)
+			require.Equal(t, len(expectedEntries_1), len(getManyEntries), "Unexpected number of entries returned for specific spot")
+
+			for eidx, entry := range getManyEntries {
+				require.NotNil(t, getManyEntries[len(getManyEntries)-eidx-1].ID)
+				assert.Empty(t, cmp.Diff(expectedEntries_1[len(getManyEntries)-eidx-1], entry))
+			}
+		})
+
 	})
 }
 
-func assertSameEntry(t *testing.T, expected, actual *Entry, msg string) {
-	t.Helper()
-
-	assert.InEpsilon(t, expected.Booking.Details.PaidAmount, actual.Booking.Details.PaidAmount, epsilon, msg)
-	assert.Equal(t, expected.ID, actual.ID, msg)
-	assert.Equal(t, expected.InternalID, actual.InternalID, msg)
-	assert.Equal(t, expected.OwnerID, actual.OwnerID, msg)
-	assertTimesEqual(t, expected.Details.BookedTimes, actual.Details.BookedTimes)
-}
-
-func assertTimesEqual(t *testing.T, expected, actual []models.TimeUnit) bool {
-	t.Helper()
-
-	fail := func() {
-		assert.Failf(t, "time slices are not equal", "expected %v but got %v", expected, actual)
-	}
-
-	if len(expected) != len(actual) {
-		fail()
-		return false
-	}
-
-	for i := range expected {
-		if !expected[i].StartTime.Equal(actual[i].StartTime) ||
-			!expected[i].EndTime.Equal(actual[i].EndTime) ||
-			expected[i].Status != actual[i].Status {
-			fail()
-			return false
-		}
-	}
-
-	return true
-}
-
-func createExpectedEntry(internalID int64, userID int64, bookingUUID uuid.UUID, paidAmount float64, bookedTimes []models.TimeUnit) Entry {
-	expectedBookedTimes := make([]models.TimeUnit, len(bookedTimes))
-	for i, timeUnit := range bookedTimes {
-		timeUnit.Status = "booked"
-		expectedBookedTimes[i] = timeUnit
-	}
+func createExpectedEntry(internalID int64, bookingUUID uuid.UUID, paidAmount float64) Entry {
+	// expectedBookedTimes := make([]models.TimeUnit, len(bookedTimes))
+	// for i, timeUnit := range bookedTimes {
+	// 	timeUnit.Status = "booked"
+	// 	expectedBookedTimes[i] = timeUnit
+	// }
 
 	return Entry{
 		Booking: models.Booking{
-			Details: models.BookingDetails{
-				PaidAmount:  paidAmount,
-				BookedTimes: expectedBookedTimes,
-			},
-			ID: bookingUUID,
+			PaidAmount: paidAmount,
+			ID:         bookingUUID,
 		},
 		InternalID: internalID,
-		OwnerID:    userID,
 	}
 }
