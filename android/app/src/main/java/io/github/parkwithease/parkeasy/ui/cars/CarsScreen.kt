@@ -2,8 +2,12 @@ package io.github.parkwithease.parkeasy.ui.cars
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -12,8 +16,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.model.Car
 
@@ -28,7 +34,7 @@ fun CarsScreen(
 
     LaunchedEffect(Unit) { viewModel.onRefresh() }
 
-    CarsScreen(cars, onCarClick, isRefreshing, viewModel::onRefresh, modifier)
+    CarsScreen(cars, onCarClick, {}, isRefreshing, viewModel::onRefresh, modifier)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,11 +42,13 @@ fun CarsScreen(
 fun CarsScreen(
     cars: List<Car>,
     onCarClick: (Car) -> Unit,
+    onAddCar: () -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(modifier) { innerPadding ->
+    Scaffold(floatingActionButton = { AddCarButton(onAddCar = onAddCar) }, modifier = modifier) {
+        innerPadding ->
         Surface(Modifier.padding(innerPadding)) {
             PullToRefreshBox(
                 items = cars,
@@ -61,5 +69,12 @@ fun CarCard(car: Car, onClick: (Car) -> Unit, modifier: Modifier = Modifier) {
         Text(car.details.model)
         Text(car.details.make)
         Text(car.details.licensePlate)
+    }
+}
+
+@Composable
+fun AddCarButton(onAddCar: () -> Unit, modifier: Modifier = Modifier) {
+    FloatingActionButton(onClick = onAddCar, modifier) {
+        Icon(imageVector = Icons.Filled.Add, contentDescription = stringResource(R.string.add_car))
     }
 }
