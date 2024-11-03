@@ -3,11 +3,16 @@ package io.github.parkwithease.parkeasy.data.remote
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
 import io.github.parkwithease.parkeasy.model.Car
+import io.github.parkwithease.parkeasy.model.CarDetails
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.cookie
 import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +53,16 @@ constructor(
         TODO("Not yet implemented")
     }
 
-    override suspend fun createCar(car: Car): Car {
-        TODO("Not yet implemented")
+    override suspend fun createCar(car: CarDetails): Result<Unit> = runCatching {
+        val authCookie = authRepo.sessionFlow.firstOrNull()
+        if (authCookie != null) {
+            withContext(ioDispatcher) {
+                client.post("/cars") {
+                    contentType(ContentType.Application.Json)
+                    setBody(car)
+                    cookie(authCookie.name, authCookie.value)
+                }
+            }
+        }
     }
 }

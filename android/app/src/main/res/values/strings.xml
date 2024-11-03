@@ -24,4 +24,8 @@
     <string name="map">Map</string>
     <string name="profile">Profile</string>
     <string name="add_car">Add a New Car</string>
+    <string name="color">Colour</string>
+    <string name="license_plate">License Plate\n</string>
+    <string name="make">Make</string>
+    <string name="model">Model</string>
 </resources>

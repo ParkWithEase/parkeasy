@@ -1,20 +1,28 @@
 package io.github.parkwithease.parkeasy.ui.cars
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -23,6 +31,7 @@ import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.model.Car
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarsScreen(
     onCarClick: (Car) -> Unit,
@@ -32,9 +41,35 @@ fun CarsScreen(
     val cars by viewModel.cars.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
 
-    LaunchedEffect(Unit) { viewModel.onRefresh() }
+    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
+    val skipPartiallyExpanded by rememberSaveable { mutableStateOf(false) }
+    val bottomSheetState =
+        rememberModalBottomSheetState(skipPartiallyExpanded = skipPartiallyExpanded)
 
-    CarsScreen(cars, onCarClick, {}, isRefreshing, viewModel::onRefresh, modifier)
+    LaunchedEffect(Unit) { viewModel.onRefresh() }
+    CarsScreen(
+        cars,
+        onCarClick,
+        { openBottomSheet = true },
+        isRefreshing,
+        viewModel::onRefresh,
+        modifier,
+    )
+    if (openBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { openBottomSheet = false },
+            sheetState = bottomSheetState,
+        ) {
+            AddCarScreen(
+                viewModel.formState,
+                viewModel::onColorChange,
+                viewModel::onLicensePlateChange,
+                viewModel::onMakeChange,
+                viewModel::onModelChange,
+                viewModel::onAddCarClick,
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,13 +77,15 @@ fun CarsScreen(
 fun CarsScreen(
     cars: List<Car>,
     onCarClick: (Car) -> Unit,
-    onAddCar: () -> Unit,
+    onShowAddCarClick: () -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(floatingActionButton = { AddCarButton(onAddCar = onAddCar) }, modifier = modifier) {
-        innerPadding ->
+    Scaffold(
+        floatingActionButton = { AddCarButton(onShowAddCarClick = onShowAddCarClick) },
+        modifier = modifier,
+    ) { innerPadding ->
         Surface(Modifier.padding(innerPadding)) {
             PullToRefreshBox(
                 items = cars,
@@ -73,8 +110,43 @@ fun CarCard(car: Car, onClick: (Car) -> Unit, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun AddCarButton(onAddCar: () -> Unit, modifier: Modifier = Modifier) {
-    FloatingActionButton(onClick = onAddCar, modifier) {
+fun AddCarButton(onShowAddCarClick: () -> Unit, modifier: Modifier = Modifier) {
+    FloatingActionButton(onClick = onShowAddCarClick, modifier) {
         Icon(imageVector = Icons.Filled.Add, contentDescription = stringResource(R.string.add_car))
+    }
+}
+
+@Composable
+fun AddCarScreen(
+    state: AddCarFormState,
+    onColorChange: (String) -> Unit,
+    onLicensePlateChange: (String) -> Unit,
+    onMakeChange: (String) -> Unit,
+    onModelChange: (String) -> Unit,
+    onAddCarClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
+        OutlinedTextField(
+            value = state.color.value,
+            onValueChange = onColorChange,
+            label = { Text(stringResource(R.string.color)) },
+        )
+        OutlinedTextField(
+            value = state.licensePlate.value,
+            onValueChange = onLicensePlateChange,
+            label = { Text(stringResource(R.string.license_plate)) },
+        )
+        OutlinedTextField(
+            value = state.make.value,
+            onValueChange = onMakeChange,
+            label = { Text(stringResource(R.string.make)) },
+        )
+        OutlinedTextField(
+            value = state.model.value,
+            onValueChange = onModelChange,
+            label = { Text(stringResource(R.string.model)) },
+        )
+        Button(onClick = onAddCarClick) { Text(stringResource(R.string.add_car)) }
     }
 }
