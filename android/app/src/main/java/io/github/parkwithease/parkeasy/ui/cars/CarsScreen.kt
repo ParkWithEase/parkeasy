@@ -1,8 +1,13 @@
 package io.github.parkwithease.parkeasy.ui.cars
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
@@ -23,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -60,14 +66,24 @@ fun CarsScreen(
             onDismissRequest = { openBottomSheet = false },
             sheetState = bottomSheetState,
         ) {
-            AddCarScreen(
-                viewModel.formState,
-                viewModel::onColorChange,
-                viewModel::onLicensePlateChange,
-                viewModel::onMakeChange,
-                viewModel::onModelChange,
-                viewModel::onAddCarClick,
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier =
+                    Modifier.padding(horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .imePadding()
+                        .verticalScroll(rememberScrollState(), reverseScrolling = true),
+            ) {
+                AddCarScreen(
+                    viewModel.formState,
+                    viewModel::onColorChange,
+                    viewModel::onLicensePlateChange,
+                    viewModel::onMakeChange,
+                    viewModel::onModelChange,
+                    viewModel::onAddCarClick,
+                )
+            }
         }
     }
 }
@@ -126,27 +142,37 @@ fun AddCarScreen(
     onAddCarClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier.widthIn(max = 320.dp),
+    ) {
         OutlinedTextField(
             value = state.color.value,
             onValueChange = onColorChange,
             label = { Text(stringResource(R.string.color)) },
+            modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             value = state.licensePlate.value,
             onValueChange = onLicensePlateChange,
             label = { Text(stringResource(R.string.license_plate)) },
+            modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             value = state.make.value,
             onValueChange = onMakeChange,
             label = { Text(stringResource(R.string.make)) },
+            modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             value = state.model.value,
             onValueChange = onModelChange,
             label = { Text(stringResource(R.string.model)) },
+            modifier = Modifier.fillMaxWidth(),
         )
-        Button(onClick = onAddCarClick) { Text(stringResource(R.string.add_car)) }
+        Button(onClick = onAddCarClick, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.add_car))
+        }
     }
 }
