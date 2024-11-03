@@ -12,6 +12,7 @@ import io.github.parkwithease.parkeasy.ui.list.listScreen
 import io.github.parkwithease.parkeasy.ui.login.loginScreen
 import io.github.parkwithease.parkeasy.ui.login.navigateToLogin
 import io.github.parkwithease.parkeasy.ui.map.mapScreen
+import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 import io.github.parkwithease.parkeasy.ui.profile.profileScreen
 
 @Composable
@@ -19,17 +20,15 @@ fun MainNavGraph(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
+    val navBar = @Composable { NavBar(navController = navController) }
     NavHost(navController = navController, startDestination = ListRoute, modifier = modifier) {
         loginScreen(onLogin = navController::popBackStack)
-        listScreen(
-            onNavigateToLogin = navController::navigateToLogin,
-            navController = navController,
-        )
-        mapScreen(onNavigateToLogin = navController::navigateToLogin, navController = navController)
+        listScreen(onNavigateToLogin = navController::navigateToLogin, navBar = navBar)
+        mapScreen(onNavigateToLogin = navController::navigateToLogin, navBar = navBar)
         profileScreen(
             onNavigateToLogin = navController::navigateToLogin,
             onNavigateToCars = navController::navigateToCars,
-            navController = navController,
+            navBar = navBar,
         )
         carsScreen {}
     }

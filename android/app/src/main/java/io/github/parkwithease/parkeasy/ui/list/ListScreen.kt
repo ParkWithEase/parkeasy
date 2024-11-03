@@ -11,13 +11,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavHostController
-import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 
 @Composable
 fun ListScreen(
     onNavigateToLogin: () -> Unit,
-    navController: NavHostController,
+    navBar: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ListViewModel = hiltViewModel<ListViewModel>(),
 ) {
@@ -27,8 +25,7 @@ fun ListScreen(
     if (!loggedIn) {
         LaunchedEffect(Unit) { latestOnNavigateToLogin() }
     } else {
-        Scaffold(modifier = modifier, bottomBar = { NavBar(navController = navController) }) {
-            innerPadding ->
+        Scaffold(modifier = modifier, bottomBar = navBar) { innerPadding ->
             Surface(modifier = Modifier.padding(innerPadding)) { Text("List") }
         }
     }

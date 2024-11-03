@@ -24,16 +24,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavHostController
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.Profile
-import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 
 @Composable
 fun ProfileScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToCars: () -> Unit,
-    navController: NavHostController,
+    navBar: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
@@ -48,7 +46,7 @@ fun ProfileScreen(
 
         Scaffold(
             modifier = modifier,
-            bottomBar = { NavBar(navController = navController) },
+            bottomBar = navBar,
             snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
         ) { innerPadding ->
             ProfileScreen(
