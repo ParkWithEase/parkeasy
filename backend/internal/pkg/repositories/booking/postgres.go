@@ -186,6 +186,8 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, use
 	smods := []bob.Mod[*dialect.SelectQuery]{sm.Columns(dbmodels.Bookings.Columns())}
 	var whereMods []mods.Where[*dialect.SelectQuery]
 
+	whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Userid.EQ(userID))
+
 	if filter.SpotID != 0 {
 		whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Parkingspotid.EQ(filter.SpotID))
 	}
@@ -196,10 +198,65 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, use
 		sm.Limit(limit),
 		sm.OrderBy(dbmodels.BookingColumns.Bookingid).Desc(),
 	)
-	// Only add the `WHERE` clause if `whereMods` has conditions
-	if len(whereMods) > 0 {
-		smods = append(smods, psql.WhereAnd(whereMods...))
+
+	smods = append(smods, psql.WhereAnd(whereMods...))
+	query := psql.Select(smods...)
+
+	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []Entry{}, nil
+		}
+		return nil, err
 	}
+	defer entryCursor.Close()
+
+	result := make([]Entry, 0, 8)
+
+	for entryCursor.Next() {
+		get, err := entryCursor.Get()
+		if err != nil {
+			return []Entry{}, fmt.Errorf("could not fetch booking details: %w", err)
+		}
+
+		amount, ok := get.Paidamount.Float64()
+		if !ok {
+			return []Entry{}, fmt.Errorf("could not convert %v to float64", get.Paidamount)
+		}
+
+		entry := Entry{
+			Booking: models.Booking{
+				PaidAmount: amount,
+				ID:         get.Bookinguuid,
+			},
+			InternalID: get.Bookingid,
+		}
+
+		result = append(result, entry)
+	}
+
+	return result, nil
+}
+
+func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, userID int64, filter *Filter) ([]Entry, error) {
+	smods := []bob.Mod[*dialect.SelectQuery]{sm.Columns(dbmodels.Bookings.Columns())}
+	var whereMods []mods.Where[*dialect.SelectQuery]
+
+	whereMods = append(whereMods, dbmodels.SelectWhere.Parkingspots.Userid.EQ(userID))
+
+	if filter.SpotID != 0 {
+		whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Parkingspotid.EQ(filter.SpotID))
+	}
+
+	smods = append(
+		smods,
+		sm.From(dbmodels.Bookings.Name(ctx)),
+		sm.Limit(limit),
+		dbmodels.SelectJoins.Bookings.InnerJoin.ParkingspotidParkingspot(ctx),
+		sm.OrderBy(dbmodels.BookingColumns.Bookingid).Desc(),
+	)
+
+	smods = append(smods, psql.WhereAnd(whereMods...))
 	query := psql.Select(smods...)
 
 	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
