@@ -1,14 +1,8 @@
 <script lang="ts">
     import { Modal } from 'carbon-components-svelte';
+    export let listing;
     export let open = false;
     import { MapLibre, DefaultMarker } from 'svelte-maplibre';
-    import type { components } from '$lib/sdk/schema';
-    type ParkingSpot = components["schemas"]["ParkingSpot"];
-
-    export let listing : ParkingSpot;
-
-    const defaultZoom : number = 13;
-
 </script>
 
 <Modal
@@ -26,18 +20,18 @@
             <p><strong>State:</strong> {listing.location.state}</p>
             <p><strong>Features:</strong></p>
             <ul>
-                <li>Charging Station: {listing.features?.charging_station ? 'Yes' : 'No'}</li>
-                <li>Plug-In: {listing.features?.plug_in ? 'Yes' : 'No'}</li>
-                <li>Shelter: {listing.features?.shelter ? 'Yes' : 'No'}</li>
+                <li>Charging Station: {listing.features.charging_station ? 'Yes' : 'No'}</li>
+                <li>Plug-In: {listing.features.plug_in ? 'Yes' : 'No'}</li>
+                <li>Shelter: {listing.features.shelter ? 'Yes' : 'No'}</li>
             </ul>
         </div>
         <div>
             <MapLibre
-                center={[listing.location.longitude ?? 0, listing.location.latitude ?? 0]}
-                zoom={defaultZoom}
+                center={[listing.location.longitude, listing.location.latitude]}
+                zoom={13}
                 style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
             >
-                <DefaultMarker lngLat={[listing.location.longitude ?? 0, listing.location.latitude ?? 0]} />
+                <DefaultMarker lngLat={[listing.location.longitude, listing.location.latitude]} />
             </MapLibre>
         </div>
     </div>

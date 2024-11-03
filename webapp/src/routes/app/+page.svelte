@@ -8,6 +8,7 @@
     import { Search } from 'carbon-components-svelte';
     import type { LocationResult } from '$lib/types/spot/location-result';
     import BottomPanelOpen from 'carbon-icons-svelte/lib/BottomPanelOpen.svelte';
+    import DetailModal from '$lib/components/spot-listings/detail-modal.svelte';
 
     const apiKey = import.meta.env.VITE_GEOCODING_API_KEY;
     const maxZoom: number = 12;
@@ -21,9 +22,9 @@
     let results: LocationResult[] = [];
     let dropdownOpen: boolean = false;
     let selectedListingId: string | null = null;
-
     let showBackToTop: boolean = false;
     let listingsContainer: HTMLDivElement;
+    let modalOpen : boolean = false;
 
     let debounceTimer: number | undefined;
 
@@ -71,19 +72,6 @@
         }
     };
 
-    onMount(() => {
-        document.addEventListener('click', handleClickOutside);
-        listingsContainer.addEventListener('scroll', handleScroll);
-        return () => {
-            document.removeEventListener('click', handleClickOutside);
-        };
-    });
-
-    onDestroy(() => {
-        document.removeEventListener('click', handleClickOutside);
-        clearTimeout(debounceTimer);
-    });
-
     const handleMarkerClick = (listingId: string) => {
         selectedListingId = listingId;
         document
@@ -100,6 +88,22 @@
     const handleScroll = () => {
         showBackToTop = listingsContainer.scrollTop > 0;
     };
+
+    const handleListingClick = () => {
+        modalOpen = true;
+    };
+
+    onMount(() => {
+        document.addEventListener('click', handleClickOutside);
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+        };
+    });
+
+    onDestroy(() => {
+        document.removeEventListener('click', handleClickOutside);
+        clearTimeout(debounceTimer);
+    });
 </script>
 
 <Navbar />
@@ -127,12 +131,15 @@
         {/if}
 
         {#each spots_data as listing}
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <div
                 class="booking-info-container {listing.id === selectedListingId ? 'highlight' : ''}"
                 id={`listing-${listing.id}`}
+                on:click={() => handleListingClick()}
             >
-                <SpotsListComponent {listing} />
+                <SpotsListComponent {listing}/>
             </div>
+            <DetailModal bind:open={modalOpen} {listing} />
         {/each}
 
         {#if showBackToTop}

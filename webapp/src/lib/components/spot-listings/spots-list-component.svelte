@@ -1,19 +1,13 @@
 <script lang="ts">
     import { ChargingStation, PlugFilled, Home } from 'carbon-icons-svelte';
     import { TooltipIcon } from 'carbon-components-svelte';
-    import DetailModal from './detail-modal.svelte';
     export let listing;
 
-    let modalOpen = false;
-
-    const handleClick = () => {
-        modalOpen = true;
-    };
 </script>
 
 <div
     class="listing-info"
-    on:click={() => handleClick()}
+    
     on:keyup={() => {}}
     role="button"
     tabindex="0"
@@ -46,7 +40,6 @@
         </div>
     </div>
 </div>
-<DetailModal bind:open={modalOpen} {listing} />
 
 <style>
     .listing-info {
