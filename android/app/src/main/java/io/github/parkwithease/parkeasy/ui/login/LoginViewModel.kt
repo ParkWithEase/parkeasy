@@ -27,16 +27,14 @@ import kotlinx.coroutines.launch
 class LoginViewModel
 @Inject
 constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : ViewModel() {
-
     val loggedIn = authRepo.statusFlow
-
-    var formState by mutableStateOf(LoginFormState())
-        private set
+    val snackbarState = SnackbarHostState()
 
     private val _formEnabled = MutableStateFlow(true)
     val formEnabled = _formEnabled.asStateFlow()
 
-    val snackbarState = SnackbarHostState()
+    var formState by mutableStateOf(LoginFormState())
+        private set
 
     fun onLoginPress() {
         viewModelScope.launch {

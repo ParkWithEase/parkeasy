@@ -24,25 +24,29 @@ fun MapScreen(
     modifier: Modifier = Modifier,
     viewModel: MapViewModel = hiltViewModel<MapViewModel>(),
 ) {
-    val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
     val loggedIn by viewModel.loggedIn.collectAsState(true)
+    val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
 
     if (!loggedIn) {
         LaunchedEffect(Unit) { latestOnNavigateToLogin() }
     } else {
-        val mapViewCamera =
-            rememberSaveableMapViewCamera(
-                // Somewhere above Winnipeg
-                MapViewCamera(state = CameraState.Centered(latitude = 49.9, longitude = -97.1))
-            )
         Scaffold(modifier = modifier, bottomBar = navBar) { innerPadding ->
-            Surface(modifier = Modifier.padding(innerPadding)) {
-                MapView(
-                    modifier = Modifier.fillMaxSize(),
-                    styleUrl = LocalMapLibreStyleProvider.current.getStyleUrl(),
-                    camera = mapViewCamera,
-                )
-            }
+            MapScreen(modifier = Modifier.padding(innerPadding))
         }
+    }
+}
+
+@Composable
+fun MapScreen(modifier: Modifier = Modifier) {
+    // Somewhere above Winnipeg
+    val cameraState = CameraState.Centered(latitude = 49.9, longitude = -97.1)
+    val mapViewCamera = rememberSaveableMapViewCamera(MapViewCamera(state = cameraState))
+
+    Surface(modifier) {
+        MapView(
+            modifier = Modifier.fillMaxSize(),
+            styleUrl = LocalMapLibreStyleProvider.current.getStyleUrl(),
+            camera = mapViewCamera,
+        )
     }
 }

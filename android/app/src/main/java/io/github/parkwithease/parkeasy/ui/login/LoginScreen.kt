@@ -60,8 +60,10 @@ fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val loggedIn by viewModel.loggedIn.collectAsState(false)
-    val formEnabled by viewModel.formEnabled.collectAsState()
     val latestOnLogin by rememberUpdatedState(onLogin)
+
+    val formEnabled by viewModel.formEnabled.collectAsState()
+
     LaunchedEffect(loggedIn) {
         if (loggedIn) {
             latestOnLogin()
@@ -72,7 +74,7 @@ fun LoginScreen(
         snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
         modifier = modifier,
     ) { innerPadding ->
-        LoginScreenInner(
+        LoginScreen(
             viewModel.formState,
             viewModel::onNameChange,
             viewModel::onEmailChange,
@@ -88,7 +90,7 @@ fun LoginScreen(
 }
 
 @Composable
-private fun LoginScreenInner(
+private fun LoginScreen(
     formState: LoginFormState,
     onNameChange: (String) -> Unit,
     onEmailChange: (String) -> Unit,
@@ -364,13 +366,13 @@ private fun SwitchRegisterText(
 @Composable
 @Preview
 private fun PreviewLoginScreen() {
-    LoginScreenInner(LoginFormState(), {}, {}, {}, {}, {}, {}, {})
+    LoginScreen(LoginFormState(), {}, {}, {}, {}, {}, {}, {})
 }
 
 @Composable
 @Preview
 private fun PreviewLoginScreenError() {
-    LoginScreenInner(
+    LoginScreen(
         LoginFormState(
             email = LoginFieldState(value = "not-an-email", error = "Invalid email"),
             confirmPassword = LoginFieldState(error = "Password does not match"),

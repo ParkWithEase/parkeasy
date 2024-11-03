@@ -19,14 +19,19 @@ fun ListScreen(
     modifier: Modifier = Modifier,
     viewModel: ListViewModel = hiltViewModel<ListViewModel>(),
 ) {
-    val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
     val loggedIn by viewModel.loggedIn.collectAsState(true)
+    val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
 
     if (!loggedIn) {
         LaunchedEffect(Unit) { latestOnNavigateToLogin() }
     } else {
         Scaffold(modifier = modifier, bottomBar = navBar) { innerPadding ->
-            Surface(modifier = Modifier.padding(innerPadding)) { Text("List") }
+            ListScreen(modifier = Modifier.padding(innerPadding))
         }
     }
+}
+
+@Composable
+fun ListScreen(modifier: Modifier = Modifier) {
+    Surface(modifier) { Text("List") }
 }

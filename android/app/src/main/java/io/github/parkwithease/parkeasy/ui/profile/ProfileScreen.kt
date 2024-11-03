@@ -35,8 +35,8 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
-    val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
     val loggedIn by viewModel.loggedIn.collectAsState(true)
+    val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
 
     if (!loggedIn) {
         LaunchedEffect(Unit) { latestOnNavigateToLogin() }

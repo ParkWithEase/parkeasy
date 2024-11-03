@@ -16,13 +16,11 @@ import kotlinx.coroutines.launch
 class ProfileViewModel
 @Inject
 constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : ViewModel() {
+    val loggedIn = authRepo.statusFlow
+    val snackbarState = SnackbarHostState()
 
     private val _profile = MutableStateFlow(Profile("", ""))
     val profile = _profile.asStateFlow()
-
-    val loggedIn = authRepo.statusFlow
-
-    val snackbarState = SnackbarHostState()
 
     fun refresh() {
         viewModelScope.launch {
