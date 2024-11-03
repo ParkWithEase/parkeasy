@@ -11,7 +11,6 @@ import (
 type Entry struct {
 	models.Booking
 	InternalID int64 // The internal ID of this booking
-	OwnerID    int64 // The user ID who made this booking
 }
 
 type EntryWithTimes struct {
@@ -36,8 +35,8 @@ var (
 )
 
 type Repository interface {
-	Create(ctx context.Context, userID int64, spotID int64, booking *models.BookingCreationInput) (Entry, error)
-	GetByUUID(ctx context.Context, bookingID uuid.UUID) (Entry, error)
+	Create(ctx context.Context, userID int64, spotID int64, booking *models.BookingCreationInput) (EntryWithTimes, error)
+	GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error)
 	GetManyForSeller(ctx context.Context, limit int, filter *Filter) ([]Entry, error)
 	GetManyForBuyer(ctx context.Context, limit int, userID int64, filter *Filter) ([]Entry, error)
 }
