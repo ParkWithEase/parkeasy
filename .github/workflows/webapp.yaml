@@ -45,6 +45,14 @@ jobs:
 
       - run: npm ci
         working-directory: webapp
+
+      - name: Add svelte-check annotator
+        uses: prgm-dev/svelte-check-pr-annotator@main
+
+      - name: Run svelte checker
+        run: npm run check
+        working-directory: webapp
+
       - run: npm run lint
         working-directory: webapp
 

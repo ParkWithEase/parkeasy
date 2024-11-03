@@ -1,13 +1,14 @@
 package io.github.parkwithease.parkeasy.ui.list
 
+import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 
-private const val ListRoute = "list"
+const val ListRoute = "list"
 
-fun NavGraphBuilder.listScreen() {
-    composable(ListRoute) { ListScreen() }
+fun NavGraphBuilder.listScreen(onNavigateToLogin: () -> Unit, navBar: @Composable () -> Unit) {
+    composable(ListRoute) { ListScreen(onNavigateToLogin = onNavigateToLogin, navBar = navBar) }
 }
 
-fun NavController.navigateToList() = this.navigate(ListRoute)
+@Suppress("unused") fun NavController.navigateToList() = this.navigate(ListRoute)

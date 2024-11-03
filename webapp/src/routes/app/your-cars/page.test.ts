@@ -1,4 +1,4 @@
-import { expect, test, describe, beforeAll, afterAll, afterEach, beforeEach, vi } from 'vitest';
+import { expect, test, describe, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { load } from './+page';
 import { render, screen } from '@testing-library/svelte';
@@ -7,17 +7,11 @@ import { BACKEND_SERVER } from '$lib/constants';
 import CarPage from './+page.svelte';
 import { test_data } from './test_data';
 import userEvent from '@testing-library/user-event';
-import paginate from '$lib/utils/paginate';
-import { newClient } from '$lib/utils/client';
+import type { PageData, PageLoadEvent } from './$types';
+import { mock } from 'vitest-mock-extended';
 
 const server = setupServer();
 const user = userEvent.setup();
-const client = newClient({ fetch: global.fetch });
-let mockData = {
-    cars: test_data,
-    hasNext: false,
-    paging: paginate(client, '/cars', { params: { query: { count: 5 } } })
-};
 
 beforeAll(() => {
     // NOTE: server.listen must be called before `createClient` is used to ensure
@@ -27,14 +21,6 @@ beforeAll(() => {
             throw new Error(`No request handler found for ${request.method} ${request.url}`);
         }
     });
-});
-
-beforeEach(() => {
-    mockData = {
-        cars: test_data,
-        hasNext: false,
-        paging: paginate(client, '/cars', { params: { query: { count: 5 } } })
-    };
 });
 
 afterEach(() => server.resetHandlers());
@@ -47,8 +33,10 @@ describe('fetch cars information test', () => {
         server.use(
             http.get(`${BACKEND_SERVER}/cars`, () => HttpResponse.json(test_data, { status: 200 }))
         );
-        const data = await load({ fetch: global.fetch });
-        expect(data?.cars).toStrictEqual(test_data);
+
+        const loadEvent = mock<PageLoadEvent>({ fetch: global.fetch });
+        const data = (await load(loadEvent)) as PageData;
+        expect(data.cars).toStrictEqual(test_data);
 
         render(CarPage, { data: data });
         test_data.forEach((car) => {
@@ -60,13 +48,14 @@ describe('fetch cars information test', () => {
     });
 
     test('test if cars create work correctly', async () => {
+        const data = mock<PageData>({ cars: test_data });
         const newCarDetail = {
             license_plate: 'lic-new',
             make: 'color-new',
             model: 'model-new',
             color: 'make-new'
         };
-        render(CarPage, { data: mockData });
+        render(CarPage, { data: data });
 
         server.use(
             http.post(`${BACKEND_SERVER}/cars`, () =>
@@ -148,12 +137,13 @@ describe('fetch cars information test', () => {
     });
 
     test('Test delete functionality', async () => {
+        const data = mock<PageData>({ cars: test_data });
         window.confirm = vi.fn(() => {
             console.log('confirm');
             return true;
         });
 
-        render(CarPage, { data: mockData });
+        render(CarPage, { data: data });
 
         server.use(
             http.delete(`${BACKEND_SERVER}/cars/:id`, () =>
@@ -169,9 +159,10 @@ describe('fetch cars information test', () => {
     });
 
     test('Test edit functionality', async () => {
-        render(CarPage, { data: mockData });
-        const carToEdit = screen.getByText(test_data[0].details.license_plate);
-        await user.click(carToEdit);
+        const data = mock<PageData>({ cars: test_data });
+        render(CarPage, { data: data });
+        const car_to_edit = screen.getByText(test_data[0].details.license_plate);
+        await user.click(car_to_edit);
         let editButton = screen.getByRole('button', { name: 'Edit' });
         await user.click(editButton);
 

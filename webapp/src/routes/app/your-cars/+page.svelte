@@ -37,11 +37,11 @@
         loadLock = true;
         data.paging
             .next()
-            .then(({ value }) => {
-                if (value?.data) {
-                    data.cars = [...data.cars, ...value.data];
+            .then(({ value: { data: cars }, done }) => {
+                if (cars) {
+                    data.cars = [...data.cars, ...cars];
                 }
-                canLoadMore = !!value?.hasNext;
+                canLoadMore = !done;
             })
             .finally(() => {
                 loadLock = false;
@@ -77,6 +77,10 @@
     }
 
     function handleDelete() {
+        if (selectedCarID == null) {
+            return;
+        }
+
         if (confirm('Are you sure you want to remove this car?')) {
             client
                 .DELETE('/cars/{id}', {
@@ -88,7 +92,7 @@
                     if (error) {
                         errorMessage = getErrorMessage(error);
                     } else {
-                        data.cars = data.cars?.filter(function (item) {
+                        data.cars = data.cars.filter(function (item) {
                             return item.id !== selectedCarID;
                         });
                         errorMessage = '';
@@ -107,6 +111,9 @@
 
     function handleEdit(event: Event) {
         event.preventDefault();
+        if (selectedCarID == null) {
+            return;
+        }
         const formData = new FormData(event.target as HTMLFormElement);
         client
             .PUT('/cars/{id}', {
@@ -123,7 +130,7 @@
             .then(({ data: change_car, error }) => {
                 if (change_car) {
                     currentModalState = CarModalState.VIEW;
-                    data.cars = data.cars?.map((car) => {
+                    data.cars = data.cars.map((car) => {
                         if (car.id == change_car.id) {
                             return change_car;
                         } else {
@@ -154,7 +161,7 @@
 
 <div>
     {#key data.cars}
-        {#each data.cars ?? [] as car}
+        {#each data.cars as car}
             <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <div id={car.id} on:click={() => selectCarIndex(car.id, car.details)}>
                 <CarDisplay car={car.details}></CarDisplay>
@@ -169,13 +176,15 @@
 </IntersectionObserver>
 
 {#if currentModalState == CarModalState.EDIT || currentModalState == CarModalState.VIEW}
-    <CarViewEditModal
-        bind:state={currentModalState}
-        bind:carInfo={selectedCarInfo}
-        on:submit={handleEdit}
-        on:delete={handleDelete}
-        bind:errorMessage
-    />
+    {#if selectedCarInfo}
+        <CarViewEditModal
+            bind:state={currentModalState}
+            bind:carInfo={selectedCarInfo}
+            on:submit={handleEdit}
+            on:delete={handleDelete}
+            bind:errorMessage
+        />
+    {/if}
 {:else if currentModalState == CarModalState.ADD}
     <CarAddModal bind:state={currentModalState} on:submit={handleCreate} bind:errorMessage />
 {/if}

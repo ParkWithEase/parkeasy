@@ -20,4 +20,7 @@
     <string name="cars">Cars</string>
     <string name="map_style_light_format">https://api.protomaps.com/styles/v2/light.json?key=%s</string>
     <string name="map_style_dark_format">https://api.protomaps.com/styles/v2/dark.json?key=%s</string>
+    <string name="list">List</string>
+    <string name="map">Map</string>
+    <string name="profile">Profile</string>
 </resources>

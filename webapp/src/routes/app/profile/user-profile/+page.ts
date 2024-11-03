@@ -1,6 +1,7 @@
 import type { PageLoad } from './$types';
 import { newClient } from '$lib/utils/client';
 import { redirect, error } from '@sveltejs/kit';
+import { modelToError } from '$lib/utils/error-adapters';
 
 export const load: PageLoad = async ({ fetch }) => {
     const client = newClient({ fetch });
@@ -12,8 +13,7 @@ export const load: PageLoad = async ({ fetch }) => {
                 redirect(307, '/auth/login');
                 break;
             default:
-                error(err.status ?? 500, err.detail);
-                break;
+                error(err.status ?? 500, modelToError(err));
         }
     }
 
