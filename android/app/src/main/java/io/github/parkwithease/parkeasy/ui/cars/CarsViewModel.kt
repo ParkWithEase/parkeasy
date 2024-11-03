@@ -47,12 +47,12 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
         }
     }
 
-    fun onColorChange(value: String) {
-        formState = formState.run { copy(color = color.copy(value = value)) }
-    }
-
     fun onLicensePlateChange(value: String) {
         formState = formState.run { copy(licensePlate = licensePlate.copy(value = value)) }
+    }
+
+    fun onColorChange(value: String) {
+        formState = formState.run { copy(color = color.copy(value = value)) }
     }
 
     fun onMakeChange(value: String) {

@@ -82,8 +82,8 @@ fun CarsScreen(
             ) {
                 AddCarScreen(
                     viewModel.formState,
-                    viewModel::onColorChange,
                     viewModel::onLicensePlateChange,
+                    viewModel::onColorChange,
                     viewModel::onMakeChange,
                     viewModel::onModelChange,
                     viewModel::onAddCarClick,
@@ -114,8 +114,9 @@ fun CarsScreen(
                 isRefreshing = isRefreshing,
                 onRefresh = onRefresh,
                 modifier = Modifier.padding(4.dp),
-                card = { car, onClick -> CarCard(car, onClick) },
-            )
+            ) { car, onClick ->
+                CarCard(car, onClick)
+            }
         }
     }
 }
@@ -149,8 +150,8 @@ fun AddCarButton(onShowAddCarClick: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 fun AddCarScreen(
     state: AddCarFormState,
-    onColorChange: (String) -> Unit,
     onLicensePlateChange: (String) -> Unit,
+    onColorChange: (String) -> Unit,
     onMakeChange: (String) -> Unit,
     onModelChange: (String) -> Unit,
     onAddCarClick: () -> Unit,
@@ -162,15 +163,15 @@ fun AddCarScreen(
         modifier = modifier.widthIn(max = 320.dp),
     ) {
         OutlinedTextField(
-            value = state.color.value,
-            onValueChange = onColorChange,
-            label = { Text(stringResource(R.string.color)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
             value = state.licensePlate.value,
             onValueChange = onLicensePlateChange,
             label = { Text(stringResource(R.string.license_plate)) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = state.color.value,
+            onValueChange = onColorChange,
+            label = { Text(stringResource(R.string.color)) },
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
