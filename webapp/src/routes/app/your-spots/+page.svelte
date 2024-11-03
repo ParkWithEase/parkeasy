@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Button } from 'carbon-components-svelte';
-    import type { PageData } from '../$types';
+    import type { PageData } from './$types';
     import { Add } from 'carbon-icons-svelte';
     import SpotDisplay from '$lib/components/spot-component/spot-display.svelte';
 

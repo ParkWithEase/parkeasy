@@ -1,7 +1,10 @@
 <script lang="ts">
     import { Form, Modal, TextInput, Checkbox } from 'carbon-components-svelte';
+    import type { components } from '$lib/sdk/schema';
+    type ParkingSpot = components['schemas']['ParkingSpot'];
     export let openState: boolean;
-    export let spotInfo;
+    export let spotInfo: ParkingSpot;
+    let form: HTMLFormElement | null;
 </script>
 
 <Modal
@@ -10,9 +13,9 @@
     primaryButtonText="Confirm"
     secondaryButtonText="Cancel"
     on:click:button--secondary={() => (openState = false)}
-    on:click:button--primary={() => document.getElementById('spot-edit-form').requestSubmit()}
+    on:click:button--primary={() => form?.requestSubmit()}
 >
-    <Form on:submit id="spot-edit-form">
+    <Form on:submit bind:ref={form}>
         <TextInput
             required
             labelText="Street address"
@@ -49,12 +52,12 @@
             value={spotInfo?.location.postal_code}
         />
         <p>Utilities</p>
-        <Checkbox name="shelter" labelText="shelter" checked={spotInfo.features.shelter} />
-        <Checkbox name="plug-in" labelText="Plug-in" checked={spotInfo.features.plug_in} />
+        <Checkbox name="shelter" labelText="shelter" checked={spotInfo.features?.shelter} />
+        <Checkbox name="plug-in" labelText="Plug-in" checked={spotInfo.features?.plug_in} />
         <Checkbox
             name="charging-station"
             labelText="Charging Station"
-            checked={spotInfo.features.charging_station}
+            checked={spotInfo.features?.charging_station}
         />
     </Form>
 </Modal>

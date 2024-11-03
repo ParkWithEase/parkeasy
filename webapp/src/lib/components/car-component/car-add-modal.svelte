@@ -4,6 +4,8 @@
 
     export let state: CarModalState;
     export let errorMessage: string;
+
+    let form: HTMLFormElement | null;
 </script>
 
 <Modal
@@ -13,12 +15,12 @@
     secondaryButtonText="Cancel"
     on:click:button--secondary={() => (state = CarModalState.NONE)}
     on:close={() => {
-        document.getElementById('car-create-form').reset();
+        form?.reset();
         errorMessage = '';
         state = CarModalState.NONE;
     }}
     on:open
-    on:click:button--primary={() => document.getElementById('car-create-form').requestSubmit()}
+    on:click:button--primary={() => form?.requestSubmit()}
 >
     {#if errorMessage}
         <InlineNotification
@@ -27,7 +29,7 @@
             on:close={() => (errorMessage = '')}
         />
     {/if}
-    <Form on:submit id="car-create-form">
+    <Form on:submit bind:ref={form}>
         <TextInput
             required
             labelText="License plate"
