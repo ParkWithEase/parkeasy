@@ -80,9 +80,9 @@ fun LoginScreen(
             viewModel::onEmailChange,
             viewModel::onPasswordChange,
             viewModel::onConfirmPasswordChange,
-            viewModel::onLoginPress,
-            viewModel::onRegisterPress,
-            viewModel::onRequestResetPress,
+            viewModel::onLoginClick,
+            viewModel::onRegisterClick,
+            viewModel::onRequestResetClick,
             enabled = formEnabled,
             modifier = Modifier.padding(innerPadding),
         )
@@ -96,9 +96,9 @@ private fun LoginScreen(
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onConfirmPasswordChange: (String) -> Unit,
-    onLogin: () -> Unit,
-    onRegister: () -> Unit,
-    onRequestReset: () -> Unit,
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit,
+    onRequestResetClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -125,9 +125,9 @@ private fun LoginScreen(
                 onEmailChange = onEmailChange,
                 onPasswordChange = onPasswordChange,
                 onConfirmPasswordChange = onConfirmPasswordChange,
-                onLogin = onLogin,
-                onRegister = onRegister,
-                onRequestReset = onRequestReset,
+                onLoginClick = onLoginClick,
+                onRegisterClick = onRegisterClick,
+                onRequestResetClick = onRequestResetClick,
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -143,9 +143,9 @@ private fun LoginForm(
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onConfirmPasswordChange: (String) -> Unit,
-    onLogin: () -> Unit,
-    onRegister: () -> Unit,
-    onRequestReset: () -> Unit,
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit,
+    onRequestResetClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -163,10 +163,10 @@ private fun LoginForm(
         )
         LoginButtons(
             loginMode,
-            onLogin = onLogin,
-            onRegister = onRegister,
-            onRequestReset = onRequestReset,
-            onSwitchMode = { loginMode = it },
+            onLoginClick = onLoginClick,
+            onRegisterClick = onRegisterClick,
+            onRequestResetClick = onRequestResetClick,
+            onSwitchModeClick = { loginMode = it },
             enabled = enabled,
             modifier = Modifier.widthIn(max = 320.dp),
         )
@@ -243,10 +243,10 @@ private fun LoginFields(
 @Composable
 private fun LoginButtons(
     mode: LoginMode,
-    onLogin: () -> Unit,
-    onRegister: () -> Unit,
-    onRequestReset: () -> Unit,
-    onSwitchMode: (LoginMode) -> Unit,
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit,
+    onRequestResetClick: () -> Unit,
+    onSwitchModeClick: (LoginMode) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -258,15 +258,15 @@ private fun LoginButtons(
                     else R.string.forgot_password
                 ),
                 if (mode == LoginMode.FORGOT) LoginMode.LOGIN else LoginMode.FORGOT,
-                onSwitchMode,
+                onSwitchModeClick,
             )
         }
         Button(
             onClick =
                 when (mode) {
-                    LoginMode.LOGIN -> onLogin
-                    LoginMode.REGISTER -> onRegister
-                    LoginMode.FORGOT -> onRequestReset
+                    LoginMode.LOGIN -> onLoginClick
+                    LoginMode.REGISTER -> onRegisterClick
+                    LoginMode.FORGOT -> onRequestResetClick
                 },
             enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
@@ -292,7 +292,7 @@ private fun LoginButtons(
                     else R.string.register_instead
                 ),
                 if (mode == LoginMode.REGISTER) LoginMode.LOGIN else LoginMode.REGISTER,
-                onSwitchMode,
+                onSwitchModeClick,
                 modifier = Modifier.fillMaxWidth(),
             )
         }

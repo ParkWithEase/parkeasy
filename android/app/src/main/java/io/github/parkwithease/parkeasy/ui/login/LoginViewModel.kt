@@ -36,7 +36,7 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     var formState by mutableStateOf(LoginFormState())
         private set
 
-    fun onLoginPress() {
+    fun onLoginClick() {
         viewModelScope.launch {
             _formEnabled.value = false
             userRepo
@@ -50,7 +50,7 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
         }
     }
 
-    fun onRegisterPress() {
+    fun onRegisterClick() {
         if (formState.password.value != formState.confirmPassword.value) return
 
         viewModelScope.launch {
@@ -72,7 +72,7 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
         }
     }
 
-    fun onRequestResetPress() {
+    fun onRequestResetClick() {
         viewModelScope.launch {
             _formEnabled.value = false
             userRepo

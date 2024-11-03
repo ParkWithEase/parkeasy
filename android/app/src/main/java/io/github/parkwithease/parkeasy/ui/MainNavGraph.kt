@@ -22,7 +22,7 @@ fun MainNavGraph(
 ) {
     val navBar = @Composable { NavBar(navController = navController) }
     NavHost(navController = navController, startDestination = ListRoute, modifier = modifier) {
-        loginScreen(onLogin = navController::popBackStack)
+        loginScreen(onNavigateFromLogin = navController::popBackStack)
         listScreen(onNavigateToLogin = navController::navigateToLogin, navBar = navBar)
         mapScreen(onNavigateToLogin = navController::navigateToLogin, navBar = navBar)
         profileScreen(
