@@ -1,3 +1,3 @@
 package io.github.parkwithease.parkeasy.model
 
-data class FieldState(val value: String = "", val error: String? = null)
+data class FieldState<T>(val value: T, val error: String? = null)

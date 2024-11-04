@@ -100,9 +100,9 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
 }
 
 data class AddSpotFormState(
-    val streetAddress: FieldState = FieldState(),
-    val city: FieldState = FieldState(),
-    val state: FieldState = FieldState(),
-    val countryCode: FieldState = FieldState(),
-    val postalCode: FieldState = FieldState(),
+    val streetAddress: FieldState<String> = FieldState(""),
+    val city: FieldState<String> = FieldState(""),
+    val state: FieldState<String> = FieldState(""),
+    val countryCode: FieldState<String> = FieldState(""),
+    val postalCode: FieldState<String> = FieldState(""),
 )

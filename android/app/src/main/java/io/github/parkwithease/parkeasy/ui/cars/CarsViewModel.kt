@@ -13,6 +13,7 @@ import io.github.parkwithease.parkeasy.model.Car
 import io.github.parkwithease.parkeasy.model.CarDetails
 import io.github.parkwithease.parkeasy.model.ErrorDetail
 import io.github.parkwithease.parkeasy.model.ErrorModel
+import io.github.parkwithease.parkeasy.model.FieldState
 import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -152,11 +153,9 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
     }
 }
 
-data class AddCarFieldState(val value: String = "", val error: String? = null)
-
 data class AddCarFormState(
-    val color: AddCarFieldState = AddCarFieldState(),
-    val licensePlate: AddCarFieldState = AddCarFieldState(),
-    val make: AddCarFieldState = AddCarFieldState(),
-    val model: AddCarFieldState = AddCarFieldState(),
+    val color: FieldState<String> = FieldState(""),
+    val licensePlate: FieldState<String> = FieldState(""),
+    val make: FieldState<String> = FieldState(""),
+    val model: FieldState<String> = FieldState(""),
 )
