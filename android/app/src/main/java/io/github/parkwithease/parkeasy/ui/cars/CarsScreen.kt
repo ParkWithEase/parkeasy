@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -40,17 +41,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.model.Car
+import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.ui.theme.Typography
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CarsScreen(
-    onCarClick: (Car) -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: CarsViewModel = hiltViewModel(),
-) {
+fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltViewModel()) {
     val cars by viewModel.cars.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    var editMode by rememberSaveable { mutableStateOf(EditMode.ADD) }
 
     var openBottomSheet by rememberSaveable { mutableStateOf(false) }
     val skipPartiallyExpanded by rememberSaveable { mutableStateOf(false) }
@@ -60,10 +59,22 @@ fun CarsScreen(
     LaunchedEffect(Unit) { viewModel.onRefresh() }
     CarsScreen(
         cars,
-        onCarClick,
-        { openBottomSheet = true },
+        { car ->
+            viewModel.currentlyEditingId = car.id
+            viewModel.onLicensePlateChange(car.details.licensePlate)
+            viewModel.onColorChange(car.details.color)
+            viewModel.onMakeChange(car.details.make)
+            viewModel.onModelChange(car.details.model)
+            editMode = EditMode.EDIT
+            openBottomSheet = true
+        },
+        {
+            editMode = EditMode.ADD
+            openBottomSheet = true
+        },
         isRefreshing,
         viewModel::onRefresh,
+        { SnackbarHost(hostState = viewModel.snackbarState) },
         modifier,
     )
     if (openBottomSheet) {
@@ -81,12 +92,14 @@ fun CarsScreen(
                         .verticalScroll(rememberScrollState(), reverseScrolling = true),
             ) {
                 AddCarScreen(
+                    editMode,
                     viewModel.formState,
                     viewModel::onLicensePlateChange,
                     viewModel::onColorChange,
                     viewModel::onMakeChange,
                     viewModel::onModelChange,
                     viewModel::onAddCarClick,
+                    viewModel::onEditCarClick,
                 )
             }
         }
@@ -101,10 +114,12 @@ fun CarsScreen(
     onShowAddCarClick: () -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
+    snackbarHost: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
         floatingActionButton = { AddCarButton(onShowAddCarClick = onShowAddCarClick) },
+        snackbarHost = snackbarHost,
         modifier = modifier,
     ) { innerPadding ->
         Surface(Modifier.padding(innerPadding)) {
@@ -149,12 +164,14 @@ fun AddCarButton(onShowAddCarClick: () -> Unit, modifier: Modifier = Modifier) {
 
 @Composable
 fun AddCarScreen(
+    editMode: EditMode,
     state: AddCarFormState,
     onLicensePlateChange: (String) -> Unit,
     onColorChange: (String) -> Unit,
     onMakeChange: (String) -> Unit,
     onModelChange: (String) -> Unit,
     onAddCarClick: () -> Unit,
+    onEditCarClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -186,8 +203,15 @@ fun AddCarScreen(
             label = { Text(stringResource(R.string.model)) },
             modifier = Modifier.fillMaxWidth(),
         )
-        Button(onClick = onAddCarClick, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.add_car))
+        Button(
+            onClick = if (editMode == EditMode.ADD) onAddCarClick else onEditCarClick,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                stringResource(
+                    if (editMode == EditMode.ADD) R.string.add_car else R.string.edit_car
+                )
+            )
         }
     }
 }

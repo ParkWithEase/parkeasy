@@ -31,6 +31,6 @@ fun MainNavGraph(
             onNavigateToCars = navController::navigateToCars,
             navBar = navBar,
         )
-        carsScreen {}
+        carsScreen()
     }
 }
