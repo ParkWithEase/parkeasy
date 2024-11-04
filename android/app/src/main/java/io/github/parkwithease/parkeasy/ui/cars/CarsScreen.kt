@@ -190,24 +190,28 @@ fun AddCarScreen(
             onValueChange = onLicensePlateChange,
             label = { Text(stringResource(R.string.license_plate)) },
             modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
         )
         OutlinedTextField(
             value = state.color.value,
             onValueChange = onColorChange,
             label = { Text(stringResource(R.string.color)) },
             modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
         )
         OutlinedTextField(
             value = state.make.value,
             onValueChange = onMakeChange,
             label = { Text(stringResource(R.string.make)) },
             modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
         )
         OutlinedTextField(
             value = state.model.value,
             onValueChange = onModelChange,
             label = { Text(stringResource(R.string.model)) },
             modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
         )
         Button(
             onClick = if (editMode == EditMode.ADD) onAddCarClick else onEditCarClick,

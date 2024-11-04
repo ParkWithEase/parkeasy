@@ -181,30 +181,35 @@ fun AddSpotScreen(
             onValueChange = onStreetAddressChange,
             label = { Text(stringResource(R.string.street_address)) },
             modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
         )
         OutlinedTextField(
             value = state.city.value,
             onValueChange = onCityChange,
             label = { Text(stringResource(R.string.city)) },
             modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
         )
         OutlinedTextField(
             value = state.state.value,
             onValueChange = onStateChange,
             label = { Text(stringResource(R.string.state)) },
             modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
         )
         OutlinedTextField(
             value = state.countryCode.value,
             onValueChange = onCountryCodeChange,
             label = { Text(stringResource(R.string.country)) },
             modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
         )
         OutlinedTextField(
             value = state.postalCode.value,
             onValueChange = onPostalCodeChange,
             label = { Text(stringResource(R.string.postal_code)) },
             modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
         )
         Button(onClick = onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.add_spot))
