@@ -1,4 +1,6 @@
 import io.github.reactivecircus.appversioning.toSemVer
+import java.io.ByteArrayInputStream
+import java.util.Properties
 import kotlin.math.min
 
 plugins {
@@ -11,6 +13,13 @@ plugins {
     alias(libs.plugins.kotlinx.kover)
     alias(libs.plugins.app.versioning)
 }
+
+val secretProperties =
+    rootProject.layout.projectDirectory
+        .file("secrets.properties")
+        .let { providers.fileContents(it) }
+        .asBytes
+        .map { Properties().apply { load(ByteArrayInputStream(it)) } }
 
 android {
     namespace = "io.github.parkwithease.parkeasy"
@@ -28,6 +37,12 @@ android {
 
         val apiHost = System.getenv("PARKEASY_ANDROID_API_HOST") ?: "http://10.0.2.2:8080"
         resValue("string", "api_host", apiHost)
+
+        val protomapsApiKey =
+            System.getenv("PARKEASY_ANDROID_PROTOMAPS_API_KEY")
+                ?: secretProperties.map { it.getProperty("protomaps.apiKey") }.orNull
+                ?: ""
+        buildConfigField("String", "PROTOMAPS_API_KEY", "\"${protomapsApiKey}\"")
     }
 
     signingConfigs {
@@ -61,7 +76,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions { jvmTarget = "11" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     composeOptions { kotlinCompilerExtensionVersion = "1.5.1" }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
     lint {
@@ -125,6 +143,7 @@ dependencies {
     // Compose
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)

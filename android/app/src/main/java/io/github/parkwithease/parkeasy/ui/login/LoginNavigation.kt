@@ -6,11 +6,10 @@ import androidx.navigation.compose.composable
 
 private const val LoginRoute = "login"
 
-fun NavGraphBuilder.loginScreen(
-    showSnackbar: suspend (String, String?) -> Boolean,
-    onLogin: () -> Unit,
-) {
-    composable(LoginRoute) { LoginScreen(showSnackbar, onLogin) }
+fun NavGraphBuilder.loginScreen(onExitApp: () -> Unit, onNavigateFromLogin: () -> Unit) {
+    composable(LoginRoute) {
+        LoginScreen(onExitApp = onExitApp, onNavigateFromLogin = onNavigateFromLogin)
+    }
 }
 
 fun NavController.navigateToLogin() = this.navigate(LoginRoute)

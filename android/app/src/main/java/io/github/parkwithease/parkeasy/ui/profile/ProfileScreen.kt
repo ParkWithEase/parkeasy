@@ -4,11 +4,14 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,31 +29,43 @@ import io.github.parkwithease.parkeasy.model.Profile
 
 @Composable
 fun ProfileScreen(
-    showSnackbar: suspend (String, String?) -> Boolean,
-    navigateCars: () -> Unit,
-    onLogout: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    onNavigateToCars: () -> Unit,
+    onNavigateToSpots: () -> Unit,
+    navBar: @Composable () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ProfileViewModel =
-        hiltViewModel<ProfileViewModel, ProfileViewModel.Factory>(
-            creationCallback = { factory -> factory.create(showSnackbar = showSnackbar) }
-        ),
+    viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val loggedIn by viewModel.loggedIn.collectAsState(true)
-    val latestOnLogout by rememberUpdatedState(onLogout)
-    LaunchedEffect(loggedIn) {
-        if (!loggedIn) {
-            latestOnLogout()
+    val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
+
+    if (!loggedIn) {
+        LaunchedEffect(Unit) { latestOnNavigateToLogin() }
+    } else {
+        LaunchedEffect(Unit) { viewModel.refresh() }
+        val profile by viewModel.profile.collectAsState()
+
+        Scaffold(
+            modifier = modifier,
+            bottomBar = navBar,
+            snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
+        ) { innerPadding ->
+            ProfileScreen(
+                profile,
+                onNavigateToCars,
+                onNavigateToSpots,
+                viewModel::onLogoutClick,
+                Modifier.padding(innerPadding),
+            )
         }
     }
-    LaunchedEffect(Unit) { viewModel.refresh() }
-    val profile by viewModel.profile.collectAsState()
-    ProfileScreen(profile, navigateCars, viewModel::onLogoutClick, modifier)
 }
 
 @Composable
 fun ProfileScreen(
     profile: Profile,
-    onCarsClick: () -> Unit,
+    onNavigateToCars: () -> Unit,
+    onNavigateToSpots: () -> Unit,
     onLogoutClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -61,7 +76,8 @@ fun ProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             ProfileDetails(profile)
-            ProfileButton(R.string.cars, onCarsClick)
+            ProfileButton(R.string.cars, onNavigateToCars)
+            ProfileButton(R.string.spots, onNavigateToSpots)
             LogoutButton(onLogoutClick)
         }
     }

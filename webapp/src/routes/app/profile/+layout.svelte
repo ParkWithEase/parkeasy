@@ -6,11 +6,9 @@
     let booking_history_link = '/app/profile/booking-history';
     let leasing_history_link = '/app/profile/leasing-history';
     let preferred_spots_link = '/app/profile/preferred-spots';
-
-    let is_side_nav_open: boolean = true;
 </script>
 
-<SideNav bind:isOpen={is_side_nav_open}>
+<SideNav isOpen fixed>
     <SideNavItems>
         <SideNavLink
             text="Your Profile"

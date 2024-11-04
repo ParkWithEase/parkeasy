@@ -3,7 +3,7 @@
     export let data: PageData;
 </script>
 
-<div class="container">
+<div class="user-profile-container">
     <div>
         <p>Name: {data.full_name}</p>
     </div>
@@ -13,15 +13,15 @@
 </div>
 
 <style>
-    .container {
+    .user-profile-container {
         display: flex;
         justify-items: flex-start;
         flex-direction: column;
     }
 
     p {
+        font-size: 1.2rem;
         padding-top: 1rem;
         margin-left: 1rem;
-        font-size: 1.2rem;
     }
 </style>

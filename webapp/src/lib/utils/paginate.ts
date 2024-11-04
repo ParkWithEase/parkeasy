@@ -24,19 +24,29 @@ function extractNextCursor(linkHeader: string | null): string | null {
 
 export default async function* <
     Path extends PathsWithMethod<paths, 'get'>,
-    Options extends FetchOptions<FilterKeys<paths[Path], 'get'>>
+    Options extends FetchOptions<FilterKeys<paths[Path], 'get'>> & {
+        params?: { query?: { after?: string } };
+    }
 >(client: Client<paths, `${string}/${string}`>, path: Path, options: Options) {
     let { data, error, response } = await client.GET(path, options);
 
     const clonedOpts = { params: {}, ...options };
     clonedOpts.params.query ??= {};
     let nextCursor = extractNextCursor(response.headers.get('Link'));
-    yield { data, error, response, hasNext: !!nextCursor };
+    if (nextCursor) {
+        yield { data, error, response };
+    } else {
+        return { data, error, response };
+    }
 
-    while (nextCursor) {
+    while (true) {
         clonedOpts.params.query.after = nextCursor;
         ({ data, error, response } = await client.GET(path, clonedOpts));
         nextCursor = extractNextCursor(response.headers.get('Link'));
-        yield { data, error, response, hasNext: !!nextCursor };
+        if (nextCursor) {
+            yield { data, error, response };
+        } else {
+            return { data, error, response };
+        }
     }
 }

@@ -1,6 +1,7 @@
 package io.github.parkwithease.parkeasy.data.remote
 
 import io.github.parkwithease.parkeasy.model.Car
+import io.github.parkwithease.parkeasy.model.CarDetails
 
 interface CarRepository {
     /**
@@ -30,7 +31,7 @@ interface CarRepository {
      * @param car the Car and its updated info.
      * @return the updated Car on success, null otherwise.
      */
-    suspend fun updateCar(car: Car): Car
+    suspend fun updateCar(car: Car): Result<Unit>?
 
     /**
      * Creates a car in the repository.
@@ -38,5 +39,5 @@ interface CarRepository {
      * @param car the Car to add to the repository.
      * @return the created Car on success, null otherwise.
      */
-    suspend fun createCar(car: Car): Car
+    suspend fun createCar(car: CarDetails): Result<Unit>?
 }

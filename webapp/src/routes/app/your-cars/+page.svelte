@@ -1,6 +1,5 @@
 <script lang="ts">
     import type { PageData } from './$types';
-    import type { Car } from '$lib/types/car/car';
     import CarDisplay from '$lib/components/car-component/car-display.svelte';
     import CarAddModal from '$lib/components/car-component/car-add-modal.svelte';
     import CarViewEditModal from '$lib/components/car-component/car-view-edit-modal.svelte';
@@ -11,6 +10,9 @@
     import IntersectionObserver from 'svelte-intersection-observer';
     import { newClient } from '$lib/utils/client';
     import { CarModalState } from '$lib/enum/car-model';
+    import type { components } from '$lib/sdk/schema';
+
+    type Car = components['schemas']['CarDetails'];
 
     let currentModalState = CarModalState.NONE;
     let selectedCarID: string | null;
@@ -35,11 +37,11 @@
         loadLock = true;
         data.paging
             .next()
-            .then(({ value: { data: cars, hasNext } }) => {
+            .then(({ value: { data: cars }, done }) => {
                 if (cars) {
                     data.cars = [...data.cars, ...cars];
                 }
-                canLoadMore = !!hasNext;
+                canLoadMore = !done;
             })
             .finally(() => {
                 loadLock = false;
@@ -75,18 +77,22 @@
     }
 
     function handleDelete() {
+        if (selectedCarID == null) {
+            return;
+        }
+
         if (confirm('Are you sure you want to remove this car?')) {
             client
                 .DELETE('/cars/{id}', {
                     params: {
-                        path: { id: selectedCarID }
+                        path: { id: selectedCarID ?? '0' }
                     }
                 })
                 .then(({ error }) => {
                     if (error) {
                         errorMessage = getErrorMessage(error);
                     } else {
-                        data.cars = data.cars?.filter(function (item) {
+                        data.cars = data.cars.filter(function (item) {
                             return item.id !== selectedCarID;
                         });
                         errorMessage = '';
@@ -105,11 +111,14 @@
 
     function handleEdit(event: Event) {
         event.preventDefault();
+        if (selectedCarID == null) {
+            return;
+        }
         const formData = new FormData(event.target as HTMLFormElement);
         client
             .PUT('/cars/{id}', {
                 params: {
-                    path: { id: selectedCarID }
+                    path: { id: selectedCarID ?? '0' }
                 },
                 body: {
                     license_plate: formData.get('license-plate') as string,
@@ -121,7 +130,7 @@
             .then(({ data: change_car, error }) => {
                 if (change_car) {
                     currentModalState = CarModalState.VIEW;
-                    data.cars = data.cars?.map((car) => {
+                    data.cars = data.cars.map((car) => {
                         if (car.id == change_car.id) {
                             return change_car;
                         } else {
@@ -142,10 +151,9 @@
     }
 </script>
 
-<div class="button-container" style="">
+<div class="top-new-button-container" style="">
     <Button
         aria-label="new-car-button"
-        style="margin: 1rem;"
         icon={Add}
         on:click={() => (currentModalState = CarModalState.ADD)}>New Car</Button
     >
@@ -153,7 +161,7 @@
 
 <div>
     {#key data.cars}
-        {#each data?.cars as car}
+        {#each data.cars as car}
             <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <div id={car.id} on:click={() => selectCarIndex(car.id, car.details)}>
                 <CarDisplay car={car.details}></CarDisplay>
@@ -168,21 +176,15 @@
 </IntersectionObserver>
 
 {#if currentModalState == CarModalState.EDIT || currentModalState == CarModalState.VIEW}
-    <CarViewEditModal
-        bind:state={currentModalState}
-        bind:carInfo={selectedCarInfo}
-        on:submit={handleEdit}
-        on:delete={handleDelete}
-        bind:errorMessage
-    />
+    {#if selectedCarInfo}
+        <CarViewEditModal
+            bind:state={currentModalState}
+            bind:carInfo={selectedCarInfo}
+            on:submit={handleEdit}
+            on:delete={handleDelete}
+            bind:errorMessage
+        />
+    {/if}
 {:else if currentModalState == CarModalState.ADD}
     <CarAddModal bind:state={currentModalState} on:submit={handleCreate} bind:errorMessage />
 {/if}
-
-<style>
-    .button-container {
-        position: sticky;
-        top: 2.5rem;
-        background: white;
-    }
-</style>

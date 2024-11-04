@@ -18,4 +18,16 @@
     <string name="logout">Logout</string>
     <string name="refresh">Refresh</string>
     <string name="cars">Cars</string>
+    <string name="map_style_light_format">https://api.protomaps.com/styles/v2/light.json?key=%s</string>
+    <string name="map_style_dark_format">https://api.protomaps.com/styles/v2/dark.json?key=%s</string>
+    <string name="list">List</string>
+    <string name="map">Map</string>
+    <string name="profile">Profile</string>
+    <string name="add_car">Add a New Car</string>
+    <string name="edit_car">Update Car</string>
+    <string name="color">Colour</string>
+    <string name="license_plate">License Plate</string>
+    <string name="make">Make</string>
+    <string name="model">Model</string>
+    <string name="spots">Parking Spots</string>
 </resources>
