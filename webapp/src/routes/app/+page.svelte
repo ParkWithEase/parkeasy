@@ -5,37 +5,41 @@
     import SpotsListComponent from '$lib/components/spot-listings/spots-list-component.svelte';
     import { Button } from 'carbon-components-svelte';
     import { Search } from 'carbon-components-svelte';
-    import type { LocationResult } from '$lib/types/spot/location-result';
     import BottomPanelOpen from 'carbon-icons-svelte/lib/BottomPanelOpen.svelte';
     import type { components } from '$lib/sdk/schema';
     import { newClient } from '$lib/utils/client';
     import { handleGetError } from '$lib/utils/error-handler';
+    import { coalesceListings } from '$lib/utils/parking-spot-list-util';
+    import DetailModal from '$lib/components/spot-listings/detail-modal.svelte';
+    import type { AddressResult } from '$lib/types/address/address';
 
     type ParkingSpot = components['schemas']['ParkingSpot'];
 
     const apiKey = import.meta.env.VITE_GEOCODING_API_KEY;
     const maxZoom: number = 12;
+    const defaultDistance = 10000;
+
     let initZoom: number = 0;
-    const selectedZoom: number = 13;
+    const selectedZoom: number = 11;
     const offset: [number, number] = [0, -10];
 
     let mapCenter: [number, number] = [0, 0];
-    let zoom: number = 10;
 
     let searchQuery = '';
-    let results: LocationResult[] = [];
+    let results: AddressResult[];
     let dropdownOpen: boolean = false;
     let selectedListingId: string | null = null;
     let showBackToTop: boolean = false;
     let listingsContainer: HTMLDivElement;
+
     let modalOpen: boolean = false;
+    let selectedListing: ParkingSpot;
 
     let debounceTimer: number | undefined;
 
-    let numVisited: number = 0;
+    let searchUsed: boolean = false;
 
     let client = newClient();
-    //export let data: PageData;
     let spotsData: ParkingSpot[] = [];
 
     const searchLocation = () => {
@@ -62,17 +66,14 @@
         }, 500); // 0.5s delay
     };
 
-    const handleSelect = (location: {
-        properties: { formatted: string };
-        geometry: { coordinates: number[] };
-    }) => {
+    const handleSelect = (location: AddressResult) => {
         searchQuery = location.properties.formatted;
         mapCenter = [location.geometry.coordinates[0], location.geometry.coordinates[1]];
         initZoom = selectedZoom;
         results = [];
         dropdownOpen = false;
-        if (numVisited === 0) {
-            numVisited += 1;
+        if (searchUsed === false) {
+            searchUsed = true;
         }
         fetchSpots(location.geometry.coordinates);
     };
@@ -103,8 +104,9 @@
         showBackToTop = listingsContainer.scrollTop > 0;
     };
 
-    const handleListingClick = () => {
+    const handleListingClick = (newSelectedListing: ParkingSpot) => {
         modalOpen = true;
+        selectedListing = newSelectedListing;
     };
 
     const fetchSpots = async (coordinates: number[]) => {
@@ -113,27 +115,13 @@
                 query: {
                     latitude: coordinates[1],
                     longitude: coordinates[0],
-                    distance: 10000
+                    distance: defaultDistance
                 }
             }
         });
         handleGetError(errorSpots);
         spotsData = coalesceListings(spots ?? []);
     };
-
-    function coalesceListings(listings: ParkingSpot[]): ParkingSpot[] {
-        const uniqueListings: ParkingSpot[] = [];
-        const seenIds = new Set<string>();
-
-        for (const listing of listings) {
-            if (!seenIds.has(listing.id)) {
-                uniqueListings.push(listing);
-                seenIds.add(listing.id);
-            }
-        }
-
-        return uniqueListings;
-    }
 
     onDestroy(() => {
         clearTimeout(debounceTimer);
@@ -154,7 +142,7 @@
             on:input={handleInput}
         />
 
-        {#if results.length > 0 && dropdownOpen}
+        {#if results?.length > 0 && dropdownOpen}
             <ul class="dropdown">
                 {#each results as result}
                     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
@@ -173,12 +161,12 @@
                         ? 'highlight'
                         : ''}"
                     id={`listing-${listing.id}`}
-                    on:click={() => handleListingClick()}
+                    on:click={() => handleListingClick(listing)}
                 >
                     <SpotsListComponent {listing} />
                 </div>
             {/each}
-        {:else if numVisited === 0}
+        {:else if searchUsed == false}
             <div class="empty-container">
                 <h2>Search for your destination ↑</h2>
             </div>
@@ -224,6 +212,10 @@
             {/each}
         </MapLibre>
     </div>
+
+    {#if modalOpen}
+        <DetailModal bind:open={modalOpen} bind:listing={selectedListing} />
+    {/if}
 </div>
 
 <style>

@@ -3,6 +3,8 @@
     export let listing;
     export let open = false;
     import { MapLibre, DefaultMarker } from 'svelte-maplibre';
+
+    const defaultZoom: number = 13;
 </script>
 
 <Modal
@@ -28,7 +30,7 @@
         <div>
             <MapLibre
                 center={[listing.location.longitude, listing.location.latitude]}
-                zoom={13}
+                zoom={defaultZoom}
                 style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
             >
                 <DefaultMarker lngLat={[listing.location.longitude, listing.location.latitude]} />
