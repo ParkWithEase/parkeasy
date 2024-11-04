@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -22,6 +23,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -35,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
@@ -57,19 +60,16 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
     LaunchedEffect(Unit) { viewModel.onRefresh() }
     SpotsScreen(
         spots,
-        { spot ->
-            viewModel.onStreetAddressChange(spot.location.streetAddress)
-            viewModel.onCityChange(spot.location.city)
-            viewModel.onStateChange(spot.location.state)
-            viewModel.onCountryCodeChange(spot.location.countryCode)
-            editMode = EditMode.EDIT
-            openBottomSheet = true
-        },
         {
             viewModel.onStreetAddressChange("")
             viewModel.onCityChange("")
             viewModel.onStateChange("")
             viewModel.onCountryCodeChange("")
+            viewModel.onPostalCodeChange("")
+            viewModel.onChargingStationChange(false)
+            viewModel.onPlugInChange(false)
+            viewModel.onShelterChange(false)
+            viewModel.onPricePerHourChange("")
             editMode = EditMode.ADD
             openBottomSheet = true
         },
@@ -98,6 +98,10 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
                     viewModel::onStateChange,
                     viewModel::onCountryCodeChange,
                     viewModel::onPostalCodeChange,
+                    viewModel::onChargingStationChange,
+                    viewModel::onPlugInChange,
+                    viewModel::onShelterChange,
+                    viewModel::onPricePerHourChange,
                     viewModel::onAddSpotClick,
                 )
             }
@@ -109,7 +113,6 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
 @Composable
 fun SpotsScreen(
     spots: List<Spot>,
-    onSpotClick: (Spot) -> Unit,
     onShowAddSpotClick: () -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
@@ -122,7 +125,7 @@ fun SpotsScreen(
         Surface(Modifier.padding(innerPadding)) {
             PullToRefreshBox(
                 items = spots,
-                onClick = onSpotClick,
+                onClick = {},
                 isRefreshing = isRefreshing,
                 onRefresh = onRefresh,
                 modifier = Modifier.padding(4.dp),
@@ -161,6 +164,7 @@ fun AddSpotButton(onShowAddSpotClick: () -> Unit, modifier: Modifier = Modifier)
 }
 
 @Composable
+@Suppress("detekt:LongMethod")
 fun AddSpotScreen(
     state: AddSpotFormState,
     onStreetAddressChange: (String) -> Unit,
@@ -168,6 +172,10 @@ fun AddSpotScreen(
     onStateChange: (String) -> Unit,
     onCountryCodeChange: (String) -> Unit,
     onPostalCodeChange: (String) -> Unit,
+    onChargingStationChange: (Boolean) -> Unit,
+    onPlugInChange: (Boolean) -> Unit,
+    onShelterChange: (Boolean) -> Unit,
+    onPricePerHourChange: (String) -> Unit,
     onAddSpotClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -211,6 +219,37 @@ fun AddSpotScreen(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
+        OutlinedTextField(
+            value = state.pricePerHour.value,
+            onValueChange = onPricePerHourChange,
+            label = { Text(stringResource(R.string.price_per_hour)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        )
+        Row {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.charging_station))
+            }
+            Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
+                Switch(
+                    checked = state.chargingStation.value,
+                    onCheckedChange = onChargingStationChange,
+                )
+            }
+        }
+        Row {
+            Column(modifier = Modifier.weight(1f)) { Text(stringResource(R.string.plug_in)) }
+            Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
+                Switch(checked = state.plugIn.value, onCheckedChange = onPlugInChange)
+            }
+        }
+        Row {
+            Column(modifier = Modifier.weight(1f)) { Text(stringResource(R.string.shelter)) }
+            Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
+                Switch(checked = state.shelter.value, onCheckedChange = onShelterChange)
+            }
+        }
         Button(onClick = onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.add_spot))
         }

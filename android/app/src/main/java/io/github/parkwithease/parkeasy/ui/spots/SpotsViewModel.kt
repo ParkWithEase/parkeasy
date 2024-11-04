@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 @HiltViewModel
+@Suppress("detekt:TooManyFunctions")
 class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) : ViewModel() {
     private val _spots = MutableStateFlow(emptyList<Spot>())
     val spots = _spots.asStateFlow()
@@ -49,7 +50,11 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                                 )
                             ),
                         features =
-                            SpotFeatures(chargingStation = false, plugIn = false, shelter = false),
+                            SpotFeatures(
+                                chargingStation = formState.chargingStation.value,
+                                plugIn = formState.plugIn.value,
+                                shelter = formState.shelter.value,
+                            ),
                         location =
                             SpotLocation(
                                 streetAddress = formState.streetAddress.value,
@@ -58,7 +63,7 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                                 countryCode = formState.countryCode.value,
                                 postalCode = formState.postalCode.value,
                             ),
-                        pricePerHour = 2.0,
+                        pricePerHour = formState.pricePerHour.value.toDoubleOrNull() ?: -1.0,
                     )
                 )
                 .also { clearFieldErrors() }
@@ -86,6 +91,22 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
         formState = formState.run { copy(postalCode = postalCode.copy(value = value)) }
     }
 
+    fun onChargingStationChange(value: Boolean) {
+        formState = formState.run { copy(chargingStation = chargingStation.copy(value = value)) }
+    }
+
+    fun onPlugInChange(value: Boolean) {
+        formState = formState.run { copy(plugIn = plugIn.copy(value = value)) }
+    }
+
+    fun onShelterChange(value: Boolean) {
+        formState = formState.run { copy(shelter = shelter.copy(value = value)) }
+    }
+
+    fun onPricePerHourChange(value: String) {
+        formState = formState.run { copy(pricePerHour = pricePerHour.copy(value = value)) }
+    }
+
     private fun clearFieldErrors() {
         formState =
             formState.run {
@@ -105,4 +126,8 @@ data class AddSpotFormState(
     val state: FieldState<String> = FieldState(""),
     val countryCode: FieldState<String> = FieldState(""),
     val postalCode: FieldState<String> = FieldState(""),
+    val chargingStation: FieldState<Boolean> = FieldState(false),
+    val plugIn: FieldState<Boolean> = FieldState(false),
+    val shelter: FieldState<Boolean> = FieldState(false),
+    val pricePerHour: FieldState<String> = FieldState(""),
 )

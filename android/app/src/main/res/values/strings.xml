@@ -37,4 +37,8 @@
     <string name="state">Province</string>
     <string name="country">Country</string>
     <string name="postal_code">Postal Code</string>
+    <string name="charging_station">Charging Station</string>
+    <string name="plug_in">Plug In</string>
+    <string name="shelter">Shelter</string>
+    <string name="price_per_hour">Price Per Hour</string>
 </resources>
