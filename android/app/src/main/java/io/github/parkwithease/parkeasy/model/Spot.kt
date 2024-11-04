@@ -13,9 +13,9 @@ data class Spot(
 
 @Serializable
 data class SpotFeatures(
-    @SerialName("charging_station") val chargingStation: Boolean = true,
-    @SerialName("plug_in") val plugIn: Boolean = true,
-    val shelter: Boolean = true,
+    @SerialName("charging_station") val chargingStation: Boolean = false,
+    @SerialName("plug_in") val plugIn: Boolean = false,
+    val shelter: Boolean = false,
 )
 
 @Serializable
