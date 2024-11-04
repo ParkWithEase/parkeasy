@@ -7,7 +7,11 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.cookie
 import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -35,4 +39,15 @@ constructor(
         }
         return spots
     }
+
+    override suspend fun createSpot(spot: Spot): Result<Unit>? =
+        authRepo.sessionFlow.firstOrNull()?.runCatching {
+            withContext(ioDispatcher) {
+                client.post("/spots") {
+                    contentType(ContentType.Application.Json)
+                    setBody(spot)
+                    cookie(name = name, value = value)
+                }
+            }
+        }
 }

@@ -30,4 +30,11 @@
     <string name="make">Make</string>
     <string name="model">Model</string>
     <string name="spots">Parking Spots</string>
+    <string name="add_spot">Add Parking Spot</string>
+    <string name="edit_spot">Update Parking Spot</string>
+    <string name="street_address">Street Address</string>
+    <string name="city">City</string>
+    <string name="state">Province</string>
+    <string name="country">Country</string>
+    <string name="postal_code">Postal Code</string>
 </resources>

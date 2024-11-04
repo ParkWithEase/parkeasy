@@ -5,10 +5,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Spot(
+    val availability: List<TimeSlot> = emptyList(),
     val features: SpotFeatures = SpotFeatures(),
     val id: String = "",
     val location: SpotLocation = SpotLocation(),
-    @SerialName("price_per_hour") val pricePerHour: Double = 1.0,
+    @SerialName("price_per_hour") val pricePerHour: Double = 0.0,
 )
 
 @Serializable
@@ -27,4 +28,10 @@ data class SpotLocation(
     @SerialName("postal_code") val postalCode: String = "",
     val state: String = "",
     @SerialName("street_address") val streetAddress: String = "",
+)
+
+@Serializable
+data class TimeSlot(
+    @SerialName("start_time") val startTime: String = "",
+    @SerialName("end_time") val endTime: String = "",
 )
