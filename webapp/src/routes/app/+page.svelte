@@ -9,7 +9,6 @@
     import type { components } from '$lib/sdk/schema';
     import { newClient } from '$lib/utils/client';
     import { handleGetError } from '$lib/utils/error-handler';
-    import { coalesceListings } from '$lib/utils/parking-spot-list-util';
     import DetailModal from '$lib/components/spot-listings/detail-modal.svelte';
     import type { AddressResult } from '$lib/types/address/address';
 
@@ -120,7 +119,7 @@
             }
         });
         handleGetError(errorSpots);
-        spotsData = coalesceListings(spots ?? []);
+        spotsData = spots ?? [];
     };
 
     onDestroy(() => {
