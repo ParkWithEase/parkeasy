@@ -8,6 +8,8 @@ import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.data.local.AuthRepositoryImpl
 import io.github.parkwithease.parkeasy.data.remote.CarRepository
 import io.github.parkwithease.parkeasy.data.remote.CarRepositoryImpl
+import io.github.parkwithease.parkeasy.data.remote.SpotRepository
+import io.github.parkwithease.parkeasy.data.remote.SpotRepositoryImpl
 import io.github.parkwithease.parkeasy.data.remote.UserRepository
 import io.github.parkwithease.parkeasy.data.remote.UserRepositoryImpl
 
@@ -20,4 +22,6 @@ interface RepoModule {
     @Binds fun bindUserRepository(userRepositoryImpl: UserRepositoryImpl): UserRepository
 
     @Binds fun bindCarRepository(carRepositoryImpl: CarRepositoryImpl): CarRepository
+
+    @Binds fun bindSpotRepository(spotRepositoryImpl: SpotRepositoryImpl): SpotRepository
 }

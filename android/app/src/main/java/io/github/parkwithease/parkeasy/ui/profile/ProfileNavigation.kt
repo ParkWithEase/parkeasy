@@ -10,12 +10,14 @@ const val ProfileRoute = "profile"
 fun NavGraphBuilder.profileScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToCars: () -> Unit,
+    onNavigateToSpots: () -> Unit,
     navBar: @Composable () -> Unit,
 ) {
     composable(ProfileRoute) {
         ProfileScreen(
             onNavigateToLogin = onNavigateToLogin,
             onNavigateToCars = onNavigateToCars,
+            onNavigateToSpots = onNavigateToSpots,
             navBar = navBar,
         )
     }
