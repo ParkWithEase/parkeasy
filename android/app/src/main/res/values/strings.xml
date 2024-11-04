@@ -29,4 +29,5 @@
     <string name="license_plate">License Plate</string>
     <string name="make">Make</string>
     <string name="model">Model</string>
+    <string name="spots">Parking Spots</string>
 </resources>

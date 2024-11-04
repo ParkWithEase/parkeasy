@@ -31,6 +31,7 @@ import io.github.parkwithease.parkeasy.model.Profile
 fun ProfileScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToCars: () -> Unit,
+    onNavigateToSpots: () -> Unit,
     navBar: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
@@ -52,6 +53,7 @@ fun ProfileScreen(
             ProfileScreen(
                 profile,
                 onNavigateToCars,
+                onNavigateToSpots,
                 viewModel::onLogoutClick,
                 Modifier.padding(innerPadding),
             )
@@ -63,6 +65,7 @@ fun ProfileScreen(
 fun ProfileScreen(
     profile: Profile,
     onNavigateToCars: () -> Unit,
+    onNavigateToSpots: () -> Unit,
     onLogoutClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -74,6 +77,7 @@ fun ProfileScreen(
         ) {
             ProfileDetails(profile)
             ProfileButton(R.string.cars, onNavigateToCars)
+            ProfileButton(R.string.spots, onNavigateToSpots)
             LogoutButton(onLogoutClick)
         }
     }
