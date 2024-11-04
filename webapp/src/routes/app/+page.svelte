@@ -127,8 +127,6 @@
     });
 </script>
 
-<Navbar />
-
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions-->
 <div class="container" on:click={handleClickOutside}>
     <div class="listings" bind:this={listingsContainer} on:scroll={handleScroll}>
@@ -269,7 +267,7 @@
     }
 
     .highlight {
-        animation: smoothBlink 0.6s linear 4;
+        animation: smoothBlink 0.6s linear 3;
     }
 
     .back-to-top {
