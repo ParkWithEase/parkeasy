@@ -77,5 +77,5 @@ type ParkingSpotFilter struct {
 	ParkingSpotAvailabilityFilter
 	Longitude float64 `query:"longitude" required:"true" doc:"Longitude of the centre point"`
 	Latitude  float64 `query:"latitude" required:"true" doc:"Latitude of the centre point"`
-	Distance  int32   `query:"distance" default:"20" doc:"distance around the centre point"`
+	Distance  int32   `query:"distance" default:"250" doc:"distance around the centre point in meters"`
 }

@@ -300,7 +300,7 @@ func TestPostgresIntegration(t *testing.T) {
 				Location:     location,
 				Features:     sampleFeatures,
 				PricePerHour: samplePricePerHour,
-				Availability: sampleTimeUnit,
+				Availability: testTimeUnits,
 			}
 
 			created, _, err := repo.Create(ctx, userID, &spot)
@@ -315,7 +315,7 @@ func TestPostgresIntegration(t *testing.T) {
 				Location:     location,
 				Features:     sampleFeatures,
 				PricePerHour: samplePricePerHour,
-				Availability: sampleTimeUnit,
+				Availability: testTimeUnits,
 			}
 
 			created, _, err := repo.Create(ctx, userID, &spot)
@@ -336,11 +336,12 @@ func TestPostgresIntegration(t *testing.T) {
 				}),
 				Availability: omit.From(FilterAvailability{
 					Start: sampleTimeUnit[0].StartTime,
-					End:   sampleTimeUnit[0].EndTime,
+					End:   testTimeUnits[2].EndTime,
 				}),
 			}
 			entries, err := repo.GetMany(ctx, 5, &filter)
 			require.NoError(t, err)
+			assert.Equal(t, len(expectedEntries), len(entries))
 
 			for eidx, entry := range entries {
 				if eidx < len(expectedEntries) {
