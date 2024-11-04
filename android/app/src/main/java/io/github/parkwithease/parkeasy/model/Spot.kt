@@ -8,7 +8,7 @@ data class Spot(
     val features: SpotFeatures = SpotFeatures(),
     val id: String = "",
     val location: SpotLocation = SpotLocation(),
-    @SerialName("price_per_hour") val pricePerHour: Float = 1f,
+    @SerialName("price_per_hour") val pricePerHour: Double = 1.0,
 )
 
 @Serializable
@@ -22,8 +22,8 @@ data class SpotFeatures(
 data class SpotLocation(
     val city: String = "",
     @SerialName("country_code") val countryCode: String = "",
-    val latitude: Float = 1f,
-    val longitude: Float = 1f,
+    val latitude: Double = 1.0,
+    val longitude: Double = 1.0,
     @SerialName("postal_code") val postalCode: String = "",
     val state: String = "",
     @SerialName("street_address") val streetAddress: String = "",
