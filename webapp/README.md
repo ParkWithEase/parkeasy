@@ -4,6 +4,11 @@ The browser frontend for ParkEasy
 
 ### Getting Started
 
+Get a free [geoapify.com](https://www.geoapify.com/) API key. This is required for Geocoding and Search autocomplete APIs to work.
+
+    cp example.env .env
+    # edit .env and add your API key
+
 First, install all dependencies
 
     npm install
