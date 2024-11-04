@@ -46,6 +46,7 @@ import io.github.parkwithease.parkeasy.ui.theme.Typography
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Suppress("detekt:LongMethod")
 fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltViewModel()) {
     val cars by viewModel.cars.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
