@@ -74,27 +74,27 @@ func TestPostgresIntegration(t *testing.T) {
 	testTimeUnits := []models.TimeUnit{
 		{
 			StartTime: time.Date(2024, time.October, 21, 14, 30, 0, 0, time.UTC),
-			EndTime:   time.Date(2024, time.October, 21, 15, 0o0, 0, 0, time.UTC),
+			EndTime:   time.Date(2024, time.October, 21, 15, 00, 0, 0, time.UTC),
 			Status:    "available",
 		},
 		{
-			StartTime: time.Date(2024, time.October, 21, 17, 0o0, 0, 0, time.UTC),
+			StartTime: time.Date(2024, time.October, 21, 17, 00, 0, 0, time.UTC),
 			EndTime:   time.Date(2024, time.October, 21, 17, 30, 0, 0, time.UTC),
 			Status:    "available",
 		},
 		{
-			StartTime: time.Date(2024, time.October, 21, 20, 0o0, 0, 0, time.UTC),
+			StartTime: time.Date(2024, time.October, 21, 20, 00, 0, 0, time.UTC),
 			EndTime:   time.Date(2024, time.October, 21, 20, 30, 0, 0, time.UTC),
 			Status:    "available",
 		},
 		{
-			StartTime: time.Date(2024, time.October, 22, 10, 0o0, 0, 0, time.UTC),
+			StartTime: time.Date(2024, time.October, 22, 10, 00, 0, 0, time.UTC),
 			EndTime:   time.Date(2024, time.October, 22, 10, 30, 0, 0, time.UTC),
 			Status:    "available",
 		},
 		{
 			StartTime: time.Date(2024, time.October, 31, 14, 30, 0, 0, time.UTC),
-			EndTime:   time.Date(2024, time.October, 31, 15, 0o0, 0, 0, time.UTC),
+			EndTime:   time.Date(2024, time.October, 31, 15, 00, 0, 0, time.UTC),
 			Status:    "available",
 		},
 	}
@@ -300,7 +300,7 @@ func TestPostgresIntegration(t *testing.T) {
 				Location:     location,
 				Features:     sampleFeatures,
 				PricePerHour: samplePricePerHour,
-				Availability: sampleTimeUnit,
+				Availability: testTimeUnits,
 			}
 
 			created, _, err := repo.Create(ctx, userID, &spot)
@@ -315,7 +315,7 @@ func TestPostgresIntegration(t *testing.T) {
 				Location:     location,
 				Features:     sampleFeatures,
 				PricePerHour: samplePricePerHour,
-				Availability: sampleTimeUnit,
+				Availability: testTimeUnits,
 			}
 
 			created, _, err := repo.Create(ctx, userID, &spot)
@@ -336,11 +336,12 @@ func TestPostgresIntegration(t *testing.T) {
 				}),
 				Availability: omit.From(FilterAvailability{
 					Start: sampleTimeUnit[0].StartTime,
-					End:   sampleTimeUnit[0].EndTime,
+					End:   testTimeUnits[2].EndTime,
 				}),
 			}
 			entries, err := repo.GetMany(ctx, 5, &filter)
 			require.NoError(t, err)
+			assert.Equal(t, len(expectedEntries), len(entries))
 
 			for eidx, entry := range entries {
 				if eidx < len(expectedEntries) {
