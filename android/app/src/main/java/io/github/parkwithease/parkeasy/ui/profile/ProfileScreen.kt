@@ -64,7 +64,7 @@ fun ProfileScreen(
 @Composable
 fun ProfileScreen(
     profile: Profile,
-    onCarsClick: () -> Unit,
+    onNavigateToCars: () -> Unit,
     onNavigateToSpots: () -> Unit,
     onLogoutClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -76,7 +76,7 @@ fun ProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             ProfileDetails(profile)
-            ProfileButton(R.string.cars, onCarsClick)
+            ProfileButton(R.string.cars, onNavigateToCars)
             ProfileButton(R.string.spots, onNavigateToSpots)
             LogoutButton(onLogoutClick)
         }
