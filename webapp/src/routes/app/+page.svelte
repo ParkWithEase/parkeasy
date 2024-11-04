@@ -19,7 +19,7 @@
     const selectedZoom: number = 13;
     const offset: [number, number] = [0, -10];
 
-    let mapCenter: [number, number] = [0,0];
+    let mapCenter: [number, number] = [0, 0];
     let zoom: number = 10;
 
     let searchQuery = '';
@@ -28,15 +28,15 @@
     let selectedListingId: string | null = null;
     let showBackToTop: boolean = false;
     let listingsContainer: HTMLDivElement;
-    let modalOpen : boolean = false;
+    let modalOpen: boolean = false;
 
     let debounceTimer: number | undefined;
-    
-    let numVisited : number = 0;
+
+    let numVisited: number = 0;
 
     let client = newClient();
     //export let data: PageData;
-    let spotsData : ParkingSpot[] = [];
+    let spotsData: ParkingSpot[] = [];
 
     const searchLocation = () => {
         const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(searchQuery)}&apiKey=${apiKey}`;
@@ -118,20 +118,20 @@
             }
         });
         handleGetError(errorSpots);
-        spotsData = coalesceListings(spots??[]);
-    }
+        spotsData = coalesceListings(spots ?? []);
+    };
 
     function coalesceListings(listings: ParkingSpot[]): ParkingSpot[] {
         const uniqueListings: ParkingSpot[] = [];
         const seenIds = new Set<string>();
-    
+
         for (const listing of listings) {
             if (!seenIds.has(listing.id)) {
                 uniqueListings.push(listing);
                 seenIds.add(listing.id);
             }
         }
-    
+
         return uniqueListings;
     }
 
@@ -167,21 +167,23 @@
 
         {#if spotsData.length > 0}
             {#each spotsData as listing}
-            <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+                <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
                 <div
-                    class="booking-info-container {listing.id === selectedListingId ? 'highlight' : ''}"
+                    class="booking-info-container {listing.id === selectedListingId
+                        ? 'highlight'
+                        : ''}"
                     id={`listing-${listing.id}`}
                     on:click={() => handleListingClick()}
                 >
-                    <SpotsListComponent {listing}/>
+                    <SpotsListComponent {listing} />
                 </div>
             {/each}
         {:else if numVisited === 0}
-            <div class = "empty-container">
-                <h2>Search for your destination ↑ </h2>
+            <div class="empty-container">
+                <h2>Search for your destination ↑</h2>
             </div>
         {:else}
-            <div class = "empty-container">
+            <div class="empty-container">
                 <h3>No listings Found!</h3>
             </div>
         {/if}
@@ -194,12 +196,14 @@
     <div class="map-view">
         <MapLibre
             center={mapCenter}
-            zoom = {initZoom}
+            zoom={initZoom}
             style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
         >
             <GeolocateControl position="bottom-left" fitBoundsOptions={{ maxZoom: maxZoom }} />
             {#each spotsData as { id, location }}
-                <DefaultMarker lngLat={[location.longitude?? mapCenter[0], location.latitude?? mapCenter[1]]}>
+                <DefaultMarker
+                    lngLat={[location.longitude ?? mapCenter[0], location.latitude ?? mapCenter[1]]}
+                >
                     <Popup {offset}>
                         <div class="popup-container">
                             <h2 class="popup-text">
@@ -300,7 +304,7 @@
         font-family: Fredoka, sans-serif;
     }
 
-    .empty-container{
+    .empty-container {
         display: flex;
         justify-content: center;
         margin: 1rem;
