@@ -69,6 +69,11 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
             openBottomSheet = true
         },
         {
+            viewModel.currentlyEditingId = ""
+            viewModel.onLicensePlateChange("")
+            viewModel.onColorChange("")
+            viewModel.onMakeChange("")
+            viewModel.onModelChange("")
             editMode = EditMode.ADD
             openBottomSheet = true
         },
