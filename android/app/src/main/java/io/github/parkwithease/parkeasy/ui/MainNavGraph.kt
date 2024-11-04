@@ -34,7 +34,7 @@ fun MainNavGraph(
             onNavigateToSpots = navController::navigateToSpots,
             navBar = navBar,
         )
-        carsScreen()
+        carsScreen {}
         spotsScreen {}
     }
 }
