@@ -1,21 +1,25 @@
 <script lang="ts">
-    import { onMount, onDestroy } from 'svelte';
+    import { onDestroy } from 'svelte';
     import Navbar from '$lib/components/navbar.svelte';
     import { MapLibre, DefaultMarker, Popup, GeolocateControl } from 'svelte-maplibre';
     import SpotsListComponent from '$lib/components/spot-listings/spots-list-component.svelte';
     import { Button } from 'carbon-components-svelte';
-    import { spots_data } from './your-spots/mock_data';
     import { Search } from 'carbon-components-svelte';
     import type { LocationResult } from '$lib/types/spot/location-result';
     import BottomPanelOpen from 'carbon-icons-svelte/lib/BottomPanelOpen.svelte';
-    import DetailModal from '$lib/components/spot-listings/detail-modal.svelte';
+    import type { components } from '$lib/sdk/schema';
+    import { newClient } from '$lib/utils/client';
+    import { handleGetError } from '$lib/utils/error-handler';
+
+    type ParkingSpot = components['schemas']['ParkingSpot'];
 
     const apiKey = import.meta.env.VITE_GEOCODING_API_KEY;
     const maxZoom: number = 12;
-    const initZoom: number = 13;
+    let initZoom: number = 0;
+    const selectedZoom: number = 13;
     const offset: [number, number] = [0, -10];
 
-    let mapCenter: [number, number] = [-97.1, 49.9];
+    let mapCenter: [number, number] = [0,0];
     let zoom: number = 10;
 
     let searchQuery = '';
@@ -27,6 +31,12 @@
     let modalOpen : boolean = false;
 
     let debounceTimer: number | undefined;
+    
+    let numVisited : number = 0;
+
+    let client = newClient();
+    //export let data: PageData;
+    let spotsData : ParkingSpot[] = [];
 
     const searchLocation = () => {
         const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(searchQuery)}&apiKey=${apiKey}`;
@@ -49,7 +59,7 @@
             if (searchQuery.length > 3) {
                 searchLocation();
             }
-        }, 750); // 0.75s delay
+        }, 500); // 0.5s delay
     };
 
     const handleSelect = (location: {
@@ -58,9 +68,13 @@
     }) => {
         searchQuery = location.properties.formatted;
         mapCenter = [location.geometry.coordinates[0], location.geometry.coordinates[1]];
-        zoom = initZoom;
+        initZoom = selectedZoom;
         results = [];
         dropdownOpen = false;
+        if (numVisited === 0) {
+            numVisited += 1;
+        }
+        fetchSpots(location.geometry.coordinates);
     };
 
     const handleClickOutside = (event: Event) => {
@@ -93,22 +107,43 @@
         modalOpen = true;
     };
 
-    onMount(() => {
-        document.addEventListener('click', handleClickOutside);
-        return () => {
-            document.removeEventListener('click', handleClickOutside);
-        };
-    });
+    const fetchSpots = async (coordinates: number[]) => {
+        const { data: spots, error: errorSpots } = await client.GET('/spots', {
+            params: {
+                query: {
+                    latitude: coordinates[1],
+                    longitude: coordinates[0],
+                    distance: 10000
+                }
+            }
+        });
+        handleGetError(errorSpots);
+        spotsData = coalesceListings(spots??[]);
+    }
+
+    function coalesceListings(listings: ParkingSpot[]): ParkingSpot[] {
+        const uniqueListings: ParkingSpot[] = [];
+        const seenIds = new Set<string>();
+    
+        for (const listing of listings) {
+            if (!seenIds.has(listing.id)) {
+                uniqueListings.push(listing);
+                seenIds.add(listing.id);
+            }
+        }
+    
+        return uniqueListings;
+    }
 
     onDestroy(() => {
-        document.removeEventListener('click', handleClickOutside);
         clearTimeout(debounceTimer);
     });
 </script>
 
 <Navbar />
 
-<div class="container">
+<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions-->
+<div class="container" on:click={handleClickOutside}>
     <div class="listings" bind:this={listingsContainer} on:scroll={handleScroll}>
         <Search
             class="search-input"
@@ -130,17 +165,26 @@
             </ul>
         {/if}
 
-        {#each spots_data as listing}
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-            <div
-                class="booking-info-container {listing.id === selectedListingId ? 'highlight' : ''}"
-                id={`listing-${listing.id}`}
-                on:click={() => handleListingClick()}
-            >
-                <SpotsListComponent {listing}/>
+        {#if spotsData.length > 0}
+            {#each spotsData as listing}
+            <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+                <div
+                    class="booking-info-container {listing.id === selectedListingId ? 'highlight' : ''}"
+                    id={`listing-${listing.id}`}
+                    on:click={() => handleListingClick()}
+                >
+                    <SpotsListComponent {listing}/>
+                </div>
+            {/each}
+        {:else if numVisited === 0}
+            <div class = "empty-container">
+                <h2>Search for your destination ↑ </h2>
             </div>
-            <DetailModal bind:open={modalOpen} {listing} />
-        {/each}
+        {:else}
+            <div class = "empty-container">
+                <h3>No listings Found!</h3>
+            </div>
+        {/if}
 
         {#if showBackToTop}
             <button class="back-to-top" on:click={scrollToTop}> ↑ Back to Top </button>
@@ -150,12 +194,12 @@
     <div class="map-view">
         <MapLibre
             center={mapCenter}
-            {zoom}
+            zoom = {initZoom}
             style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
         >
             <GeolocateControl position="bottom-left" fitBoundsOptions={{ maxZoom: maxZoom }} />
-            {#each spots_data as { id, location }}
-                <DefaultMarker lngLat={[location.longitude, location.latitude]}>
+            {#each spotsData as { id, location }}
+                <DefaultMarker lngLat={[location.longitude?? mapCenter[0], location.latitude?? mapCenter[1]]}>
                     <Popup {offset}>
                         <div class="popup-container">
                             <h2 class="popup-text">
@@ -188,7 +232,7 @@
     .listings {
         display: flex;
         width: 25%;
-        max-height: 82vh;
+        height: 85%;
         overflow-y: auto;
         flex-direction: column;
         padding: 0.5rem;
@@ -254,5 +298,11 @@
     .popup-text {
         margin: 1rem;
         font-family: Fredoka, sans-serif;
+    }
+
+    .empty-container{
+        display: flex;
+        justify-content: center;
+        margin: 1rem;
     }
 </style>
