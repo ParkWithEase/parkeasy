@@ -29,7 +29,7 @@ interface CarRepository {
      * Updates a car's details.
      *
      * @param car the Car and its updated info.
-     * @return the updated Car on success, null otherwise.
+     * @return Result
      */
     suspend fun updateCar(car: Car): Result<Unit>?
 
@@ -37,7 +37,7 @@ interface CarRepository {
      * Creates a car in the repository.
      *
      * @param car the Car to add to the repository.
-     * @return the created Car on success, null otherwise.
+     * @return Result
      */
     suspend fun createCar(car: CarDetails): Result<Unit>?
 }
