@@ -17,7 +17,7 @@
     let results: AddressResult[];
     let dropdownOpen: boolean = false;
     let warningModalOpen: boolean = false;
-    let warningText : String = false;
+    let warningText : String = '';
 
     export let isReadOnly: boolean;
 
@@ -99,35 +99,6 @@
             dropdownOpen = false;
         }
     };
-
-    // const verifyAddress = () => {
-    //     fetch(`https://api.geoapify.com/v1/geocode/search?housenumber=${encodeURIComponent(houseNumber)}&street=${encodeURIComponent(streetAddress)}&postcode=${encodeURIComponent(postalCode)}
-    //     &city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&country=${encodeURIComponent(country)}&apiKey=${apiKey}`)
-    //     .then(result => result.json()).then((result) => {
-    //         let features = result.features || [];
-
-    //         // To find a confidence level that works for you, try experimenting with different levels
-    //         //Code referred from JSFiddle at: https://www.npmjs.com/package/@geoapify/geocoder-autocomplete
-    //         const confidenceLevelToAccept = 0.25;
-    //         features = features.filter(feature => feature.properties.rank.confidence >= confidenceLevelToAccept);
-
-    //         if (features.length) {
-    //             const foundAddress = features[0];
-    //             if (foundAddress.properties.rank.confidence === 1) {
-    //                 warningText = `We verified the address you entered. The formatted address is: ${foundAddress.properties.formatted}`;
-    //             } else if (foundAddress.properties.rank.confidence > 0.5 && foundAddress.properties.rank.confidence_street_level === 1) {
-    //                 warningText = `We have some doubts about the accuracy of the address: ${foundAddress.properties.formatted}`
-    //             } else if (foundAddress.properties.rank.confidence_street_level === 1) {
-    //                 warningText = `We can confirm the address up to street level: ${foundAddress.properties.formatted}`
-    //             } else {
-    //                 warningText = `We can only verify your address partially. The address we found is ${foundAddress.properties.formatted}`
-    //             }
-    //         } else {
-    //             warningText = "We cannot find your address. Please check if you provided the correct address."
-    //         }
-    //         warningModalOpen = true;
-    //     })
-    // }
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions-->
