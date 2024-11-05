@@ -215,6 +215,7 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, filter *Fil
 		smods,
 		sm.From(dbmodels.Parkingspots.Name(ctx)),
 		sm.Limit(limit),
+		sm.Distinct(),
 		psql.WhereAnd(whereMods...),
 	)
 	query := psql.Select(smods...)
