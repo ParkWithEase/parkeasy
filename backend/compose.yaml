@@ -6,6 +6,7 @@ services:
       dockerfile: ./Containerfile
     ports:
       - "8080:8080"
+      - "6060:6060"
     depends_on:
       db:
         condition: service_healthy

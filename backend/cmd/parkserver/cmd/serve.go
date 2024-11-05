@@ -2,15 +2,20 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"net/http"
+	_ "net/http/pprof" //nolint:gosec // registration on DefaultServeMux is expected
 	"net/url"
 	"path"
 	"strconv"
+	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/app/parkserver"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
+	"github.com/sourcegraph/conc"
 )
 
 type DBUrlBuilder struct {
@@ -61,6 +66,7 @@ type ServeCmd struct {
 	GeocodioAPIKey string   `placeholder:"API-KEY" env:"GEOCODIO_API_KEY" help:"API key for geocod.io service."`
 	DB             DBConfig `embed:"" group:"db" prefix:"db-" envprefix:"DB_"`
 	Port           uint16   `short:"p" placeholder:"PORT" env:"PORT" default:"8080" help:"Port to serve the server on (default: ${default})."`
+	ProfilerPort   uint16   `placeholder:"PORT" env:"PROFILER_PORT" help:"Port to serve pprof endpoints on (disabled by default)."`
 	Insecure       bool     `env:"INSECURE" help:"Run in insecure mode for development (ie. CORS allow-all, HTTP cookies)."`
 }
 
@@ -85,6 +91,29 @@ func (s *ServeCmd) Run(ctx context.Context, l *zerolog.Logger, globals *Globals)
 	ctx = log.WithContext(ctx)
 	if s.GeocodioAPIKey == "" {
 		log.Warn().Msg("no geocodio api key provided, some features might not work")
+	}
+
+	if s.ProfilerPort != 0 {
+		log.Info().Uint16("port", s.ProfilerPort).Msg("profiler server started")
+		profilerServer := http.Server{
+			Addr:              net.JoinHostPort("", strconv.Itoa(int(s.ProfilerPort))),
+			Handler:           http.DefaultServeMux,
+			BaseContext:       func(net.Listener) context.Context { return ctx },
+			ReadHeaderTimeout: 3 * time.Second,
+		}
+		var wg conc.WaitGroup
+		defer wg.Wait()
+		wg.Go(func() {
+			if err := profilerServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				log.Err(err).Msg("error with profiler server")
+			}
+		})
+		wg.Go(func() {
+			<-ctx.Done()
+			sctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+			_ = profilerServer.Shutdown(sctx)
+		})
 	}
 
 	pool, err := pgxpool.New(ctx, s.DB.String())

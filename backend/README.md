@@ -26,6 +26,17 @@ Hot code reloading is provided by [Air] and can be run via
 
 [Air]: https://github.com/air-verse/air
 
+### Integrated profiler
+
+Runtime profiling data is provided using [`net/http/pprof`](https://pkg.go.dev/net/http/pprof) and can be accessed if `PROVIDER_PORT` is configured. The example environment file will configure this port to 6060.
+
+These endpoints allow for capturing sensitive system data, and control over the garbage collector operations. As such, these endpoints must **not** be exposed to untrusted networks.
+
+For how to make use of this feature, see:
+
+- [`net/http/pprof` Usage examples](https://pkg.go.dev/net/http/pprof#hdr-Usage_examples)
+- [Profiling Go Programs](https://go.dev/blog/pprof)
+
 ### DB model
 
 This server uses [Bob](https://bob.stephenafamo.com/) for building and running SQL queries.
