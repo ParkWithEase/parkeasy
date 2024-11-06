@@ -183,6 +183,12 @@ func TestPostgresIntegration(t *testing.T) {
 		BookedTimes:   sampleTimeUnit[0:2],
 	}
 
+	// bookingCreationInput_1 := models.BookingCreationInput{
+	// 	ParkingSpotID: parkingSpotUUID,
+	// 	PaidAmount:    paidAmount,
+	// 	BookedTimes:   sampleTimeUnit_1[0:2],
+	// }
+
 	t.Run("basic add & get", func(t *testing.T) {
 		t.Cleanup(func() {
 			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
@@ -234,6 +240,27 @@ func TestPostgresIntegration(t *testing.T) {
 			assert.ErrorIs(t, err, ErrTimeAlreadyBooked)
 		}
 	})
+
+	// t.Run("trying to book a not listed time should fail", func(t *testing.T) {
+	// 	t.Cleanup(func() {
+	// 		err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+	// 		require.NoError(t, err, "could not restore db")
+
+	// 		// clear all idle connections
+	// 		// required since Restore() deletes the current DB
+	// 		pool.Reset()
+	// 	})
+
+	// 	// Create a parking spot for testing
+	// 	parkingSpotEntry, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput)
+
+	// 	_, _ = repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput_1)
+
+	// 	_, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
+	// 	if assert.Error(t, err, "Creating a booking for a non listed time should fail") {
+	// 		assert.ErrorIs(t, err, ErrTimeAlreadyBooked)
+	// 	}
+	// })
 
 	t.Run("get many bookings for buyer", func(t *testing.T) {
 		t.Cleanup(func() {

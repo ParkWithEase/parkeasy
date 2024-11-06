@@ -9,6 +9,7 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbmodels"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbtype"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/aarondl/opt/null"
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
 	"github.com/govalues/decimal"
@@ -16,7 +17,6 @@ import (
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
-	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/mods"
 	"github.com/stephenafamo/scan"
 )
@@ -56,53 +56,76 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		return EntryWithTimes{}, fmt.Errorf("could not execute insert: %w", err)
 	}
 
-	updatedTimes := make([]models.TimeUnit, 0, len(booking.BookedTimes))
+	// updatedTimes := make([]models.TimeUnit, 0, len(booking.BookedTimes))
 
-	umods := []bob.Mod[*dialect.UpdateQuery]{
-		um.Table(dbmodels.Timeunits.Name(ctx)),
-		um.SetCol(dbmodels.ColumnNames.Timeunits.Bookingid).ToArg(inserted.Bookingid),
+	// umods := []bob.Mod[*dialect.UpdateQuery]{
+	// 	um.Table(dbmodels.Timeunits.Name(ctx)),
+	// 	um.SetCol(dbmodels.ColumnNames.Timeunits.Bookingid).ToArg(inserted.Bookingid),
+	// }
+
+	// Update the corresponding time slots
+	units := make([]*dbmodels.Timeunit, 0, len(booking.BookedTimes))
+	for _, time := range booking.BookedTimes {
+		units = append(units, &dbmodels.Timeunit{
+			Timerange: dbtype.Tstzrange{
+				Start: time.StartTime,
+				End:   time.EndTime,
+			},
+			Parkingspotid: spotID,
+			Bookingid:     null.From(inserted.Bookingid),
+		})
 	}
 
-	for _, time := range booking.BookedTimes {
-		var whereMods []mods.Where[*dialect.UpdateQuery]
+	err = inserted.AttachBookingidTimeunits(ctx, tx, units...)
+	if err != nil {
+		return EntryWithTimes{}, err
+	}
 
-		whereMods = append(whereMods, um.Where(
-			dbmodels.TimeunitColumns.Timerange.OP(
-				"&&",
-				psql.Arg(dbtype.Tstzrange{
-					Start: time.StartTime,
-					End:   time.EndTime,
-				}),
-			),
-		))
+	// for _, time := range booking.BookedTimes {
+	// 	var whereMods []mods.Where[*dialect.UpdateQuery]
 
-		whereMods = append(whereMods, um.Where(dbmodels.TimeunitColumns.Bookingid.IsNull()))
+	// 	whereMods = append(whereMods, sm.Where(
+	// 		dbmodels.TimeunitColumns.Timerange.OP(
+	// 			"&&",
+	// 			psql.Arg(dbtype.Tstzrange{
+	// 				Start: time.StartTime,
+	// 				End:   time.EndTime,
+	// 			}),
+	// 		),
+	// 	))
 
-		uWhereMod := append(
-			umods,
-			psql.WhereAnd(whereMods...),
-			um.Returning(dbmodels.Timeunits.Columns()),
-		)
+	// 	whereMods = append(whereMods, sm.Where(dbmodels.TimeunitColumns.Bookingid.IsNull()))
 
-		query := psql.Update(uWhereMod...)
+	// 	uWhereMod := append(
+	// 		umods,
+	// 		psql.WhereAnd(whereMods...),
+	// 		um.Returning(dbmodels.Timeunits.Columns()),
+	// 	)
 
-		updateCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[*dbmodels.Timeunit]())
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return EntryWithTimes{}, fmt.Errorf("update failed on time to reflect a booking: %w", err)
-			}
-		}
-		defer updateCursor.Close()
+	// 	query := psql.Update(uWhereMod...)
 
-		if updateCursor.Next() {
-			get, err := updateCursor.Get()
-			if err != nil {
-				return EntryWithTimes{}, fmt.Errorf("could not fetch updated time: %w", err)
-			}
-			updatedTimes = append(updatedTimes, timeUnitFromDB(get))
-		} else {
-			return EntryWithTimes{}, ErrTimeAlreadyBooked
-		}
+	// 	updateCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[*dbmodels.Timeunit]())
+	// 	if err != nil {
+	// 		if errors.Is(err, sql.ErrNoRows) {
+	// 			return EntryWithTimes{}, fmt.Errorf("update failed on time to reflect a booking: %w", err)
+	// 		}
+	// 	}
+	// 	defer updateCursor.Close()
+
+	// 	if updateCursor.Next() {
+	// 		get, err := updateCursor.Get()
+	// 		if err != nil {
+	// 			return EntryWithTimes{}, fmt.Errorf("could not fetch updated time: %w", err)
+	// 		}
+	// 		updatedTimes = append(updatedTimes, timeUnitFromDB(get))
+	// 	} else {
+	// 		return EntryWithTimes{}, ErrTimeAlreadyBooked
+	// 	}
+	// }
+
+	err = tx.Commit()
+	if err != nil {
+		return EntryWithTimes{}, fmt.Errorf("could not commit transaction: %w", err)
 	}
 
 	amount, ok := inserted.Paidamount.Float64()
@@ -118,12 +141,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 			},
 			InternalID: inserted.Bookingid,
 		},
-		BookedTimes: updatedTimes,
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return EntryWithTimes{}, fmt.Errorf("could not commit transaction: %w", err)
+		BookedTimes: timeUnitsFromDB(inserted.R.BookingidTimeunits),
 	}
 
 	return entry, nil
