@@ -18,6 +18,8 @@ export const load: PageLoad = async ({ fetch, params }) => {
 
     const currentMonday = getMonday(new Date(Date.now()));
 
+    const nextMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
+    nextMonday.setMinutes(nextMonday.getMinutes() - 30);
     const { data: availability, error: errorAvailability } = await client.GET(
         '/spots/{id}/availability',
         {
@@ -27,10 +29,7 @@ export const load: PageLoad = async ({ fetch, params }) => {
                 },
                 query: {
                     availability_start: currentMonday.toISOString(),
-                    availability_end: getDateWithDayOffset(
-                        currentMonday,
-                        DAY_IN_A_WEEK
-                    ).toISOString()
+                    availability_end: nextMonday.toISOString(),
                 }
             }
         }

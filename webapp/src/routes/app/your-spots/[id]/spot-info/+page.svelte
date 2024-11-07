@@ -103,6 +103,8 @@
 
     function toNextWeek() {
         currentMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
+        const nextMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
+        nextMonday.setMinutes(nextMonday.getMinutes() - 30);
         if (!availabilityTablesInitial.get(currentMonday.getTime())) {
             client
                 .GET('/spots/{id}/availability', {
@@ -112,15 +114,13 @@
                         },
                         query: {
                             availability_start: currentMonday.toISOString(),
-                            availability_end: getDateWithDayOffset(
-                                currentMonday,
-                                DAY_IN_A_WEEK
-                            ).toISOString()
+                            availability_end: nextMonday.toISOString()
                         }
                     }
                 })
                 .then(({ data: availability, error }) => {
                     if (availability) {
+                        console.log(availability);
                         let newTable = createAvailabilityTable(availability);
                         availabilityTablesInitial.set(currentMonday.getTime(), newTable);
                         availabilityTableEdit.set(
