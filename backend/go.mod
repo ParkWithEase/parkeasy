@@ -15,7 +15,7 @@ require (
 	github.com/peterhellberg/link v1.2.0
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stephenafamo/bob v0.28.1
-	github.com/stephenafamo/scan v0.4.2
+	github.com/stephenafamo/scan v0.6.0
 	github.com/testcontainers/testcontainers-go v0.34.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.34.0
 )
