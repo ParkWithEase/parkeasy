@@ -6,7 +6,7 @@ require (
 	github.com/aarondl/opt v0.0.0-20230114172057-b91f370c41f0
 	github.com/alecthomas/kong v1.2.1
 	github.com/alexedwards/scs/pgxstore v0.0.0-20240316134038-7e11d57e8885
-	github.com/danielgtaylor/huma/v2 v2.22.1
+	github.com/danielgtaylor/huma/v2 v2.25.0
 	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/golang-migrate/migrate/v4 v4.18.1
 	github.com/google/go-cmp v0.6.0
@@ -48,7 +48,7 @@ require (
 	github.com/huandu/xstrings v1.3.1 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/klauspost/compress v1.17.7 // indirect
+	github.com/klauspost/compress v1.17.10 // indirect
 	github.com/knadh/koanf/maps v0.1.1 // indirect
 	github.com/knadh/koanf/parsers/yaml v0.1.0 // indirect
 	github.com/knadh/koanf/providers/confmap v0.1.0 // indirect
@@ -113,8 +113,8 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/atomic v1.9.0 // indirect
-	golang.org/x/crypto v0.27.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/crypto v0.28.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
