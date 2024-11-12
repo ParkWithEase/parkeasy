@@ -29,7 +29,7 @@ export const load: PageLoad = async ({ fetch, params }) => {
                 },
                 query: {
                     availability_start: currentMonday.toISOString(),
-                    availability_end: nextMonday.toISOString(),
+                    availability_end: nextMonday.toISOString()
                 }
             }
         }
