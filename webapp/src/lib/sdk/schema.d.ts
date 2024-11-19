@@ -124,6 +124,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    '/demo': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get demo data */
+        get: operations['get-demo-data'];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     '/healthz': {
         parameters: {
             query?: never;
@@ -1088,6 +1105,44 @@ export interface operations {
             };
         };
     };
+    'get-demo-data': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': string;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
     'check-health': {
         parameters: {
             query?: never;
@@ -1126,7 +1181,7 @@ export interface operations {
                 longitude: number;
                 /** @description Latitude of the centre point */
                 latitude: number;
-                /** @description distance around the centre point */
+                /** @description distance around the centre point in meters */
                 distance?: number;
             };
             header?: never;

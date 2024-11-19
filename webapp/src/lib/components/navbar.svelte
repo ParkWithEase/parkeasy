@@ -8,6 +8,7 @@
     import Car from 'carbon-icons-svelte/lib/Car.svelte';
     import { BACKEND_SERVER } from '$lib/constants';
     import { goto } from '$app/navigation';
+    import { Printer } from 'carbon-icons-svelte';
 
     async function logout() {
         try {
@@ -31,6 +32,12 @@
 <Header>
     <a href="/#"><img src={logo} alt="parkeasy-logo" class="text-logo" /></a>
     <HeaderUtilities>
+        <HeaderGlobalAction
+            iconDescription="Demo Link"
+            tooltipAlignment="start"
+            icon={Printer}
+            href="/app/demo"
+        />
         <HeaderGlobalAction
             iconDescription="Explore open spots"
             tooltipAlignment="start"
