@@ -15,6 +15,7 @@ import (
 var TableNames = struct {
 	Auths        string
 	Cars         string
+	Demos        string
 	Parkingspots string
 	Resettokens  string
 	Sessions     string
@@ -23,6 +24,7 @@ var TableNames = struct {
 }{
 	Auths:        "auth",
 	Cars:         "car",
+	Demos:        "demo",
 	Parkingspots: "parkingspot",
 	Resettokens:  "resettoken",
 	Sessions:     "sessions",
@@ -33,6 +35,7 @@ var TableNames = struct {
 var ColumnNames = struct {
 	Auths        authColumnNames
 	Cars         carColumnNames
+	Demos        demoColumnNames
 	Parkingspots parkingspotColumnNames
 	Resettokens  resettokenColumnNames
 	Sessions     sessionColumnNames
@@ -53,6 +56,9 @@ var ColumnNames = struct {
 		Make:         "make",
 		Model:        "model",
 		Color:        "color",
+	},
+	Demos: demoColumnNames{
+		Demostring: "demostring",
 	},
 	Parkingspots: parkingspotColumnNames{
 		Parkingspotid:      "parkingspotid",
@@ -105,6 +111,7 @@ var (
 func Where[Q psql.Filterable]() struct {
 	Auths        authWhere[Q]
 	Cars         carWhere[Q]
+	Demos        demoWhere[Q]
 	Parkingspots parkingspotWhere[Q]
 	Resettokens  resettokenWhere[Q]
 	Sessions     sessionWhere[Q]
@@ -114,6 +121,7 @@ func Where[Q psql.Filterable]() struct {
 	return struct {
 		Auths        authWhere[Q]
 		Cars         carWhere[Q]
+		Demos        demoWhere[Q]
 		Parkingspots parkingspotWhere[Q]
 		Resettokens  resettokenWhere[Q]
 		Sessions     sessionWhere[Q]
@@ -122,6 +130,7 @@ func Where[Q psql.Filterable]() struct {
 	}{
 		Auths:        buildAuthWhere[Q](AuthColumns),
 		Cars:         buildCarWhere[Q](CarColumns),
+		Demos:        buildDemoWhere[Q](DemoColumns),
 		Parkingspots: buildParkingspotWhere[Q](ParkingspotColumns),
 		Resettokens:  buildResettokenWhere[Q](ResettokenColumns),
 		Sessions:     buildSessionWhere[Q](SessionColumns),
