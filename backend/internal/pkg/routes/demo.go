@@ -52,7 +52,7 @@ func (r *DemoRoute) RegisterDemoRoutes(api huma.API) {
 		Summary:     "Get demo data",
 		Tags:        []string{DemoTag.Name},
 	}), func(ctx context.Context, input *struct{}) (*DemoOutput, error) {
-		// userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		// _ = r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 
 		resultString, err := r.service.Get(ctx)
 		if err != nil {
