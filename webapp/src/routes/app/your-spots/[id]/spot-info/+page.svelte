@@ -120,7 +120,6 @@
                 })
                 .then(({ data: availability, error }) => {
                     if (availability) {
-                        console.log(availability);
                         let newTable = createAvailabilityTable(availability);
                         availabilityTablesInitial.set(currentMonday.getTime(), newTable);
                         availabilityTableEdit.set(
