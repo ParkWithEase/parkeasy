@@ -1,6 +1,5 @@
-<script lang="ts">
-    import type { PageData } from './$types';
-
+<!-- <script lang="ts">
+    import type { PageData } from '../$types';
     export let data: PageData;
 </script>
 
@@ -23,4 +22,4 @@
         justify-items: flex-start;
         flex-direction: column;
     }
-</style>
+</style> -->
