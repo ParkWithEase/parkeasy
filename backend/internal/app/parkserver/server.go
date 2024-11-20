@@ -26,6 +26,9 @@ import (
 	parkingSpotRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/parkingspot"
 
+	// demoRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/demo"
+	// "github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/demo"
+
 	"github.com/alexedwards/scs/pgxstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
