@@ -36,7 +36,7 @@ package demo
 // 	snapshotErr := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
 // 	require.NoError(t, snapshotErr, "could not snapshot db")
 
-// 	stringValue := "Hello World"
+// 	stringValue := "https://www.youtube.com/embed/dQw4w9WgXcQ?si=rfdaZniahQxOA1CG&autoplay=1"
 
 // 	t.Run("basic getting the string", func(t *testing.T) {
 // 		t.Cleanup(func() {
@@ -48,7 +48,7 @@ package demo
 // 			pool.Reset()
 // 		})
 
-// 		// Testing create
+// 		// Testing get
 // 		returnedString, err := repo.Get(ctx)
 // 		require.NoError(t, err)
 // 		assert.Equal(t, returnedString, stringValue, "Returned string should be equal")
