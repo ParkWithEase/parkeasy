@@ -4,6 +4,6 @@ INTEGRATION=1 go test -run Integration ./internal/pkg/repositories/demo/... -v
 
 go test ./internal/pkg/services/demo/... -v
 
-go test ./internal/pkg/routes/demo_test.go -v
+go test ./internal/pkg/routes/... -v
 
 docker compose -f compose.yaml up --build
