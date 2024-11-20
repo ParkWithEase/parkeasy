@@ -26,9 +26,6 @@ import (
 	parkingSpotRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/parkingspot"
 
-	demoRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/demo"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/demo"
-
 	"github.com/alexedwards/scs/pgxstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
@@ -76,9 +73,9 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	carService := car.New(carRepository)
 	carRoute := routes.NewCarRoute(carService, sessionManager)
 
-	demoRepository := demoRepo.NewPostgres(db)
-	demoServicer := demo.New(demoRepository)
-	demoRoute := routes.NewDemoRoute(demoServicer, sessionManager)
+	// demoRepository := demoRepo.NewPostgres(db)
+	// demoServicer := demo.New(demoRepository)
+	// demoRoute := routes.NewDemoRoute(demoServicer, sessionManager)
 
 	healthService := health.New(c.DBPool)
 	healthRoute := routes.NewHealthRoute(healthService)
@@ -88,7 +85,7 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	huma.AutoRegister(api, userRoute)
 	huma.AutoRegister(api, parkingSpotRoute)
 	huma.AutoRegister(api, carRoute)
-	huma.AutoRegister(api, demoRoute)
+	// huma.AutoRegister(api, demoRoute)
 	huma.AutoRegister(api, healthRoute)
 }
 

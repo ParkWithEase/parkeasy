@@ -1,14 +1,14 @@
 package demo
 
-import (
-	"context"
-	"errors"
-)
+// import (
+// 	"context"
+// 	"errors"
+// )
 
-var (
-	ErrNotFound = errors.New("No data to query (for demo)")
-)
+// var (
+// 	ErrNotFound = errors.New("No data to query (for demo)")
+// )
 
-type Repository interface {
-	Get(ctx context.Context) (string, error)
-}
+// type Repository interface {
+// 	Get(ctx context.Context) (string, error)
+// }

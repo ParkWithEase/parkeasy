@@ -1,33 +1,33 @@
 package demo
 
-import (
-	"context"
-	"errors"
+// import (
+// 	"context"
+// 	"errors"
 
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
-	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/demo"
-)
+// 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+// 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/demo"
+// )
 
-type Service struct {
-	repo demo.Repository
-}
+// type Service struct {
+// 	repo demo.Repository
+// }
 
-func New(repo demo.Repository) *Service {
-	return &Service{
-		repo: repo,
-	}
-}
+// func New(repo demo.Repository) *Service {
+// 	return &Service{
+// 		repo: repo,
+// 	}
+// }
 
-func (s *Service) Get(ctx context.Context) (string, error) {
-	result, err := s.repo.Get(ctx)
+// func (s *Service) Get(ctx context.Context) (string, error) {
+// 	result, err := s.repo.Get(ctx)
 
-	if err != nil {
-		if errors.Is(err, demo.ErrNotFound) {
-			err = models.ErrNoData
-		}
+// 	if err != nil {
+// 		if errors.Is(err, demo.ErrNotFound) {
+// 			err = models.ErrNoData
+// 		}
 
-		return "", err
-	}
+// 		return "", err
+// 	}
 
-	return result, nil
-}
+// 	return result, nil
+// }

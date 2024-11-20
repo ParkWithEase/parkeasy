@@ -1,7 +1,7 @@
 package models
 
-var (
-	ErrNoData = CodeNotFound.WithMsg("No data to retrieve")
-)
+// var (
+// 	ErrNoData = CodeNotFound.WithMsg("No data to retrieve")
+// )
 
-type Demo string
+// type Demo string
