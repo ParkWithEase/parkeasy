@@ -9,3 +9,9 @@ export const PASSWORD_NOT_MATCH = 'password and confirm password not match';
 export const INTERNAL_SERVER_ERROR = 'Something went wrong with the server';
 export const CREATE_WITH_EMPTY_AVAILABILITY_TABLE_ERROR =
     "Can't create a parking spot with an empty availability table";
+export const ACCOUNT_CREATE_SUCCESS =
+    'Account created successfully. Normally we would ask for email verification but for demo... nah';
+export const DEFAULT_ACCOUNT_CREATION_ERROR = 'Wrong invalid email or invalid password';
+export const PASSWORD_RESET_TOKEN_GET_ERROR =
+    "We shouldn't be doing this but for demo sake, your email doesn't exist";
+export const PASSWORD_RESET_SUCCESS_MESSAGE = 'Password changed successfully';
