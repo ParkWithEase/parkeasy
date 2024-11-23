@@ -464,4 +464,136 @@ func TestPostgresIntegration(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("add preference spots", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+
+			// clear all idle connections
+			// required since Restore() deletes the current DB
+			pool.Reset()
+		})
+
+		// Create entries
+		expectedWinnipegEntries := make([]Entry, 0, len(sampleWinnipegLocations))
+		// Insert winnipeg locations for testing various distances
+		for _, location := range sampleWinnipegLocations {
+			spot := models.ParkingSpotCreationInput{
+				Location:     location,
+				Features:     sampleFeatures,
+				PricePerHour: samplePricePerHour,
+				Availability: testTimeUnits,
+			}
+
+			created, _, err := repo.Create(ctx, userID, &spot)
+			require.NoError(t, err)
+			expectedWinnipegEntries = append(expectedWinnipegEntries, created)
+		}
+
+		pool.Reset()
+		snapshotErr := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+		require.NoError(t, snapshotErr, "could not snapshot db")
+
+		t.Run("okay add preference", func(t *testing.T) {
+			err := repo.AddPreferenceSpot(ctx, userID, 1)
+			require.NoError(t, err)
+
+			err = repo.AddPreferenceSpot(ctx, userID, 2)
+			require.NoError(t, err)
+		})
+
+		t.Run("duplicate add preference should fail", func(t *testing.T) {
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+				require.NoError(t, err, "could not restore db")
+
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
+
+			// Add preference for first spot
+			err := repo.AddPreferenceSpot(ctx, userID, 1)
+			require.NoError(t, err)
+
+			// Attempt to add the same preference for same spot
+			err = repo.AddPreferenceSpot(ctx, userID, 1)
+			if assert.Error(t, err, "Creating a preference spot that is already a preference should fail") {
+				assert.ErrorIs(t, err, ErrDuplicatedPreference)
+			}
+		})
+	})
+
+	t.Run("get many preference spots", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+
+			// clear all idle connections
+			// required since Restore() deletes the current DB
+			pool.Reset()
+		})
+
+		// Populate data
+		expectedEntries := make([]Entry, 0, len(sampleLocations))
+		// Insert locations
+		for _, location := range sampleLocations {
+			spot := models.ParkingSpotCreationInput{
+				Location:     location,
+				Features:     sampleFeatures,
+				PricePerHour: samplePricePerHour,
+				Availability: testTimeUnits,
+			}
+
+			created, _, err := repo.Create(ctx, userID, &spot)
+			require.NoError(t, err)
+			expectedEntries = append(expectedEntries, created)
+		}
+
+		idx := 1
+		for ; idx <= len(expectedEntries); idx += 1 {
+			repo.AddPreferenceSpot(ctx, userID, int64(idx))
+			require.NoError(t, err)
+		}
+
+		t.Run("simple paginate", func(t *testing.T) {
+			t.Parallel()
+
+			var cursor omit.Val[Cursor]
+			idx := 0
+			for ; idx < len(sampleLocations); idx += 2 {
+				entries, err := repo.GetPreferenceSpots(ctx, userID, 2, cursor)
+				require.NoError(t, err)
+				if assert.LessOrEqual(t, 1, len(entries), "expecting at least one entry") {
+					cursor = omit.From(Cursor{
+						ID: entries[len(entries)-1].InternalID,
+					})
+				}
+
+				for eidx, entry := range entries {
+					detailsIdx := idx + eidx
+					if detailsIdx < len(expectedEntries) {
+						assert.Equal(t, expectedEntries[detailsIdx], entry)
+					}
+				}
+			}
+		})
+
+		t.Run("cursor too far", func(t *testing.T) {
+			t.Parallel()
+
+			entries, err := repo.GetPreferenceSpots(ctx, userID, 100, omit.From(Cursor{ID: 10000000}))
+			require.NoError(t, err)
+			assert.Empty(t, entries)
+		})
+
+		t.Run("non-existent user", func(t *testing.T) {
+			t.Parallel()
+
+			entries, err := repo.GetPreferenceSpots(ctx, userID+100, 100, omit.Val[Cursor]{})
+			require.NoError(t, err)
+			assert.Empty(t, entries)
+		})
+	})
 }

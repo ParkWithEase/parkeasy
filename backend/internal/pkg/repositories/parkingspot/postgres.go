@@ -246,6 +246,76 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, filter *Fil
 	return result, nil
 }
 
+func (p *PostgresRepository) AddPreferenceSpot(ctx context.Context, userID int64, spotID int64) error {
+	_, err := dbmodels.Preferencespots.Insert(ctx, p.db, &dbmodels.PreferencespotSetter{
+		Userid:        omit.From(userID),
+		Parkingspotid: omit.From(spotID),
+	})
+
+	if err != nil {
+		// Handle duplicate error
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.UniqueViolation && pgErr.ConstraintName == "preferencespots_pkey" {
+				return ErrDuplicatedPreference
+			}
+		}
+		return fmt.Errorf("could not execute insert: %w", err)
+	}
+
+	return nil
+}
+
+func (p *PostgresRepository) GetPreferenceSpots(ctx context.Context, userID int64, limit int, after omit.Val[Cursor]) ([]Entry, error) {
+	// cursor, err := dbmodels.Parkingspots.Query(
+	// 	ctx, p.db,
+	// 	sm.Columns(dbmodels.Parkingspots.Columns()),
+	// 	psql.WhereAnd(
+	// 		dbmodels.SelectWhere.Preferencespots.Userid.EQ(userID),
+	// 	),
+	// 	dbmodels.SelectJoins.Preferencespots.InnerJoin.ParkingspotidParkingspot(ctx),
+	// 	sm.Limit(limit),
+	// ).Cursor()
+
+	smods := []bob.Mod[*dialect.SelectQuery]{
+		sm.Columns(dbmodels.Parkingspots.Columns()),                                                // Select columns from Parkingspots
+		sm.From(dbmodels.Parkingspots.Name(ctx)),                                                   // Parkingspots as the main table
+		sm.InnerJoin(dbmodels.SelectJoins.Preferencespots.InnerJoin.ParkingspotidParkingspot(ctx)), // Join with Preferencespots
+		psql.WhereAnd( // WHERE clause with user ID filter
+			dbmodels.SelectWhere.Preferencespots.Userid.EQ(userID),
+		),
+		sm.Limit(limit), // Limit modifier
+	}
+
+	// Build the query
+	query := psql.Select(smods...)
+
+	// Execute the query and map results to dbmodels.Parkingspot
+	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[*dbmodels.Parkingspot]())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []Entry{}, nil // No rows found
+		}
+		return nil, err // Other errors
+	}
+	defer entryCursor.Close()
+
+	result := make([]Entry, 0, 8)
+	for entryCursor.Next() {
+		dbSpot, err := entryCursor.Get()
+		if err != nil { // if there's an error, just return what we already have
+			break
+		}
+		entry, err := entryFromDB(dbSpot)
+		if err != nil { // if there's an error, just return what we already have
+			break
+		}
+		result = append(result, entry)
+	}
+
+	return result, nil
+}
+
 func (r *getManyResult) ToEntry() (GetManyEntry, error) {
 	entry, err := entryFromDB(&r.Parkingspot)
 	if err != nil {
