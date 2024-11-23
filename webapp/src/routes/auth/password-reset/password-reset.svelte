@@ -1,6 +1,12 @@
 <script lang="ts">
     import FormHeader from '$lib/components/form-header.svelte';
-    import { BACKEND_SERVER, INTERNAL_SERVER_ERROR, PASSWORD_NOT_MATCH } from '$lib/constants';
+    import {
+        INTERNAL_SERVER_ERROR,
+        PASSWORD_NOT_MATCH,
+        PASSWORD_RESET_SUCCESS_MESSAGE
+    } from '$lib/constants';
+    import { newClient } from '$lib/utils/client';
+    import { getErrorMessage } from '$lib/utils/error-handler';
     import { Form, PasswordInput } from 'carbon-components-svelte';
 
     export let resetToken: string | null;
@@ -13,6 +19,9 @@
 
     let valid: boolean = false;
     let tokenUsed: boolean = false;
+
+    let client = newClient();
+
     $: {
         if (resetToken == null) {
             valid = false;
@@ -27,39 +36,27 @@
         }
     }
 
-    async function resetPassword(event: Event) {
-        // Default form behaviour will send the payload on to the url
+    function resetPassword(event: Event) {
         event.preventDefault();
         if (valid) {
             errorMessage = '';
-            console.log(resetToken);
-            let payload = {
-                password_token: resetToken,
-                new_password: password
-            };
-            try {
-                const response = await fetch(`${BACKEND_SERVER}/auth/password:reset`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    successMessage = 'Password changed success';
-                    tokenUsed = true;
-                } else {
-                    const data = await response.json();
-                    console.log(data);
-                    errorMessage =
-                        data.errors[0].message || "Hmm seems like your reset token doesn't work";
+            client
+                .POST('/auth/password:reset', {
+                    body: { new_password: password, password_token: resetToken ?? '' }
+                })
+                .then(({ error }) => {
+                    if (error) {
+                        errorMessage = getErrorMessage(error);
+                        successMessage = '';
+                    } else {
+                        successMessage = PASSWORD_RESET_SUCCESS_MESSAGE;
+                        tokenUsed = true;
+                    }
+                })
+                .catch(() => {
+                    errorMessage = INTERNAL_SERVER_ERROR;
                     successMessage = '';
-                }
-            } catch {
-                errorMessage = INTERNAL_SERVER_ERROR;
-                successMessage = '';
-            }
+                });
         }
     }
 </script>
