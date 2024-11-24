@@ -109,7 +109,7 @@
     };
 
     const fetchSpots = async (coordinates: number[], radius: number) => {
-        console.log(`radius ${distanceRadius}`)
+        console.log(`radius ${distanceRadius}`);
         const { data: spots, error: errorSpots } = await client.GET('/spots', {
             params: {
                 query: {
@@ -163,8 +163,8 @@
             min={100}
             max={5000}
             step={100}
-            minLabel = "1m"
-            maxLabel = "5km"
+            minLabel="1m"
+            maxLabel="5km"
             labelText="Distance Radius (metres)"
             on:change={(event) => handleRadiusChange(event.detail)}
         />
