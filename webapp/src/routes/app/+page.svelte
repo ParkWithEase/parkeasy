@@ -1,10 +1,9 @@
 <script lang="ts">
     import { onDestroy } from 'svelte';
-    import Navbar from '$lib/components/navbar.svelte';
     import { MapLibre, DefaultMarker, Popup, GeolocateControl } from 'svelte-maplibre';
     import SpotsListComponent from '$lib/components/spot-listings/spots-list-component.svelte';
     import { Button } from 'carbon-components-svelte';
-    import { Search } from 'carbon-components-svelte';
+    import { Search, Slider } from 'carbon-components-svelte';
     import BottomPanelOpen from 'carbon-icons-svelte/lib/BottomPanelOpen.svelte';
     import type { components } from '$lib/sdk/schema';
     import { newClient } from '$lib/utils/client';
@@ -16,7 +15,8 @@
 
     const apiKey = import.meta.env.VITE_GEOCODING_API_KEY;
     const maxZoom: number = 12;
-    const defaultDistance = 10000;
+    const defaultDistance = 2000;
+    let distanceRadius = defaultDistance;
 
     let initZoom: number = 0;
     const selectedZoom: number = 11;
@@ -74,7 +74,7 @@
         if (searchUsed === false) {
             searchUsed = true;
         }
-        fetchSpots(location.geometry.coordinates);
+        fetchSpots(location.geometry.coordinates, distanceRadius);
     };
 
     const handleClickOutside = (event: Event) => {
@@ -108,18 +108,26 @@
         selectedListing = newSelectedListing;
     };
 
-    const fetchSpots = async (coordinates: number[]) => {
+    const fetchSpots = async (coordinates: number[], radius: number) => {
+        console.log(`radius ${distanceRadius}`)
         const { data: spots, error: errorSpots } = await client.GET('/spots', {
             params: {
                 query: {
                     latitude: coordinates[1],
                     longitude: coordinates[0],
-                    distance: defaultDistance
+                    distance: radius
                 }
             }
         });
         handleGetError(errorSpots);
         spotsData = spots ?? [];
+    };
+
+    const handleRadiusChange = (radius: number) => {
+        distanceRadius = radius;
+        if (mapCenter[0] !== 0 && mapCenter[1] !== 0) {
+            fetchSpots(mapCenter, distanceRadius);
+        }
     };
 
     onDestroy(() => {
@@ -149,6 +157,17 @@
                 {/each}
             </ul>
         {/if}
+
+        <Slider
+            value={distanceRadius}
+            min={100}
+            max={5000}
+            step={100}
+            minLabel = "1m"
+            maxLabel = "5km"
+            labelText="Distance Radius (metres)"
+            on:change={(event) => handleRadiusChange(event.detail)}
+        />
 
         {#if spotsData.length > 0}
             {#each spotsData as listing}
