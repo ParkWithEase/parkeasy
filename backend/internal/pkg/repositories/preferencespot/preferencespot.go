@@ -25,6 +25,7 @@ var (
 
 type Repository interface {
 	Create(ctx context.Context, userID int64, spotID int64) error
+	GetBySpotUUID(ctx context.Context, userID int64, spotID int64) (bool, error)
 	GetMany(ctx context.Context, userID int64, limit int, after omit.Val[Cursor]) ([]Entry, error)
 	Delete(ctx context.Context, userID int64, spotID int64) error
 }

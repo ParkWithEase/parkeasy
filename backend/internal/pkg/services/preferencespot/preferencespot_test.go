@@ -79,6 +79,12 @@ func (m *mockRepo) Delete(ctx context.Context, userID int64, spotID int64) error
 	return args.Error(0)
 }
 
+// GetBySpotUUID implements preferencespot.Repository.
+func (m *mockRepo) GetBySpotUUID(ctx context.Context, userID int64, spotID int64) (bool, error) {
+	args := m.Called(ctx, userID, spotID)
+	return args.Bool(0), args.Error(1)
+}
+
 // Create implements parkingspot.Repository.
 func (m *mockParkingSpotRepo) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (parkingspot.Entry, []models.TimeUnit, error) {
 	args := m.Called(ctx, userID, spot)
@@ -108,6 +114,7 @@ func (m *mockParkingSpotRepo) GetMany(ctx context.Context, limit int, filter *pa
 	args := m.Called(limit, filter)
 	return args.Get(0).([]parkingspot.GetManyEntry), args.Error(1)
 }
+
 
 func TestCreate(t *testing.T) {
 	t.Parallel()

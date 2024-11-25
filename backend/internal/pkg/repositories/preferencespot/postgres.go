@@ -54,6 +54,22 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	return nil
 }
 
+func (p *PostgresRepository) GetBySpotUUID(ctx context.Context, userID int64, spotID int64) (bool, error) {
+	exists, err := dbmodels.Preferencespots.Query(
+		ctx, p.db,
+		sm.Columns(1),
+		psql.WhereAnd(dbmodels.SelectWhere.Preferencespots.Preferencespotid.EQ(spotID),
+			dbmodels.SelectWhere.Preferencespots.Preferencespotid.EQ(userID),
+		),
+	).Exists()
+
+	if err != nil {
+		return false, fmt.Errorf("could not execute query: %w", err)
+	}
+
+	return exists, nil
+}
+
 func (p *PostgresRepository) GetMany(ctx context.Context, userID int64, limit int, after omit.Val[Cursor]) ([]Entry, error) {
 	where := dbmodels.SelectWhere.Preferencespots.Userid.EQ(userID)
 	if cursor, ok := after.Get(); ok {

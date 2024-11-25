@@ -164,7 +164,7 @@ func TestPostgresIntegration(t *testing.T) {
 		},
 	}
 
-	t.Run("add preference spots", func(t *testing.T) {
+	t.Run("basic add/get/delete preference spots", func(t *testing.T) {
 		t.Cleanup(func() {
 			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
 			require.NoError(t, err, "could not restore db")
@@ -210,12 +210,26 @@ func TestPostgresIntegration(t *testing.T) {
 			}
 		})
 
+		t.Run("okay get preference", func(t *testing.T) {
+			res, err := repo.GetBySpotUUID(ctx, userID, 1)
+			require.NoError(t, err)
+
+			assert.Equal(t, true, res)
+		})
+
+		t.Run("get non-existent preference", func(t *testing.T) {
+			res, err := repo.GetBySpotUUID(ctx, userID, -1)
+			require.NoError(t, err)
+
+			assert.Equal(t, false, res)
+		})
+
 		t.Run("okay delete preference", func(t *testing.T) {
 			err = repo.Delete(ctx, userID, 1)
 			require.NoError(t, err)
 		})
 
-		t.Run("delete non-existant preference", func(t *testing.T) {
+		t.Run("delete non-existent preference", func(t *testing.T) {
 			err = repo.Delete(ctx, userID, 1)
 			if assert.Error(t, err, "Deleting a preference spot that is not preferred should fail") {
 				assert.ErrorIs(t, err, ErrNotFound)
