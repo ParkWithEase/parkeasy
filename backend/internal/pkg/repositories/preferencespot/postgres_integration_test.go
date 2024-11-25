@@ -2,6 +2,7 @@ package preferencespot
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -232,7 +233,7 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		// Populate data
+		// Populate spots
 		expectedEntries := make([]Entry, 0, len(sampleLocations))
 		// Insert locations
 		idx := 1
@@ -247,17 +248,16 @@ func TestPostgresIntegration(t *testing.T) {
 			created, _, err := spotRepo.Create(ctx, userID, &spot)
 			require.NoError(t, err)
 
+			err = repo.Create(ctx, userID, created.InternalID)
+			require.NoError(t, err)
+			fmt.Printf("\nCreated: %d\n", created.InternalID)
+
 			preferenceEntry := Entry{
 				ParkingSpot: created.ParkingSpot,
 				InternalID:  int64(idx),
 			}
+			idx += 1
 			expectedEntries = append(expectedEntries, preferenceEntry)
-		}
-
-		idx = 1
-		for ; idx <= len(expectedEntries); idx += 1 {
-			err := repo.Create(ctx, userID, int64(idx))
-			require.NoError(t, err)
 		}
 
 		t.Run("simple paginate", func(t *testing.T) {
@@ -268,11 +268,11 @@ func TestPostgresIntegration(t *testing.T) {
 			for ; idx < len(sampleLocations); idx += 2 {
 				entries, err := repo.GetMany(ctx, userID, 2, cursor)
 				require.NoError(t, err)
-				// if assert.LessOrEqual(t, 1, len(entries), "expecting at least one entry") {
-				// 	cursor = omit.From(Cursor{
-				// 		ID: entries[len(entries)-1].InternalID,
-				// 	})
-				// }
+				if assert.LessOrEqual(t, 1, len(entries), "expecting at least one entry") {
+					cursor = omit.From(Cursor{
+						ID: entries[len(entries)-1].InternalID,
+					})
+				}
 
 				for eidx, entry := range entries {
 					detailsIdx := idx + eidx

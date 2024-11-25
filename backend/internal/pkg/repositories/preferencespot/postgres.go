@@ -5,13 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbmodels"
-	// "github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/aarondl/opt/omit"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/rs/zerolog/log"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
@@ -58,37 +58,22 @@ func (p *PostgresRepository) GetMany(ctx context.Context, userID int64, limit in
 	where := dbmodels.SelectWhere.Preferencespots.Userid.EQ(userID)
 	if cursor, ok := after.Get(); ok {
 		where = psql.WhereAnd(where, dbmodels.SelectWhere.Preferencespots.Preferencespotid.GT(cursor.ID))
-		fmt.Printf("YES")
 	}
 
-	// cursor, err := dbmodels.Parkingspots.Query(
-	// 	ctx, p.db,
-	// 	sm.Columns(dbmodels.Parkingspots.Columns()),
-	// 	psql.WhereAnd(
-	// 		dbmodels.SelectWhere.Preferencespots.Userid.EQ(userID),
-	// 	),
-	// 	sm.InnerJoin(dbmodels.SelectJoins.Preferencespots.InnerJoin.ParkingspotidParkingspot(ctx)),
-	// 	sm.Limit(limit),
-	// ).Cursor()
-
 	smods := []bob.Mod[*dialect.SelectQuery]{
-		sm.Columns(dbmodels.Parkingspots.Columns()),                                  // Select columns from Parkingspots
+		sm.Columns(dbmodels.Parkingspots.Columns()),
 		sm.Columns(dbmodels.PreferencespotColumns.Preferencespotid),
-		sm.From(dbmodels.Preferencespots.Name(ctx)),                                  // Preferencespots as the main table
-		dbmodels.SelectJoins.Preferencespots.InnerJoin.ParkingspotidParkingspot(ctx), // Join with Preferencespots
-		sm.Limit(limit), // Limit modifier
+		sm.From(dbmodels.Preferencespots.Name(ctx)),
+		dbmodels.SelectJoins.Preferencespots.InnerJoin.ParkingspotidParkingspot(ctx),
+		sm.Limit(limit),
 		where,
 	}
 
 	// Build the query
 	query := psql.Select(smods...)
 
-	sqlBuilder := strings.Builder{}
-	query.WriteSQL(&sqlBuilder, nil, 0)
-	fmt.Printf("Generated SQL: %s\n", sqlBuilder.String())
-
 	// Execute the query and map results to getManyResult
-	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[Entry]())
+	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return []Entry{}, nil // No rows found
@@ -99,11 +84,18 @@ func (p *PostgresRepository) GetMany(ctx context.Context, userID int64, limit in
 
 	result := make([]Entry, 0, 8)
 	for entryCursor.Next() {
-		entry, err := entryCursor.Get()
+		r, err := entryCursor.Get()
 		if err != nil { // if there's an error, just return what we already have
 			break
 		}
-		result = append(result, entry)
+
+		res, err := entryFromDB(r)
+		if err != nil { // if there is an error converting lat, long or price to float, then log and skip this entry
+			log.Err(err).Msg("error while converting DB entry")
+			continue
+		}
+
+		result = append(result, res)
 	}
 
 	return result, nil
@@ -126,38 +118,39 @@ func (p *PostgresRepository) Delete(ctx context.Context, userID int64, spotID in
 	return nil
 }
 
-// func entryFromDB(model getManyResult) (Entry, error) {
-// 	lat, ok := model.Latitude.Float64()
-// 	if !ok {
-// 		return Entry{}, fmt.Errorf("could not convert %v to float64", model.Latitude)
-// 	}
-// 	lon, ok := model.Longitude.Float64()
-// 	if !ok {
-// 		return Entry{}, fmt.Errorf("could not convert %v to float64", model.Longitude)
-// 	}
-// 	price, ok := model.Priceperhour.Float64()
-// 	if !ok {
-// 		return Entry{}, fmt.Errorf("could not convert %v to float64", model.Priceperhour)
-// 	}
+func entryFromDB(model getManyResult) (Entry, error) {
+	lat, ok := model.Latitude.Float64()
+	if !ok {
+		return Entry{}, fmt.Errorf("could not convert %v to float64", model.Latitude)
+	}
+	lon, ok := model.Longitude.Float64()
+	if !ok {
+		return Entry{}, fmt.Errorf("could not convert %v to float64", model.Longitude)
+	}
+	price, ok := model.Priceperhour.Float64()
+	if !ok {
+		return Entry{}, fmt.Errorf("could not convert %v to float64", model.Priceperhour)
+	}
 
-// 	return Entry{
-// 		ParkingSpot: models.ParkingSpot{
-// 			Location: models.ParkingSpotLocation{
-// 				PostalCode:    model.Postalcode,
-// 				CountryCode:   model.Countrycode,
-// 				City:          model.City,
-// 				State:         model.State,
-// 				StreetAddress: model.Streetaddress,
-// 				Longitude:     lon,
-// 				Latitude:      lat,
-// 			},
-// 			Features: models.ParkingSpotFeatures{
-// 				Shelter:         model.Hasshelter,
-// 				PlugIn:          model.Hasplugin,
-// 				ChargingStation: model.Haschargingstation,
-// 			},
-// 			PricePerHour: price,
-// 			ID:           model.Parkingspotuuid,
-// 		},
-// 	}, nil
-// }
+	return Entry{
+		ParkingSpot: models.ParkingSpot{
+			Location: models.ParkingSpotLocation{
+				PostalCode:    model.Postalcode,
+				CountryCode:   model.Countrycode,
+				City:          model.City,
+				State:         model.State,
+				StreetAddress: model.Streetaddress,
+				Longitude:     lon,
+				Latitude:      lat,
+			},
+			Features: models.ParkingSpotFeatures{
+				Shelter:         model.Hasshelter,
+				PlugIn:          model.Hasplugin,
+				ChargingStation: model.Haschargingstation,
+			},
+			PricePerHour: price,
+			ID:           model.Parkingspotuuid,
+		},
+		InternalID: model.Preferencespotid,
+	}, nil
+}

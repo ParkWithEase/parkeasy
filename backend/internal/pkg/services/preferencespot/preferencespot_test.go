@@ -133,6 +133,21 @@ func TestCreate(t *testing.T) {
 		repo.AssertExpectations(t)
 	})
 
+
+	t.Run("create preference on non existent parking spot", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		spotRepo := new(mockParkingSpotRepo)
+		spotRepo.AddGetCalls()
+		srv := New(repo, spotRepo)
+
+		err := srv.Create(ctx, testUserID, uuid.Nil)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
+		}
+		repo.AssertExpectations(t)
+	})
 }
 
 func TestGetMany(t *testing.T) {
@@ -296,7 +311,7 @@ func TestDelete(t *testing.T) {
 		repo.AssertExpectations(t)
 	})
 
-	t.Run("deleting non-existent preference does not produce errors", func(t *testing.T) {
+	t.Run("deleting preference on non existent parking spot", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
