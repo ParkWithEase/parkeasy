@@ -59,6 +59,4 @@ type Repository interface {
 	GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error)
 	GetMany(ctx context.Context, limit int, filter *Filter) ([]GetManyEntry, error)
 	GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error)
-	GetPreferenceSpots(ctx context.Context, userID int64, limit int, after omit.Val[Cursor]) ([]Entry, error)
-	AddPreferenceSpot(ctx context.Context, userID int64, spotID int64) error
 }

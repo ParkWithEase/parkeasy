@@ -8,7 +8,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/aarondl/opt/omit"
@@ -22,7 +21,6 @@ import (
 	"github.com/stephenafamo/bob/expr"
 	"github.com/stephenafamo/bob/mods"
 	"github.com/stephenafamo/bob/orm"
-	"github.com/stephenafamo/scan"
 )
 
 // User is an object representing the database table.
@@ -55,7 +53,6 @@ type UsersStmt = bob.QueryStmt[*User, UserSlice]
 type userR struct {
 	UseridCars         CarSlice         // car.car_userid_fkey
 	UseridParkingspots ParkingspotSlice // parkingspot.parkingspot_userid_fkey
-	Parkingspots       ParkingspotSlice // preferencespots.preferencespots_parkingspotid_fkeypreferencespots.preferencespots_userid_fkey
 	AuthuuidAuth       *Auth            // users.users_authuuid_fkey
 }
 
@@ -309,7 +306,6 @@ type userJoins[Q dialect.Joinable] struct {
 	typ                string
 	UseridCars         func(context.Context) modAs[Q, carColumns]
 	UseridParkingspots func(context.Context) modAs[Q, parkingspotColumns]
-	Parkingspots       func(context.Context) modAs[Q, parkingspotColumns]
 	AuthuuidAuth       func(context.Context) modAs[Q, authColumns]
 }
 
@@ -322,7 +318,6 @@ func buildUserJoins[Q dialect.Joinable](cols userColumns, typ string) userJoins[
 		typ:                typ,
 		UseridCars:         usersJoinUseridCars[Q](cols, typ),
 		UseridParkingspots: usersJoinUseridParkingspots[Q](cols, typ),
-		Parkingspots:       usersJoinParkingspots[Q](cols, typ),
 		AuthuuidAuth:       usersJoinAuthuuidAuth[Q](cols, typ),
 	}
 }
@@ -460,33 +455,6 @@ func usersJoinUseridParkingspots[Q dialect.Joinable](from userColumns, typ strin
 	}
 }
 
-func usersJoinParkingspots[Q dialect.Joinable](from userColumns, typ string) func(context.Context) modAs[Q, parkingspotColumns] {
-	return func(ctx context.Context) modAs[Q, parkingspotColumns] {
-		return modAs[Q, parkingspotColumns]{
-			c: ParkingspotColumns,
-			f: func(to parkingspotColumns) bob.Mod[Q] {
-				random := strconv.FormatInt(randInt(), 10)
-				mods := make(mods.QueryMods[Q], 0, 2)
-
-				{
-					to := PreferencespotColumns.AliasedAs(PreferencespotColumns.Alias() + random)
-					mods = append(mods, dialect.Join[Q](typ, Preferencespots.Name(ctx).As(to.Alias())).On(
-						to.Userid.EQ(from.Userid),
-					))
-				}
-				{
-					from := PreferencespotColumns.AliasedAs(PreferencespotColumns.Alias() + random)
-					mods = append(mods, dialect.Join[Q](typ, Parkingspots.Name(ctx).As(to.Alias())).On(
-						to.Parkingspotid.EQ(from.Parkingspotid),
-					))
-				}
-
-				return mods
-			},
-		}
-	}
-}
-
 func usersJoinAuthuuidAuth[Q dialect.Joinable](from userColumns, typ string) func(context.Context) modAs[Q, authColumns] {
 	return func(ctx context.Context) modAs[Q, authColumns] {
 		return modAs[Q, authColumns]{
@@ -542,29 +510,6 @@ func (os UserSlice) UseridParkingspots(ctx context.Context, exec bob.Executor, m
 	)...)
 }
 
-// Parkingspots starts a query for related objects on parkingspot
-func (o *User) Parkingspots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
-	return Parkingspots.Query(ctx, exec, append(mods,
-		sm.InnerJoin(Preferencespots.NameAs(ctx)).On(
-			ParkingspotColumns.Parkingspotid.EQ(PreferencespotColumns.Parkingspotid)),
-		sm.Where(PreferencespotColumns.Userid.EQ(psql.Arg(o.Userid))),
-	)...)
-}
-
-func (os UserSlice) Parkingspots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
-	PKArgs := make([]bob.Expression, len(os))
-	for i, o := range os {
-		PKArgs[i] = psql.ArgGroup(o.Userid)
-	}
-
-	return Parkingspots.Query(ctx, exec, append(mods,
-		sm.InnerJoin(Preferencespots.NameAs(ctx)).On(
-			ParkingspotColumns.Parkingspotid.EQ(PreferencespotColumns.Parkingspotid),
-		),
-		sm.Where(psql.Group(PreferencespotColumns.Userid).In(PKArgs...)),
-	)...)
-}
-
 // AuthuuidAuth starts a query for related objects on auth
 func (o *User) AuthuuidAuth(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) AuthsQuery {
 	return Auths.Query(ctx, exec, append(mods,
@@ -614,20 +559,6 @@ func (o *User) Preload(name string, retrieved any) error {
 		for _, rel := range rels {
 			if rel != nil {
 				rel.R.UseridUser = o
-			}
-		}
-		return nil
-	case "Parkingspots":
-		rels, ok := retrieved.(ParkingspotSlice)
-		if !ok {
-			return fmt.Errorf("user cannot load %T as %q", retrieved, name)
-		}
-
-		o.R.Parkingspots = rels
-
-		for _, rel := range rels {
-			if rel != nil {
-				rel.R.Users = UserSlice{o}
 			}
 		}
 		return nil
@@ -786,107 +717,6 @@ func (os UserSlice) LoadUserUseridParkingspots(ctx context.Context, exec bob.Exe
 			rel.R.UseridUser = o
 
 			o.R.UseridParkingspots = append(o.R.UseridParkingspots, rel)
-		}
-	}
-
-	return nil
-}
-
-func ThenLoadUserParkingspots(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
-	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
-		loader, isLoader := retrieved.(interface {
-			LoadUserParkingspots(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
-		})
-		if !isLoader {
-			return fmt.Errorf("object %T cannot load UserParkingspots", retrieved)
-		}
-
-		err := loader.LoadUserParkingspots(ctx, exec, queryMods...)
-
-		// Don't cause an issue due to missing relationships
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil
-		}
-
-		return err
-	})
-}
-
-// LoadUserParkingspots loads the user's Parkingspots into the .R struct
-func (o *User) LoadUserParkingspots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if o == nil {
-		return nil
-	}
-
-	// Reset the relationship
-	o.R.Parkingspots = nil
-
-	related, err := o.Parkingspots(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, rel := range related {
-		rel.R.Users = UserSlice{o}
-	}
-
-	o.R.Parkingspots = related
-	return nil
-}
-
-// LoadUserParkingspots loads the user's Parkingspots into the .R struct
-func (os UserSlice) LoadUserParkingspots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
-	if len(os) == 0 {
-		return nil
-	}
-
-	// since we are changing the columns, we need to check if the original columns were set or add the defaults
-	sq := dialect.SelectQuery{}
-	for _, mod := range mods {
-		mod.Apply(&sq)
-	}
-
-	if len(sq.SelectList.Columns) == 0 {
-		mods = append(mods, sm.Columns(Parkingspots.Columns()))
-	}
-
-	q := os.Parkingspots(ctx, exec, append(
-		mods,
-		sm.Columns(PreferencespotColumns.Userid.As("related_users.Userid")),
-	)...)
-
-	UseridSlice := []int64{}
-
-	mapper := scan.Mod(scan.StructMapper[*Parkingspot](), func(ctx context.Context, cols []string) (scan.BeforeFunc, func(any, any) error) {
-		return func(row *scan.Row) (any, error) {
-				UseridSlice = append(UseridSlice, *new(int64))
-				row.ScheduleScan("related_users.Userid", &UseridSlice[len(UseridSlice)-1])
-
-				return nil, nil
-			},
-			func(any, any) error {
-				return nil
-			}
-	})
-
-	parkingspots, err := bob.Allx[*Parkingspot, ParkingspotSlice](ctx, exec, q, mapper)
-	if err != nil {
-		return err
-	}
-
-	for _, o := range os {
-		o.R.Parkingspots = nil
-	}
-
-	for _, o := range os {
-		for i, rel := range parkingspots {
-			if o.Userid != UseridSlice[i] {
-				continue
-			}
-
-			rel.R.Users = append(rel.R.Users, o)
-
-			o.R.Parkingspots = append(o.R.Parkingspots, rel)
 		}
 	}
 
@@ -1108,69 +938,6 @@ func (user0 *User) AttachUseridParkingspots(ctx context.Context, exec bob.Execut
 
 	for _, rel := range related {
 		rel.R.UseridUser = user0
-	}
-
-	return nil
-}
-
-func attachUserParkingspots0(ctx context.Context, exec bob.Executor, count int, user0 *User, parkingspots2 ParkingspotSlice) (PreferencespotSlice, error) {
-	setters := make([]*PreferencespotSetter, count)
-	for i := 0; i < count; i++ {
-		setters[i] = &PreferencespotSetter{
-			Userid:        omit.From(user0.Userid),
-			Parkingspotid: omit.From(parkingspots2[i].Parkingspotid),
-		}
-	}
-
-	preferencespots1, err := Preferencespots.InsertMany(ctx, exec, setters...)
-	if err != nil {
-		return nil, fmt.Errorf("attachUserParkingspots0: %w", err)
-	}
-
-	return preferencespots1, nil
-}
-
-func (user0 *User) InsertParkingspots(ctx context.Context, exec bob.Executor, related ...*ParkingspotSetter) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	inserted, err := Parkingspots.InsertMany(ctx, exec, related...)
-	if err != nil {
-		return fmt.Errorf("inserting related objects: %w", err)
-	}
-	parkingspots2 := ParkingspotSlice(inserted)
-
-	_, err = attachUserParkingspots0(ctx, exec, len(related), user0, parkingspots2)
-	if err != nil {
-		return err
-	}
-
-	user0.R.Parkingspots = append(user0.R.Parkingspots, parkingspots2...)
-
-	for _, rel := range parkingspots2 {
-		rel.R.Users = append(rel.R.Users, user0)
-	}
-	return nil
-}
-
-func (user0 *User) AttachParkingspots(ctx context.Context, exec bob.Executor, related ...*Parkingspot) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-	parkingspots2 := ParkingspotSlice(related)
-
-	_, err = attachUserParkingspots0(ctx, exec, len(related), user0, parkingspots2)
-	if err != nil {
-		return err
-	}
-
-	user0.R.Parkingspots = append(user0.R.Parkingspots, parkingspots2...)
-
-	for _, rel := range related {
-		rel.R.Users = append(rel.R.Users, user0)
 	}
 
 	return nil

@@ -25,7 +25,7 @@ var TableNames = struct {
 	Auths:           "auth",
 	Cars:            "car",
 	Parkingspots:    "parkingspot",
-	Preferencespots: "preferencespots",
+	Preferencespots: "preferencespot",
 	Resettokens:     "resettoken",
 	Sessions:        "sessions",
 	Timeunits:       "timeunit",
@@ -74,8 +74,9 @@ var ColumnNames = struct {
 		Priceperhour:       "priceperhour",
 	},
 	Preferencespots: preferencespotColumnNames{
-		Userid:        "userid",
-		Parkingspotid: "parkingspotid",
+		Preferencespotid: "preferencespotid",
+		Userid:           "userid",
+		Parkingspotid:    "parkingspotid",
 	},
 	Resettokens: resettokenColumnNames{
 		Token:    "token",
