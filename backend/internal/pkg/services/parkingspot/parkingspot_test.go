@@ -74,16 +74,6 @@ func (m *mockRepo) GetMany(ctx context.Context, limit int, filter *parkingspot.F
 	return args.Get(0).([]parkingspot.GetManyEntry), args.Error(1)
 }
 
-// GetMany implements parkingspot.Repository.
-func (m *mockRepo) GetPreferenceSpots(ctx context.Context, userID int64, limit int, after omit.Val[parkingspot.Cursor]) ([]parkingspot.Entry, error) {
-	args := m.Called(userID, limit, after)
-	return args.Get(0).([]parkingspot.Entry), args.Error(1)
-}
-
-func (m *mockRepo) AddPreferenceSpot(ctx context.Context, userID int64, spotID int64) error {
-	args := m.Called(userID, spotID)
-	return args.Error(0)
-}
 
 const (
 	sampleLatitudeFloat  = float64(43.07923)
