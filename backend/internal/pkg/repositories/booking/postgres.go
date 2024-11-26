@@ -47,7 +47,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		return EntryWithTimes{}, ErrInvalidPaidAmount
 	}
 
-	inserted, err := dbmodels.Bookings.Insert(ctx, p.db, &dbmodels.BookingSetter{
+	inserted, err := dbmodels.Bookings.Insert(ctx, tx, &dbmodels.BookingSetter{
 		Userid:        omit.From(userID),
 		Parkingspotid: omit.From(spotID),
 		Paidamount:    omit.From(paidAmount),
@@ -56,14 +56,63 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		return EntryWithTimes{}, fmt.Errorf("could not execute insert: %w", err)
 	}
 
-	// updatedTimes := make([]models.TimeUnit, 0, len(booking.BookedTimes))
+	//--------Update the corresponding time slots--------
+	// Check if all the time slots are available
+	smods := []bob.Mod[*dialect.SelectQuery]{sm.Columns(dbmodels.Timeunits.Columns())}
 
-	// umods := []bob.Mod[*dialect.UpdateQuery]{
-	// 	um.Table(dbmodels.Timeunits.Name(ctx)),
-	// 	um.SetCol(dbmodels.ColumnNames.Timeunits.Bookingid).ToArg(inserted.Bookingid),
-	// }
+	//Variable for OR clauses in where, used for timeslots timeranges
+	var whereOrMods []mods.Where[*dialect.SelectQuery]
+	for _, time := range booking.BookedTimes {
+		whereOrMods = append(whereOrMods, sm.Where(
+			dbmodels.TimeunitColumns.Timerange.OP(
+				"&&",
+				psql.Arg(dbtype.Tstzrange{
+					Start: time.StartTime,
+					End:   time.EndTime,
+				}),
+			),
+		))
+	}
 
-	// Update the corresponding time slots
+	//Variable for AND clauses in where
+	var whereMods []mods.Where[*dialect.SelectQuery]
+	whereMods = append(
+		whereMods,
+		dbmodels.SelectWhere.Timeunits.Bookingid.IsNull(),
+		dbmodels.SelectWhere.Timeunits.Parkingspotid.EQ(spotID),
+		psql.WhereOr(whereOrMods...))
+
+	smods = append(
+		smods,
+		sm.From(dbmodels.Timeunits.Name(ctx)),
+	)
+
+	smods = append(smods, psql.WhereAnd(whereMods...))
+	query := psql.Select(smods...)
+
+	updateCursor, err := bob.Cursor(ctx, tx, query, scan.StructMapper[*dbmodels.Timeunit]())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			//We do not care if the time is not losted or already booked, the user can not book it
+			//In this case Time Slot is not available to be booked
+			return EntryWithTimes{}, ErrTimeAlreadyBooked
+		}
+	}
+	defer updateCursor.Close()
+
+	// Count rows in the cursor, and form timeUnits
+	count := 0
+	for updateCursor.Next() {
+		count++
+	}
+
+	// Check if the count matches the expected number of booked times
+	if count != len(booking.BookedTimes) {
+		return EntryWithTimes{}, ErrTimeAlreadyBooked
+	}
+
+	//Update time units with booking ID
+	//Form time units with booking ID
 	units := make([]*dbmodels.Timeunit, 0, len(booking.BookedTimes))
 	for _, time := range booking.BookedTimes {
 		units = append(units, &dbmodels.Timeunit{
@@ -80,48 +129,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	if err != nil {
 		return EntryWithTimes{}, err
 	}
-
-	// for _, time := range booking.BookedTimes {
-	// 	var whereMods []mods.Where[*dialect.UpdateQuery]
-
-	// 	whereMods = append(whereMods, sm.Where(
-	// 		dbmodels.TimeunitColumns.Timerange.OP(
-	// 			"&&",
-	// 			psql.Arg(dbtype.Tstzrange{
-	// 				Start: time.StartTime,
-	// 				End:   time.EndTime,
-	// 			}),
-	// 		),
-	// 	))
-
-	// 	whereMods = append(whereMods, sm.Where(dbmodels.TimeunitColumns.Bookingid.IsNull()))
-
-	// 	uWhereMod := append(
-	// 		umods,
-	// 		psql.WhereAnd(whereMods...),
-	// 		um.Returning(dbmodels.Timeunits.Columns()),
-	// 	)
-
-	// 	query := psql.Update(uWhereMod...)
-
-	// 	updateCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[*dbmodels.Timeunit]())
-	// 	if err != nil {
-	// 		if errors.Is(err, sql.ErrNoRows) {
-	// 			return EntryWithTimes{}, fmt.Errorf("update failed on time to reflect a booking: %w", err)
-	// 		}
-	// 	}
-	// 	defer updateCursor.Close()
-
-	// 	if updateCursor.Next() {
-	// 		get, err := updateCursor.Get()
-	// 		if err != nil {
-	// 			return EntryWithTimes{}, fmt.Errorf("could not fetch updated time: %w", err)
-	// 		}
-	// 		updatedTimes = append(updatedTimes, timeUnitFromDB(get))
-	// 	} else {
-	// 		return EntryWithTimes{}, ErrTimeAlreadyBooked
-	// 	}
-	// }
+	//------------------------------------------------
 
 	err = tx.Commit()
 	if err != nil {
