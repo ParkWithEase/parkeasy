@@ -2,6 +2,7 @@ package parkingspot
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"math"
@@ -11,22 +12,27 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/geocoding"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/preferencespot"
 	"github.com/aarondl/opt/omit"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 // Largest number of entries returned per request
 const MaximumCount = 1000
 
 type Service struct {
-	repo     parkingspot.Repository
-	geocoder geocoding.Geocoder
+	repo           parkingspot.Repository
+	geocoder       geocoding.Geocoder
+	preferenceRepo preferencespot.Repository
 }
 
-func New(repo parkingspot.Repository, geocoder geocoding.Geocoder) *Service {
+func New(repo parkingspot.Repository, geocoder geocoding.Geocoder, preferenceRepo preferencespot.Repository) *Service {
 	return &Service{
-		repo:     repo,
-		geocoder: geocoder,
+		repo:           repo,
+		geocoder:       geocoder,
+		preferenceRepo: preferenceRepo,
 	}
 }
 
@@ -267,4 +273,95 @@ func validateSpotLocation(location *models.ParkingSpotLocation) error {
 		return models.ErrInvalidStreetAddress
 	}
 	return nil
+}
+
+func (s *Service) CreatePreference(ctx context.Context, userID int64, spotID uuid.UUID) error {
+	entry, err := s.repo.GetByUUID(ctx, spotID)
+
+	if err != nil {
+		return models.ErrParkingSpotNotFound
+	}
+
+	spotInternalID := entry.InternalID
+
+	return s.preferenceRepo.Create(ctx, userID, spotInternalID)
+}
+
+func (s *Service) GetPreferenceByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (bool, error) {
+	entry, err := s.repo.GetByUUID(ctx, spotID)
+
+	if err != nil {
+		return false, models.ErrParkingSpotNotFound
+	}
+
+	return s.preferenceRepo.GetBySpotUUID(ctx, userID, entry.InternalID)
+}
+
+func (s *Service) GetManyPreferences(ctx context.Context, userID int64, count int, after models.Cursor) (spots []models.ParkingSpot, next models.Cursor, err error) {
+	if count <= 0 {
+		return []models.ParkingSpot{}, "", nil
+	}
+
+	cursor := decodeCursor(after)
+	count = min(count, MaximumCount)
+	preferenceEntries, err := s.preferenceRepo.GetMany(ctx, userID, count+1, cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(preferenceEntries) > count {
+		preferenceEntries = preferenceEntries[:len(preferenceEntries)-1]
+
+		next, err = encodeCursor(preferencespot.Cursor{
+			ID: preferenceEntries[len(preferenceEntries)-1].InternalID,
+		})
+		// This is an issue, but not enough to abort the request
+		if err != nil {
+			log.Err(err).
+				Int64("userid", userID).
+				Int64("preferencespotid", preferenceEntries[len(preferenceEntries)-2].InternalID).
+				Msg("could not encode next cursor")
+		}
+	}
+
+	result := make([]models.ParkingSpot, 0, len(preferenceEntries))
+	for _, entry := range preferenceEntries {
+		result = append(result, entry.ParkingSpot)
+	}
+	return result, next, nil
+}
+
+func (s *Service) DeletePreference(ctx context.Context, userID int64, spotID uuid.UUID) error {
+	entry, err := s.repo.GetByUUID(ctx, spotID)
+
+	if err != nil {
+		return models.ErrParkingSpotNotFound
+	}
+
+	spotInternalID := entry.InternalID
+
+	return s.preferenceRepo.Delete(ctx, userID, spotInternalID)
+}
+
+func decodeCursor(cursor models.Cursor) omit.Val[preferencespot.Cursor] {
+	raw, err := base64.RawURLEncoding.DecodeString(string(cursor))
+	if err != nil {
+		return omit.Val[preferencespot.Cursor]{}
+	}
+
+	var result preferencespot.Cursor
+	err = cbor.Unmarshal(raw, &result)
+	if err != nil {
+		return omit.Val[preferencespot.Cursor]{}
+	}
+
+	return omit.From(result)
+}
+
+func encodeCursor(cursor preferencespot.Cursor) (models.Cursor, error) {
+	raw, err := cbor.Marshal(cursor)
+	if err != nil {
+		return "", err
+	}
+
+	return models.Cursor(base64.RawURLEncoding.EncodeToString(raw)), nil
 }

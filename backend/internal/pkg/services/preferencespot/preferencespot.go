@@ -40,6 +40,16 @@ func (s *Service) Create(ctx context.Context, userID int64, spotID uuid.UUID) er
 	return s.repo.Create(ctx, userID, spotInternalID)
 }
 
+func (s *Service) GetBySpotUUID(ctx context.Context, userID int64, spotID uuid.UUID) (bool, error) {
+	entry, err := s.spotRepo.GetByUUID(ctx, spotID)
+
+	if err != nil {
+		return false, models.ErrParkingSpotNotFound
+	}
+
+	return s.repo.GetBySpotUUID(ctx, userID, entry.InternalID)
+}
+
 func (s *Service) GetMany(ctx context.Context, userID int64, count int, after models.Cursor) (spots []models.ParkingSpot, next models.Cursor, err error) {
 	if count <= 0 {
 		return []models.ParkingSpot{}, "", nil

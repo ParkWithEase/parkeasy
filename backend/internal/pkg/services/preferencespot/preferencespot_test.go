@@ -157,6 +157,33 @@ func TestCreate(t *testing.T) {
 	})
 }
 
+func TestGetBySpotUUID(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	t.Run("basic get", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		spotRepo := new(mockParkingSpotRepo)
+		spotRepo.AddGetCalls()
+		srv := New(repo, spotRepo)
+
+		repo.On("GetBySpotUUID", mock.Anything, testUserID, testInternalID).
+			Return(
+				true,
+				nil,
+			).
+			Once()
+		res, err := srv.GetBySpotUUID(ctx, testUserID, testSpotID)
+		require.NoError(t, err)
+		assert.Equal(t, true, res)
+		repo.AssertExpectations(t)
+	})
+}
+
 func TestGetMany(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())

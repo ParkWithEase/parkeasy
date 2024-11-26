@@ -18,9 +18,11 @@ type PreferenceSpotServicer interface {
 	//
 	// Returns no error if successful.
 	Create(ctx context.Context, userID int64, spotID uuid.UUID) error
-	// Get many preference spots
+	// Get many preference spots for `userID`.
 	GetMany(ctx context.Context, userID int64, count int, after models.Cursor) ([]models.ParkingSpot, models.Cursor, error)
-	// Delete the preference spot with `preferenceID` if `userID` owns the resource.
+	// Get the preference state of a spot with `spotID` for `userID`.
+	GetBySpotUUID(ctx context.Context, userID int64, spotID uuid.UUID) (bool, error)
+	// Delete the preference spot with `spotID` if `userID` owns the resource.
 	Delete(ctx context.Context, userID int64, spotID uuid.UUID) error
 }
 
@@ -33,6 +35,10 @@ type PreferenceSpotRoute struct {
 type PreferenceSpotListOutput struct {
 	Link []string             `header:"Link" doc:"Contains details on getting the next page of resources" example:"<https://example.com/spots/preference?after=gQL>; rel=\"next\""`
 	Body []models.ParkingSpot `nullable:"false"`
+}
+
+type PreferenceBoolOutput struct {
+	Preference bool `json:"preference" doc:"Whether the spot is preferred or not"`
 }
 
 // Returns a new `PreferenceSpotRoute`
@@ -84,6 +90,39 @@ func (r *PreferenceSpotRoute) RegisterPreferenceSpotRoutes(api huma.API) {
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 		return nil, nil
+	})
+
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID: "get-preference-spot",
+		Method:      http.MethodGet,
+		Path:        "/spots/{id}/preference",
+		Summary:     "Get the preference state of the specified spot",
+		Tags:        []string{PreferenceSpotTag.Name},
+		Errors:      []int{http.StatusUnprocessableEntity},
+	}), func(ctx context.Context, input *struct {
+		ID uuid.UUID `path:"id"`
+	},
+	) (*PreferenceBoolOutput, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		res, err := r.service.GetBySpotUUID(ctx, userID, input.ID)
+		if err != nil {
+			var detail error
+			switch {
+			case errors.Is(err, models.ErrParkingSpotNotFound):
+				detail = &huma.ErrorDetail{
+					Location: "path.id",
+					Value:    input.ID,
+				}
+				return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
+			default:
+				return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, nil)
+			}
+
+		}
+
+		return &PreferenceBoolOutput{
+			Preference: res,
+		}, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
