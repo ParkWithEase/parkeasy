@@ -1,7 +1,13 @@
 <script lang="ts">
     import FormHeader from '$lib/components/form-header.svelte';
     import SubmitButton from '$lib/components/submit-button.svelte';
-    import { BACKEND_SERVER, INTERNAL_SERVER_ERROR, PASSWORD_NOT_MATCH } from '$lib/constants';
+    import {
+        ACCOUNT_CREATE_SUCCESS,
+        DEFAULT_ACCOUNT_CREATION_ERROR,
+        PASSWORD_NOT_MATCH
+    } from '$lib/constants';
+    import { newClient } from '$lib/utils/client';
+    import { getErrorMessage } from '$lib/utils/error-handler';
     import { Form, TextInput, PasswordInput } from 'carbon-components-svelte';
     let firstName: string;
     let lastName: string;
@@ -15,6 +21,8 @@
     let accountCreated: boolean = false;
     let valid: boolean = false;
 
+    let client = newClient();
+
     $: {
         if (password !== passwordConfirm) {
             errorMessage = PASSWORD_NOT_MATCH;
@@ -25,34 +33,32 @@
         }
     }
 
-    async function signup() {
+    function signup() {
         if (valid) {
-            try {
-                const response = await fetch(`${BACKEND_SERVER}/user`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
+            client
+                .POST('/user', {
+                    body: {
                         full_name: `${firstName} ${lastName}`,
                         email: email,
                         password: password
-                    })
-                });
+                    }
+                })
+                .then(({ error }) => {
+                    if (error) {
+                        errorMessage = error.errors
+                            ? (error.errors[0].message ?? getErrorMessage(error))
+                            : DEFAULT_ACCOUNT_CREATION_ERROR;
+                    } else {
+                        successMessage = ACCOUNT_CREATE_SUCCESS;
 
-                if (response.ok) {
-                    successMessage =
-                        'Account created successfully. Normally we would ask for email verification but for demo... nah';
-                    accountCreated = true;
-                    errorMessage = '';
-                } else {
-                    const data = await response.json();
-                    errorMessage = data.errors[0].message;
-                }
-            } catch {
-                errorMessage = INTERNAL_SERVER_ERROR;
-                successMessage = '';
-            }
+                        accountCreated = true;
+                        errorMessage = '';
+                    }
+                })
+                .catch((err) => {
+                    errorMessage = err;
+                    successMessage = '';
+                });
         }
     }
 </script>
