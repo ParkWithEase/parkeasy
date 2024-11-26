@@ -175,8 +175,7 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		// Create entries
-		expectedWinnipegEntries := make([]parkingspot.Entry, 0, len(sampleWinnipegLocations))
-		// Insert winnipeg locations for testing various distances
+		// Insert winnipeg locations for testing
 		for _, location := range sampleWinnipegLocations {
 			spot := models.ParkingSpotCreationInput{
 				Location:     location,
@@ -185,9 +184,8 @@ func TestPostgresIntegration(t *testing.T) {
 				Availability: testTimeUnits,
 			}
 
-			created, _, err := spotRepo.Create(ctx, userID, &spot)
+			_, _, err := spotRepo.Create(ctx, userID, &spot)
 			require.NoError(t, err)
-			expectedWinnipegEntries = append(expectedWinnipegEntries, created)
 		}
 
 		pool.Reset()
@@ -214,14 +212,14 @@ func TestPostgresIntegration(t *testing.T) {
 			res, err := repo.GetBySpotUUID(ctx, userID, 1)
 			require.NoError(t, err)
 
-			assert.Equal(t, true, res)
+			assert.True(t, res)
 		})
 
 		t.Run("get non-existent preference", func(t *testing.T) {
 			res, err := repo.GetBySpotUUID(ctx, userID, -1)
 			require.NoError(t, err)
 
-			assert.Equal(t, false, res)
+			assert.False(t, res)
 		})
 
 		t.Run("okay delete preference", func(t *testing.T) {

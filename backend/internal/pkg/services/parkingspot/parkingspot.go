@@ -277,7 +277,6 @@ func validateSpotLocation(location *models.ParkingSpotLocation) error {
 
 func (s *Service) CreatePreference(ctx context.Context, userID int64, spotID uuid.UUID) error {
 	entry, err := s.repo.GetByUUID(ctx, spotID)
-
 	if err != nil {
 		return models.ErrParkingSpotNotFound
 	}
@@ -289,7 +288,6 @@ func (s *Service) CreatePreference(ctx context.Context, userID int64, spotID uui
 
 func (s *Service) GetPreferenceByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (bool, error) {
 	entry, err := s.repo.GetByUUID(ctx, spotID)
-
 	if err != nil {
 		return false, models.ErrParkingSpotNotFound
 	}
@@ -324,15 +322,14 @@ func (s *Service) GetManyPreferences(ctx context.Context, userID int64, count in
 	}
 
 	result := make([]models.ParkingSpot, 0, len(preferenceEntries))
-	for _, entry := range preferenceEntries {
-		result = append(result, entry.ParkingSpot)
+	for i := range preferenceEntries {
+		result = append(result, preferenceEntries[i].ParkingSpot)
 	}
 	return result, next, nil
 }
 
 func (s *Service) DeletePreference(ctx context.Context, userID int64, spotID uuid.UUID) error {
 	entry, err := s.repo.GetByUUID(ctx, spotID)
-
 	if err != nil {
 		return models.ErrParkingSpotNotFound
 	}

@@ -34,12 +34,11 @@ type getManyResult struct {
 	Preferencespotid int64 `db:"preferencespotid"`
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID int64) error {
+func (p *PostgresRepository) Create(ctx context.Context, userID, spotID int64) error {
 	_, err := dbmodels.Preferencespots.Insert(ctx, p.db, &dbmodels.PreferencespotSetter{
 		Userid:        omit.From(userID),
 		Parkingspotid: omit.From(spotID),
 	})
-
 	if err != nil {
 		// Handle duplicate error
 		var pgErr *pgconn.PgError
@@ -54,7 +53,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	return nil
 }
 
-func (p *PostgresRepository) GetBySpotUUID(ctx context.Context, userID int64, spotID int64) (bool, error) {
+func (p *PostgresRepository) GetBySpotUUID(ctx context.Context, userID, spotID int64) (bool, error) {
 	exists, err := dbmodels.Preferencespots.Query(
 		ctx, p.db,
 		sm.Columns(1),
@@ -62,7 +61,6 @@ func (p *PostgresRepository) GetBySpotUUID(ctx context.Context, userID int64, sp
 			dbmodels.SelectWhere.Preferencespots.Preferencespotid.EQ(userID),
 		),
 	).Exists()
-
 	if err != nil {
 		return false, fmt.Errorf("could not execute query: %w", err)
 	}
@@ -105,7 +103,7 @@ func (p *PostgresRepository) GetMany(ctx context.Context, userID int64, limit in
 			break
 		}
 
-		res, err := entryFromDB(r)
+		res, err := entryFromDB(&r)
 		if err != nil { // if there is an error converting lat, long or price to float, then log and skip this entry
 			log.Err(err).Msg("error while converting DB entry")
 			continue
@@ -117,7 +115,7 @@ func (p *PostgresRepository) GetMany(ctx context.Context, userID int64, limit in
 	return result, nil
 }
 
-func (p *PostgresRepository) Delete(ctx context.Context, userID int64, spotID int64) error {
+func (p *PostgresRepository) Delete(ctx context.Context, userID, spotID int64) error {
 	rowsAffected, err := dbmodels.Preferencespots.DeleteQ(
 		ctx, p.db,
 		dbmodels.DeleteWhere.Preferencespots.Userid.EQ(userID),
@@ -134,7 +132,7 @@ func (p *PostgresRepository) Delete(ctx context.Context, userID int64, spotID in
 	return nil
 }
 
-func entryFromDB(model getManyResult) (Entry, error) {
+func entryFromDB(model *getManyResult) (Entry, error) {
 	lat, ok := model.Latitude.Float64()
 	if !ok {
 		return Entry{}, fmt.Errorf("could not convert %v to float64", model.Latitude)

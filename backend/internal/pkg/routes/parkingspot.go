@@ -97,9 +97,127 @@ func (r *ParkingSpotRoute) RegisterParkingSpotTag(api huma.API) {
 }
 
 // Registers `/spots` routes
-func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
+func (r *ParkingSpotRoute) RegisterParkingSpotPreferenceRoutes(api huma.API) {
 	apiPrefix := getAPIPrefix(api.OpenAPI())
 
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID:   "create-preference-spot",
+		Method:        http.MethodPost,
+		Path:          "/spots/{id}/preference",
+		Summary:       "Create a preference spot",
+		Tags:          []string{ParkingSpotTag.Name},
+		DefaultStatus: http.StatusCreated,
+		Errors:        []int{http.StatusUnprocessableEntity},
+	}), func(ctx context.Context, input *struct {
+		ID uuid.UUID `path:"id"`
+	},
+	) (*struct{}, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		err := r.service.CreatePreference(ctx, userID, input.ID)
+		if err != nil {
+			var detail error
+			if errors.Is(err, models.ErrParkingSpotNotFound) {
+				detail = &huma.ErrorDetail{
+					Location: "path.id",
+					Value:    input.ID,
+				}
+			}
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
+		}
+		return nil, nil
+	})
+
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID: "get-preference-spot",
+		Method:      http.MethodGet,
+		Path:        "/spots/{id}/preference",
+		Summary:     "Get the preference state of the specified spot",
+		Tags:        []string{ParkingSpotTag.Name},
+		Errors:      []int{http.StatusUnprocessableEntity},
+	}), func(ctx context.Context, input *struct {
+		ID uuid.UUID `path:"id"`
+	},
+	) (*preferenceBoolOutput, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		res, err := r.service.GetPreferenceByUUID(ctx, userID, input.ID)
+		if err != nil {
+			var detail error
+			switch {
+			case errors.Is(err, models.ErrParkingSpotNotFound):
+				detail = &huma.ErrorDetail{
+					Location: "path.id",
+					Value:    input.ID,
+				}
+				return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
+			default:
+				return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, nil)
+			}
+
+		}
+
+		return &preferenceBoolOutput{
+			Preference: res,
+		}, nil
+	})
+
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID: "list-preference-spots",
+		Method:      http.MethodGet,
+		Path:        "/spots/preference",
+		Summary:     "Get preference spots associated to the current user",
+		Tags:        []string{ParkingSpotTag.Name},
+	}), func(ctx context.Context, input *struct {
+		After models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
+		Count int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of preference spots that appear per page."`
+	},
+	) (*preferenceSpotListOutput, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		preferenceSpots, nextCursor, err := r.service.GetManyPreferences(ctx, userID, input.Count, input.After)
+		if err != nil {
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
+		}
+
+		result := preferenceSpotListOutput{Body: preferenceSpots}
+		if nextCursor != "" {
+			nextURL := apiPrefix.JoinPath("/spots/preference")
+			nextURL.RawQuery = url.Values{
+				"count": []string{strconv.Itoa(input.Count)},
+				"after": []string{string(nextCursor)},
+			}.Encode()
+			result.Link = append(result.Link, "<"+nextURL.String()+`>; rel="next"`)
+		}
+		return &result, nil
+	})
+
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID: "delete-preference-spot",
+		Method:      http.MethodDelete,
+		Path:        "/spots/{id}/preference",
+		Summary:     "Delete the specified preference",
+		Tags:        []string{ParkingSpotTag.Name},
+		Errors:      []int{http.StatusUnprocessableEntity},
+	}), func(ctx context.Context, input *struct {
+		ID uuid.UUID `path:"id"`
+	},
+	) (*struct{}, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		err := r.service.DeletePreference(ctx, userID, input.ID)
+		if err != nil {
+			var detail error
+			if errors.Is(err, models.ErrParkingSpotNotFound) {
+				detail = &huma.ErrorDetail{
+					Location: "path.id",
+					Value:    input.ID,
+				}
+			}
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
+		}
+		return nil, nil
+	})
+}
+
+// Registers `/spots` routes
+func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	huma.Register(api, *withUserID(&huma.Operation{
 		OperationID:   "create-parking-spot",
 		Method:        http.MethodPost,
@@ -156,35 +274,6 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 		return &parkingSpotCreationOutput{Body: result}, nil
-	})
-
-	huma.Register(api, *withUserID(&huma.Operation{
-		OperationID: "list-preference-spots",
-		Method:      http.MethodGet,
-		Path:        "/spots/preference",
-		Summary:     "Get preference spots associated to the current user",
-		Tags:        []string{ParkingSpotTag.Name},
-	}), func(ctx context.Context, input *struct {
-		After models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
-		Count int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of preference spots that appear per page."`
-	},
-	) (*preferenceSpotListOutput, error) {
-		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		preferenceSpots, nextCursor, err := r.service.GetManyPreferences(ctx, userID, input.Count, input.After)
-		if err != nil {
-			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
-		}
-
-		result := preferenceSpotListOutput{Body: preferenceSpots}
-		if nextCursor != "" {
-			nextURL := apiPrefix.JoinPath("/spots/preference")
-			nextURL.RawQuery = url.Values{
-				"count": []string{strconv.Itoa(input.Count)},
-				"after": []string{string(nextCursor)},
-			}.Encode()
-			result.Link = append(result.Link, "<"+nextURL.String()+`>; rel="next"`)
-		}
-		return &result, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
@@ -278,91 +367,5 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		result := parkingSpotListOutput{Body: spots}
 
 		return &result, nil
-	})
-
-	huma.Register(api, *withUserID(&huma.Operation{
-		OperationID:   "create-preference-spot",
-		Method:        http.MethodPost,
-		Path:          "/spots/{id}/preference",
-		Summary:       "Create a preference spot",
-		Tags:          []string{ParkingSpotTag.Name},
-		DefaultStatus: http.StatusCreated,
-		Errors:        []int{http.StatusUnprocessableEntity},
-	}), func(ctx context.Context, input *struct {
-		ID uuid.UUID `path:"id"`
-	},
-	) (*struct{}, error) {
-		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		err := r.service.CreatePreference(ctx, userID, input.ID)
-		if err != nil {
-			var detail error
-			if errors.Is(err, models.ErrParkingSpotNotFound) {
-				detail = &huma.ErrorDetail{
-					Location: "path.id",
-					Value:    input.ID,
-				}
-			}
-			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
-		}
-		return nil, nil
-	})
-
-	huma.Register(api, *withUserID(&huma.Operation{
-		OperationID: "get-preference-spot",
-		Method:      http.MethodGet,
-		Path:        "/spots/{id}/preference",
-		Summary:     "Get the preference state of the specified spot",
-		Tags:        []string{ParkingSpotTag.Name},
-		Errors:      []int{http.StatusUnprocessableEntity},
-	}), func(ctx context.Context, input *struct {
-		ID uuid.UUID `path:"id"`
-	},
-	) (*preferenceBoolOutput, error) {
-		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		res, err := r.service.GetPreferenceByUUID(ctx, userID, input.ID)
-		if err != nil {
-			var detail error
-			switch {
-			case errors.Is(err, models.ErrParkingSpotNotFound):
-				detail = &huma.ErrorDetail{
-					Location: "path.id",
-					Value:    input.ID,
-				}
-				return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
-			default:
-				return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, nil)
-			}
-
-		}
-
-		return &preferenceBoolOutput{
-			Preference: res,
-		}, nil
-	})
-
-	huma.Register(api, *withUserID(&huma.Operation{
-		OperationID: "delete-preference-spot",
-		Method:      http.MethodDelete,
-		Path:        "/spots/{id}/preference",
-		Summary:     "Delete the specified preference",
-		Tags:        []string{ParkingSpotTag.Name},
-		Errors:      []int{http.StatusUnprocessableEntity},
-	}), func(ctx context.Context, input *struct {
-		ID uuid.UUID `path:"id"`
-	},
-	) (*struct{}, error) {
-		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		err := r.service.DeletePreference(ctx, userID, input.ID)
-		if err != nil {
-			var detail error
-			if errors.Is(err, models.ErrParkingSpotNotFound) {
-				detail = &huma.ErrorDetail{
-					Location: "path.id",
-					Value:    input.ID,
-				}
-			}
-			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
-		}
-		return nil, nil
 	})
 }

@@ -80,7 +80,7 @@ func (m *mockRepo) GetMany(ctx context.Context, limit int, filter *parkingspot.F
 }
 
 // Create implements preferencespot.Repository.
-func (m *mockPreferenceSpotRepo) Create(ctx context.Context, userID int64, spotID int64) error {
+func (m *mockPreferenceSpotRepo) Create(ctx context.Context, userID, spotID int64) error {
 	args := m.Called(ctx, userID, spotID)
 	return args.Error(0)
 }
@@ -92,13 +92,13 @@ func (m *mockPreferenceSpotRepo) GetMany(ctx context.Context, userID int64, limi
 }
 
 // Delete implements preferencespot.Repository.
-func (m *mockPreferenceSpotRepo) Delete(ctx context.Context, userID int64, spotID int64) error {
+func (m *mockPreferenceSpotRepo) Delete(ctx context.Context, userID, spotID int64) error {
 	args := m.Called(ctx, userID, spotID)
 	return args.Error(0)
 }
 
 // GetBySpotUUID implements preferencespot.Repository.
-func (m *mockPreferenceSpotRepo) GetBySpotUUID(ctx context.Context, userID int64, spotID int64) (bool, error) {
+func (m *mockPreferenceSpotRepo) GetBySpotUUID(ctx context.Context, userID, spotID int64) (bool, error) {
 	args := m.Called(ctx, userID, spotID)
 	return args.Bool(0), args.Error(1)
 }
@@ -149,10 +149,12 @@ var sampleGeocoderResult = []geocoding.Result{
 	},
 }
 
-var testSpotID = uuid.New()
-var testUserID = int64(1)
-var testInternalID = int64(1)
-var samplePricePerHour = 10.0
+var (
+	testSpotID         = uuid.New()
+	testUserID         = int64(1)
+	testInternalID     = int64(1)
+	samplePricePerHour = 10.0
+)
 
 var sampleEntry = parkingspot.Entry{
 	ParkingSpot: models.ParkingSpot{
@@ -745,7 +747,7 @@ func TestGetBySpotUUID(t *testing.T) {
 			Once()
 		res, err := srv.GetPreferenceByUUID(ctx, testUserID, testSpotID)
 		require.NoError(t, err)
-		assert.Equal(t, true, res)
+		assert.True(t, res)
 		preferenceRepo.AssertExpectations(t)
 	})
 }

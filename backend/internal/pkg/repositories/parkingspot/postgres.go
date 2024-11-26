@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbmodels"
@@ -219,10 +218,6 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, filter *Fil
 		psql.WhereAnd(whereMods...),
 	)
 	query := psql.Select(smods...)
-
-	sqlBuilder := strings.Builder{}
-	query.WriteSQL(&sqlBuilder, nil, 0)
-	fmt.Printf("Generated SQL: %s\n", sqlBuilder.String())
 
 	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
 	if err != nil {
