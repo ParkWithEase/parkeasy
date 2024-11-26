@@ -1,2 +1,0 @@
-DROP TABLE IF EXISTS PreferenceSpot;
-DROP INDEX IF EXISTS PreferenceSpotIdx;
