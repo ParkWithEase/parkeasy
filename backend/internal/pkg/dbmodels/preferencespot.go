@@ -46,6 +46,7 @@ type PreferencespotsStmt = bob.QueryStmt[*Preferencespot, PreferencespotSlice]
 // preferencespotR is where relationships are stored.
 type preferencespotR struct {
 	ParkingspotidParkingspot *Parkingspot // preferencespot.preferencespot_parkingspotid_fkey
+	UseridUser               *User        // preferencespot.preferencespot_userid_fkey
 }
 
 // PreferencespotSetter is used for insert/upsert/update operations
@@ -193,6 +194,7 @@ func buildPreferencespotWhere[Q psql.Filterable](cols preferencespotColumns) pre
 type preferencespotJoins[Q dialect.Joinable] struct {
 	typ                      string
 	ParkingspotidParkingspot func(context.Context) modAs[Q, parkingspotColumns]
+	UseridUser               func(context.Context) modAs[Q, userColumns]
 }
 
 func (j preferencespotJoins[Q]) aliasedAs(alias string) preferencespotJoins[Q] {
@@ -203,6 +205,7 @@ func buildPreferencespotJoins[Q dialect.Joinable](cols preferencespotColumns, ty
 	return preferencespotJoins[Q]{
 		typ:                      typ,
 		ParkingspotidParkingspot: preferencespotsJoinParkingspotidParkingspot[Q](cols, typ),
+		UseridUser:               preferencespotsJoinUseridUser[Q](cols, typ),
 	}
 }
 
@@ -320,6 +323,25 @@ func preferencespotsJoinParkingspotidParkingspot[Q dialect.Joinable](from prefer
 	}
 }
 
+func preferencespotsJoinUseridUser[Q dialect.Joinable](from preferencespotColumns, typ string) func(context.Context) modAs[Q, userColumns] {
+	return func(ctx context.Context) modAs[Q, userColumns] {
+		return modAs[Q, userColumns]{
+			c: UserColumns,
+			f: func(to userColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Users.Name(ctx).As(to.Alias())).On(
+						to.Userid.EQ(from.Userid),
+					))
+				}
+
+				return mods
+			},
+		}
+	}
+}
+
 // ParkingspotidParkingspot starts a query for related objects on parkingspot
 func (o *Preferencespot) ParkingspotidParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
 	return Parkingspots.Query(ctx, exec, append(mods,
@@ -335,6 +357,24 @@ func (os PreferencespotSlice) ParkingspotidParkingspot(ctx context.Context, exec
 
 	return Parkingspots.Query(ctx, exec, append(mods,
 		sm.Where(psql.Group(ParkingspotColumns.Parkingspotid).In(PKArgs...)),
+	)...)
+}
+
+// UseridUser starts a query for related objects on users
+func (o *Preferencespot) UseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
+	return Users.Query(ctx, exec, append(mods,
+		sm.Where(UserColumns.Userid.EQ(psql.Arg(o.Userid))),
+	)...)
+}
+
+func (os PreferencespotSlice) UseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
+	PKArgs := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgs[i] = psql.ArgGroup(o.Userid)
+	}
+
+	return Users.Query(ctx, exec, append(mods,
+		sm.Where(psql.Group(UserColumns.Userid).In(PKArgs...)),
 	)...)
 }
 
@@ -354,6 +394,18 @@ func (o *Preferencespot) Preload(name string, retrieved any) error {
 
 		if rel != nil {
 			rel.R.ParkingspotidPreferencespots = PreferencespotSlice{o}
+		}
+		return nil
+	case "UseridUser":
+		rel, ok := retrieved.(*User)
+		if !ok {
+			return fmt.Errorf("preferencespot cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.UseridUser = rel
+
+		if rel != nil {
+			rel.R.UseridPreferencespots = PreferencespotSlice{o}
 		}
 		return nil
 	default:
@@ -449,6 +501,94 @@ func (os PreferencespotSlice) LoadPreferencespotParkingspotidParkingspot(ctx con
 	return nil
 }
 
+func PreloadPreferencespotUseridUser(opts ...psql.PreloadOption) psql.Preloader {
+	return psql.Preload[*User, UserSlice](orm.Relationship{
+		Name: "UseridUser",
+		Sides: []orm.RelSide{
+			{
+				From: "preferencespot",
+				To:   TableNames.Users,
+				ToExpr: func(ctx context.Context) bob.Expression {
+					return Users.Name(ctx)
+				},
+				FromColumns: []string{
+					ColumnNames.Preferencespots.Userid,
+				},
+				ToColumns: []string{
+					ColumnNames.Users.Userid,
+				},
+			},
+		},
+	}, Users.Columns().Names(), opts...)
+}
+
+func ThenLoadPreferencespotUseridUser(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
+	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+		loader, isLoader := retrieved.(interface {
+			LoadPreferencespotUseridUser(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+		})
+		if !isLoader {
+			return fmt.Errorf("object %T cannot load PreferencespotUseridUser", retrieved)
+		}
+
+		err := loader.LoadPreferencespotUseridUser(ctx, exec, queryMods...)
+
+		// Don't cause an issue due to missing relationships
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+
+		return err
+	})
+}
+
+// LoadPreferencespotUseridUser loads the preferencespot's UseridUser into the .R struct
+func (o *Preferencespot) LoadPreferencespotUseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.UseridUser = nil
+
+	related, err := o.UseridUser(ctx, exec, mods...).One()
+	if err != nil {
+		return err
+	}
+
+	related.R.UseridPreferencespots = PreferencespotSlice{o}
+
+	o.R.UseridUser = related
+	return nil
+}
+
+// LoadPreferencespotUseridUser loads the preferencespot's UseridUser into the .R struct
+func (os PreferencespotSlice) LoadPreferencespotUseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	users, err := os.UseridUser(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		for _, rel := range users {
+			if o.Userid != rel.Userid {
+				continue
+			}
+
+			rel.R.UseridPreferencespots = append(rel.R.UseridPreferencespots, o)
+
+			o.R.UseridUser = rel
+			break
+		}
+	}
+
+	return nil
+}
+
 func attachPreferencespotParkingspotidParkingspot0(ctx context.Context, exec bob.Executor, count int, preferencespot0 *Preferencespot, parkingspot1 *Parkingspot) (*Preferencespot, error) {
 	setter := &PreferencespotSetter{
 		Parkingspotid: omit.From(parkingspot1.Parkingspotid),
@@ -491,6 +631,52 @@ func (preferencespot0 *Preferencespot) AttachParkingspotidParkingspot(ctx contex
 	preferencespot0.R.ParkingspotidParkingspot = parkingspot1
 
 	parkingspot1.R.ParkingspotidPreferencespots = append(parkingspot1.R.ParkingspotidPreferencespots, preferencespot0)
+
+	return nil
+}
+
+func attachPreferencespotUseridUser0(ctx context.Context, exec bob.Executor, count int, preferencespot0 *Preferencespot, user1 *User) (*Preferencespot, error) {
+	setter := &PreferencespotSetter{
+		Userid: omit.From(user1.Userid),
+	}
+
+	err := Preferencespots.Update(ctx, exec, setter, preferencespot0)
+	if err != nil {
+		return nil, fmt.Errorf("attachPreferencespotUseridUser0: %w", err)
+	}
+
+	return preferencespot0, nil
+}
+
+func (preferencespot0 *Preferencespot) InsertUseridUser(ctx context.Context, exec bob.Executor, related *UserSetter) error {
+	user1, err := Users.Insert(ctx, exec, related)
+	if err != nil {
+		return fmt.Errorf("inserting related objects: %w", err)
+	}
+
+	_, err = attachPreferencespotUseridUser0(ctx, exec, 1, preferencespot0, user1)
+	if err != nil {
+		return err
+	}
+
+	preferencespot0.R.UseridUser = user1
+
+	user1.R.UseridPreferencespots = append(user1.R.UseridPreferencespots, preferencespot0)
+
+	return nil
+}
+
+func (preferencespot0 *Preferencespot) AttachUseridUser(ctx context.Context, exec bob.Executor, user1 *User) error {
+	var err error
+
+	_, err = attachPreferencespotUseridUser0(ctx, exec, 1, preferencespot0, user1)
+	if err != nil {
+		return err
+	}
+
+	preferencespot0.R.UseridUser = user1
+
+	user1.R.UseridPreferencespots = append(user1.R.UseridPreferencespots, preferencespot0)
 
 	return nil
 }

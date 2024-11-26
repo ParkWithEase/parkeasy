@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS PreferenceSpot (
     PreferenceSpotID BIGSERIAL PRIMARY KEY,
-    UserID BIGINT NOT NULL,
+    UserID BIGINT NOT NULL REFERENCES Users(UserId),
     ParkingSpotId BIGINT NOT NULL REFERENCES ParkingSpot(ParkingSpotId)
 );
 
