@@ -273,7 +273,7 @@ func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, af
 
 	whereMods = append(whereMods, dbmodels.SelectWhere.Parkingspots.Userid.EQ(userID))
 	if cursor, ok := after.Get(); ok {
-		whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Bookingid.GT(cursor.ID))
+		whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Bookingid.LT(cursor.ID))
 	}
 
 	if filter.SpotID != 0 {

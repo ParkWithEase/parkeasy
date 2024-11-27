@@ -301,7 +301,8 @@ func TestPostgresIntegration(t *testing.T) {
 		parkingSpotEntry_1, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput_1)
 		parkingSpotEntry_2, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput_2)
 
-		expectedAllEntries := make([]Entry, 0, 8)
+		expectedAllBuyerEntries := make([]Entry, 0, 8)
+		expectedAllSellerEntries := make([]Entry, 0, 8)
 		// Create another to test for entries corresponding to a particular spot
 		expectedEntries_1 := make([]Entry, 0, 8)
 		// Create another one to test get many for seller
@@ -319,7 +320,7 @@ func TestPostgresIntegration(t *testing.T) {
 			require.NoError(t, err)
 
 			expectedCreateEntry := createExpectedEntry(createEntry.Entry.InternalID, createEntry.Entry.Booking.ID, bookingCreationInput_1.PaidAmount)
-			expectedAllEntries = append(expectedAllEntries, expectedCreateEntry)
+			expectedAllBuyerEntries = append(expectedAllBuyerEntries, expectedCreateEntry)
 		}
 
 		for eidx := range sampleTimeUnit_1 {
@@ -350,7 +351,10 @@ func TestPostgresIntegration(t *testing.T) {
 			expectedEntries_2 = append(expectedEntries_2, expectedCreateEntry)
 		}
 
-		expectedAllEntries = append(expectedAllEntries, expectedEntries_1...)
+		expectedAllBuyerEntries = append(expectedAllBuyerEntries, expectedEntries_1...)
+		// Append to get all entries corresponding to a seller
+		expectedAllSellerEntries = append(expectedAllSellerEntries, expectedAllBuyerEntries...)
+		expectedAllSellerEntries = append(expectedAllSellerEntries, expectedEntries_2...)
 
 		t.Run("get many for a buyer without any filter", func(t *testing.T) {
 			t.Parallel()
@@ -359,7 +363,7 @@ func TestPostgresIntegration(t *testing.T) {
 			filter := Filter{}
 
 			idx := 0
-			for ; idx < len(expectedAllEntries); idx += 4 {
+			for ; idx < len(expectedAllBuyerEntries); idx += 4 {
 				getManyEntries, err := repo.GetManyForBuyer(ctx, 4, cursor, userID, &filter)
 				require.NoError(t, err)
 				if assert.LessOrEqual(t, 1, len(getManyEntries), "expecting at least one entry") {
@@ -369,10 +373,10 @@ func TestPostgresIntegration(t *testing.T) {
 				}
 
 				for eidx, entry := range getManyEntries {
-					unitIdx := len(expectedAllEntries) - (idx + eidx) - 1
-					if unitIdx < len(expectedAllEntries) {
+					unitIdx := len(expectedAllBuyerEntries) - (idx + eidx) - 1
+					if unitIdx < len(expectedAllBuyerEntries) {
 						require.NotNil(t, getManyEntries[eidx].ID)
-						assert.Empty(t, cmp.Diff(expectedAllEntries[unitIdx], entry))
+						assert.Empty(t, cmp.Diff(expectedAllBuyerEntries[unitIdx], entry))
 					}
 				}
 			}
@@ -426,6 +430,92 @@ func TestPostgresIntegration(t *testing.T) {
 			t.Parallel()
 
 			entries, err := repo.GetManyForBuyer(ctx, 50, omit.Val[Cursor]{}, userID+100, &Filter{SpotID: 100000})
+			require.NoError(t, err)
+			assert.Empty(t, entries)
+		})
+
+		t.Run("get many for a seller without any filter", func(t *testing.T) {
+			t.Parallel()
+
+			var cursor omit.Val[Cursor]
+			filter := Filter{}
+
+			idx := 0
+			for ; idx < len(expectedAllSellerEntries); idx += 4 {
+				getManyEntries, err := repo.GetManyForSeller(ctx, 4, cursor, userID, &filter)
+				require.NoError(t, err)
+				if assert.LessOrEqual(t, 1, len(getManyEntries), "expecting at least one entry") {
+					cursor = omit.From(Cursor{
+						ID: getManyEntries[len(getManyEntries)-1].InternalID,
+					})
+				}
+
+				for eidx, entry := range getManyEntries {
+					unitIdx := len(expectedAllSellerEntries) - (idx + eidx) - 1
+					if unitIdx < len(expectedAllSellerEntries) {
+						require.NotNil(t, getManyEntries[eidx].ID)
+						assert.Empty(t, cmp.Diff(expectedAllSellerEntries[unitIdx], entry))
+					}
+				}
+			}
+		})
+
+		t.Run("get many for a seller corresponding to a particular spot", func(t *testing.T) {
+			t.Parallel()
+
+			var cursor omit.Val[Cursor]
+			filter := Filter{
+				SpotID: parkingSpotEntry_1.InternalID,
+			}
+
+			idx := 0
+			for ; idx < len(expectedEntries_1); idx += 4 {
+				getManyEntries, err := repo.GetManyForSeller(ctx, 4, cursor, userID, &filter)
+				require.NoError(t, err)
+				if assert.LessOrEqual(t, 1, len(getManyEntries), "expecting at least one entry") {
+					cursor = omit.From(Cursor{
+						ID: getManyEntries[len(getManyEntries)-1].InternalID,
+					})
+				}
+
+				for eidx, entry := range getManyEntries {
+					unitIdx := len(expectedEntries_1) - (idx + eidx) - 1
+					if unitIdx < len(expectedEntries_1) {
+						require.NotNil(t, getManyEntries[eidx].ID)
+						assert.Empty(t, cmp.Diff(expectedEntries_1[unitIdx], entry))
+					}
+				}
+			}
+		})
+
+		t.Run("cursor too close to zero (before the bookings for seller spots begin)", func(t *testing.T) {
+			t.Parallel()
+
+			entries, err := repo.GetManyForSeller(ctx, 50, omit.From(Cursor{ID: 0}), userID, &Filter{})
+			require.NoError(t, err)
+			assert.Empty(t, entries)
+		})
+
+		t.Run("non-existent seller", func(t *testing.T) {
+			t.Parallel()
+
+			entries, err := repo.GetManyForSeller(ctx, 50, omit.Val[Cursor]{}, userID+100, &Filter{})
+			require.NoError(t, err)
+			assert.Empty(t, entries)
+		})
+
+		t.Run("non-existent spot for seller", func(t *testing.T) {
+			t.Parallel()
+
+			entries, err := repo.GetManyForSeller(ctx, 50, omit.Val[Cursor]{}, userID+100, &Filter{SpotID: 100000})
+			require.NoError(t, err)
+			assert.Empty(t, entries)
+		})
+
+		t.Run("not owned spot for seller", func(t *testing.T) {
+			t.Parallel()
+
+			entries, err := repo.GetManyForSeller(ctx, 50, omit.Val[Cursor]{}, userID_1, &Filter{SpotID: parkingSpotEntry.InternalID})
 			require.NoError(t, err)
 			assert.Empty(t, entries)
 		})
