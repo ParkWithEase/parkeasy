@@ -1,13 +1,19 @@
 <script lang="ts">
     import logo from '$lib/images/logo-text.png';
-    import { Header, HeaderUtilities, HeaderGlobalAction } from 'carbon-components-svelte';
-    import Logout from '../../../node_modules/carbon-icons-svelte/lib/Logout.svelte';
-    import User from '../../../node_modules/carbon-icons-svelte/lib/User.svelte';
-    import Map from '../../../node_modules/carbon-icons-svelte/lib/Map.svelte';
-    import MobileAdd from 'carbon-icons-svelte/lib/MobileAdd.svelte';
-    import Car from 'carbon-icons-svelte/lib/Car.svelte';
+    import {
+        Header,
+        HeaderUtilities,
+        HeaderGlobalAction,
+        HeaderAction,
+        HeaderPanelLinks,
+        HeaderPanelLink,
+        HeaderPanelDivider,
+        TooltipIcon
+    } from 'carbon-components-svelte';
     import { BACKEND_SERVER } from '$lib/constants';
     import { goto } from '$app/navigation';
+    import { responsiveState } from '$lib/stores/responsive';
+    import { Logout, User, Map, MobileAdd, Car } from 'carbon-icons-svelte';
 
     async function logout() {
         try {
@@ -24,33 +30,73 @@
             throw new Error('Something went wrong');
         }
     }
+
+    let shouldReponse: boolean = false;
+    responsiveState.subscribe((value) => {
+        shouldReponse = value;
+    });
+
+    let isOpen: boolean = false;
+    $: isOpen = shouldReponse && false;
 </script>
 
-<svelte:window />
-
-<Header>
+<Header expansionBreakpoint={0}>
     <a href="/#"><img src={logo} alt="parkeasy-logo" class="text-logo" /></a>
     <HeaderUtilities>
-        <HeaderGlobalAction
-            iconDescription="Explore open spots"
-            tooltipAlignment="start"
-            icon={Map}
-            href="/#"
-        />
-        <HeaderGlobalAction iconDescription="Your spots" icon={MobileAdd} href="/app/your-spots" />
-        <HeaderGlobalAction iconDescription="Your cars" icon={Car} href="/app/your-cars" />
-        <HeaderGlobalAction
-            iconDescription="Profile"
-            icon={User}
-            href="/app/profile/user-profile"
-        />
-        <HeaderGlobalAction
-            iconDescription="Log out"
-            tooltipAlignment="end"
-            icon={Logout}
-            href="/"
-            on:click={logout}
-        />
+        {#if shouldReponse}
+            <HeaderAction bind:isOpen>
+                <HeaderPanelLinks>
+                    <HeaderPanelDivider>Pages</HeaderPanelDivider>
+
+                    <HeaderPanelLink href="/#" on:click={() => (isOpen = false)}>
+                        <TooltipIcon icon={Map} tooltipText="Explore open spots" />
+                        Explore open spots
+                    </HeaderPanelLink>
+
+                    <HeaderPanelLink href="/app/your-spots" on:click={() => (isOpen = false)}>
+                        <TooltipIcon icon={MobileAdd} tooltipText="Your spots" />Your spots
+                    </HeaderPanelLink>
+
+                    <HeaderPanelLink href="/app/your-cars" on:click={() => (isOpen = false)}
+                        ><TooltipIcon icon={Car} tooltipText="Your cars" />Your cars</HeaderPanelLink
+                    >
+                    <HeaderPanelLink
+                        href="/app/profile/user-profile"
+                        on:click={() => (isOpen = false)}
+                        ><TooltipIcon icon={User} tooltipText="Profile" />Profile</HeaderPanelLink
+                    >
+                    <HeaderPanelDivider />
+                    <HeaderPanelLink on:click={logout}
+                        ><TooltipIcon icon={User} tooltipText="Profile" />Log out</HeaderPanelLink
+                    >
+                </HeaderPanelLinks>
+            </HeaderAction>
+        {:else}
+            <HeaderGlobalAction
+                iconDescription="Explore open spots"
+                tooltipAlignment="start"
+                icon={Map}
+                href="/#"
+            />
+            <HeaderGlobalAction
+                iconDescription="Your spots"
+                icon={MobileAdd}
+                href="/app/your-spots"
+            />
+            <HeaderGlobalAction iconDescription="Your cars" icon={Car} href="/app/your-cars" />
+            <HeaderGlobalAction
+                iconDescription="Profile"
+                icon={User}
+                href="/app/profile/user-profile"
+            />
+            <HeaderGlobalAction
+                iconDescription="Log out"
+                tooltipAlignment="end"
+                icon={Logout}
+                href="/"
+                on:click={logout}
+            />
+        {/if}
     </HeaderUtilities>
 </Header>
 
