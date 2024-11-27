@@ -109,7 +109,6 @@
     };
 
     const fetchSpots = async (coordinates: number[], radius: number) => {
-        console.log(`radius ${distanceRadius}`);
         const { data: spots, error: errorSpots } = await client.GET('/spots', {
             params: {
                 query: {
@@ -158,16 +157,19 @@
             </ul>
         {/if}
 
-        <Slider
-            value={distanceRadius}
-            min={100}
-            max={5000}
-            step={100}
-            minLabel="1m"
-            maxLabel="5km"
-            labelText="Distance Radius (metres)"
-            on:change={(event) => handleRadiusChange(event.detail)}
-        />
+        <div class="slider-container">
+            <Slider
+                value={distanceRadius}
+                min={100}
+                max={5000}
+                step={100}
+                minLabel="1m"
+                maxLabel="5km"
+                labelText="Distance Radius (metres)"
+                on:change={(event) => handleRadiusChange(event.detail)}
+            />
+        </div>
+        
 
         {#if spotsData.length > 0}
             {#each spotsData as listing}
@@ -316,5 +318,9 @@
         display: flex;
         justify-content: center;
         margin: 1rem;
+    }
+
+    .slider-container :global(bx--form-item){
+        flex: 0 0 auto;
     }
 </style>
