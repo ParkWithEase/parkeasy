@@ -2,7 +2,6 @@ package booking
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/testutils"
+	"github.com/aarondl/opt/omit"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -49,13 +49,21 @@ func TestPostgresIntegration(t *testing.T) {
 		FullName: "John Wick",
 		Email:    "j.wick@gmail.com",
 	}
+	profile_1 := models.UserProfile{
+		FullName: "John Smith",
+		Email:    "j.smith@gmail.com",
+	}
 
 	const testEmail = "j.wick@gmail.com"
 	const testPasswordHash = "some hash"
+	const testEmail_1 = "j.smith@gmail.com"
+	const testPasswordHash_1 = "some other hash"
 
 	authUUID, _ := authRepo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
+	authUUID_1, _ := authRepo.Create(ctx, testEmail_1, models.HashedPassword(testPasswordHash_1))
 
 	userID, _ := userRepo.Create(ctx, authUUID, profile)
+	userID_1, _ := userRepo.Create(ctx, authUUID_1, profile_1)
 
 	pool.Reset()
 	snapshotErr := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
@@ -151,6 +159,16 @@ func TestPostgresIntegration(t *testing.T) {
 		Longitude:     -97.13599,
 	}
 
+	sampleLocation_2 := models.ParkingSpotLocation{
+		PostalCode:    "R3C1B6",
+		CountryCode:   "CA",
+		City:          "Winnipeg",
+		StreetAddress: "2000 Main St",
+		State:         "MB",
+		Latitude:      49.88220,
+		Longitude:     -97.13656,
+	}
+
 	sampleFeatures := models.ParkingSpotFeatures{
 		Shelter:         true,
 		PlugIn:          false,
@@ -171,6 +189,13 @@ func TestPostgresIntegration(t *testing.T) {
 		Features:     sampleFeatures,
 		PricePerHour: samplePricePerHour,
 		Availability: sampleAvailability_1,
+	}
+
+	parkingSpotCreationInput_2 := models.ParkingSpotCreationInput{
+		Location:     sampleLocation_2,
+		Features:     sampleFeatures,
+		PricePerHour: samplePricePerHour,
+		Availability: sampleAvailability,
 	}
 
 	parkingSpotUUID := uuid.New()
@@ -261,7 +286,7 @@ func TestPostgresIntegration(t *testing.T) {
 		}
 	})
 
-	t.Run("get many bookings for buyer", func(t *testing.T) {
+	t.Run("get many bookings for buyer and seller with cursor", func(t *testing.T) {
 		t.Cleanup(func() {
 			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
 			require.NoError(t, err, "could not restore db")
@@ -274,10 +299,13 @@ func TestPostgresIntegration(t *testing.T) {
 		// Create a parking spots for testing
 		parkingSpotEntry, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput)
 		parkingSpotEntry_1, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput_1)
+		parkingSpotEntry_2, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput_2)
 
 		expectedAllEntries := make([]Entry, 0, 8)
 		// Create another to test for entries corresponding to a particular spot
 		expectedEntries_1 := make([]Entry, 0, 8)
+		// Create another one to test get many for seller
+		expectedEntries_2 := make([]Entry, 0, 8)
 
 		// Create multiple bookings and expected get many output
 		for eidx := range sampleTimeUnit {
@@ -287,10 +315,10 @@ func TestPostgresIntegration(t *testing.T) {
 				BookedTimes:   []models.TimeUnit{sampleTimeUnit[eidx]},
 			}
 
-			createEntry_1, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput_1)
+			createEntry, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput_1)
 			require.NoError(t, err)
 
-			expectedCreateEntry := createExpectedEntry(createEntry_1.Entry.InternalID, createEntry_1.Entry.Booking.ID, bookingCreationInput_1.PaidAmount)
+			expectedCreateEntry := createExpectedEntry(createEntry.Entry.InternalID, createEntry.Entry.Booking.ID, bookingCreationInput_1.PaidAmount)
 			expectedAllEntries = append(expectedAllEntries, expectedCreateEntry)
 		}
 
@@ -301,52 +329,105 @@ func TestPostgresIntegration(t *testing.T) {
 				BookedTimes:   []models.TimeUnit{sampleTimeUnit_1[eidx]},
 			}
 
-			createEntry_2, err_1 := repo.Create(ctx, userID, parkingSpotEntry_1.InternalID, &bookingCreationInput_2)
-			require.NoError(t, err_1)
+			createEntry, err := repo.Create(ctx, userID, parkingSpotEntry_1.InternalID, &bookingCreationInput_2)
+			require.NoError(t, err)
 
-			expectedCreateEntry_1 := createExpectedEntry(createEntry_2.Entry.InternalID, createEntry_2.Entry.Booking.ID, bookingCreationInput_2.PaidAmount)
-			expectedEntries_1 = append(expectedEntries_1, expectedCreateEntry_1)
+			expectedCreateEntry := createExpectedEntry(createEntry.Entry.InternalID, createEntry.Entry.Booking.ID, bookingCreationInput_2.PaidAmount)
+			expectedEntries_1 = append(expectedEntries_1, expectedCreateEntry)
+		}
+
+		for eidx := range sampleTimeUnit {
+			bookingCreationInput_3 := models.BookingCreationInput{
+				ParkingSpotID: parkingSpotEntry_2.ID,
+				PaidAmount:    paidAmount_1,
+				BookedTimes:   []models.TimeUnit{sampleTimeUnit[eidx]},
+			}
+
+			createEntry, err := repo.Create(ctx, userID_1, parkingSpotEntry_2.InternalID, &bookingCreationInput_3)
+			require.NoError(t, err)
+
+			expectedCreateEntry := createExpectedEntry(createEntry.Entry.InternalID, createEntry.Entry.Booking.ID, bookingCreationInput_3.PaidAmount)
+			expectedEntries_2 = append(expectedEntries_2, expectedCreateEntry)
 		}
 
 		expectedAllEntries = append(expectedAllEntries, expectedEntries_1...)
 
-		fmt.Println(expectedAllEntries)
-		fmt.Println(expectedEntries_1)
-
 		t.Run("get many for a buyer without any filter", func(t *testing.T) {
 			t.Parallel()
-			// TODO: Update when cursor is functional
 
-			// var cursor omit.Val[Cursor]
+			var cursor omit.Val[Cursor]
 			filter := Filter{}
 
-			getManyEntries, err := repo.GetManyForBuyer(ctx, 15, userID, &filter)
-			require.NoError(t, err)
-			require.Equal(t, len(expectedAllEntries), len(getManyEntries), "Unexpected number of entries returned")
+			idx := 0
+			for ; idx < len(expectedAllEntries); idx += 4 {
+				getManyEntries, err := repo.GetManyForBuyer(ctx, 4, cursor, userID, &filter)
+				require.NoError(t, err)
+				if assert.LessOrEqual(t, 1, len(getManyEntries), "expecting at least one entry") {
+					cursor = omit.From(Cursor{
+						ID: getManyEntries[len(getManyEntries)-1].InternalID,
+					})
+				}
 
-			for eidx, entry := range getManyEntries {
-				require.NotNil(t, getManyEntries[len(getManyEntries)-eidx-1].ID)
-				assert.Empty(t, cmp.Diff(expectedAllEntries[len(getManyEntries)-eidx-1], entry))
+				for eidx, entry := range getManyEntries {
+					unitIdx := len(expectedAllEntries) - (idx + eidx) - 1
+					if unitIdx < len(expectedAllEntries) {
+						require.NotNil(t, getManyEntries[eidx].ID)
+						assert.Empty(t, cmp.Diff(expectedAllEntries[unitIdx], entry))
+					}
+				}
 			}
 		})
 
 		t.Run("get many for a buyer corresponding to a particular spot", func(t *testing.T) {
 			t.Parallel()
-			// TODO: Update when cursor is functional
 
-			// var cursor omit.Val[Cursor]
+			var cursor omit.Val[Cursor]
 			filter := Filter{
 				SpotID: parkingSpotEntry_1.InternalID,
 			}
 
-			getManyEntries, err := repo.GetManyForBuyer(ctx, 15, userID, &filter)
-			require.NoError(t, err)
-			require.Equal(t, len(expectedEntries_1), len(getManyEntries), "Unexpected number of entries returned for specific spot")
+			idx := 0
+			for ; idx < len(expectedEntries_1); idx += 4 {
+				getManyEntries, err := repo.GetManyForBuyer(ctx, 4, cursor, userID, &filter)
+				require.NoError(t, err)
+				if assert.LessOrEqual(t, 1, len(getManyEntries), "expecting at least one entry") {
+					cursor = omit.From(Cursor{
+						ID: getManyEntries[len(getManyEntries)-1].InternalID,
+					})
+				}
 
-			for eidx, entry := range getManyEntries {
-				require.NotNil(t, getManyEntries[len(getManyEntries)-eidx-1].ID)
-				assert.Empty(t, cmp.Diff(expectedEntries_1[len(getManyEntries)-eidx-1], entry))
+				for eidx, entry := range getManyEntries {
+					unitIdx := len(expectedEntries_1) - (idx + eidx) - 1
+					if unitIdx < len(expectedEntries_1) {
+						require.NotNil(t, getManyEntries[eidx].ID)
+						assert.Empty(t, cmp.Diff(expectedEntries_1[unitIdx], entry))
+					}
+				}
 			}
+		})
+
+		t.Run("cursor too close to zero (before the bookings for user begin)", func(t *testing.T) {
+			t.Parallel()
+
+			entries, err := repo.GetManyForBuyer(ctx, 50, omit.From(Cursor{ID: 0}), userID, &Filter{})
+			require.NoError(t, err)
+			assert.Empty(t, entries)
+		})
+
+		t.Run("non-existent buyer", func(t *testing.T) {
+			t.Parallel()
+
+			entries, err := repo.GetManyForBuyer(ctx, 50, omit.Val[Cursor]{}, userID+100, &Filter{})
+			require.NoError(t, err)
+			assert.Empty(t, entries)
+		})
+
+		t.Run("non-existent spot for buyer", func(t *testing.T) {
+			t.Parallel()
+
+			entries, err := repo.GetManyForBuyer(ctx, 50, omit.Val[Cursor]{}, userID+100, &Filter{SpotID: 100000})
+			require.NoError(t, err)
+			assert.Empty(t, entries)
 		})
 
 	})

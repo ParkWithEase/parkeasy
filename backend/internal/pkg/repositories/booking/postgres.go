@@ -208,11 +208,14 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	return entry, nil
 }
 
-func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, userID int64, filter *Filter) ([]Entry, error) {
+func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error) {
 	smods := []bob.Mod[*dialect.SelectQuery]{sm.Columns(dbmodels.Bookings.Columns())}
 	var whereMods []mods.Where[*dialect.SelectQuery]
 
 	whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Userid.EQ(userID))
+	if cursor, ok := after.Get(); ok {
+		whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Bookingid.LT(cursor.ID))
+	}
 
 	if filter.SpotID != 0 {
 		whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Parkingspotid.EQ(filter.SpotID))
@@ -264,11 +267,14 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, use
 	return result, nil
 }
 
-func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, userID int64, filter *Filter) ([]Entry, error) {
+func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error) {
 	smods := []bob.Mod[*dialect.SelectQuery]{sm.Columns(dbmodels.Bookings.Columns())}
 	var whereMods []mods.Where[*dialect.SelectQuery]
 
 	whereMods = append(whereMods, dbmodels.SelectWhere.Parkingspots.Userid.EQ(userID))
+	if cursor, ok := after.Get(); ok {
+		whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Bookingid.GT(cursor.ID))
+	}
 
 	if filter.SpotID != 0 {
 		whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Parkingspotid.EQ(filter.SpotID))

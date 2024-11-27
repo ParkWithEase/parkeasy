@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
+	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
 )
 
@@ -37,6 +38,6 @@ var (
 type Repository interface {
 	Create(ctx context.Context, userID int64, spotID int64, booking *models.BookingCreationInput) (EntryWithTimes, error)
 	GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error)
-	GetManyForSeller(ctx context.Context, limit int, userID int64, filter *Filter) ([]Entry, error)
-	GetManyForBuyer(ctx context.Context, limit int, userID int64, filter *Filter) ([]Entry, error)
+	GetManyForSeller(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error)
+	GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error)
 }
