@@ -2,7 +2,6 @@ package preferencespot
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -53,10 +52,6 @@ func TestPostgresIntegration(t *testing.T) {
 	authUUID, _ := authRepo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
 
 	userID, _ := userRepo.Create(ctx, authUUID, profile)
-
-	pool.Reset()
-	snapshotErr := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
-	require.NoError(t, snapshotErr, "could not snapshot db")
 
 	// Test variables
 	testTimeUnits := []models.TimeUnit{
@@ -143,26 +138,30 @@ func TestPostgresIntegration(t *testing.T) {
 		},
 	}
 
-	sampleWinnipegLocations := []models.ParkingSpotLocation{
-		{
-			PostalCode:    "R3C1A6",
-			CountryCode:   "CA",
-			City:          "Winnipeg",
-			StreetAddress: "180 Main St",
-			State:         "MB",
-			Latitude:      49.88990,
-			Longitude:     -97.13599,
-		},
-		{
-			PostalCode:    "R3C0N9",
-			CountryCode:   "CA",
-			City:          "Winnipeg",
-			StreetAddress: "330 York Ave",
-			State:         "MB",
-			Latitude:      49.88885,
-			Longitude:     -97.14193,
-		},
+	spotEntries := make([]parkingspot.Entry, 0, len(sampleLocations))
+
+	// Expected resulting preference entries for testing get methods
+	expectedEntries := make([]Entry, 0, len(sampleLocations))
+
+	// Create parking spots for testing
+	for _, location := range sampleLocations {
+		spot := models.ParkingSpotCreationInput{
+			Location:     location,
+			Features:     sampleFeatures,
+			PricePerHour: samplePricePerHour,
+			Availability: testTimeUnits,
+		}
+
+		created, _, err := spotRepo.Create(ctx, userID, &spot)
+		require.NoError(t, err)
+
+		spotEntries = append(spotEntries, created)
 	}
+
+	// Snapshot after parking spots are inserted
+	pool.Reset()
+	snapshotErr := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+	require.NoError(t, snapshotErr, "could not snapshot db")
 
 	t.Run("basic add/get/delete preference spots", func(t *testing.T) {
 		t.Cleanup(func() {
@@ -173,24 +172,6 @@ func TestPostgresIntegration(t *testing.T) {
 			// required since Restore() deletes the current DB
 			pool.Reset()
 		})
-
-		// Create entries
-		// Insert winnipeg locations for testing
-		for _, location := range sampleWinnipegLocations {
-			spot := models.ParkingSpotCreationInput{
-				Location:     location,
-				Features:     sampleFeatures,
-				PricePerHour: samplePricePerHour,
-				Availability: testTimeUnits,
-			}
-
-			_, _, err := spotRepo.Create(ctx, userID, &spot)
-			require.NoError(t, err)
-		}
-
-		pool.Reset()
-		snapshotErr := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
-		require.NoError(t, snapshotErr, "could not snapshot db")
 
 		t.Run("okay add preference", func(t *testing.T) {
 			err := repo.Create(ctx, userID, 1)
@@ -209,14 +190,14 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		t.Run("okay get preference", func(t *testing.T) {
-			res, err := repo.GetBySpotUUID(ctx, userID, 1)
+			res, err := repo.GetBySpotID(ctx, userID, 1)
 			require.NoError(t, err)
 
 			assert.True(t, res)
 		})
 
 		t.Run("get non-existent preference", func(t *testing.T) {
-			res, err := repo.GetBySpotUUID(ctx, userID, -1)
+			res, err := repo.GetBySpotID(ctx, userID, -1)
 			require.NoError(t, err)
 
 			assert.False(t, res)
@@ -225,11 +206,16 @@ func TestPostgresIntegration(t *testing.T) {
 		t.Run("okay delete preference", func(t *testing.T) {
 			err = repo.Delete(ctx, userID, 1)
 			require.NoError(t, err)
+
+			// Make sure that it is deleted
+			res, err := repo.GetBySpotID(ctx, userID, 1)
+			require.NoError(t, err)
+			assert.False(t, res)
 		})
 
 		t.Run("delete non-existent preference", func(t *testing.T) {
 			err = repo.Delete(ctx, userID, 1)
-			if assert.Error(t, err, "Deleting a preference spot that is not preferred should fail") {
+			if assert.Error(t, err, "Deleting a preference spot that is not preference should fail") {
 				assert.ErrorIs(t, err, ErrNotFound)
 			}
 		})
@@ -245,27 +231,14 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		// Populate spots
-		expectedEntries := make([]Entry, 0, len(sampleLocations))
-		// Insert locations
+		// Prepare expected resulting preference entries for testing get many preference
 		idx := 1
-		for _, location := range sampleLocations {
-			spot := models.ParkingSpotCreationInput{
-				Location:     location,
-				Features:     sampleFeatures,
-				PricePerHour: samplePricePerHour,
-				Availability: testTimeUnits,
-			}
-
-			created, _, err := spotRepo.Create(ctx, userID, &spot)
+		for _, spotEntry := range spotEntries {
+			err = repo.Create(ctx, userID, spotEntry.InternalID)
 			require.NoError(t, err)
-
-			err = repo.Create(ctx, userID, created.InternalID)
-			require.NoError(t, err)
-			fmt.Printf("\nCreated: %d\n", created.InternalID)
 
 			preferenceEntry := Entry{
-				ParkingSpot: created.ParkingSpot,
+				ParkingSpot: spotEntry.ParkingSpot,
 				InternalID:  int64(idx),
 			}
 			idx += 1
@@ -276,7 +249,7 @@ func TestPostgresIntegration(t *testing.T) {
 			t.Parallel()
 
 			var cursor omit.Val[Cursor]
-			idx = 0
+			idx := 0
 			for ; idx < len(sampleLocations); idx += 2 {
 				entries, err := repo.GetMany(ctx, userID, 2, cursor)
 				require.NoError(t, err)

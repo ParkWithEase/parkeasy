@@ -292,7 +292,7 @@ func (s *Service) GetPreferenceByUUID(ctx context.Context, userID int64, spotID 
 		return false, models.ErrParkingSpotNotFound
 	}
 
-	return s.preferenceRepo.GetBySpotUUID(ctx, userID, entry.InternalID)
+	return s.preferenceRepo.GetBySpotID(ctx, userID, entry.InternalID)
 }
 
 func (s *Service) GetManyPreferences(ctx context.Context, userID int64, count int, after models.Cursor) (spots []models.ParkingSpot, next models.Cursor, err error) {
@@ -331,11 +331,14 @@ func (s *Service) GetManyPreferences(ctx context.Context, userID int64, count in
 func (s *Service) DeletePreference(ctx context.Context, userID int64, spotID uuid.UUID) error {
 	entry, err := s.repo.GetByUUID(ctx, spotID)
 	if err != nil {
-		return models.ErrParkingSpotNotFound
+		// It's not an error to delete something that doesn't exist
+		if errors.Is(err, parkingspot.ErrNotFound) {
+			return nil
+		}
+		return err
 	}
 
 	spotInternalID := entry.InternalID
-
 	return s.preferenceRepo.Delete(ctx, userID, spotInternalID)
 }
 

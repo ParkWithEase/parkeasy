@@ -97,8 +97,8 @@ func (m *mockPreferenceSpotRepo) Delete(ctx context.Context, userID, spotID int6
 	return args.Error(0)
 }
 
-// GetBySpotUUID implements preferencespot.Repository.
-func (m *mockPreferenceSpotRepo) GetBySpotUUID(ctx context.Context, userID, spotID int64) (bool, error) {
+// GetBySpotID implements preferencespot.Repository.
+func (m *mockPreferenceSpotRepo) GetBySpotID(ctx context.Context, userID, spotID int64) (bool, error) {
 	args := m.Called(ctx, userID, spotID)
 	return args.Bool(0), args.Error(1)
 }
@@ -724,7 +724,7 @@ func TestCreatePreference(t *testing.T) {
 	})
 }
 
-func TestGetBySpotUUID(t *testing.T) {
+func TestGetBySpotID(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -739,7 +739,7 @@ func TestGetBySpotUUID(t *testing.T) {
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
 
-		preferenceRepo.On("GetBySpotUUID", mock.Anything, testUserID, testInternalID).
+		preferenceRepo.On("GetBySpotID", mock.Anything, testUserID, testInternalID).
 			Return(
 				true,
 				nil,

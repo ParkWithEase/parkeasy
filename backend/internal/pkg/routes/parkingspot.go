@@ -203,14 +203,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotPreferenceRoutes(api huma.API) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		err := r.service.DeletePreference(ctx, userID, input.ID)
 		if err != nil {
-			var detail error
-			if errors.Is(err, models.ErrParkingSpotNotFound) {
-				detail = &huma.ErrorDetail{
-					Location: "path.id",
-					Value:    input.ID,
-				}
-			}
-			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, nil)
 		}
 		return nil, nil
 	})
