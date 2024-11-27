@@ -167,3 +167,12 @@ button:focus:not(:focus-visible) {
     margin: 1rem 0 1rem 0;
     max-width: 6rem;
 }
+
+.spot-info-header {
+    font-size: 2rem;
+}
+
+
+.spot-info-image {
+    max-height: 20rem;
+}
