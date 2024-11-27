@@ -117,7 +117,7 @@
                 const matchedAddress = result.features[0].properties;
                 // Validate all fields match exactly
                 const isMatch =
-                    matchedAddress.housenumber + ' ' +  matchedAddress.street?.toLowerCase() ===
+                    matchedAddress.housenumber + ' ' + matchedAddress.street?.toLowerCase() ===
                         streetAddress.toLowerCase() &&
                     matchedAddress.city?.toLowerCase() === city.toLowerCase() &&
                     matchedAddress.state_code?.toLowerCase() === state.toLowerCase() &&

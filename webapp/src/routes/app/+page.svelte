@@ -169,7 +169,6 @@
                 on:change={(event) => handleRadiusChange(event.detail)}
             />
         </div>
-        
 
         {#if spotsData.length > 0}
             {#each spotsData as listing}
@@ -320,7 +319,7 @@
         margin: 1rem;
     }
 
-    .slider-container :global(bx--form-item){
+    .slider-container :global(bx--form-item) {
         flex: 0 0 auto;
     }
 </style>
