@@ -798,6 +798,34 @@ func TestGetPreferenceBySpotUUID(t *testing.T) {
 
 		srv.AssertExpectations(t)
 	})
+
+	t.Run("not found handling", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		spotUUID := uuid.New()
+		srv.On("GetPreferenceByUUID", mock.Anything, testUserID, mock.Anything).
+			Return(false, models.ErrParkingSpotNotFound).
+			Once()
+
+		resp := api.GetCtx(ctx, "/spots/"+spotUUID.String()+"/preference")
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Location: "path.id",
+			Value:    jsonAnyify(spotUUID),
+		})
+
+		srv.AssertExpectations(t)
+	})
 }
 
 func TestGetManyPreference(t *testing.T) {
