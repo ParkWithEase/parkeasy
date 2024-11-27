@@ -59,17 +59,13 @@ func TestPostgresIntegration(t *testing.T) {
 	const testEmail_1 = "j.smith@gmail.com"
 	const testPasswordHash_1 = "some other hash"
 
+	//Create authemtication and user records
 	authUUID, _ := authRepo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
 	authUUID_1, _ := authRepo.Create(ctx, testEmail_1, models.HashedPassword(testPasswordHash_1))
-
 	userID, _ := userRepo.Create(ctx, authUUID, profile)
 	userID_1, _ := userRepo.Create(ctx, authUUID_1, profile_1)
 
-	pool.Reset()
-	snapshotErr := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
-	require.NoError(t, snapshotErr, "could not snapshot db")
-
-	// Test variables
+	// Test variables for parking spots
 	sampleTimeUnit := []models.TimeUnit{
 		{
 			StartTime: time.Date(2024, time.October, 21, 14, 30, 0, 0, time.UTC), // 2:30 PM on October 21, 2024
@@ -198,9 +194,19 @@ func TestPostgresIntegration(t *testing.T) {
 		Availability: sampleAvailability,
 	}
 
+	// Create a parking spots for testing
+	parkingSpotEntry, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput)
+	parkingSpotEntry_1, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput_1)
+	parkingSpotEntry_2, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput_2)
+
+	pool.Reset()
+	snapshotErr := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+	require.NoError(t, snapshotErr, "could not snapshot db")
+
+	// Sample UUID for a spot
 	parkingSpotUUID := uuid.New()
-	paidAmount := float64(100)
-	paidAmount_1 := float64(50)
+	paidAmount := 100.0
+	paidAmount_1 := 50.0
 
 	bookingCreationInput := models.BookingCreationInput{
 		ParkingSpotID: parkingSpotUUID,
@@ -223,9 +229,6 @@ func TestPostgresIntegration(t *testing.T) {
 			// required since Restore() deletes the current DB
 			pool.Reset()
 		})
-
-		// Create a parking spot for testing
-		parkingSpotEntry, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput)
 
 		// Testing create
 		createEntry, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
@@ -255,9 +258,6 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		// Create a parking spot for testing
-		parkingSpotEntry, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput)
-
 		_, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
 		require.NoError(t, err, "could not create initial booking")
 
@@ -277,9 +277,6 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		// Create a parking spot for testing
-		parkingSpotEntry, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput)
-
 		_, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput_1)
 		if assert.Error(t, err, "Creating a booking for a non listed time should fail") {
 			assert.ErrorIs(t, err, ErrTimeAlreadyBooked)
@@ -295,11 +292,6 @@ func TestPostgresIntegration(t *testing.T) {
 			// required since Restore() deletes the current DB
 			pool.Reset()
 		})
-
-		// Create a parking spots for testing
-		parkingSpotEntry, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput)
-		parkingSpotEntry_1, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput_1)
-		parkingSpotEntry_2, _, _ := parkingSpotRepo.Create(ctx, userID, &parkingSpotCreationInput_2)
 
 		expectedAllBuyerEntries := make([]Entry, 0, 8)
 		expectedAllSellerEntries := make([]Entry, 0, 8)
@@ -362,8 +354,7 @@ func TestPostgresIntegration(t *testing.T) {
 			var cursor omit.Val[Cursor]
 			filter := Filter{}
 
-			idx := 0
-			for ; idx < len(expectedAllBuyerEntries); idx += 4 {
+			for idx := 0; idx < len(expectedAllBuyerEntries); idx += 4 {
 				getManyEntries, err := repo.GetManyForBuyer(ctx, 4, cursor, userID, &filter)
 				require.NoError(t, err)
 				if assert.LessOrEqual(t, 1, len(getManyEntries), "expecting at least one entry") {
@@ -519,16 +510,10 @@ func TestPostgresIntegration(t *testing.T) {
 			require.NoError(t, err)
 			assert.Empty(t, entries)
 		})
-
 	})
 }
 
 func createExpectedEntry(internalID int64, bookingUUID uuid.UUID, paidAmount float64) Entry {
-	// expectedBookedTimes := make([]models.TimeUnit, len(bookedTimes))
-	// for i, timeUnit := range bookedTimes {
-	// 	timeUnit.Status = "booked"
-	// 	expectedBookedTimes[i] = timeUnit
-	// }
 
 	return Entry{
 		Booking: models.Booking{

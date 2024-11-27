@@ -9,14 +9,15 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbmodels"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbtype"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
-	"github.com/aarondl/opt/null"
 	"github.com/aarondl/opt/omit"
+	"github.com/aarondl/opt/omitnull"
 	"github.com/google/uuid"
 	"github.com/govalues/decimal"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/mods"
 	"github.com/stephenafamo/scan"
 )
@@ -58,12 +59,14 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 
 	//--------Update the corresponding time slots--------
 	// Check if all the time slots are available
-	smods := []bob.Mod[*dialect.SelectQuery]{sm.Columns(dbmodels.Timeunits.Columns())}
+	umods := []bob.Mod[*dialect.UpdateQuery]{&dbmodels.TimeunitSetter{
+		Bookingid: omitnull.From(inserted.Bookingid),
+	}}
 
 	//Variable for OR clauses in where, used for timeslots timeranges
-	var whereOrMods []mods.Where[*dialect.SelectQuery]
+	var whereOrMods []mods.Where[*dialect.UpdateQuery]
 	for _, time := range booking.BookedTimes {
-		whereOrMods = append(whereOrMods, sm.Where(
+		whereOrMods = append(whereOrMods, um.Where(
 			dbmodels.TimeunitColumns.Timerange.OP(
 				"&&",
 				psql.Arg(dbtype.Tstzrange{
@@ -75,59 +78,34 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	}
 
 	//Variable for AND clauses in where
-	var whereMods []mods.Where[*dialect.SelectQuery]
+	var whereMods []mods.Where[*dialect.UpdateQuery]
 	whereMods = append(
 		whereMods,
-		dbmodels.SelectWhere.Timeunits.Bookingid.IsNull(),
-		dbmodels.SelectWhere.Timeunits.Parkingspotid.EQ(spotID),
+		dbmodels.UpdateWhere.Timeunits.Bookingid.IsNull(),
+		dbmodels.UpdateWhere.Timeunits.Parkingspotid.EQ(spotID),
 		psql.WhereOr(whereOrMods...))
 
-	smods = append(
-		smods,
-		sm.From(dbmodels.Timeunits.Name(ctx)),
-	)
+	umods = append(umods, psql.WhereAnd(whereMods...), um.Returning(dbmodels.Timeunits.Columns()))
+	query := dbmodels.Timeunits.UpdateQ(ctx, tx, umods...)
 
-	smods = append(smods, psql.WhereAnd(whereMods...))
-	query := psql.Select(smods...)
-
-	updateCursor, err := bob.Cursor(ctx, tx, query, scan.StructMapper[*dbmodels.Timeunit]())
+	updatedCursor, err := query.Cursor()
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			//We do not care if the time is not losted or already booked, the user can not book it
-			//In this case Time Slot is not available to be booked
-			return EntryWithTimes{}, ErrTimeAlreadyBooked
+		return EntryWithTimes{}, fmt.Errorf("could not update time units: %w", err)
+	}
+	defer updatedCursor.Close()
+
+	bookedSlots := make([]models.TimeUnit, 0, len(booking.BookedTimes))
+	for updatedCursor.Next() {
+		dbtime, err := updatedCursor.Get()
+		if err != nil {
+			return EntryWithTimes{}, fmt.Errorf("could not get time units: %w", err)
 		}
-	}
-	defer updateCursor.Close()
 
-	// Count rows in the cursor, and form timeUnits
-	count := 0
-	for updateCursor.Next() {
-		count++
+		bookedSlots = append(bookedSlots, timeUnitFromDB(dbtime))
 	}
-
 	// Check if the count matches the expected number of booked times
-	if count != len(booking.BookedTimes) {
+	if len(bookedSlots) != len(booking.BookedTimes) {
 		return EntryWithTimes{}, ErrTimeAlreadyBooked
-	}
-
-	//Update time units with booking ID
-	//Form time units with booking ID
-	units := make([]*dbmodels.Timeunit, 0, len(booking.BookedTimes))
-	for _, time := range booking.BookedTimes {
-		units = append(units, &dbmodels.Timeunit{
-			Timerange: dbtype.Tstzrange{
-				Start: time.StartTime,
-				End:   time.EndTime,
-			},
-			Parkingspotid: spotID,
-			Bookingid:     null.From(inserted.Bookingid),
-		})
-	}
-
-	err = inserted.AttachBookingidTimeunits(ctx, tx, units...)
-	if err != nil {
-		return EntryWithTimes{}, err
 	}
 	//------------------------------------------------
 
@@ -149,7 +127,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 			},
 			InternalID: inserted.Bookingid,
 		},
-		BookedTimes: timeUnitsFromDB(inserted.R.BookingidTimeunits),
+		BookedTimes: bookedSlots,
 	}
 
 	return entry, nil
@@ -206,6 +184,44 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	}
 
 	return entry, nil
+}
+
+func (p *PostgresRepository) GetBookedTimesByUUID(ctx context.Context, bookingUUID uuid.UUID) ([]models.TimeUnit, error) {
+	// Query timeunits
+	result, err := dbmodels.Timeunits.Query(
+		ctx, p.db,
+		sm.Columns(dbmodels.TimeunitColumns.Timerange),
+		sm.Columns(dbmodels.TimeunitColumns.Bookingid),
+		psql.WhereAnd(
+			dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingUUID),
+		),
+		dbmodels.SelectJoins.Timeunits.InnerJoin.BookingidBooking(ctx),
+		sm.OrderBy(psql.F("lower", dbmodels.TimeunitColumns.Timerange)),
+	).All()
+	if err != nil {
+		return nil, err
+	}
+
+	// If no rows found
+	if len(result) == 0 {
+		// Ignore errors here, just treat it as not existing
+
+		// Check if the booking exists
+		exists, _ := dbmodels.Bookings.Query(
+			ctx, p.db,
+			sm.Columns(1),
+			dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingUUID),
+		).Exists()
+
+		if !exists {
+			return nil, ErrNotFound
+		}
+
+		// No time units is not an error
+		return []models.TimeUnit{}, nil
+	}
+
+	return timeUnitsFromDB(result), nil
 }
 
 func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error) {

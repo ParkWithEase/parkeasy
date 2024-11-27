@@ -40,4 +40,5 @@ type Repository interface {
 	GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error)
 	GetManyForSeller(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error)
 	GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error)
+	GetBookedTimesByUUID(ctx context.Context, bookingUUID uuid.UUID) ([]models.TimeUnit, error)
 }
