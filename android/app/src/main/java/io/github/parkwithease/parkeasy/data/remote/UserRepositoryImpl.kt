@@ -95,8 +95,7 @@ constructor(
             }
             .mapAPIError()
             .let { result ->
-                if (result.isSuccess) result.mapCatching { it.body<Profile>() }
-                else result.map { Profile() }
+                result.mapCatching { if (result.isSuccess) it.body<Profile>() else Profile() }
             }
 
     // Update authentication status based on the response assuming that the request alters
