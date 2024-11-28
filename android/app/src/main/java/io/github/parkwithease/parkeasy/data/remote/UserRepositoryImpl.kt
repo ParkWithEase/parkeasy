@@ -94,8 +94,7 @@ constructor(
             }
             .mapAPIError()
             .let { result ->
-                if (result.isSuccess) result.mapCatching { it.body<Profile>() }
-                else result.map { Profile() }
+                result.mapCatching { if (result.isSuccess) it.body<Profile>() else Profile() }
             }
 
     // Convert API error into a failing Result
