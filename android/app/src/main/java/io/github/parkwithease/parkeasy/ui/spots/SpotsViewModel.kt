@@ -35,7 +35,12 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
     fun onRefresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            _spots.value = spotRepo.getSpots()
+            spotRepo
+                .getSpots()
+                .onSuccess { _spots.value = it }
+                .onFailure {
+                    viewModelScope.launch { snackbarState.showSnackbar("Error retrieving spots") }
+                }
             _isRefreshing.value = false
         }
     }

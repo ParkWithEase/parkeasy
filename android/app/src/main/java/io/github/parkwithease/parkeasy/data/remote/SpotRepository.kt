@@ -8,7 +8,7 @@ interface SpotRepository {
      *
      * @return a List of Spots.
      */
-    suspend fun getSpots(): List<Spot>
+    suspend fun getSpots(): Result<List<Spot>>
 
     /**
      * Creates a spot in the repository.
