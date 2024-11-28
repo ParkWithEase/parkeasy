@@ -3,7 +3,6 @@
     import Background from '$lib/images/background.png';
     import {
         Content,
-        Checkbox,
         Button,
         TextInput,
         Form,
@@ -26,7 +25,6 @@
     import AvailabilitySection from '$lib/components/spot-component/availability-section.svelte';
     import SpotInfo from '$lib/components/spot-component/spot-info.svelte';
     import { Favorite, FavoriteFilled } from 'carbon-icons-svelte';
-    import { onMount } from 'svelte';
 
     export let data: PageData;
     type TimeUnit = components['schemas']['TimeUnit'];
@@ -34,6 +32,8 @@
     //Variable for location edit section
     let spot = data.spot;
     let availabilityTimeSlot = data.time_slots;
+    let spotPreferred: boolean = data.isPreferred;
+    console.log(data);
 
     //temporarily use id from params
 
@@ -206,7 +206,37 @@
     }
 
     function setPreference() {
-        data.isPreferred = !data.isPreferred;
+        if (!spotPreferred) {
+            console.log('add preference');
+            client
+                .POST('/spots/{id}/preference', { params: { path: { id: spot?.id ?? '0' } } })
+                .then(({ error }) => {
+                    if (error) {
+                        errorMessage = getErrorMessage(error);
+                        toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+                    } else {
+                        spotPreferred = true;
+                    }
+                })
+                .catch((err) => {
+                    errorMessage = err;
+                });
+        } else {
+            console.log('remove preference');
+            client
+                .DELETE('/spots/{id}/preference', { params: { path: { id: spot?.id ?? '0' } } })
+                .then(({ error }) => {
+                    if (error) {
+                        errorMessage = getErrorMessage(error);
+                        toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+                    } else {
+                        spotPreferred = false;
+                    }
+                })
+                .catch((err) => {
+                    errorMessage = err;
+                });
+        }
     }
 </script>
 
@@ -230,11 +260,11 @@
     <div class="header-with-preference-option">
         <p class="spot-info-header">Location</p>
         <TooltipIcon
-            tooltipText={data.isPreferred ? 'Remove from preferred list' : 'Add to preferred list'}
+            tooltipText={spotPreferred ? 'Remove from preferred list' : 'Add to preferred list'}
             on:click={() => setPreference()}
         >
             <FavoriteFilled
-                style={`${data.isPreferred ? 'fill:deeppink;' : 'fill:None;'} position:absolute; `}
+                style={`${spotPreferred ? 'fill:deeppink;' : 'fill:None;'} position:absolute; `}
                 size={SPOT_PREFFERED_ICON_SIZE}
             />
             <Favorite style="fill:black; position: absolute; " size={SPOT_PREFFERED_ICON_SIZE} />

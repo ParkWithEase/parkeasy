@@ -1,14 +1,7 @@
 <script lang="ts">
     import type { PageData } from './$types';
     import Background from '$lib/images/background.png';
-    import {
-        Content,
-        Checkbox,
-        Button,
-        TextInput,
-        Form,
-        ToastNotification
-    } from 'carbon-components-svelte';
+    import { Content, Button, TextInput, Form, ToastNotification } from 'carbon-components-svelte';
     import { TimeSlotStatus, TimeSlotStatusConverter } from '$lib/enum/timeslot-status';
     import { DAY_IN_A_WEEK, ERROR_MESSAGE_TIME_OUT, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
     import { getMonday, getDateWithDayOffset } from '$lib/utils/datetime-util';

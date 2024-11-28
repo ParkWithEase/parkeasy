@@ -4,35 +4,33 @@
     export let spot;
 </script>
 
-<a href={`your-spots/${spot.id}/spot-info`}>
-    <div class="spot-info">
+<div class="spot-info">
+    <div>
+        <img src={BackgroundImage} class="spot-image" alt="A parking spot" />
+    </div>
+    <div>
         <div>
-            <img src={BackgroundImage} class="spot-image" alt="A parking spot" />
+            <p class="spot-title">
+                {spot.location.street_address}, {spot.location.postal_code}
+                {#if spot.isListed}
+                    <Tag type="green" style="font-size: 1rem;">listed</Tag>
+                {/if}
+            </p>
+            <span style="font-size: 1rem"
+                >{spot.location.city}, {spot.location.state} {spot.location.country_code}</span
+            >
         </div>
         <div>
-            <div>
-                <p class="spot-title">
-                    {spot.location.street_address}, {spot.location.postal_code}
-                    {#if spot.isListed}
-                        <Tag type="green" style="font-size: 1rem;">listed</Tag>
-                    {/if}
-                </p>
-                <span style="font-size: 1rem"
-                    >{spot.location.city}, {spot.location.state} {spot.location.country_code}</span
-                >
-            </div>
-            <div>
-                <Checkbox labelText="Shelter" checked={spot.features.shelter} readonly />
-                <Checkbox labelText="Plug-in" checked={spot.features.plug_in} readonly />
-                <Checkbox
-                    labelText="Charging station"
-                    checked={spot.features.charging_station}
-                    readonly
-                />
-            </div>
+            <Checkbox labelText="Shelter" checked={spot.features.shelter} readonly />
+            <Checkbox labelText="Plug-in" checked={spot.features.plug_in} readonly />
+            <Checkbox
+                labelText="Charging station"
+                checked={spot.features.charging_station}
+                readonly
+            />
         </div>
     </div>
-</a>
+</div>
 
 <style>
     .spot-info {
@@ -43,6 +41,7 @@
         align-items: center;
         flex-direction: row;
         border: 1px solid #cfcfcfcf;
+        color: black;
     }
 
     .spot-image {
