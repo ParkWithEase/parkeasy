@@ -41,5 +41,5 @@ interface UserRepository {
      *
      * @return Profile of the user if valid user, null otherwise
      */
-    suspend fun getUser(): Profile?
+    suspend fun getUser(): Result<Profile>
 }
