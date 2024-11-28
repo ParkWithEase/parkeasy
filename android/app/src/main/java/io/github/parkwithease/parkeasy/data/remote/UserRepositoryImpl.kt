@@ -2,6 +2,7 @@ package io.github.parkwithease.parkeasy.data.remote
 
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
+import io.github.parkwithease.parkeasy.model.ErrorModel
 import io.github.parkwithease.parkeasy.model.LoggedOutException
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.Profile
