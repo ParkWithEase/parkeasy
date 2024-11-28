@@ -233,15 +233,11 @@
             tooltipText={data.isPreferred ? 'Remove from preferred list' : 'Add to preferred list'}
             on:click={() => setPreference()}
         >
-            <!-- {#if data.isPreferred} -->
             <FavoriteFilled
                 style={`${data.isPreferred ? 'fill:deeppink;' : 'fill:None;'} position:absolute; `}
                 size={SPOT_PREFFERED_ICON_SIZE}
             />
             <Favorite style="fill:black; position: absolute; " size={SPOT_PREFFERED_ICON_SIZE} />
-            <!-- {:else}
-                    <Favorite size={SPOT_PREFFERED_ICON_SIZE} />
-                {/if} -->
         </TooltipIcon>
     </div>
 
