@@ -41,9 +41,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
-import io.github.parkwithease.parkeasy.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.Spot
+import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

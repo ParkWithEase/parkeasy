@@ -39,9 +39,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
-import io.github.parkwithease.parkeasy.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.model.Car
 import io.github.parkwithease.parkeasy.model.EditMode
+import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.ui.theme.Typography
 
 @OptIn(ExperimentalMaterial3Api::class)
