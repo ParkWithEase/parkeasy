@@ -3,7 +3,6 @@ package io.github.parkwithease.parkeasy.data.remote
 import io.github.parkwithease.parkeasy.data.common.mapAPIError
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
-import io.github.parkwithease.parkeasy.model.ErrorModel
 import io.github.parkwithease.parkeasy.model.LoggedOutException
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.Profile
@@ -94,7 +93,8 @@ constructor(
             }
             .mapAPIError()
             .let { result ->
-                result.mapCatching { if (result.isSuccess) it.body<Profile>() else Profile() }
+                if (result.isSuccess) result.mapCatching { it.body<Profile>() }
+                else result.map { Profile() }
             }
 
     // Update authentication status based on the response assuming that the request alters
