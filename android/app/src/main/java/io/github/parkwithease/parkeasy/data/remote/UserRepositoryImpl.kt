@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.data.remote
 
+import io.github.parkwithease.parkeasy.data.common.mapAPIError
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
 import io.github.parkwithease.parkeasy.model.ErrorModel
@@ -18,7 +19,6 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-import io.ktor.http.isSuccess
 import io.ktor.http.setCookie
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
@@ -96,12 +96,6 @@ constructor(
             .let { result ->
                 result.mapCatching { if (result.isSuccess) it.body<Profile>() else Profile() }
             }
-
-    // Convert API error into a failing Result
-    private suspend fun Result<HttpResponse>.mapAPIError(): Result<HttpResponse> = mapCatching {
-        if (!it.status.isSuccess()) throw APIException(it.body<ErrorModel>())
-        it
-    }
 
     // Update authentication status based on the response assuming that the request alters
     // authentication status
