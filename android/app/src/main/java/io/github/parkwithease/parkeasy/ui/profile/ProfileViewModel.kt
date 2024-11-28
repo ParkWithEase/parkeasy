@@ -22,14 +22,15 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     private val _profile = MutableStateFlow(Profile("", ""))
     val profile = _profile.asStateFlow()
 
-    fun refresh() {
+    fun refresh() =
         viewModelScope.launch {
-            val profile = userRepo.getUser()
-            if (profile != null) {
-                _profile.value = profile
-            }
+            userRepo
+                .getUser()
+                .onSuccess { _profile.value = it }
+                .onFailure {
+                    viewModelScope.launch { snackbarState.showSnackbar("Error retrieving profile") }
+                }
         }
-    }
 
     fun onLogoutClick() {
         viewModelScope.launch {
