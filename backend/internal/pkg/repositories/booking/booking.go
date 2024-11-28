@@ -32,7 +32,7 @@ var (
 	ErrTimeAlreadyBooked = errors.New("one or more times is already booked")
 	ErrNotFound          = errors.New("no booking found")
 	ErrInvalidPaidAmount = errors.New("paid amount not valid")
-	ErrNoConstraint      = errors.New("no constraint provided for get many")
+	ErrNoTimeSlots       = errors.New("no time units provided for booking")
 )
 
 type Repository interface {
