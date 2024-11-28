@@ -3,6 +3,7 @@ export const DAY_IN_A_WEEK = 7;
 export const TOTAL_SEGMENTS_NUMBER = 48;
 export const ERROR_MESSAGE_TIME_OUT = 3_000;
 export const WAIT_TIME_BEFORE_AUTO_COMPLETE = 1_000;
+export const RESPONSE_WIDTH = 600;
 export const SPOT_PREFFERED_ICON_SIZE = 32;
 
 //Error Message
