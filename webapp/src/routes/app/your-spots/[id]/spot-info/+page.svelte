@@ -293,6 +293,7 @@
 <style>
     .spot-info-image {
         max-height: 20rem;
+        max-width: 100%;
     }
 
     .spot-info-header {

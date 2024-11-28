@@ -6,9 +6,14 @@
     let spotInfoLink = `/app/your-spots/${currentSpotID}/spot-info`;
     let spotPerformanceLink = `/app/your-spots/${currentSpotID}/spot-performance`;
     let leasingHistoryLink = `/app/your-spots/${currentSpotID}/spot-leasing-history`;
+    import { responsiveState } from '$lib/stores/responsive';
+    let shouldReponse: boolean = false;
+    responsiveState.subscribe((value) => {
+        shouldReponse = value;
+    });
 </script>
 
-<SideNav isOpen fixed>
+<SideNav isOpen={!shouldReponse} fixed={!shouldReponse} rail={shouldReponse}>
     <SideNavItems>
         <SideNavLink
             text="General Information"
