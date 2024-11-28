@@ -48,6 +48,7 @@ import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.Spot
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("detekt:LongMethod")
 @Composable
 fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltViewModel()) {
     val spots by viewModel.spots.collectAsState()
@@ -77,6 +78,7 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
         },
         isRefreshing,
         viewModel::onRefresh,
+        viewModel.snackbarState,
         modifier,
     )
     if (openBottomSheet) {
@@ -118,11 +120,13 @@ fun SpotsScreen(
     onShowAddSpotClick: () -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
+    snackbarState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
         floatingActionButton = { AddSpotButton(onShowAddSpotClick = onShowAddSpotClick) },
         modifier = modifier,
+        snackbarHost = { SnackbarHost(hostState = snackbarState) },
     ) { innerPadding ->
         Surface(Modifier.padding(innerPadding)) {
             PullToRefreshBox(
