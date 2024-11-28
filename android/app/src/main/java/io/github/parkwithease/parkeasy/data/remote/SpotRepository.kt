@@ -16,5 +16,5 @@ interface SpotRepository {
      * @param spot the Spot to add to the repository.
      * @return Result
      */
-    suspend fun createSpot(spot: Spot): Result<Unit>?
+    suspend fun createSpot(spot: Spot): Result<Unit>
 }

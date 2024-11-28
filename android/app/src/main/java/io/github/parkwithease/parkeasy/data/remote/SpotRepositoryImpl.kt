@@ -2,6 +2,7 @@ package io.github.parkwithease.parkeasy.data.remote
 
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
+import io.github.parkwithease.parkeasy.model.LoggedOutException
 import io.github.parkwithease.parkeasy.model.Spot
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -40,8 +41,9 @@ constructor(
         return spots
     }
 
-    override suspend fun createSpot(spot: Spot): Result<Unit>? =
-        authRepo.sessionFlow.firstOrNull()?.runCatching {
+    override suspend fun createSpot(spot: Spot): Result<Unit> =
+        authRepo.sessionFlow.firstOrNull().runCatching {
+            if (this == null) throw LoggedOutException()
             withContext(ioDispatcher) {
                 client.post("/spots") {
                     contentType(ContentType.Application.Json)

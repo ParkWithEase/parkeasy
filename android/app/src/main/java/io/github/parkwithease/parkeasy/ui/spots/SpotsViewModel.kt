@@ -67,7 +67,10 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                     )
                 )
                 .also { clearFieldErrors() }
-                ?.onSuccess { onRefresh() }
+                .onSuccess { onRefresh() }
+                .onFailure {
+                    viewModelScope.launch { snackbarState.showSnackbar("Error creating spot") }
+                }
         }
     }
 
