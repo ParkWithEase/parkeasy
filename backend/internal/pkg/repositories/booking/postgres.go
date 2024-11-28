@@ -48,6 +48,11 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		return EntryWithTimes{}, ErrInvalidPaidAmount
 	}
 
+	// Check if any time slots are passed
+	if len(booking.BookedTimes) == 0 {
+		return EntryWithTimes{}, ErrNoTimeSlots
+	}
+
 	inserted, err := dbmodels.Bookings.Insert(ctx, tx, &dbmodels.BookingSetter{
 		Userid:        omit.From(userID),
 		Parkingspotid: omit.From(spotID),
@@ -83,7 +88,8 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		whereMods,
 		dbmodels.UpdateWhere.Timeunits.Bookingid.IsNull(),
 		dbmodels.UpdateWhere.Timeunits.Parkingspotid.EQ(spotID),
-		psql.WhereOr(whereOrMods...))
+		psql.WhereOr(whereOrMods...),
+	)
 
 	umods = append(umods, psql.WhereAnd(whereMods...), um.Returning(dbmodels.Timeunits.Columns()))
 	query := dbmodels.Timeunits.UpdateQ(ctx, tx, umods...)
@@ -120,13 +126,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	}
 
 	entry := EntryWithTimes{
-		Entry: Entry{
-			Booking: models.Booking{
-				PaidAmount: amount,
-				ID:         inserted.Bookinguuid,
-			},
-			InternalID: inserted.Bookingid,
-		},
+		Entry:       formEntry(amount, inserted.Bookinguuid, inserted.Bookingid),
 		BookedTimes: bookedSlots,
 	}
 
@@ -173,13 +173,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	}
 
 	entry := EntryWithTimes{
-		Entry: Entry{
-			Booking: models.Booking{
-				PaidAmount: amount,
-				ID:         bookingResult.Bookinguuid,
-			},
-			InternalID: bookingResult.Bookingid,
-		},
+		Entry:       formEntry(amount, bookingResult.Bookinguuid, bookingResult.Bookingid),
 		BookedTimes: timeUnitsFromDB(timeResult),
 	}
 
@@ -269,13 +263,7 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 			return []Entry{}, fmt.Errorf("could not convert %v to float64", get.Paidamount)
 		}
 
-		entry := Entry{
-			Booking: models.Booking{
-				PaidAmount: amount,
-				ID:         get.Bookinguuid,
-			},
-			InternalID: get.Bookingid,
-		}
+		entry := formEntry(amount, get.Bookinguuid, get.Bookingid)
 
 		result = append(result, entry)
 	}
@@ -329,13 +317,7 @@ func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, af
 			return []Entry{}, fmt.Errorf("could not convert %v to float64", get.Paidamount)
 		}
 
-		entry := Entry{
-			Booking: models.Booking{
-				PaidAmount: amount,
-				ID:         get.Bookinguuid,
-			},
-			InternalID: get.Bookingid,
-		}
+		entry := formEntry(amount, get.Bookinguuid, get.Bookingid)
 
 		result = append(result, entry)
 	}
@@ -349,6 +331,16 @@ func timeUnitsFromDB(model []*dbmodels.Timeunit) []models.TimeUnit {
 		result = append(result, timeUnitFromDB(unit))
 	}
 	return result
+}
+
+func formEntry(amount float64, bookingUUID uuid.UUID, bookingID int64) Entry {
+	return Entry{
+		Booking: models.Booking{
+			PaidAmount: amount,
+			ID:         bookingUUID,
+		},
+		InternalID: bookingID,
+	}
 }
 
 func timeUnitFromDB(model *dbmodels.Timeunit) models.TimeUnit {
