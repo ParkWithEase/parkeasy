@@ -3,7 +3,6 @@ package io.github.parkwithease.parkeasy.data.remote
 import io.github.parkwithease.parkeasy.data.common.mapAPIError
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
-import io.github.parkwithease.parkeasy.model.LoggedOutException
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.Profile
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
@@ -17,6 +16,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.setCookie
 import javax.inject.Inject
@@ -82,20 +82,20 @@ constructor(
             .mapAPIError()
             .map {}
 
-    override suspend fun getUser(): Result<Profile> =
-        authRepo.sessionFlow
-            .firstOrNull()
-            .runCatching {
-                if (this == null) throw LoggedOutException()
+    override suspend fun getUser(): Profile? {
+        val authCookie = authRepo.sessionFlow.firstOrNull()
+        var profile: Profile? = null
+        if (authCookie != null) {
+            val response =
                 withContext(ioDispatcher) {
-                    client.get("/user") { cookie(name = name, value = value) }
+                    client.get("/user") { cookie(authCookie.name, authCookie.value) }
                 }
+            if (response.status == HttpStatusCode.OK) {
+                profile = response.body()
             }
-            .mapAPIError()
-            .let { result ->
-                if (result.isSuccess) result.mapCatching { it.body<Profile>() }
-                else result.map { Profile() }
-            }
+        }
+        return profile
+    }
 
     // Update authentication status based on the response assuming that the request alters
     // authentication status
