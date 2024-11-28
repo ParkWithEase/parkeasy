@@ -9,21 +9,21 @@ interface CarRepository {
      *
      * @return a List of Cars.
      */
-    suspend fun getCars(): List<Car>
+    suspend fun getCars(): Result<List<Car>>
 
     /**
      * Deletes a car in the database by id.
      *
      * @return true on success, false on fail.
      */
-    suspend fun deleteCar(id: String): Boolean
+    suspend fun deleteCar(id: String): Result<Boolean>
 
     /**
      * Gets a car's details by id.
      *
      * @return the Car if exists and authorized, null otherwise.
      */
-    suspend fun getCarInfo(id: String): Car
+    suspend fun getCarInfo(id: String): Result<Car>
 
     /**
      * Updates a car's details.
@@ -31,7 +31,7 @@ interface CarRepository {
      * @param car the Car and its updated info.
      * @return Result
      */
-    suspend fun updateCar(car: Car): Result<Unit>?
+    suspend fun updateCar(car: Car): Result<Unit>
 
     /**
      * Creates a car in the repository.
@@ -39,5 +39,5 @@ interface CarRepository {
      * @param car the Car to add to the repository.
      * @return Result
      */
-    suspend fun createCar(car: CarDetails): Result<Unit>?
+    suspend fun createCar(car: CarDetails): Result<Unit>
 }
