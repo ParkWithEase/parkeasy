@@ -73,7 +73,7 @@ type preferenceSpotListOutput struct {
 }
 
 type preferenceBoolOutput struct {
-	Preference bool `json:"preference" doc:"Whether the spot is preferred or not"`
+	Body bool `json:"body" doc:"Whether the spot is preferred or not"`
 }
 
 var ParkingSpotTag = huma.Tag{
@@ -156,7 +156,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotPreferenceRoutes(api huma.API) {
 		}
 
 		return &preferenceBoolOutput{
-			Preference: res,
+			Body: res,
 		}, nil
 	})
 
