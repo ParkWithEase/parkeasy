@@ -5,15 +5,16 @@ import (
 )
 
 var (
-	ErrBookingOwned      = CodeForbidden.WithMsg("booking is owned by an another user")
 	ErrBookingNotFound   = CodeNotFound.WithMsg("this booking does not exist")
-	ErrBookingDuplicate  = CodeDuplicate.WithMsg("booking already exists")
+	ErrEmptyBookingTimes = CodeNotFound.WithMsg("can not create booking with no time slots")
+	ErrDuplicateBooking  = CodeDuplicate.WithMsg("one or more time slots are already booked")
 	ErrInvalidPaidAmount = CodeBookingInvalid.WithMsg("the specified paid amount is invalid")
 )
 
 type Booking struct {
-	PaidAmount float64   `json:"paid_amount" doc:"The amount paid for the booking"`
-	ID         uuid.UUID `json:"id" doc:"ID of this resource"`
+	PaidAmount    float64   `json:"paid_amount" doc:"The amount paid for the booking"`
+	ID            uuid.UUID `json:"id" doc:"ID of this resource"`
+	ParkingSpotID int64     `json:"spotid" doc:"internal ID of the parking spot"`
 }
 
 type BookingWithTimes struct {
@@ -24,7 +25,11 @@ type BookingWithTimes struct {
 type BookingCreationInput struct {
 	ParkingSpotID uuid.UUID  `json:"parking_spot_id" doc:"ID of the parking spot being booked"`
 	BookedTimes   []TimeUnit `json:"booked_times" doc:"The booked times of this booking"`
-	PaidAmount    float64    `json:"paid_amount" doc:"The amount paid for the booking"`
+}
+
+type BookingCreationDBInput struct {
+	BookingInfo BookingCreationInput
+	PaidAmount  float64 `json:"paid_amount" doc:"The amount paid for the booking"`
 }
 
 type BookingFilter struct {

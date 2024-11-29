@@ -32,11 +32,10 @@ var (
 	ErrTimeAlreadyBooked = errors.New("one or more times is already booked")
 	ErrNotFound          = errors.New("no booking found")
 	ErrInvalidPaidAmount = errors.New("paid amount not valid")
-	ErrNoTimeSlots       = errors.New("no time units provided for booking")
 )
 
 type Repository interface {
-	Create(ctx context.Context, userID int64, spotID int64, booking *models.BookingCreationInput) (EntryWithTimes, error)
+	Create(ctx context.Context, userID int64, spotID int64, booking *models.BookingCreationDBInput) (EntryWithTimes, error)
 	GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error)
 	GetManyForSeller(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error)
 	GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error)
