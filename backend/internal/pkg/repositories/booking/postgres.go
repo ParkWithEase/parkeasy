@@ -36,7 +36,7 @@ type getManyResult struct {
 	dbmodels.Booking
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID int64, booking *models.BookingCreationInput) (EntryWithTimes, error) {
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID int64, booking *models.BookingCreationDBInput) (EntryWithTimes, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return EntryWithTimes{}, fmt.Errorf("could not start a transaction: %w", err)
@@ -46,11 +46,6 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	paidAmount, err := decimal.NewFromFloat64(booking.PaidAmount)
 	if err != nil {
 		return EntryWithTimes{}, ErrInvalidPaidAmount
-	}
-
-	// Check if any time slots are passed
-	if len(booking.BookedTimes) == 0 {
-		return EntryWithTimes{}, ErrNoTimeSlots
 	}
 
 	inserted, err := dbmodels.Bookings.Insert(ctx, tx, &dbmodels.BookingSetter{
@@ -70,7 +65,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 
 	//Variable for OR clauses in where, used for timeslots timeranges
 	var whereOrMods []mods.Where[*dialect.UpdateQuery]
-	for _, time := range booking.BookedTimes {
+	for _, time := range booking.BookingInfo.BookedTimes {
 		whereOrMods = append(whereOrMods, um.Where(
 			dbmodels.TimeunitColumns.Timerange.OP(
 				"&&",
@@ -100,7 +95,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	}
 	defer updatedCursor.Close()
 
-	bookedSlots := make([]models.TimeUnit, 0, len(booking.BookedTimes))
+	bookedSlots := make([]models.TimeUnit, 0, len(booking.BookingInfo.BookedTimes))
 	for updatedCursor.Next() {
 		dbtime, err := updatedCursor.Get()
 		if err != nil {
@@ -110,7 +105,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		bookedSlots = append(bookedSlots, timeUnitFromDB(dbtime))
 	}
 	// Check if the count matches the expected number of booked times
-	if len(bookedSlots) != len(booking.BookedTimes) {
+	if len(bookedSlots) != len(booking.BookingInfo.BookedTimes) {
 		return EntryWithTimes{}, ErrTimeAlreadyBooked
 	}
 	//------------------------------------------------
@@ -126,7 +121,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	}
 
 	entry := EntryWithTimes{
-		Entry:       formEntry(amount, inserted.Bookinguuid, inserted.Bookingid),
+		Entry:       formEntry(amount, inserted.Bookinguuid, inserted.Bookingid, inserted.Parkingspotid),
 		BookedTimes: bookedSlots,
 	}
 
@@ -141,6 +136,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 			dbmodels.BookingColumns.Bookingid,
 			dbmodels.BookingColumns.Bookinguuid,
 			dbmodels.BookingColumns.Userid,
+			dbmodels.BookingColumns.Parkingspotid,
 		),
 		dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingID),
 	).One()
@@ -173,7 +169,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	}
 
 	entry := EntryWithTimes{
-		Entry:       formEntry(amount, bookingResult.Bookinguuid, bookingResult.Bookingid),
+		Entry:       formEntry(amount, bookingResult.Bookinguuid, bookingResult.Bookingid, bookingResult.Parkingspotid),
 		BookedTimes: timeUnitsFromDB(timeResult),
 	}
 
@@ -263,7 +259,7 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 			return []Entry{}, fmt.Errorf("could not convert %v to float64", get.Paidamount)
 		}
 
-		entry := formEntry(amount, get.Bookinguuid, get.Bookingid)
+		entry := formEntry(amount, get.Bookinguuid, get.Bookingid, get.Parkingspotid)
 
 		result = append(result, entry)
 	}
@@ -317,7 +313,7 @@ func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, af
 			return []Entry{}, fmt.Errorf("could not convert %v to float64", get.Paidamount)
 		}
 
-		entry := formEntry(amount, get.Bookinguuid, get.Bookingid)
+		entry := formEntry(amount, get.Bookinguuid, get.Bookingid, get.Parkingspotid)
 
 		result = append(result, entry)
 	}
@@ -333,11 +329,12 @@ func timeUnitsFromDB(model []*dbmodels.Timeunit) []models.TimeUnit {
 	return result
 }
 
-func formEntry(amount float64, bookingUUID uuid.UUID, bookingID int64) Entry {
+func formEntry(amount float64, bookingUUID uuid.UUID, bookingID int64, spotID int64) Entry {
 	return Entry{
 		Booking: models.Booking{
-			PaidAmount: amount,
-			ID:         bookingUUID,
+			PaidAmount:    amount,
+			ID:            bookingUUID,
+			ParkingSpotID: spotID,
 		},
 		InternalID: bookingID,
 	}
