@@ -73,7 +73,7 @@ type preferenceSpotListOutput struct {
 }
 
 type preferenceBoolOutput struct {
-	Body bool `json:"body" doc:"Whether the spot is preferred or not"`
+	Body bool `doc:"Whether the spot is preferred or not"`
 }
 
 var ParkingSpotTag = huma.Tag{

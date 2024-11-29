@@ -57,15 +57,13 @@ func (p *PostgresRepository) GetBySpotID(ctx context.Context, userID, spotID int
 	exists, err := dbmodels.Preferencespots.Query(
 		ctx, p.db,
 		sm.Columns(1),
-		psql.WhereAnd(dbmodels.SelectWhere.Preferencespots.Preferencespotid.EQ(spotID),
-			dbmodels.SelectWhere.Preferencespots.Preferencespotid.EQ(userID),
+		psql.WhereAnd(dbmodels.SelectWhere.Preferencespots.Parkingspotid.EQ(spotID),
+			dbmodels.SelectWhere.Preferencespots.Userid.EQ(userID),
 		),
 	).Exists()
 	if err != nil {
 		return false, fmt.Errorf("could not execute query: %w", err)
 	}
-
-	log.Printf("userID: %d  spotID: %d  -  result: %t", userID, spotID, exists)
 
 	return exists, nil
 }
