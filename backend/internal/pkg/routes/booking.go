@@ -17,7 +17,7 @@ type BookingServicer interface {
 	// Creates a new booking attached to `userID`.
 	//
 	// Returns the booking internal ID and the model.
-	Create(ctx context.Context, userID int64, spotID uuid.UUID, booking *models.BookingCreationInput) (int64, models.BookingWithTimes, error)
+	Create(ctx context.Context, userID int64, bookingDetails *models.BookingCreationInput) (int64, models.BookingWithTimes, error)
 	// Get at most `count` bookings associated with the given `userID` that satisfies the given filter conditions.
 	//
 	// If there are more entries following the result, a non-empty cursor will be returned
@@ -30,6 +30,8 @@ type BookingServicer interface {
 	GetManyForBuyer(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error)
 	// Get the booking with `bookingID` if `userID` has enough permission to view the resource.
 	GetByUUID(ctx context.Context, userID int64, bookingID uuid.UUID) (models.BookingWithTimes, error)
+	// Get booked times with `bookingID if `userID` has enough permission to view the resource.
+	GetBookedTimesByUUID(ctx context.Context, userID int64, bookinID uuid.UUID) ([]models.TimeUnit, error)
 }
 
 // BookingRoute represents booking-related API routes
@@ -43,7 +45,7 @@ type bookingOutput struct {
 	Body models.Booking
 }
 
-type BookingListOutput struct {
+type bookingListOutput struct {
 	Link []string         `header:"Link" doc:"Contains details on getting the next page of resources" example:"<https://example.com/bookings?after=gQL>; rel=\"next\""`
 	Body []models.Booking `nullable:"false"`
 }
@@ -79,7 +81,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 	huma.Register(api, *withUserID(&huma.Operation{
 		OperationID:   "create-booking",
 		Method:        http.MethodPost,
-		Path:          "/booking",
+		Path:          "/book",
 		Summary:       "Create a new booking",
 		Tags:          []string{BookingTag.Name},
 		DefaultStatus: http.StatusCreated,
@@ -89,7 +91,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 	},
 	) (*bookingWithTimesOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		_, result, err := r.service.Create(ctx, userID, input.Body.ParkingSpotID, &input.Body)
+		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
 			var detail error
 			// TO-DO: handle all error cases from services
@@ -109,14 +111,14 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		After  models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
 		Count  int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of bookings that appear per page."`
 	},
-	) (*BookingListOutput, error) {
+	) (*bookingListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		bookings, nextCursor, err := r.service.GetManyForBuyer(ctx, userID, input.Count, input.After, *input.Filter)
 		if err != nil {
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
 
-		result := BookingListOutput{Body: bookings}
+		result := bookingListOutput{Body: bookings}
 		if nextCursor != "" {
 			nextURL := apiPrefix.JoinPath("/users/bookings")
 			nextURL.RawQuery = url.Values{
@@ -139,14 +141,14 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		After  models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
 		Count  int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of bookings that appear per page."`
 	},
-	) (*BookingListOutput, error) {
+	) (*bookingListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		bookings, nextCursor, err := r.service.GetManyForSeller(ctx, userID, input.Count, input.After, *input.Filter)
 		if err != nil {
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
 
-		result := BookingListOutput{Body: bookings}
+		result := bookingListOutput{Body: bookings}
 		if nextCursor != "" {
 			nextURL := apiPrefix.JoinPath("/users/leasings")
 			nextURL.RawQuery = url.Values{
