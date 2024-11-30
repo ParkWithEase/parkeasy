@@ -83,19 +83,55 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
     }
 
     fun onLicensePlateChange(value: String) {
-        formState = formState.run { copy(licensePlate = licensePlate.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    licensePlate =
+                        licensePlate.copy(
+                            value = value,
+                            error = if (value != "") null else "License plate cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onColorChange(value: String) {
-        formState = formState.run { copy(color = color.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    color =
+                        color.copy(
+                            value = value,
+                            error = if (value != "") null else "Colour cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onMakeChange(value: String) {
-        formState = formState.run { copy(make = make.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    make =
+                        make.copy(
+                            value = value,
+                            error = if (value != "") null else "Make cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onModelChange(value: String) {
-        formState = formState.run { copy(model = model.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    model =
+                        model.copy(
+                            value = value,
+                            error = if (value != "") null else "Model cannot be empty",
+                        )
+                )
+            }
     }
 
     private fun Result<Unit>.recoverRequestErrors(operationFailMsg: String): Result<Unit> =
