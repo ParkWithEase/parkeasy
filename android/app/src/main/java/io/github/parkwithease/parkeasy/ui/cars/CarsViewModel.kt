@@ -39,7 +39,12 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
     fun onRefresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            _cars.value = carRepo.getCars()
+            carRepo
+                .getCars()
+                .onSuccess { _cars.value = it }
+                .onFailure {
+                    viewModelScope.launch { snackbarState.showSnackbar("Error retrieving cars") }
+                }
             _isRefreshing.value = false
         }
     }
@@ -56,8 +61,8 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
                     )
                 )
                 .also { clearFieldErrors() }
-                ?.onSuccess { onRefresh() }
-                ?.recoverRequestErrors("Error adding car")
+                .onSuccess { onRefresh() }
+                .recoverRequestErrors("Error adding car")
         }
     }
 
@@ -77,8 +82,8 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
                     )
                 )
                 .also { clearFieldErrors() }
-                ?.onSuccess { onRefresh() }
-                ?.recoverRequestErrors("Error adding car")
+                .onSuccess { onRefresh() }
+                .recoverRequestErrors("Error adding car")
         }
     }
 

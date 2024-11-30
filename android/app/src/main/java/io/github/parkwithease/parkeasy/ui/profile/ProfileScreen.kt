@@ -56,7 +56,7 @@ fun ProfileScreen(
             snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
         ) { innerPadding ->
             ProfileScreen(
-                profile ?: Profile("", ""),
+                profile,
                 profileRoutes,
                 viewModel::onLogoutClick,
                 Modifier.padding(innerPadding),
