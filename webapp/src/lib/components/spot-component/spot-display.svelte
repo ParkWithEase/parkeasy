@@ -53,8 +53,4 @@
         font-size: 1.5rem;
         padding-top: 0.5rem;
     }
-
-    a {
-        all: unset;
-    }
 </style>

@@ -33,8 +33,6 @@
     let spot = data.spot;
     let availabilityTimeSlot = data.time_slots;
     let spotPreferred: boolean = data.isPreferred;
-    console.log(data);
-
     //temporarily use id from params
 
     //These are Variables for availability edit section

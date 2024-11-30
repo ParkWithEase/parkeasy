@@ -12,9 +12,12 @@ export function handleGetError(errorDetails?: ErrorModel) {
         case 401:
             redirect(307, '/auth/login');
             break;
-        case 404: 
+        case 404:
         case 422:
-            error(errorDetails.status, { message: errorDetails.detail ?? INTERNAL_SERVER_ERROR, ...errorDetails });
+            error(errorDetails.status, {
+                message: errorDetails.detail ?? INTERNAL_SERVER_ERROR,
+                ...errorDetails
+            });
             break;
         default:
             error(500, { message: errorDetails.detail ?? INTERNAL_SERVER_ERROR, ...errorDetails });

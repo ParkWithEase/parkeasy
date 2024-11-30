@@ -38,18 +38,21 @@ export const load: PageLoad = async ({ fetch, params }) => {
 
     handleGetError(errorAvailability);
 
-    const { error: errorPreference} = await client.GET("/spots/{id}/preference", {
-        params: {
-            path: {
-                id: params.id
+    const { data: isPreferred, error: errorPreference } = await client.GET(
+        '/spots/{id}/preference',
+        {
+            params: {
+                path: {
+                    id: params.id
+                }
             }
         }
-    })
+    );
 
     handleGetError(errorPreference);
     return {
         spot: spot_info,
         time_slots: availability,
-        isPreferred: false  
+        isPreferred: isPreferred ?? false
     };
 };
