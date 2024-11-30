@@ -1,10 +1,10 @@
 package io.github.parkwithease.parkeasy.data.remote
 
+import io.github.parkwithease.parkeasy.data.common.mapAPIError
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
 import io.github.parkwithease.parkeasy.model.Car
 import io.github.parkwithease.parkeasy.model.CarDetails
-import io.github.parkwithease.parkeasy.model.ErrorModel
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.cookie
@@ -12,11 +12,9 @@ import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import io.ktor.http.isSuccess
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -82,10 +80,4 @@ constructor(
             }
             ?.mapAPIError()
             ?.map {}
-
-    // Convert API error into a failing Result
-    private suspend fun Result<HttpResponse>.mapAPIError(): Result<HttpResponse> = mapCatching {
-        if (!it.status.isSuccess()) throw APIException(it.body<ErrorModel>())
-        it
-    }
 }
