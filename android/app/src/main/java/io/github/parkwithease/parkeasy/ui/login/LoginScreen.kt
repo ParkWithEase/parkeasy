@@ -120,7 +120,7 @@ private fun LoginScreen(
             Box(modifier = Modifier.widthIn(min = 80.dp, max = 240.dp)) {
                 Image(
                     painter = painterResource(R.drawable.logo_stacked_outlined),
-                    contentDescription = stringResource(R.string.logo),
+                    contentDescription = null,
                     modifier = Modifier.aspectRatio(1f),
                 )
             }
@@ -321,7 +321,7 @@ private fun LoginField(
         value = value,
         onValueChange = { onValueChange(it) },
         label = { Text(label) },
-        leadingIcon = { Icon(imageVector = imageVector, contentDescription = label) },
+        leadingIcon = { Icon(imageVector = imageVector, contentDescription = null) },
         isError = isError,
         visualTransformation = visualTransformation,
         keyboardOptions = keyboardOptions,
