@@ -43,9 +43,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
-import io.github.parkwithease.parkeasy.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.Spot
+import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("detekt:LongMethod")
@@ -196,6 +196,8 @@ fun AddSpotScreen(
             label = { Text(stringResource(R.string.street_address)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.streetAddress.error != null,
+            supportingText = { state.streetAddress.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.city.value,
@@ -203,6 +205,8 @@ fun AddSpotScreen(
             label = { Text(stringResource(R.string.city)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.city.error != null,
+            supportingText = { state.city.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.state.value,
@@ -210,6 +214,8 @@ fun AddSpotScreen(
             label = { Text(stringResource(R.string.state)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.state.error != null,
+            supportingText = { state.state.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.countryCode.value,
@@ -217,6 +223,8 @@ fun AddSpotScreen(
             label = { Text(stringResource(R.string.country)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.countryCode.error != null,
+            supportingText = { state.countryCode.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.postalCode.value,
@@ -224,6 +232,8 @@ fun AddSpotScreen(
             label = { Text(stringResource(R.string.postal_code)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.postalCode.error != null,
+            supportingText = { state.postalCode.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.pricePerHour.value,
@@ -231,6 +241,8 @@ fun AddSpotScreen(
             label = { Text(stringResource(R.string.price_per_hour)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.pricePerHour.error != null,
+            supportingText = { state.pricePerHour.error?.also { Text(it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
         Row {

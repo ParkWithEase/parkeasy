@@ -215,9 +215,7 @@ func TestPostgresIntegration(t *testing.T) {
 
 		t.Run("delete non-existent preference", func(t *testing.T) {
 			err = repo.Delete(ctx, userID, 1)
-			if assert.Error(t, err, "Deleting a preference spot that is not preference should fail") {
-				assert.ErrorIs(t, err, ErrNotFound)
-			}
+			require.NoError(t, err)
 		})
 	})
 

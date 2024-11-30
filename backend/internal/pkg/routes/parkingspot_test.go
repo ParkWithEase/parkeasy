@@ -794,7 +794,12 @@ func TestGetPreferenceBySpotUUID(t *testing.T) {
 			Once()
 
 		resp := api.GetCtx(ctx, "/spots/"+spotUUID.String()+"/preference")
-		assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+
+		var prefOutput bool
+		err := json.NewDecoder(resp.Result().Body).Decode(&prefOutput)
+		require.NoError(t, err)
+		assert.True(t, prefOutput)
 
 		srv.AssertExpectations(t)
 	})
