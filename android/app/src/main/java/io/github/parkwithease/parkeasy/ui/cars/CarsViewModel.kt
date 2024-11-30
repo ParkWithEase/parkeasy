@@ -157,6 +157,17 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
     private fun annotateErrorLocation(errors: List<ErrorDetail>) {
         for (err in errors) {
             when (err.location) {
+                "body" ->
+                    formState =
+                        formState.run {
+                            copy(
+                                licensePlate = licensePlate.copy(error = "Invalid license plate"),
+                                color = color.copy(error = "Invalid color"),
+                                make = make.copy(error = "Invalid make"),
+                                model = model.copy(error = "Invalid model"),
+                            )
+                        }
+
                 "body.license_plate" ->
                     formState =
                         formState.run {

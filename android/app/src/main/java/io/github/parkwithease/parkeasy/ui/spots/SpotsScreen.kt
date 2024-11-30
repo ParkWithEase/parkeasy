@@ -190,6 +190,8 @@ fun AddSpotScreen(
             label = { Text(stringResource(R.string.street_address)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.streetAddress.error != null,
+            supportingText = { state.streetAddress.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.city.value,
@@ -197,6 +199,8 @@ fun AddSpotScreen(
             label = { Text(stringResource(R.string.city)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.city.error != null,
+            supportingText = { state.city.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.state.value,
@@ -204,6 +208,8 @@ fun AddSpotScreen(
             label = { Text(stringResource(R.string.state)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.state.error != null,
+            supportingText = { state.state.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.countryCode.value,
@@ -211,6 +217,8 @@ fun AddSpotScreen(
             label = { Text(stringResource(R.string.country)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.countryCode.error != null,
+            supportingText = { state.countryCode.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.postalCode.value,
@@ -218,6 +226,8 @@ fun AddSpotScreen(
             label = { Text(stringResource(R.string.postal_code)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.postalCode.error != null,
+            supportingText = { state.postalCode.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.pricePerHour.value,
@@ -225,6 +235,8 @@ fun AddSpotScreen(
             label = { Text(stringResource(R.string.price_per_hour)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.pricePerHour.error != null,
+            supportingText = { state.pricePerHour.error?.also { Text(it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
         Row {
