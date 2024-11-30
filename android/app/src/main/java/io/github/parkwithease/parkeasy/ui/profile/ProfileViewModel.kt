@@ -8,8 +8,12 @@ import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.data.remote.UserRepository
 import io.github.parkwithease.parkeasy.model.Profile
 import javax.inject.Inject
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -19,17 +23,16 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     val loggedIn = authRepo.statusFlow
     val snackbarState = SnackbarHostState()
 
-    private val _profile = MutableStateFlow(Profile("", ""))
-    val profile = _profile.asStateFlow()
-
-    fun refresh() {
-        viewModelScope.launch {
-            val profile = userRepo.getUser()
-            if (profile != null) {
-                _profile.value = profile
-            }
-        }
-    }
+    private val refreshTrigger =
+        MutableSharedFlow<Unit>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_LATEST,
+        )
+    val profile =
+        refreshTrigger
+            .onStart { emit(Unit) }
+            .map { userRepo.getUser() } // <- this flow gets user data on subscribe
+            .stateIn(viewModelScope, SharingStarted.Lazily, Profile("", ""))
 
     fun onLogoutClick() {
         viewModelScope.launch {
