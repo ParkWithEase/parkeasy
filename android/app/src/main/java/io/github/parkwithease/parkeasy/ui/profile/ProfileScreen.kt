@@ -42,7 +42,6 @@ fun ProfileScreen(
     if (!loggedIn) {
         LaunchedEffect(Unit) { latestOnNavigateToLogin() }
     } else {
-        LaunchedEffect(Unit) { viewModel.refresh() }
         val profile by viewModel.profile.collectAsState()
 
         Scaffold(
@@ -51,7 +50,7 @@ fun ProfileScreen(
             snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
         ) { innerPadding ->
             ProfileScreen(
-                profile,
+                profile ?: Profile("", ""),
                 onNavigateToCars,
                 onNavigateToSpots,
                 viewModel::onLogoutClick,
