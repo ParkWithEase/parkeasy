@@ -57,8 +57,8 @@ func (p *PostgresRepository) GetBySpotID(ctx context.Context, userID, spotID int
 	exists, err := dbmodels.Preferencespots.Query(
 		ctx, p.db,
 		sm.Columns(1),
-		psql.WhereAnd(dbmodels.SelectWhere.Preferencespots.Preferencespotid.EQ(spotID),
-			dbmodels.SelectWhere.Preferencespots.Preferencespotid.EQ(userID),
+		psql.WhereAnd(dbmodels.SelectWhere.Preferencespots.Parkingspotid.EQ(spotID),
+			dbmodels.SelectWhere.Preferencespots.Userid.EQ(userID),
 		),
 	).Exists()
 	if err != nil {
@@ -116,7 +116,7 @@ func (p *PostgresRepository) GetMany(ctx context.Context, userID int64, limit in
 }
 
 func (p *PostgresRepository) Delete(ctx context.Context, userID, spotID int64) error {
-	rowsAffected, err := dbmodels.Preferencespots.DeleteQ(
+	_, err := dbmodels.Preferencespots.DeleteQ(
 		ctx, p.db,
 		psql.WhereAnd(
 			dbmodels.DeleteWhere.Preferencespots.Userid.EQ(userID),
@@ -125,10 +125,6 @@ func (p *PostgresRepository) Delete(ctx context.Context, userID, spotID int64) e
 	).Exec()
 	if err != nil {
 		return fmt.Errorf("could not execute delete: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return ErrNotFound
 	}
 
 	return nil
