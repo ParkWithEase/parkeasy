@@ -172,6 +172,18 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
             }
     }
 
+    fun onPlusTime(elements: Iterable<Int>) {
+        formState =
+            formState.run { copy(times = times.copy(value = formState.times.value.plus(elements))) }
+    }
+
+    fun onMinusTime(elements: Iterable<Int>) {
+        formState =
+            formState.run {
+                copy(times = times.copy(value = formState.times.value.minus(elements)))
+            }
+    }
+
     private fun clearFieldErrors() {
         formState =
             formState.run {
@@ -195,4 +207,5 @@ data class AddSpotFormState(
     val plugIn: FieldState<Boolean> = FieldState(false),
     val shelter: FieldState<Boolean> = FieldState(false),
     val pricePerHour: FieldState<String> = FieldState(""),
+    val times: FieldState<Set<Int>> = FieldState<Set<Int>>(emptySet()),
 )

@@ -40,9 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,8 +61,6 @@ import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
-import kotlin.collections.minus
-import kotlin.collections.plus
 
 private const val NumColumns = 7
 private const val NumRows = 48
@@ -129,6 +125,8 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
                     viewModel::onShelterChange,
                     viewModel::onPricePerHourChange,
                     viewModel::onAddSpotClick,
+                    viewModel::onPlusTime,
+                    viewModel::onMinusTime,
                 )
             }
         }
@@ -205,6 +203,8 @@ fun AddSpotScreen(
     onShelterChange: (Boolean) -> Unit,
     onPricePerHourChange: (String) -> Unit,
     onAddSpotClick: () -> Unit,
+    plus: (elements: Iterable<Int>) -> Unit,
+    minus: (elements: Iterable<Int>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -290,19 +290,20 @@ fun AddSpotScreen(
                 Switch(checked = state.shelter.value, onCheckedChange = onShelterChange)
             }
         }
-        TimeGrid(modifier = Modifier.height(576.dp))
+        TimeGrid(state.times.value, plus, minus, Modifier.height(576.dp))
         Button(onClick = onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.add_spot))
         }
     }
 }
 
-@Suppress("detekt:MutableStateParam") // unnecessarily complicated to refactor
 @Composable
 private fun TimeGrid(
+    selectedIds: Set<Int>,
+    plus: (elements: Iterable<Int>) -> Unit,
+    minus: (elements: Iterable<Int>) -> Unit,
     modifier: Modifier = Modifier,
     slots: List<Int> = List(NumColumns * NumRows) { it % NumColumns * NumRows + it / NumColumns },
-    selectedIds: MutableState<Set<Int>> = rememberSaveable { mutableStateOf(emptySet()) },
 ) {
     val state = rememberLazyGridState()
 
@@ -310,10 +311,16 @@ private fun TimeGrid(
         state = state,
         columns = GridCells.Fixed(NumColumns),
         horizontalArrangement = Arrangement.spacedBy(3.dp),
-        modifier = modifier.timeGridDragHandler(lazyGridState = state, selectedIds = selectedIds),
+        modifier =
+            modifier.timeGridDragHandler(
+                lazyGridState = state,
+                selectedIds = selectedIds,
+                plus = plus,
+                minus = minus,
+            ),
     ) {
         items(slots, key = { it }) { id ->
-            val selected by remember { derivedStateOf { selectedIds.value.contains(id) } }
+            val selected = selectedIds.contains(id)
 
             Surface(
                 tonalElevation = 3.dp,
@@ -329,9 +336,9 @@ private fun TimeGrid(
                             indication = null, // do not show a ripple
                             onValueChange = {
                                 if (it) {
-                                    selectedIds.value += id
+                                    plus(id..id)
                                 } else {
-                                    selectedIds.value -= id
+                                    minus(id..id)
                                 }
                             },
                         ),
@@ -343,7 +350,9 @@ private fun TimeGrid(
 @Suppress("detekt:UnsafeCallOnNullableType") // code provided by a Google engineer -> probably fine
 fun Modifier.timeGridDragHandler(
     lazyGridState: LazyGridState,
-    selectedIds: MutableState<Set<Int>>,
+    selectedIds: Set<Int>,
+    plus: (elements: Iterable<Int>) -> Unit,
+    minus: (elements: Iterable<Int>) -> Unit,
 ) =
     pointerInput(Unit) {
         fun LazyGridState.gridItemKeyAtPosition(hitPoint: Offset): Int? =
@@ -361,11 +370,11 @@ fun Modifier.timeGridDragHandler(
                 lazyGridState.gridItemKeyAtPosition(offset)?.let { key ->
                     initialKey = key
                     currentKey = key
-                    if (!selectedIds.value.contains(key)) {
-                        selectedIds.value += key
+                    if (!selectedIds.contains(key)) {
+                        plus(key..key)
                         adding = true
                     } else {
-                        selectedIds.value -= key
+                        minus(key..key)
                         adding = false
                     }
                 }
@@ -376,19 +385,17 @@ fun Modifier.timeGridDragHandler(
                 if (initialKey != null) {
                     lazyGridState.gridItemKeyAtPosition(change.position)?.let { key ->
                         if (currentKey != key) {
-                            selectedIds.value =
-                                if (adding)
-                                    selectedIds.value
-                                        .minus(initialKey!!..currentKey!!)
-                                        .minus(currentKey!!..initialKey!!)
-                                        .plus(initialKey!!..key)
-                                        .plus(key..initialKey!!)
-                                else
-                                    selectedIds.value
-                                        .plus(initialKey!!..currentKey!!)
-                                        .plus(currentKey!!..initialKey!!)
-                                        .minus(initialKey!!..key)
-                                        .minus(key..initialKey!!)
+                            if (adding) {
+                                minus(initialKey!!..currentKey!!)
+                                minus(currentKey!!..initialKey!!)
+                                plus(initialKey!!..key)
+                                plus(key..initialKey!!)
+                            } else {
+                                plus(initialKey!!..currentKey!!)
+                                plus(currentKey!!..initialKey!!)
+                                minus(initialKey!!..key)
+                                minus(key..initialKey!!)
+                            }
                             currentKey = key
                         }
                     }
