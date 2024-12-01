@@ -81,7 +81,7 @@ func (m *mockRepo) GetMany(ctx context.Context, limit int, filter *parkingspot.F
 
 // UpdateByUUID implements parkingspot.Repository.
 func (m *mockRepo) UpdateByUUID(ctx context.Context, spotID uuid.UUID, updateSpot *models.ParkingSpotUpdateInput) (parkingspot.Entry, []models.TimeUnit, error) {
-	args := m.Called(spotID, updateSpot)
+	args := m.Called(ctx, spotID, updateSpot)
 	return args.Get(0).(parkingspot.Entry), args.Get(1).([]models.TimeUnit), args.Error(2)
 }
 
@@ -464,6 +464,33 @@ func TestGetByUUID(t *testing.T) {
 		spot, err := srv.GetByUUID(ctx, testOwnerID, testSpotUUID)
 		require.NoError(t, err)
 		assert.Equal(t, output, spot)
+		repo.AssertExpectations(t)
+	})
+}
+
+func TestUpdateByUUID(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	t.Run("update spot okay", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		geoRepo := new(mockGeocodingRepo)
+		preferenceRepo := new(mockPreferenceSpotRepo)
+		srv := New(repo, geoRepo, preferenceRepo)
+
+		input := &models.ParkingSpotUpdateInput{
+			Availability: sampleAvailability,
+			PricePerHour: samplePricePerHour,
+		}
+
+		repo.On("UpdateByUUID", mock.Anything, testSpotUUID, input).
+		Return(testEntry, sampleAvailability, nil).Once()
+
+		_, err := srv.UpdateByUUID(ctx, testSpotUUID, input)
+		require.NoError(t, err)
 		repo.AssertExpectations(t)
 	})
 }

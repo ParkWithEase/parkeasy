@@ -121,6 +121,38 @@ func (s *Service) Create(ctx context.Context, userID int64, input *models.Parkin
 	return result.InternalID, out, nil
 }
 
+func (s *Service) UpdateByUUID(ctx context.Context, spotID uuid.UUID, input *models.ParkingSpotUpdateInput) (models.ParkingSpotWithAvailability, error) {
+	err := validateSpotDetails(input.Availability, input.PricePerHour)
+	if err != nil {
+		return models.ParkingSpotWithAvailability{}, err
+	}
+
+	result, availability, err := s.repo.UpdateByUUID(ctx, spotID, input)
+	if err != nil {
+		return models.ParkingSpotWithAvailability{}, err
+	}
+
+	out := models.ParkingSpotWithAvailability{
+		ParkingSpot: models.ParkingSpot{
+			Location: models.ParkingSpotLocation{
+				PostalCode:    result.Location.PostalCode,
+				CountryCode:   result.Location.CountryCode,
+				State:         result.Location.State,
+				City:          result.Location.City,
+				StreetAddress: result.Location.StreetAddress,
+				Longitude:     result.Location.Longitude,
+				Latitude:      result.Location.Latitude,
+			},
+			Features:     result.Features,
+			PricePerHour: result.PricePerHour,
+			ID:           result.ID,
+		},
+		Availability: availability,
+	}
+
+	return out, nil
+}
+
 func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error) {
 	result, err := s.repo.GetByUUID(ctx, spotID)
 	if err != nil {
@@ -239,17 +271,21 @@ func validateCreationInput(input *models.ParkingSpotCreationInput) error {
 		return err
 	}
 
+	return validateSpotDetails(input.Availability, input.PricePerHour)
+}
+
+func validateSpotDetails(availability []models.TimeUnit, pricePerHour float64) error {
 	// There must be at least one slot
-	if len(input.Availability) == 0 {
+	if len(availability) == 0 {
 		return models.ErrNoAvailability
 	}
 	// All availability units must be 30 minutes
-	for _, unit := range input.Availability {
+	for _, unit := range availability {
 		if unit.EndTime != unit.StartTime.Add(30*time.Minute) {
 			return models.ErrInvalidTimeUnit
 		}
 	}
-	if input.PricePerHour < 0 || math.IsNaN(input.PricePerHour) || math.IsInf(input.PricePerHour, 0) {
+	if pricePerHour < 0 || math.IsNaN(pricePerHour) || math.IsInf(pricePerHour, 0) {
 		return models.ErrInvalidPricePerHour
 	}
 
