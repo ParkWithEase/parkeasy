@@ -17,6 +17,17 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+
+private const val MinutesPerSlot = 30
 
 @HiltViewModel
 @Suppress("detekt:TooManyFunctions")
@@ -45,18 +56,46 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
         }
     }
 
+    @Suppress("detekt:LongMethod")
     fun onAddSpotClick() {
+        val tz = TimeZone.currentSystemDefault()
+        val startOfWeek =
+            Clock.System.now()
+                .toLocalDateTime(tz)
+                .date
+                .apply {
+                    minus(
+                        dayOfWeek.isoDayNumber - 1, // Monday is 1, Sunday is 7
+                        DateTimeUnit.DAY,
+                    )
+                }
+                .atStartOfDayIn(tz)
+                .toLocalDateTime(tz)
         viewModelScope.launch {
             spotRepo
                 .createSpot(
                     Spot(
                         availability =
-                            listOf(
-                                TimeSlot(
-                                    startTime = "2024-11-04T01:30:00-06:00",
-                                    endTime = "2024-11-04T02:00:00-06:00",
-                                )
-                            ),
+                            formState.times.value
+                                .sortedBy { it }
+                                .map {
+                                    TimeSlot(
+                                        startTime =
+                                            startOfWeek
+                                                .toInstant(tz)
+                                                .plus(MinutesPerSlot * it, DateTimeUnit.MINUTE, tz)
+                                                .toLocalDateTime(tz),
+                                        endTime =
+                                            startOfWeek
+                                                .toInstant(tz)
+                                                .plus(
+                                                    MinutesPerSlot * (it + 1),
+                                                    DateTimeUnit.MINUTE,
+                                                    tz,
+                                                )
+                                                .toLocalDateTime(tz),
+                                    )
+                                },
                         features =
                             SpotFeatures(
                                 chargingStation = formState.chargingStation.value,
