@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbmodels"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbtype"
@@ -13,6 +14,7 @@ import (
 	"github.com/aarondl/opt/omitnull"
 	"github.com/google/uuid"
 	"github.com/govalues/decimal"
+	"github.com/rs/zerolog"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
@@ -34,6 +36,7 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 
 type getManyResult struct {
 	dbmodels.Booking
+	Parkingspotuuid uuid.UUID `db:"parkingspotuuid" `
 }
 
 func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID int64, booking *models.BookingCreationDBInput) (EntryWithTimes, error) {
@@ -121,7 +124,12 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	}
 
 	entry := EntryWithTimes{
-		Entry:       formEntry(amount, inserted.Bookinguuid, inserted.Bookingid, inserted.Parkingspotid),
+		Entry: formEntry(amount,
+			inserted.Bookinguuid,
+			inserted.Bookingid,
+			booking.BookingInfo.ParkingSpotID,
+			inserted.Createdat,
+		),
 		BookedTimes: bookedSlots,
 	}
 
@@ -129,22 +137,57 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error) {
-	bookingResult, err := dbmodels.Bookings.Query(
-		ctx, p.db,
-		sm.Columns(
-			dbmodels.BookingColumns.Paidamount,
-			dbmodels.BookingColumns.Bookingid,
-			dbmodels.BookingColumns.Bookinguuid,
-			dbmodels.BookingColumns.Userid,
-			dbmodels.BookingColumns.Parkingspotid,
-		),
+	log := zerolog.Ctx(ctx).
+		With().
+		Str("component", "booking.Postgres").
+		Logger()
+
+	// Build select mods
+	smods := []bob.Mod[*dialect.SelectQuery]{
+		sm.Columns(dbmodels.Bookings.Columns()),
+		sm.Columns(dbmodels.ParkingspotColumns.Parkingspotuuid),
+		sm.From(dbmodels.Bookings.Name(ctx)),
+		dbmodels.SelectJoins.Bookings.InnerJoin.ParkingspotidParkingspot(ctx),
 		dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingID),
-	).One()
+		sm.Limit(1),
+	}
+
+	// Build the query
+	query := psql.Select(smods...)
+
+	// Execute the query
+	cursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
+	// bookingResult, err := dbmodels.Bookings.Query(
+	// 	ctx, p.db,
+	// 	sm.Columns(
+	// 		dbmodels.BookingColumns.Paidamount,
+	// 		dbmodels.BookingColumns.Bookingid,
+	// 		dbmodels.BookingColumns.Bookinguuid,
+	// 		dbmodels.BookingColumns.Userid,
+	// 		dbmodels.BookingColumns.Parkingspotid,
+	// 	),
+	// 	dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingID),
+	// ).One()
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
 		}
 		return EntryWithTimes{}, err
+	}
+	defer cursor.Close()
+
+	var bookingResult getManyResult
+
+	if cursor.Next() {
+		bookingResult, err = cursor.Get()
+		if err != nil {
+			log.Err(err).Msg("error retrieving record from cursor")
+			return EntryWithTimes{}, err
+		}
+	} else {
+		// No results found in cursor
+		log.Info().Msg("no results found in cursor")
+		return EntryWithTimes{}, ErrNotFound
 	}
 
 	timeResult, err := dbmodels.Timeunits.Query(
@@ -169,7 +212,12 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	}
 
 	entry := EntryWithTimes{
-		Entry:       formEntry(amount, bookingResult.Bookinguuid, bookingResult.Bookingid, bookingResult.Parkingspotid),
+		Entry: formEntry(amount,
+			bookingResult.Bookinguuid,
+			bookingResult.Bookingid,
+			bookingResult.Parkingspotuuid,
+			bookingResult.Createdat,
+		),
 		BookedTimes: timeUnitsFromDB(timeResult),
 	}
 
@@ -215,7 +263,15 @@ func (p *PostgresRepository) GetBookedTimesByUUID(ctx context.Context, bookingUU
 }
 
 func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error) {
-	smods := []bob.Mod[*dialect.SelectQuery]{sm.Columns(dbmodels.Bookings.Columns())}
+	log := zerolog.Ctx(ctx).
+		With().
+		Str("component", "booking.Postgres").
+		Logger()
+
+	smods := []bob.Mod[*dialect.SelectQuery]{
+		sm.Columns(dbmodels.Bookings.Columns()),
+		sm.Columns(dbmodels.ParkingspotColumns.Parkingspotuuid),
+	}
 	var whereMods []mods.Where[*dialect.SelectQuery]
 
 	whereMods = append(whereMods, dbmodels.SelectWhere.Bookings.Userid.EQ(userID))
@@ -230,12 +286,15 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 	smods = append(
 		smods,
 		sm.From(dbmodels.Bookings.Name(ctx)),
+		dbmodels.SelectJoins.Bookings.InnerJoin.ParkingspotidParkingspot(ctx),
 		sm.Limit(limit),
 		sm.OrderBy(dbmodels.BookingColumns.Bookingid).Desc(),
 	)
 
 	smods = append(smods, psql.WhereAnd(whereMods...))
 	query := psql.Select(smods...)
+	str, _, err := query.Build()
+	fmt.Println(str)
 
 	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
 	if err != nil {
@@ -256,10 +315,17 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 
 		amount, ok := get.Paidamount.Float64()
 		if !ok {
-			return []Entry{}, fmt.Errorf("could not convert %v to float64", get.Paidamount)
+			// if there is an error converting amount to float
+			log.Err(err).Msg("error while converting amount to float")
+			continue
 		}
 
-		entry := formEntry(amount, get.Bookinguuid, get.Bookingid, get.Parkingspotid)
+		entry := formEntry(amount,
+			get.Bookinguuid,
+			get.Bookingid,
+			get.Parkingspotuuid,
+			get.Createdat,
+		)
 
 		result = append(result, entry)
 	}
@@ -268,7 +334,15 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 }
 
 func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error) {
-	smods := []bob.Mod[*dialect.SelectQuery]{sm.Columns(dbmodels.Bookings.Columns())}
+	log := zerolog.Ctx(ctx).
+		With().
+		Str("component", "booking.Postgres").
+		Logger()
+
+	smods := []bob.Mod[*dialect.SelectQuery]{
+		sm.Columns(dbmodels.Bookings.Columns()),
+		sm.Columns(dbmodels.ParkingspotColumns.Parkingspotuuid),
+	}
 	var whereMods []mods.Where[*dialect.SelectQuery]
 
 	whereMods = append(whereMods, dbmodels.SelectWhere.Parkingspots.Userid.EQ(userID))
@@ -283,8 +357,8 @@ func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, af
 	smods = append(
 		smods,
 		sm.From(dbmodels.Bookings.Name(ctx)),
-		sm.Limit(limit),
 		dbmodels.SelectJoins.Bookings.InnerJoin.ParkingspotidParkingspot(ctx),
+		sm.Limit(limit),
 		sm.OrderBy(dbmodels.BookingColumns.Bookingid).Desc(),
 	)
 
@@ -310,10 +384,17 @@ func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, af
 
 		amount, ok := get.Paidamount.Float64()
 		if !ok {
-			return []Entry{}, fmt.Errorf("could not convert %v to float64", get.Paidamount)
+			// if there is an error converting amount to float
+			log.Err(err).Msg("error while converting amount to float")
+			continue
 		}
 
-		entry := formEntry(amount, get.Bookinguuid, get.Bookingid, get.Parkingspotid)
+		entry := formEntry(amount,
+			get.Bookinguuid,
+			get.Bookingid,
+			get.Parkingspotuuid,
+			get.Createdat,
+		)
 
 		result = append(result, entry)
 	}
@@ -329,12 +410,13 @@ func timeUnitsFromDB(model []*dbmodels.Timeunit) []models.TimeUnit {
 	return result
 }
 
-func formEntry(amount float64, bookingUUID uuid.UUID, bookingID int64, spotID int64) Entry {
+func formEntry(amount float64, bookingUUID uuid.UUID, bookingID int64, parkingSpotUUID uuid.UUID, createdAt time.Time) Entry {
 	return Entry{
 		Booking: models.Booking{
 			PaidAmount:    amount,
 			ID:            bookingUUID,
-			ParkingSpotID: spotID,
+			ParkingSpotID: parkingSpotUUID,
+			CreatedAt:     createdAt,
 		},
 		InternalID: bookingID,
 	}

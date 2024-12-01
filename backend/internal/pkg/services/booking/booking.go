@@ -60,6 +60,15 @@ func (s *Service) Create(ctx context.Context, userID int64, bookingDetails *mode
 	return result.InternalID, out, nil
 }
 
+func (s *Service) GetManyForSeller(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error) {
+
+	return []models.Booking{}, models.Cursor(""), nil
+}
+
+func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error) {
+	return nil, models.Cursor(""), nil
+}
+
 func calculateAmount(numSlots int, pricePerHour float64) float64 {
 	return float64(numSlots) * pricePerHour
 }
