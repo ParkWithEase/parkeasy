@@ -297,11 +297,12 @@ fun AddSpotScreen(
     }
 }
 
+@Suppress("detekt:MutableStateParam") // unnecessarily complicated to refactor
 @Composable
 private fun TimeGrid(
+    modifier: Modifier = Modifier,
     slots: List<Int> = List(NumColumns * NumRows) { it % NumColumns * NumRows + it / NumColumns },
     selectedIds: MutableState<Set<Int>> = rememberSaveable { mutableStateOf(emptySet()) },
-    modifier: Modifier = Modifier,
 ) {
     val state = rememberLazyGridState()
 
@@ -339,6 +340,7 @@ private fun TimeGrid(
     }
 }
 
+@Suppress("detekt:UnsafeCallOnNullableType") // code provided by a Google engineer -> probably fine
 fun Modifier.timeGridDragHandler(
     lazyGridState: LazyGridState,
     selectedIds: MutableState<Set<Int>>,
