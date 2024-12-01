@@ -14,6 +14,7 @@ import (
 
 var TableNames = struct {
 	Auths           string
+	Bookings        string
 	Cars            string
 	Parkingspots    string
 	Preferencespots string
@@ -23,6 +24,7 @@ var TableNames = struct {
 	Users           string
 }{
 	Auths:           "auth",
+	Bookings:        "booking",
 	Cars:            "car",
 	Parkingspots:    "parkingspot",
 	Preferencespots: "preferencespot",
@@ -34,6 +36,7 @@ var TableNames = struct {
 
 var ColumnNames = struct {
 	Auths           authColumnNames
+	Bookings        bookingColumnNames
 	Cars            carColumnNames
 	Parkingspots    parkingspotColumnNames
 	Preferencespots preferencespotColumnNames
@@ -47,6 +50,15 @@ var ColumnNames = struct {
 		Authuuid:     "authuuid",
 		Email:        "email",
 		Passwordhash: "passwordhash",
+	},
+	Bookings: bookingColumnNames{
+		Bookingid:     "bookingid",
+		Bookinguuid:   "bookinguuid",
+		Userid:        "userid",
+		Parkingspotid: "parkingspotid",
+		Carid:         "carid",
+		Paidamount:    "paidamount",
+		Createdat:     "createdat",
 	},
 	Cars: carColumnNames{
 		Carid:        "carid",
@@ -91,6 +103,7 @@ var ColumnNames = struct {
 	Timeunits: timeunitColumnNames{
 		Timerange:     "timerange",
 		Parkingspotid: "parkingspotid",
+		Bookingid:     "bookingid",
 	},
 	Users: userColumnNames{
 		Userid:     "userid",
@@ -112,6 +125,7 @@ var (
 
 func Where[Q psql.Filterable]() struct {
 	Auths           authWhere[Q]
+	Bookings        bookingWhere[Q]
 	Cars            carWhere[Q]
 	Parkingspots    parkingspotWhere[Q]
 	Preferencespots preferencespotWhere[Q]
@@ -122,6 +136,7 @@ func Where[Q psql.Filterable]() struct {
 } {
 	return struct {
 		Auths           authWhere[Q]
+		Bookings        bookingWhere[Q]
 		Cars            carWhere[Q]
 		Parkingspots    parkingspotWhere[Q]
 		Preferencespots preferencespotWhere[Q]
@@ -131,6 +146,7 @@ func Where[Q psql.Filterable]() struct {
 		Users           userWhere[Q]
 	}{
 		Auths:           buildAuthWhere[Q](AuthColumns),
+		Bookings:        buildBookingWhere[Q](BookingColumns),
 		Cars:            buildCarWhere[Q](CarColumns),
 		Parkingspots:    buildParkingspotWhere[Q](ParkingspotColumns),
 		Preferencespots: buildPreferencespotWhere[Q](PreferencespotColumns),
@@ -163,6 +179,7 @@ func (j joinSet[Q]) AliasedAs(alias string) joinSet[Q] {
 
 type joins[Q dialect.Joinable] struct {
 	Auths           joinSet[authJoins[Q]]
+	Bookings        joinSet[bookingJoins[Q]]
 	Cars            joinSet[carJoins[Q]]
 	Parkingspots    joinSet[parkingspotJoins[Q]]
 	Preferencespots joinSet[preferencespotJoins[Q]]
@@ -182,6 +199,7 @@ func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q
 func getJoins[Q dialect.Joinable]() joins[Q] {
 	return joins[Q]{
 		Auths:           buildJoinSet[authJoins[Q]](AuthColumns, buildAuthJoins),
+		Bookings:        buildJoinSet[bookingJoins[Q]](BookingColumns, buildBookingJoins),
 		Cars:            buildJoinSet[carJoins[Q]](CarColumns, buildCarJoins),
 		Parkingspots:    buildJoinSet[parkingspotJoins[Q]](ParkingspotColumns, buildParkingspotJoins),
 		Preferencespots: buildJoinSet[preferencespotJoins[Q]](PreferencespotColumns, buildPreferencespotJoins),

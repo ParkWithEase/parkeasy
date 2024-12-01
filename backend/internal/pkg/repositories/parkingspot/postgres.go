@@ -21,6 +21,7 @@ import (
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
 	"github.com/stephenafamo/bob/dialect/psql/fm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/mods"
 	"github.com/stephenafamo/scan"
 )
@@ -80,6 +81,127 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 	availability := timeUnitsFromDB(inserted.R.ParkingspotidTimeunits)
 
 	return entry, availability, nil
+}
+
+func (p *PostgresRepository) UpdateByUUID(ctx context.Context, spotID uuid.UUID, updateSpot *models.ParkingSpotUpdateInput) (Entry, []models.TimeUnit, error) {
+	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return Entry{}, nil, fmt.Errorf("could not start a transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
+
+	spotSetter, err := spotSetterFromUpdateInput(updateSpot)
+	if err != nil {
+		return Entry{}, nil, err
+	}
+
+	// Update the spot details
+	updated, err := dbmodels.Parkingspots.UpdateQ(
+		ctx, p.db,
+		dbmodels.UpdateWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
+		spotSetter,
+		um.Returning(dbmodels.Parkingspots.Columns()),
+	).One()
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Entry{}, []models.TimeUnit{}, ErrNotFound
+		}
+		return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: %w", err)
+	}
+
+	// Delete unbooked times
+	_, err = dbmodels.Timeunits.DeleteQ(
+		ctx, p.db,
+		dbmodels.DeleteWhere.Timeunits.Parkingspotid.EQ(updated.Parkingspotid),
+		dbmodels.DeleteWhere.Timeunits.Bookingid.IsNull(),
+	).Exec()
+	if err != nil {
+		return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: %w", err)
+	}
+
+	// Get remaining booked times
+	bookedTimes, err := dbmodels.Timeunits.Query(
+		ctx, p.db,
+		sm.Columns(dbmodels.TimeunitColumns.Timerange),
+		psql.WhereAnd(
+			dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
+		),
+	).All()
+
+	// Determine unbooked times to be inserted
+	newTimeUnits := timeUnitSetMinus(updateSpot.Availability, timeUnitsFromDB(bookedTimes))
+
+	// Insert unbooked times
+	newTimesSetter := timeSetterFromInput(newTimeUnits, updated.Parkingspotid)
+	newTimes := make(dbmodels.TimeunitSlice, 0, 8)
+	for _, setter := range newTimesSetter {
+		insertedTimes, err := dbmodels.Timeunits.Insert(ctx, p.db, setter)
+		if err != nil {
+			return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: %w", err)
+		}
+		newTimes = append(newTimes, insertedTimes)
+	}
+
+	// Get times from DB after update
+	bookedTimes, err = dbmodels.Timeunits.Query(
+		ctx, p.db,
+		sm.Columns(dbmodels.TimeunitColumns.Timerange),
+		psql.WhereAnd(
+			dbmodels.SelectWhere.Timeunits.Parkingspotid.EQ(updated.Parkingspotid),
+		),
+	).All()
+
+	// Compare state of times in DB after update with times from input
+	audit := timeUnitSetMinus(updateSpot.Availability, timeUnitsFromDB(bookedTimes))
+	if len(audit) != 0 {
+		return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: audit failed")
+	}
+
+	// Commit since audit passed
+	err = tx.Commit()
+	if err != nil {
+		return Entry{}, nil, fmt.Errorf("could not commit transaction: %w", err)
+	}
+
+	entry, err := entryFromDB(updated)
+	if err != nil {
+		return Entry{}, nil, fmt.Errorf("could not adapt dbmodels.Parkingspot: %w", err)
+	}
+	availability := timeUnitsFromDB(newTimes)
+
+	return entry, availability, nil
+}
+
+func timeUnitSetMinus(firstSet, secondSet []models.TimeUnit) []models.TimeUnit {
+	// Create a map to store booked TimeUnits for quick lookup
+	bookedSet := make(map[time.Time]map[time.Time]struct{})
+	for _, booked := range secondSet {
+		start := booked.StartTime.UTC().Truncate(time.Second)
+		end := booked.EndTime.UTC().Truncate(time.Second)
+
+		if _, exists := bookedSet[start]; !exists {
+			bookedSet[start] = make(map[time.Time]struct{})
+		}
+		bookedSet[start][end] = struct{}{}
+	}
+
+	var result []models.TimeUnit
+	for _, update := range firstSet {
+		start := update.StartTime.UTC().Truncate(time.Second)
+		end := update.EndTime.UTC().Truncate(time.Second)
+
+		if _, startFound := bookedSet[start]; startFound {
+			if _, endFound := bookedSet[start][end]; endFound {
+				continue
+			}
+		}
+		result = append(result, models.TimeUnit{
+			StartTime: start,
+			EndTime:   end,
+			Status:    update.Status,
+		})
+	}
+	return result
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error) {
@@ -345,4 +467,33 @@ func settersFromCreateInput(userID int64, input *models.ParkingSpotCreationInput
 		Haschargingstation: omit.From(input.Features.ChargingStation),
 		Priceperhour:       omit.From(price),
 	}, timeunits, nil
+}
+
+func spotSetterFromUpdateInput(input *models.ParkingSpotUpdateInput) (dbmodels.ParkingspotSetter, error) {
+	price, err := decimal.NewFromFloat64(input.PricePerHour)
+	if err != nil {
+		return dbmodels.ParkingspotSetter{}, ErrInvalidPrice
+	}
+
+	return dbmodels.ParkingspotSetter{
+		Hasshelter:         omit.From(input.Features.Shelter),
+		Hasplugin:          omit.From(input.Features.PlugIn),
+		Haschargingstation: omit.From(input.Features.ChargingStation),
+		Priceperhour:       omit.From(price),
+	}, nil
+}
+
+func timeSetterFromInput(input []models.TimeUnit, spotID int64) []*dbmodels.TimeunitSetter {
+	timeunits := make([]*dbmodels.TimeunitSetter, 0, len(input))
+	for _, timeslot := range input {
+		timeunits = append(timeunits, &dbmodels.TimeunitSetter{
+			Timerange: omit.From(dbtype.Tstzrange{
+				Start: timeslot.StartTime,
+				End:   timeslot.EndTime,
+			}),
+			Parkingspotid: omit.From(spotID),
+		})
+	}
+
+	return timeunits
 }

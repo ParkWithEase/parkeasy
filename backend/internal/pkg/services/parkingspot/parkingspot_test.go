@@ -79,6 +79,12 @@ func (m *mockRepo) GetMany(ctx context.Context, limit int, filter *parkingspot.F
 	return args.Get(0).([]parkingspot.GetManyEntry), args.Error(1)
 }
 
+// UpdateByUUID implements parkingspot.Repository.
+func (m *mockRepo) UpdateByUUID(ctx context.Context, spotID uuid.UUID, updateSpot *models.ParkingSpotUpdateInput) (parkingspot.Entry, []models.TimeUnit, error) {
+	args := m.Called(spotID, updateSpot)
+	return args.Get(0).(parkingspot.Entry), args.Get(1).([]models.TimeUnit), args.Error(2)
+}
+
 // Create implements preferencespot.Repository.
 func (m *mockPreferenceSpotRepo) Create(ctx context.Context, userID, spotID int64) error {
 	args := m.Called(ctx, userID, spotID)

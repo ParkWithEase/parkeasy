@@ -71,6 +71,19 @@ func TestPostgresIntegration(t *testing.T) {
 		},
 	}
 
+	sampleUpdateTimeUnit := []models.TimeUnit{
+		{
+			StartTime: time.Date(2024, time.October, 22, 14, 30, 0, 0, time.UTC), // 2:30 PM on October 22, 2024
+			EndTime:   time.Date(2024, time.October, 22, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 22, 2024),
+			Status:    "available",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 22, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 22, 2024
+			EndTime:   time.Date(2024, time.October, 22, 15, 30, 0, 0, time.UTC), // 3:30 PM on October 22, 2024),
+			Status:    "available",
+		},
+	}
+
 	testTimeUnits := []models.TimeUnit{
 		{
 			StartTime: time.Date(2024, time.October, 21, 14, 30, 0, 0, time.UTC),
@@ -100,6 +113,8 @@ func TestPostgresIntegration(t *testing.T) {
 	}
 
 	sampleAvailability := append([]models.TimeUnit(nil), sampleTimeUnit...)
+	sampleUpdateAvailability := append([]models.TimeUnit(nil), sampleUpdateTimeUnit...)
+
 
 	sampleLocation := models.ParkingSpotLocation{
 		PostalCode:    "L2E6T2",
@@ -117,13 +132,26 @@ func TestPostgresIntegration(t *testing.T) {
 		ChargingStation: true,
 	}
 
+	sampleUpdateFeatures := models.ParkingSpotFeatures{
+		Shelter:         false,
+		PlugIn:          true,
+		ChargingStation: false,
+	}
+
 	samplePricePerHour := 10.50
+	sampleUpdatePricePerHour := 5.50
 
 	creationInput := models.ParkingSpotCreationInput{
 		Location:     sampleLocation,
 		Features:     sampleFeatures,
 		PricePerHour: samplePricePerHour,
 		Availability: sampleAvailability,
+	}
+
+	updateInput := models.ParkingSpotUpdateInput{
+		Features: sampleUpdateFeatures,
+		PricePerHour: sampleUpdatePricePerHour,
+		Availability: sampleUpdateTimeUnit,
 	}
 
 	timeTestCreationInput := models.ParkingSpotCreationInput{
@@ -379,6 +407,45 @@ func TestPostgresIntegration(t *testing.T) {
 			require.Len(t, entries, 2)
 			assert.Empty(t, cmp.Diff(expectedWinnipegEntries[0], entries[0].Entry))
 			assert.Empty(t, cmp.Diff(expectedWinnipegEntries[1], entries[1].Entry))
+		})
+	})
+
+	t.Run("update parking spot", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+
+			// clear all idle connections
+			// required since Restore() deletes the current DB
+			pool.Reset()
+		})
+	
+		// Create an entry
+		createEntry, _, err := repo.Create(ctx, userID, &creationInput)
+		require.NoError(t, err)
+
+		t.Run("okay update spot", func(t *testing.T) {
+			t.Parallel()
+
+			updateEntry, timeunits, err := repo.UpdateByUUID(ctx, createEntry.ID, &updateInput)
+			require.NoError(t, err)
+			assert.NotEqual(t, 0, updateEntry.InternalID)
+			assert.NotEqual(t, uuid.Nil, updateEntry.ID)
+
+			expectedSpot := Entry{
+				ParkingSpot: models.ParkingSpot{
+					Location:     sampleLocation,
+					Features:     sampleUpdateFeatures,
+					PricePerHour: sampleUpdatePricePerHour,
+					ID:           updateEntry.ID,
+				},
+				InternalID: updateEntry.InternalID,
+				OwnerID:    userID,
+			}
+
+			require.NoError(t, err)
+			assert.Empty(t, cmp.Diff(expectedSpot, updateEntry))
+			assert.Empty(t, cmp.Diff(sampleUpdateAvailability, timeunits))
 		})
 	})
 

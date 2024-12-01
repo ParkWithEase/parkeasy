@@ -79,3 +79,9 @@ type ParkingSpotFilter struct {
 	Latitude  float64 `query:"latitude" required:"true" doc:"Latitude of the centre point"`
 	Distance  int32   `query:"distance" default:"250" doc:"distance around the centre point in meters"`
 }
+
+type ParkingSpotUpdateInput struct {
+	Availability []TimeUnit          `json:"availability" nullable:"false"`
+	PricePerHour float64             `json:"price_per_hour" doc:"price per hour"`
+	Features     ParkingSpotFeatures `json:"features,omitempty"`	
+}
