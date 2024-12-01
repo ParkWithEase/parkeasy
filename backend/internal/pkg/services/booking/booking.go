@@ -6,18 +6,21 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/booking"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/car"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 )
 
 type Service struct {
 	repo     booking.Repository
 	spotRepo parkingspot.Repository
+	carRepo  car.Repository
 }
 
-func New(repo booking.Repository, spotRepo parkingspot.Repository) *Service {
+func New(repo booking.Repository, spotRepo parkingspot.Repository, carRepo car.Repository) *Service {
 	return &Service{
 		repo:     repo,
 		spotRepo: spotRepo,
+		carRepo:  carRepo,
 	}
 }
 
@@ -36,6 +39,19 @@ func (s *Service) Create(ctx context.Context, userID int64, bookingDetails *mode
 		return 0, models.BookingWithTimes{}, err
 	}
 
+	//Check if the car exists
+	carEntry, err := s.carRepo.GetByUUID(ctx, bookingDetails.CarID)
+	if err != nil {
+		if errors.Is(err, car.ErrNotFound) {
+			err = models.ErrCarNotFound
+		}
+		return 0, models.BookingWithTimes{}, err
+	}
+	//Check if the car belongs to the user
+	if carEntry.OwnerID != userID {
+		return 0, models.BookingWithTimes{}, models.ErrCarNotOwned
+	}
+
 	// Calculate amount for booking
 	amount := calculateAmount(len(bookingDetails.BookedTimes), parkingSpot.PricePerHour)
 	creationInput := models.BookingCreationDBInput{
@@ -43,7 +59,7 @@ func (s *Service) Create(ctx context.Context, userID int64, bookingDetails *mode
 		PaidAmount:  amount,
 	}
 
-	result, err := s.repo.Create(ctx, userID, parkingSpot.InternalID, &creationInput)
+	result, err := s.repo.Create(ctx, userID, parkingSpot.InternalID, carEntry.InternalID, &creationInput)
 	if err != nil {
 		if errors.Is(err, booking.ErrTimeAlreadyBooked) {
 			err = models.ErrDuplicateBooking
@@ -60,15 +76,15 @@ func (s *Service) Create(ctx context.Context, userID int64, bookingDetails *mode
 	return result.InternalID, out, nil
 }
 
-func (s *Service) GetManyForSeller(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error) {
+// func (s *Service) GetManyForSeller(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error) {
 
-	return []models.Booking{}, models.Cursor(""), nil
-}
+// 	return []models.Booking{}, models.Cursor(""), nil
+// }
 
-func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error) {
-	return nil, models.Cursor(""), nil
-}
+// func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error) {
+// 	return nil, models.Cursor(""), nil
+// }
 
 func calculateAmount(numSlots int, pricePerHour float64) float64 {
-	return float64(numSlots) * pricePerHour
+	return (float64(numSlots) / 2) * pricePerHour
 }
