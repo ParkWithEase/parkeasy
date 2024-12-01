@@ -53,6 +53,7 @@ var ColumnNames = struct {
 		Bookinguuid:   "bookinguuid",
 		Userid:        "userid",
 		Parkingspotid: "parkingspotid",
+		Carid:         "carid",
 		Paidamount:    "paidamount",
 		Createdat:     "createdat",
 	},

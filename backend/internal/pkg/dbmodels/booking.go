@@ -31,6 +31,7 @@ type Booking struct {
 	Bookinguuid   uuid.UUID       `db:"bookinguuid" `
 	Userid        int64           `db:"userid" `
 	Parkingspotid int64           `db:"parkingspotid" `
+	Carid         int64           `db:"carid" `
 	Paidamount    decimal.Decimal `db:"paidamount" `
 	Createdat     time.Time       `db:"createdat" `
 
@@ -52,6 +53,7 @@ type BookingsStmt = bob.QueryStmt[*Booking, BookingSlice]
 
 // bookingR is where relationships are stored.
 type bookingR struct {
+	CaridCar                 *Car          // booking.booking_carid_fkey
 	ParkingspotidParkingspot *Parkingspot  // booking.booking_parkingspotid_fkey
 	UseridUser               *User         // booking.booking_userid_fkey
 	BookingidTimeunits       TimeunitSlice // timeunit.timeunit_bookingid_fkey
@@ -65,12 +67,13 @@ type BookingSetter struct {
 	Bookinguuid   omit.Val[uuid.UUID]       `db:"bookinguuid" `
 	Userid        omit.Val[int64]           `db:"userid" `
 	Parkingspotid omit.Val[int64]           `db:"parkingspotid" `
+	Carid         omit.Val[int64]           `db:"carid" `
 	Paidamount    omit.Val[decimal.Decimal] `db:"paidamount" `
 	Createdat     omit.Val[time.Time]       `db:"createdat" `
 }
 
 func (s BookingSetter) SetColumns() []string {
-	vals := make([]string, 0, 6)
+	vals := make([]string, 0, 7)
 	if !s.Bookingid.IsUnset() {
 		vals = append(vals, "bookingid")
 	}
@@ -85,6 +88,10 @@ func (s BookingSetter) SetColumns() []string {
 
 	if !s.Parkingspotid.IsUnset() {
 		vals = append(vals, "parkingspotid")
+	}
+
+	if !s.Carid.IsUnset() {
+		vals = append(vals, "carid")
 	}
 
 	if !s.Paidamount.IsUnset() {
@@ -111,6 +118,9 @@ func (s BookingSetter) Overwrite(t *Booking) {
 	if !s.Parkingspotid.IsUnset() {
 		t.Parkingspotid, _ = s.Parkingspotid.Get()
 	}
+	if !s.Carid.IsUnset() {
+		t.Carid, _ = s.Carid.Get()
+	}
 	if !s.Paidamount.IsUnset() {
 		t.Paidamount, _ = s.Paidamount.Get()
 	}
@@ -120,7 +130,7 @@ func (s BookingSetter) Overwrite(t *Booking) {
 }
 
 func (s BookingSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 6)
+	vals := make([]bob.Expression, 7)
 	if s.Bookingid.IsUnset() {
 		vals[0] = psql.Raw("DEFAULT")
 	} else {
@@ -145,16 +155,22 @@ func (s BookingSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
 		vals[3] = psql.Arg(s.Parkingspotid)
 	}
 
-	if s.Paidamount.IsUnset() {
+	if s.Carid.IsUnset() {
 		vals[4] = psql.Raw("DEFAULT")
 	} else {
-		vals[4] = psql.Arg(s.Paidamount)
+		vals[4] = psql.Arg(s.Carid)
+	}
+
+	if s.Paidamount.IsUnset() {
+		vals[5] = psql.Raw("DEFAULT")
+	} else {
+		vals[5] = psql.Arg(s.Paidamount)
 	}
 
 	if s.Createdat.IsUnset() {
-		vals[5] = psql.Raw("DEFAULT")
+		vals[6] = psql.Raw("DEFAULT")
 	} else {
-		vals[5] = psql.Arg(s.Createdat)
+		vals[6] = psql.Arg(s.Createdat)
 	}
 
 	return im.Values(vals...)
@@ -165,7 +181,7 @@ func (s BookingSetter) Apply(q *dialect.UpdateQuery) {
 }
 
 func (s BookingSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 6)
+	exprs := make([]bob.Expression, 0, 7)
 
 	if !s.Bookingid.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -195,6 +211,13 @@ func (s BookingSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if !s.Carid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "carid")...),
+			psql.Arg(s.Carid),
+		}})
+	}
+
 	if !s.Paidamount.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			psql.Quote(append(prefix, "paidamount")...),
@@ -217,6 +240,7 @@ type bookingColumnNames struct {
 	Bookinguuid   string
 	Userid        string
 	Parkingspotid string
+	Carid         string
 	Paidamount    string
 	Createdat     string
 }
@@ -229,6 +253,7 @@ type bookingColumns struct {
 	Bookinguuid   psql.Expression
 	Userid        psql.Expression
 	Parkingspotid psql.Expression
+	Carid         psql.Expression
 	Paidamount    psql.Expression
 	Createdat     psql.Expression
 }
@@ -248,6 +273,7 @@ func buildBookingColumns(alias string) bookingColumns {
 		Bookinguuid:   psql.Quote(alias, "bookinguuid"),
 		Userid:        psql.Quote(alias, "userid"),
 		Parkingspotid: psql.Quote(alias, "parkingspotid"),
+		Carid:         psql.Quote(alias, "carid"),
 		Paidamount:    psql.Quote(alias, "paidamount"),
 		Createdat:     psql.Quote(alias, "createdat"),
 	}
@@ -258,6 +284,7 @@ type bookingWhere[Q psql.Filterable] struct {
 	Bookinguuid   psql.WhereMod[Q, uuid.UUID]
 	Userid        psql.WhereMod[Q, int64]
 	Parkingspotid psql.WhereMod[Q, int64]
+	Carid         psql.WhereMod[Q, int64]
 	Paidamount    psql.WhereMod[Q, decimal.Decimal]
 	Createdat     psql.WhereMod[Q, time.Time]
 }
@@ -272,6 +299,7 @@ func buildBookingWhere[Q psql.Filterable](cols bookingColumns) bookingWhere[Q] {
 		Bookinguuid:   psql.Where[Q, uuid.UUID](cols.Bookinguuid),
 		Userid:        psql.Where[Q, int64](cols.Userid),
 		Parkingspotid: psql.Where[Q, int64](cols.Parkingspotid),
+		Carid:         psql.Where[Q, int64](cols.Carid),
 		Paidamount:    psql.Where[Q, decimal.Decimal](cols.Paidamount),
 		Createdat:     psql.Where[Q, time.Time](cols.Createdat),
 	}
@@ -279,6 +307,7 @@ func buildBookingWhere[Q psql.Filterable](cols bookingColumns) bookingWhere[Q] {
 
 type bookingJoins[Q dialect.Joinable] struct {
 	typ                      string
+	CaridCar                 func(context.Context) modAs[Q, carColumns]
 	ParkingspotidParkingspot func(context.Context) modAs[Q, parkingspotColumns]
 	UseridUser               func(context.Context) modAs[Q, userColumns]
 	BookingidTimeunits       func(context.Context) modAs[Q, timeunitColumns]
@@ -291,6 +320,7 @@ func (j bookingJoins[Q]) aliasedAs(alias string) bookingJoins[Q] {
 func buildBookingJoins[Q dialect.Joinable](cols bookingColumns, typ string) bookingJoins[Q] {
 	return bookingJoins[Q]{
 		typ:                      typ,
+		CaridCar:                 bookingsJoinCaridCar[Q](cols, typ),
 		ParkingspotidParkingspot: bookingsJoinParkingspotidParkingspot[Q](cols, typ),
 		UseridUser:               bookingsJoinUseridUser[Q](cols, typ),
 		BookingidTimeunits:       bookingsJoinBookingidTimeunits[Q](cols, typ),
@@ -392,6 +422,25 @@ func (o BookingSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	return nil
 }
 
+func bookingsJoinCaridCar[Q dialect.Joinable](from bookingColumns, typ string) func(context.Context) modAs[Q, carColumns] {
+	return func(ctx context.Context) modAs[Q, carColumns] {
+		return modAs[Q, carColumns]{
+			c: CarColumns,
+			f: func(to carColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Cars.Name(ctx).As(to.Alias())).On(
+						to.Carid.EQ(from.Carid),
+					))
+				}
+
+				return mods
+			},
+		}
+	}
+}
+
 func bookingsJoinParkingspotidParkingspot[Q dialect.Joinable](from bookingColumns, typ string) func(context.Context) modAs[Q, parkingspotColumns] {
 	return func(ctx context.Context) modAs[Q, parkingspotColumns] {
 		return modAs[Q, parkingspotColumns]{
@@ -447,6 +496,24 @@ func bookingsJoinBookingidTimeunits[Q dialect.Joinable](from bookingColumns, typ
 			},
 		}
 	}
+}
+
+// CaridCar starts a query for related objects on car
+func (o *Booking) CaridCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
+	return Cars.Query(ctx, exec, append(mods,
+		sm.Where(CarColumns.Carid.EQ(psql.Arg(o.Carid))),
+	)...)
+}
+
+func (os BookingSlice) CaridCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
+	PKArgs := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgs[i] = psql.ArgGroup(o.Carid)
+	}
+
+	return Cars.Query(ctx, exec, append(mods,
+		sm.Where(psql.Group(CarColumns.Carid).In(PKArgs...)),
+	)...)
 }
 
 // ParkingspotidParkingspot starts a query for related objects on parkingspot
@@ -509,6 +576,18 @@ func (o *Booking) Preload(name string, retrieved any) error {
 	}
 
 	switch name {
+	case "CaridCar":
+		rel, ok := retrieved.(*Car)
+		if !ok {
+			return fmt.Errorf("booking cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.CaridCar = rel
+
+		if rel != nil {
+			rel.R.CaridBookings = BookingSlice{o}
+		}
+		return nil
 	case "ParkingspotidParkingspot":
 		rel, ok := retrieved.(*Parkingspot)
 		if !ok {
@@ -550,6 +629,94 @@ func (o *Booking) Preload(name string, retrieved any) error {
 	default:
 		return fmt.Errorf("booking has no relationship %q", name)
 	}
+}
+
+func PreloadBookingCaridCar(opts ...psql.PreloadOption) psql.Preloader {
+	return psql.Preload[*Car, CarSlice](orm.Relationship{
+		Name: "CaridCar",
+		Sides: []orm.RelSide{
+			{
+				From: "booking",
+				To:   TableNames.Cars,
+				ToExpr: func(ctx context.Context) bob.Expression {
+					return Cars.Name(ctx)
+				},
+				FromColumns: []string{
+					ColumnNames.Bookings.Carid,
+				},
+				ToColumns: []string{
+					ColumnNames.Cars.Carid,
+				},
+			},
+		},
+	}, Cars.Columns().Names(), opts...)
+}
+
+func ThenLoadBookingCaridCar(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
+	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+		loader, isLoader := retrieved.(interface {
+			LoadBookingCaridCar(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+		})
+		if !isLoader {
+			return fmt.Errorf("object %T cannot load BookingCaridCar", retrieved)
+		}
+
+		err := loader.LoadBookingCaridCar(ctx, exec, queryMods...)
+
+		// Don't cause an issue due to missing relationships
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+
+		return err
+	})
+}
+
+// LoadBookingCaridCar loads the booking's CaridCar into the .R struct
+func (o *Booking) LoadBookingCaridCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.CaridCar = nil
+
+	related, err := o.CaridCar(ctx, exec, mods...).One()
+	if err != nil {
+		return err
+	}
+
+	related.R.CaridBookings = BookingSlice{o}
+
+	o.R.CaridCar = related
+	return nil
+}
+
+// LoadBookingCaridCar loads the booking's CaridCar into the .R struct
+func (os BookingSlice) LoadBookingCaridCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	cars, err := os.CaridCar(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		for _, rel := range cars {
+			if o.Carid != rel.Carid {
+				continue
+			}
+
+			rel.R.CaridBookings = append(rel.R.CaridBookings, o)
+
+			o.R.CaridCar = rel
+			break
+		}
+	}
+
+	return nil
 }
 
 func PreloadBookingParkingspotidParkingspot(opts ...psql.PreloadOption) psql.Preloader {
@@ -796,6 +963,52 @@ func (os BookingSlice) LoadBookingBookingidTimeunits(ctx context.Context, exec b
 			o.R.BookingidTimeunits = append(o.R.BookingidTimeunits, rel)
 		}
 	}
+
+	return nil
+}
+
+func attachBookingCaridCar0(ctx context.Context, exec bob.Executor, count int, booking0 *Booking, car1 *Car) (*Booking, error) {
+	setter := &BookingSetter{
+		Carid: omit.From(car1.Carid),
+	}
+
+	err := Bookings.Update(ctx, exec, setter, booking0)
+	if err != nil {
+		return nil, fmt.Errorf("attachBookingCaridCar0: %w", err)
+	}
+
+	return booking0, nil
+}
+
+func (booking0 *Booking) InsertCaridCar(ctx context.Context, exec bob.Executor, related *CarSetter) error {
+	car1, err := Cars.Insert(ctx, exec, related)
+	if err != nil {
+		return fmt.Errorf("inserting related objects: %w", err)
+	}
+
+	_, err = attachBookingCaridCar0(ctx, exec, 1, booking0, car1)
+	if err != nil {
+		return err
+	}
+
+	booking0.R.CaridCar = car1
+
+	car1.R.CaridBookings = append(car1.R.CaridBookings, booking0)
+
+	return nil
+}
+
+func (booking0 *Booking) AttachCaridCar(ctx context.Context, exec bob.Executor, car1 *Car) error {
+	var err error
+
+	_, err = attachBookingCaridCar0(ctx, exec, 1, booking0, car1)
+	if err != nil {
+		return err
+	}
+
+	booking0.R.CaridCar = car1
+
+	car1.R.CaridBookings = append(car1.R.CaridBookings, booking0)
 
 	return nil
 }

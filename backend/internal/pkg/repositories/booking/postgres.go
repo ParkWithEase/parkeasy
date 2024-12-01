@@ -37,9 +37,10 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 type getManyResult struct {
 	dbmodels.Booking
 	Parkingspotuuid uuid.UUID `db:"parkingspotuuid" `
+	Caruuid         uuid.UUID `db:"caruuid" `
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID int64, booking *models.BookingCreationDBInput) (EntryWithTimes, error) {
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID int64, carID int64, booking *models.BookingCreationDBInput) (EntryWithTimes, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return EntryWithTimes{}, fmt.Errorf("could not start a transaction: %w", err)
@@ -54,6 +55,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	inserted, err := dbmodels.Bookings.Insert(ctx, tx, &dbmodels.BookingSetter{
 		Userid:        omit.From(userID),
 		Parkingspotid: omit.From(spotID),
+		Carid:         omit.From(carID),
 		Paidamount:    omit.From(paidAmount),
 	})
 	if err != nil {
@@ -128,6 +130,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 			inserted.Bookinguuid,
 			inserted.Bookingid,
 			booking.BookingInfo.ParkingSpotID,
+			booking.BookingInfo.CarID,
 			inserted.Createdat,
 		),
 		BookedTimes: bookedSlots,
@@ -146,8 +149,10 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	smods := []bob.Mod[*dialect.SelectQuery]{
 		sm.Columns(dbmodels.Bookings.Columns()),
 		sm.Columns(dbmodels.ParkingspotColumns.Parkingspotuuid),
+		sm.Columns(dbmodels.CarColumns.Caruuid),
 		sm.From(dbmodels.Bookings.Name(ctx)),
 		dbmodels.SelectJoins.Bookings.InnerJoin.ParkingspotidParkingspot(ctx),
+		dbmodels.SelectJoins.Bookings.InnerJoin.CaridCar(ctx),
 		dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingID),
 		sm.Limit(1),
 	}
@@ -157,17 +162,6 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 
 	// Execute the query
 	cursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
-	// bookingResult, err := dbmodels.Bookings.Query(
-	// 	ctx, p.db,
-	// 	sm.Columns(
-	// 		dbmodels.BookingColumns.Paidamount,
-	// 		dbmodels.BookingColumns.Bookingid,
-	// 		dbmodels.BookingColumns.Bookinguuid,
-	// 		dbmodels.BookingColumns.Userid,
-	// 		dbmodels.BookingColumns.Parkingspotid,
-	// 	),
-	// 	dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingID),
-	// ).One()
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
@@ -216,6 +210,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 			bookingResult.Bookinguuid,
 			bookingResult.Bookingid,
 			bookingResult.Parkingspotuuid,
+			bookingResult.Caruuid,
 			bookingResult.Createdat,
 		),
 		BookedTimes: timeUnitsFromDB(timeResult),
@@ -271,6 +266,7 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 	smods := []bob.Mod[*dialect.SelectQuery]{
 		sm.Columns(dbmodels.Bookings.Columns()),
 		sm.Columns(dbmodels.ParkingspotColumns.Parkingspotuuid),
+		sm.Columns(dbmodels.CarColumns.Caruuid),
 	}
 	var whereMods []mods.Where[*dialect.SelectQuery]
 
@@ -287,6 +283,7 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 		smods,
 		sm.From(dbmodels.Bookings.Name(ctx)),
 		dbmodels.SelectJoins.Bookings.InnerJoin.ParkingspotidParkingspot(ctx),
+		dbmodels.SelectJoins.Bookings.InnerJoin.CaridCar(ctx),
 		sm.Limit(limit),
 		sm.OrderBy(dbmodels.BookingColumns.Bookingid).Desc(),
 	)
@@ -324,6 +321,7 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 			get.Bookinguuid,
 			get.Bookingid,
 			get.Parkingspotuuid,
+			get.Caruuid,
 			get.Createdat,
 		)
 
@@ -342,6 +340,7 @@ func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, af
 	smods := []bob.Mod[*dialect.SelectQuery]{
 		sm.Columns(dbmodels.Bookings.Columns()),
 		sm.Columns(dbmodels.ParkingspotColumns.Parkingspotuuid),
+		sm.Columns(dbmodels.CarColumns.Caruuid),
 	}
 	var whereMods []mods.Where[*dialect.SelectQuery]
 
@@ -358,6 +357,7 @@ func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, af
 		smods,
 		sm.From(dbmodels.Bookings.Name(ctx)),
 		dbmodels.SelectJoins.Bookings.InnerJoin.ParkingspotidParkingspot(ctx),
+		dbmodels.SelectJoins.Bookings.InnerJoin.CaridCar(ctx),
 		sm.Limit(limit),
 		sm.OrderBy(dbmodels.BookingColumns.Bookingid).Desc(),
 	)
@@ -393,6 +393,7 @@ func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, af
 			get.Bookinguuid,
 			get.Bookingid,
 			get.Parkingspotuuid,
+			get.Caruuid,
 			get.Createdat,
 		)
 
@@ -410,12 +411,13 @@ func timeUnitsFromDB(model []*dbmodels.Timeunit) []models.TimeUnit {
 	return result
 }
 
-func formEntry(amount float64, bookingUUID uuid.UUID, bookingID int64, parkingSpotUUID uuid.UUID, createdAt time.Time) Entry {
+func formEntry(amount float64, bookingUUID uuid.UUID, bookingID int64, parkingSpotUUID uuid.UUID, carID uuid.UUID, createdAt time.Time) Entry {
 	return Entry{
 		Booking: models.Booking{
 			PaidAmount:    amount,
 			ID:            bookingUUID,
 			ParkingSpotID: parkingSpotUUID,
+			CarID:         carID,
 			CreatedAt:     createdAt,
 		},
 		InternalID: bookingID,

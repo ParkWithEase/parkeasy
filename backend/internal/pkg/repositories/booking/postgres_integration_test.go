@@ -7,6 +7,7 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/car"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/testutils"
@@ -43,6 +44,7 @@ func TestPostgresIntegration(t *testing.T) {
 	repo := NewPostgres(db)
 	userRepo := user.NewPostgres(db)
 	authRepo := auth.NewPostgres(db)
+	carRepo := car.NewPostgres(db)
 	parkingSpotRepo := parkingspot.NewPostgres(db)
 
 	profile := models.UserProfile{
@@ -64,6 +66,24 @@ func TestPostgresIntegration(t *testing.T) {
 	authUUID_1, _ := authRepo.Create(ctx, testEmail_1, models.HashedPassword(testPasswordHash_1))
 	userID, _ := userRepo.Create(ctx, authUUID, profile)
 	userID_1, _ := userRepo.Create(ctx, authUUID_1, profile_1)
+
+	// Test variables for car
+	sampleDetails := []models.CarDetails{
+		{
+			LicensePlate: "HTV 670",
+			Make:         "Honda",
+			Model:        "Civic",
+			Color:        "Blue",
+		},
+		{
+			LicensePlate: "HTV 671",
+			Make:         "Honda",
+			Model:        "Civic",
+			Color:        "Black",
+		},
+	}
+	carID, carEntry, _ := carRepo.Create(ctx, userID, &models.CarCreationInput{CarDetails: sampleDetails[0]})
+	carID_1, carEntry_1, _ := carRepo.Create(ctx, userID_1, &models.CarCreationInput{CarDetails: sampleDetails[1]})
 
 	// Test variables for parking spots
 	sampleTimeUnit := []models.TimeUnit{
@@ -210,6 +230,7 @@ func TestPostgresIntegration(t *testing.T) {
 	bookingCreationInput := models.BookingCreationDBInput{
 		BookingInfo: models.BookingCreationInput{
 			ParkingSpotID: parkingSpotEntry.ID,
+			CarID:         carEntry.ID,
 			BookedTimes:   sampleTimeUnit[0:2],
 		},
 		PaidAmount: paidAmount,
@@ -218,6 +239,7 @@ func TestPostgresIntegration(t *testing.T) {
 	bookingCreationInput_1 := models.BookingCreationDBInput{
 		BookingInfo: models.BookingCreationInput{
 			ParkingSpotID: parkingSpotEntry.ID,
+			CarID:         carEntry_1.ID,
 			BookedTimes:   sampleTimeUnit_1[0:2],
 		},
 		PaidAmount: paidAmount,
@@ -234,12 +256,13 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		// Testing create
-		createEntry, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
+		createEntry, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, carID, &bookingCreationInput)
 
 		expectedCreateEntry := createExpectedEntry(createEntry.Entry.InternalID,
 			createEntry.Entry.Booking.ID,
 			bookingCreationInput.PaidAmount,
 			bookingCreationInput.BookingInfo.ParkingSpotID,
+			bookingCreationInput.BookingInfo.CarID,
 			createEntry.CreatedAt,
 		)
 
@@ -268,10 +291,10 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		_, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
+		_, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, carID, &bookingCreationInput)
 		require.NoError(t, err, "could not create initial booking")
 
-		_, err = repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
+		_, err = repo.Create(ctx, userID, parkingSpotEntry.InternalID, carID, &bookingCreationInput)
 		if assert.Error(t, err, "Creating a booking on an already booked time should fail") {
 			assert.ErrorIs(t, err, ErrTimeAlreadyBooked)
 		}
@@ -287,7 +310,7 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		_, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput_1)
+		_, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, carID, &bookingCreationInput_1)
 		if assert.Error(t, err, "Creating a booking for a non listed time should fail") {
 			assert.ErrorIs(t, err, ErrTimeAlreadyBooked)
 		}
@@ -315,18 +338,20 @@ func TestPostgresIntegration(t *testing.T) {
 			bookingCreationInput_1 := models.BookingCreationDBInput{
 				BookingInfo: models.BookingCreationInput{
 					ParkingSpotID: parkingSpotEntry.ID,
+					CarID:         carEntry.ID,
 					BookedTimes:   []models.TimeUnit{sampleTimeUnit[eidx]},
 				},
 				PaidAmount: paidAmount,
 			}
 
-			createEntry, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput_1)
+			createEntry, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, carID, &bookingCreationInput_1)
 			require.NoError(t, err)
 
 			expectedCreateEntry := createExpectedEntry(createEntry.Entry.InternalID,
 				createEntry.Entry.Booking.ID,
 				bookingCreationInput_1.PaidAmount,
 				bookingCreationInput_1.BookingInfo.ParkingSpotID,
+				carEntry.ID,
 				createEntry.CreatedAt,
 			)
 			expectedAllBuyerEntries = append(expectedAllBuyerEntries, expectedCreateEntry)
@@ -336,18 +361,20 @@ func TestPostgresIntegration(t *testing.T) {
 			bookingCreationInput_2 := models.BookingCreationDBInput{
 				BookingInfo: models.BookingCreationInput{
 					ParkingSpotID: parkingSpotEntry_1.ID,
+					CarID:         carEntry.ID,
 					BookedTimes:   []models.TimeUnit{sampleTimeUnit_1[eidx]},
 				},
 				PaidAmount: paidAmount_1,
 			}
 
-			createEntry, err := repo.Create(ctx, userID, parkingSpotEntry_1.InternalID, &bookingCreationInput_2)
+			createEntry, err := repo.Create(ctx, userID, parkingSpotEntry_1.InternalID, carID, &bookingCreationInput_2)
 			require.NoError(t, err)
 
 			expectedCreateEntry := createExpectedEntry(createEntry.Entry.InternalID,
 				createEntry.Entry.Booking.ID,
 				bookingCreationInput_2.PaidAmount,
 				bookingCreationInput_2.BookingInfo.ParkingSpotID,
+				carEntry.ID,
 				createEntry.CreatedAt,
 			)
 			expectedEntries_1 = append(expectedEntries_1, expectedCreateEntry)
@@ -357,18 +384,20 @@ func TestPostgresIntegration(t *testing.T) {
 			bookingCreationInput_3 := models.BookingCreationDBInput{
 				BookingInfo: models.BookingCreationInput{
 					ParkingSpotID: parkingSpotEntry_2.ID,
+					CarID:         carEntry_1.ID,
 					BookedTimes:   []models.TimeUnit{sampleTimeUnit[eidx]},
 				},
 				PaidAmount: paidAmount_1,
 			}
 
-			createEntry, err := repo.Create(ctx, userID_1, parkingSpotEntry_2.InternalID, &bookingCreationInput_3)
+			createEntry, err := repo.Create(ctx, userID_1, parkingSpotEntry_2.InternalID, carID_1, &bookingCreationInput_3)
 			require.NoError(t, err)
 
 			expectedCreateEntry := createExpectedEntry(createEntry.Entry.InternalID,
 				createEntry.Entry.Booking.ID,
 				bookingCreationInput_3.PaidAmount,
 				bookingCreationInput_3.BookingInfo.ParkingSpotID,
+				carEntry_1.ID,
 				createEntry.CreatedAt,
 			)
 			expectedEntries_2 = append(expectedEntries_2, expectedCreateEntry)
@@ -548,7 +577,7 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		// Create a booking for testing
-		createdBooking, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
+		createdBooking, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, carID, &bookingCreationInput)
 		require.NoError(t, err, "could not create booking")
 
 		// Test retrieval by UUID
@@ -562,6 +591,7 @@ func TestPostgresIntegration(t *testing.T) {
 			createdBooking.Entry.Booking.ID,
 			bookingCreationInput.PaidAmount,
 			bookingCreationInput.BookingInfo.ParkingSpotID,
+			carEntry.ID,
 			createdBooking.CreatedAt,
 		)
 		assert.Empty(t, cmp.Diff(expectedEntry, retrievedEntry.Entry))
@@ -593,7 +623,7 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		// Create a booking with valid times
-		createdBooking, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, &bookingCreationInput)
+		createdBooking, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, carID, &bookingCreationInput)
 		require.NoError(t, err, "could not create booking")
 
 		// Test retrieval of booked times
@@ -623,13 +653,14 @@ func TestPostgresIntegration(t *testing.T) {
 
 }
 
-func createExpectedEntry(internalID int64, bookingUUID uuid.UUID, paidAmount float64, spotID uuid.UUID, createdAt time.Time) Entry {
+func createExpectedEntry(internalID int64, bookingUUID uuid.UUID, paidAmount float64, spotID uuid.UUID, carID uuid.UUID, createdAt time.Time) Entry {
 
 	return Entry{
 		Booking: models.Booking{
 			PaidAmount:    paidAmount,
 			ID:            bookingUUID,
 			ParkingSpotID: spotID,
+			CarID:         carID,
 			CreatedAt:     createdAt,
 		},
 		InternalID: internalID,
