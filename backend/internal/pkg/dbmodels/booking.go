@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/aarondl/opt/omit"
 	"github.com/aarondl/opt/omitnull"
@@ -31,6 +32,7 @@ type Booking struct {
 	Userid        int64           `db:"userid" `
 	Parkingspotid int64           `db:"parkingspotid" `
 	Paidamount    decimal.Decimal `db:"paidamount" `
+	Createdat     time.Time       `db:"createdat" `
 
 	R bookingR `db:"-" `
 }
@@ -64,10 +66,11 @@ type BookingSetter struct {
 	Userid        omit.Val[int64]           `db:"userid" `
 	Parkingspotid omit.Val[int64]           `db:"parkingspotid" `
 	Paidamount    omit.Val[decimal.Decimal] `db:"paidamount" `
+	Createdat     omit.Val[time.Time]       `db:"createdat" `
 }
 
 func (s BookingSetter) SetColumns() []string {
-	vals := make([]string, 0, 5)
+	vals := make([]string, 0, 6)
 	if !s.Bookingid.IsUnset() {
 		vals = append(vals, "bookingid")
 	}
@@ -86,6 +89,10 @@ func (s BookingSetter) SetColumns() []string {
 
 	if !s.Paidamount.IsUnset() {
 		vals = append(vals, "paidamount")
+	}
+
+	if !s.Createdat.IsUnset() {
+		vals = append(vals, "createdat")
 	}
 
 	return vals
@@ -107,10 +114,13 @@ func (s BookingSetter) Overwrite(t *Booking) {
 	if !s.Paidamount.IsUnset() {
 		t.Paidamount, _ = s.Paidamount.Get()
 	}
+	if !s.Createdat.IsUnset() {
+		t.Createdat, _ = s.Createdat.Get()
+	}
 }
 
 func (s BookingSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 5)
+	vals := make([]bob.Expression, 6)
 	if s.Bookingid.IsUnset() {
 		vals[0] = psql.Raw("DEFAULT")
 	} else {
@@ -141,6 +151,12 @@ func (s BookingSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
 		vals[4] = psql.Arg(s.Paidamount)
 	}
 
+	if s.Createdat.IsUnset() {
+		vals[5] = psql.Raw("DEFAULT")
+	} else {
+		vals[5] = psql.Arg(s.Createdat)
+	}
+
 	return im.Values(vals...)
 }
 
@@ -149,7 +165,7 @@ func (s BookingSetter) Apply(q *dialect.UpdateQuery) {
 }
 
 func (s BookingSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 5)
+	exprs := make([]bob.Expression, 0, 6)
 
 	if !s.Bookingid.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -186,6 +202,13 @@ func (s BookingSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if !s.Createdat.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "createdat")...),
+			psql.Arg(s.Createdat),
+		}})
+	}
+
 	return exprs
 }
 
@@ -195,6 +218,7 @@ type bookingColumnNames struct {
 	Userid        string
 	Parkingspotid string
 	Paidamount    string
+	Createdat     string
 }
 
 var BookingColumns = buildBookingColumns("booking")
@@ -206,6 +230,7 @@ type bookingColumns struct {
 	Userid        psql.Expression
 	Parkingspotid psql.Expression
 	Paidamount    psql.Expression
+	Createdat     psql.Expression
 }
 
 func (c bookingColumns) Alias() string {
@@ -224,6 +249,7 @@ func buildBookingColumns(alias string) bookingColumns {
 		Userid:        psql.Quote(alias, "userid"),
 		Parkingspotid: psql.Quote(alias, "parkingspotid"),
 		Paidamount:    psql.Quote(alias, "paidamount"),
+		Createdat:     psql.Quote(alias, "createdat"),
 	}
 }
 
@@ -233,6 +259,7 @@ type bookingWhere[Q psql.Filterable] struct {
 	Userid        psql.WhereMod[Q, int64]
 	Parkingspotid psql.WhereMod[Q, int64]
 	Paidamount    psql.WhereMod[Q, decimal.Decimal]
+	Createdat     psql.WhereMod[Q, time.Time]
 }
 
 func (bookingWhere[Q]) AliasedAs(alias string) bookingWhere[Q] {
@@ -246,6 +273,7 @@ func buildBookingWhere[Q psql.Filterable](cols bookingColumns) bookingWhere[Q] {
 		Userid:        psql.Where[Q, int64](cols.Userid),
 		Parkingspotid: psql.Where[Q, int64](cols.Parkingspotid),
 		Paidamount:    psql.Where[Q, decimal.Decimal](cols.Paidamount),
+		Createdat:     psql.Where[Q, time.Time](cols.Createdat),
 	}
 }
 

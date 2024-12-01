@@ -54,6 +54,7 @@ var ColumnNames = struct {
 		Userid:        "userid",
 		Parkingspotid: "parkingspotid",
 		Paidamount:    "paidamount",
+		Createdat:     "createdat",
 	},
 	Cars: carColumnNames{
 		Carid:        "carid",

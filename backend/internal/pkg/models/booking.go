@@ -1,6 +1,8 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -14,7 +16,8 @@ var (
 type Booking struct {
 	PaidAmount    float64   `json:"paid_amount" doc:"The amount paid for the booking"`
 	ID            uuid.UUID `json:"id" doc:"ID of this resource"`
-	ParkingSpotID int64     `json:"spotid" doc:"internal ID of the parking spot"`
+	ParkingSpotID uuid.UUID `json:"parkingspot_id" doc:"the ID of parking spot"`
+	CreatedAt     time.Time `json:"booking_time" doc:"Time when the booking was made"`
 }
 
 type BookingWithTimes struct {
