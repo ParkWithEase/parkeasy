@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.spots
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -44,6 +46,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +64,7 @@ import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
+import kotlinx.datetime.LocalTime
 
 private const val NumColumns = 7
 private const val NumRows = 48
@@ -290,9 +294,30 @@ fun AddSpotScreen(
                 Switch(checked = state.shelter.value, onCheckedChange = onShelterChange)
             }
         }
-        TimeGrid(state.times.value, plus, minus, Modifier.height(576.dp))
+        val test by rememberUpdatedState(state.times.value)
+        Row(Modifier.height(600.dp)) {
+            ColumnHeader(Modifier.width(48.dp))
+            TimeGrid(test, plus, minus)
+        }
         Button(onClick = onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.add_spot))
+        }
+    }
+}
+
+@Composable
+private fun ColumnHeader(
+    modifier: Modifier = Modifier,
+    state: LazyGridState = rememberLazyGridState(),
+) {
+    LazyVerticalGrid(state = state, columns = GridCells.Fixed(1), modifier = modifier) {
+        items(NumRows + 1) { num ->
+            if (num % 2 == 0) {
+                Text(
+                    if (num == 0) "" else LocalTime((num / 2 - 1), 0).toString(),
+                    Modifier.height(24.dp),
+                )
+            }
         }
     }
 }
@@ -303,10 +328,9 @@ private fun TimeGrid(
     plus: (elements: Iterable<Int>) -> Unit,
     minus: (elements: Iterable<Int>) -> Unit,
     modifier: Modifier = Modifier,
+    state: LazyGridState = rememberLazyGridState(),
     slots: List<Int> = List(NumColumns * NumRows) { it % NumColumns * NumRows + it / NumColumns },
 ) {
-    val state = rememberLazyGridState()
-
     LazyVerticalGrid(
         state = state,
         columns = GridCells.Fixed(NumColumns),
@@ -319,14 +343,15 @@ private fun TimeGrid(
                 minus = minus,
             ),
     ) {
+        items(NumColumns) { Text("Test", Modifier.height(24.dp)) }
         items(slots, key = { it }) { id ->
             val selected = selectedIds.contains(id)
 
             Surface(
                 tonalElevation = 3.dp,
                 color =
-                    if (selected) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurface,
+                    if (selected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.primaryContainer,
                 modifier =
                     Modifier.height(12.dp)
                         .padding(top = if (id % 48 > 0 && id % 48 % 2 == 0) 3.dp else 0.dp)
@@ -348,7 +373,7 @@ private fun TimeGrid(
 }
 
 @Suppress("detekt:UnsafeCallOnNullableType") // code provided by a Google engineer -> probably fine
-fun Modifier.timeGridDragHandler(
+private fun Modifier.timeGridDragHandler(
     lazyGridState: LazyGridState,
     selectedIds: Set<Int>,
     plus: (elements: Iterable<Int>) -> Unit,
@@ -377,6 +402,8 @@ fun Modifier.timeGridDragHandler(
                         minus(key..key)
                         adding = false
                     }
+                    Log.e("", selectedIds.contains(key).toString())
+                    Log.e("", selectedIds.toString())
                 }
             },
             onDragCancel = { initialKey = null },
