@@ -1,15 +1,24 @@
 package io.github.parkwithease.parkeasy.ui.spots
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,6 +28,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -30,22 +40,34 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.round
+import androidx.compose.ui.unit.toIntRect
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
+import kotlin.collections.minus
+import kotlin.collections.plus
+
+private const val NumColumns = 7
+private const val NumRows = 48
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("detekt:LongMethod")
@@ -56,7 +78,7 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
     var editMode by rememberSaveable { mutableStateOf(EditMode.ADD) }
 
     var openBottomSheet by rememberSaveable { mutableStateOf(false) }
-    val skipPartiallyExpanded by rememberSaveable { mutableStateOf(false) }
+    val skipPartiallyExpanded by rememberSaveable { mutableStateOf(true) }
     val bottomSheetState =
         rememberModalBottomSheetState(skipPartiallyExpanded = skipPartiallyExpanded)
 
@@ -268,8 +290,107 @@ fun AddSpotScreen(
                 Switch(checked = state.shelter.value, onCheckedChange = onShelterChange)
             }
         }
+        TimeGrid(modifier = Modifier.height(576.dp))
         Button(onClick = onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.add_spot))
         }
     }
 }
+
+@Composable
+private fun TimeGrid(
+    slots: List<Int> = List(NumColumns * NumRows) { it % NumColumns * NumRows + it / NumColumns },
+    selectedIds: MutableState<Set<Int>> = rememberSaveable { mutableStateOf(emptySet()) },
+    modifier: Modifier = Modifier,
+) {
+    val state = rememberLazyGridState()
+
+    LazyVerticalGrid(
+        state = state,
+        columns = GridCells.Fixed(NumColumns),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        modifier = modifier.timeGridDragHandler(lazyGridState = state, selectedIds = selectedIds),
+    ) {
+        items(slots, key = { it }) { id ->
+            val selected by remember { derivedStateOf { selectedIds.value.contains(id) } }
+
+            Surface(
+                tonalElevation = 3.dp,
+                color =
+                    if (selected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurface,
+                modifier =
+                    Modifier.height(12.dp)
+                        .padding(top = if (id % 48 > 0 && id % 48 % 2 == 0) 3.dp else 0.dp)
+                        .toggleable(
+                            value = selected,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null, // do not show a ripple
+                            onValueChange = {
+                                if (it) {
+                                    selectedIds.value += id
+                                } else {
+                                    selectedIds.value -= id
+                                }
+                            },
+                        ),
+            ) {}
+        }
+    }
+}
+
+fun Modifier.timeGridDragHandler(
+    lazyGridState: LazyGridState,
+    selectedIds: MutableState<Set<Int>>,
+) =
+    pointerInput(Unit) {
+        fun LazyGridState.gridItemKeyAtPosition(hitPoint: Offset): Int? =
+            layoutInfo.visibleItemsInfo
+                .find { itemInfo ->
+                    itemInfo.size.toIntRect().contains(hitPoint.round() - itemInfo.offset)
+                }
+                ?.key as? Int
+
+        var initialKey: Int? = null
+        var currentKey: Int? = null
+        var adding = false
+        detectDragGestures(
+            onDragStart = { offset ->
+                lazyGridState.gridItemKeyAtPosition(offset)?.let { key ->
+                    initialKey = key
+                    currentKey = key
+                    if (!selectedIds.value.contains(key)) {
+                        selectedIds.value += key
+                        adding = true
+                    } else {
+                        selectedIds.value -= key
+                        adding = false
+                    }
+                }
+            },
+            onDragCancel = { initialKey = null },
+            onDragEnd = { initialKey = null },
+            onDrag = { change, _ ->
+                if (initialKey != null) {
+                    lazyGridState.gridItemKeyAtPosition(change.position)?.let { key ->
+                        if (currentKey != key) {
+                            selectedIds.value =
+                                if (adding)
+                                    selectedIds.value
+                                        .minus(initialKey!!..currentKey!!)
+                                        .minus(currentKey!!..initialKey!!)
+                                        .plus(initialKey!!..key)
+                                        .plus(key..initialKey!!)
+                                else
+                                    selectedIds.value
+                                        .plus(initialKey!!..currentKey!!)
+                                        .plus(currentKey!!..initialKey!!)
+                                        .minus(initialKey!!..key)
+                                        .minus(key..initialKey!!)
+                            currentKey = key
+                        }
+                    }
+                }
+            },
+        )
+    }
