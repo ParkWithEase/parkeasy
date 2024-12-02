@@ -1,8 +1,10 @@
 package io.github.parkwithease.parkeasy.ui.login
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -34,14 +36,14 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     private val _formEnabled = MutableStateFlow(true)
     val formEnabled = _formEnabled.asStateFlow()
 
-    var formState by mutableStateOf(LoginFormState())
+    var state by mutableStateOf(LoginFormState())
         private set
 
     fun onLoginClick() {
         viewModelScope.launch {
             _formEnabled.value = false
             userRepo
-                .login(LoginCredentials(formState.email.value, formState.password.value))
+                .login(LoginCredentials(state.email.value, state.password.value))
                 .also { clearFieldErrors() }
                 .onSuccess {
                     viewModelScope.launch { snackbarState.showSnackbar("Logged in successfully") }
@@ -52,16 +54,16 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     }
 
     fun onRegisterClick() {
-        if (formState.password.value != formState.confirmPassword.value) return
+        if (state.password.value != state.confirmPassword.value) return
 
         viewModelScope.launch {
             _formEnabled.value = false
             userRepo
                 .register(
                     RegistrationCredentials(
-                        formState.name.value,
-                        formState.email.value,
-                        formState.password.value,
+                        state.name.value,
+                        state.email.value,
+                        state.password.value,
                     )
                 )
                 .also { clearFieldErrors() }
@@ -77,7 +79,7 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
         viewModelScope.launch {
             _formEnabled.value = false
             userRepo
-                .requestReset(ResetCredentials(formState.email.value))
+                .requestReset(ResetCredentials(state.email.value))
                 .also { clearFieldErrors() }
                 .onSuccess {
                     viewModelScope.launch {
@@ -90,8 +92,8 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     }
 
     fun onNameChange(value: String) {
-        formState =
-            formState.run {
+        state =
+            state.run {
                 copy(
                     name =
                         name.copy(
@@ -103,8 +105,8 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     }
 
     fun onEmailChange(value: String) {
-        formState =
-            formState.run {
+        state =
+            state.run {
                 copy(
                     email =
                         email.copy(
@@ -116,8 +118,8 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     }
 
     fun onPasswordChange(value: String) {
-        formState =
-            formState.run {
+        state =
+            state.run {
                 copy(
                     password =
                         password.copy(
@@ -135,8 +137,8 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     }
 
     fun onConfirmPasswordChange(value: String) {
-        formState =
-            formState.run {
+        state =
+            state.run {
                 copy(
                     confirmPassword =
                         confirmPassword.copy(
@@ -166,15 +168,15 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     private fun errorToForm(error: ErrorModel) {
         when (error.type) {
             ErrorModel.TYPE_INVALID_CREDENTIALS -> {
-                formState =
-                    formState.run {
+                state =
+                    state.run {
                         copy(email = email.copy(error = ""), password = password.copy(error = ""))
                     }
             }
 
             ErrorModel.TYPE_PASSWORD_LENGTH ->
-                formState =
-                    formState.run {
+                state =
+                    state.run {
                         copy(password = password.copy(error = "Password too long or too short"))
                     }
 
@@ -186,20 +188,18 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
         for (err in errors) {
             when (err.location) {
                 "body.email" ->
-                    formState =
-                        formState.run { copy(email = email.copy(error = "Invalid email address")) }
+                    state = state.run { copy(email = email.copy(error = "Invalid email address")) }
 
                 "body.password" ->
-                    formState =
-                        formState.run { copy(password = password.copy(error = "Invalid password")) }
+                    state = state.run { copy(password = password.copy(error = "Invalid password")) }
             }
         }
     }
 
     // Clear errors set via external services
     private fun clearFieldErrors() {
-        formState =
-            formState.run {
+        state =
+            state.run {
                 copy(
                     name = name.copy(error = null),
                     email = email.copy(error = null),
@@ -207,11 +207,39 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
                 )
             }
     }
+
+    fun createHandler() =
+        LoginFormHandler(
+            onNameChange = this::onNameChange,
+            onEmailChange = this::onEmailChange,
+            onPasswordChange = this::onPasswordChange,
+            onConfirmPasswordChange = this::onConfirmPasswordChange,
+            onLoginClick = this::onLoginClick,
+            onRegisterClick = this::onRegisterClick,
+            onRequestResetClick = this::onRequestResetClick,
+        )
 }
+
+@Composable
+fun rememberLoginFormState(viewModel: LoginViewModel) = remember(viewModel) { viewModel.state }
+
+@Composable
+fun rememberLoginFormHandler(viewModel: LoginViewModel) =
+    remember(viewModel) { viewModel.createHandler() }
 
 data class LoginFormState(
     val name: FieldState<String> = FieldState(""),
     val email: FieldState<String> = FieldState(""),
     val password: FieldState<String> = FieldState(""),
     val confirmPassword: FieldState<String> = FieldState(""),
+)
+
+data class LoginFormHandler(
+    val onNameChange: (String) -> Unit = {},
+    val onEmailChange: (String) -> Unit = {},
+    val onPasswordChange: (String) -> Unit = {},
+    val onConfirmPasswordChange: (String) -> Unit = {},
+    val onLoginClick: () -> Unit = {},
+    val onRegisterClick: () -> Unit = {},
+    val onRequestResetClick: () -> Unit = {},
 )

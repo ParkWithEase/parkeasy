@@ -45,11 +45,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
-import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.LoginMode
 import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 
@@ -65,6 +63,9 @@ fun LoginScreen(
 
     val formEnabled by viewModel.formEnabled.collectAsState()
 
+    val state = rememberLoginFormState(viewModel)
+    val handler = rememberLoginFormHandler(viewModel)
+
     LaunchedEffect(loggedIn) {
         if (loggedIn) {
             latestOnNavigateFromLogin()
@@ -78,14 +79,8 @@ fun LoginScreen(
         modifier = modifier,
     ) { innerPadding ->
         LoginScreen(
-            viewModel.formState,
-            viewModel::onNameChange,
-            viewModel::onEmailChange,
-            viewModel::onPasswordChange,
-            viewModel::onConfirmPasswordChange,
-            viewModel::onLoginClick,
-            viewModel::onRegisterClick,
-            viewModel::onRequestResetClick,
+            state = state,
+            handler = handler,
             enabled = formEnabled,
             modifier = Modifier.padding(innerPadding),
         )
@@ -94,14 +89,8 @@ fun LoginScreen(
 
 @Composable
 private fun LoginScreen(
-    formState: LoginFormState,
-    onNameChange: (String) -> Unit,
-    onEmailChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onConfirmPasswordChange: (String) -> Unit,
-    onLoginClick: () -> Unit,
-    onRegisterClick: () -> Unit,
-    onRequestResetClick: () -> Unit,
+    state: LoginFormState,
+    handler: LoginFormHandler,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -123,14 +112,8 @@ private fun LoginScreen(
                 )
             }
             LoginForm(
-                formState = formState,
-                onNameChange = onNameChange,
-                onEmailChange = onEmailChange,
-                onPasswordChange = onPasswordChange,
-                onConfirmPasswordChange = onConfirmPasswordChange,
-                onLoginClick = onLoginClick,
-                onRegisterClick = onRegisterClick,
-                onRequestResetClick = onRequestResetClick,
+                state = state,
+                handler = handler,
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -141,34 +124,23 @@ private fun LoginScreen(
 
 @Composable
 private fun LoginForm(
-    formState: LoginFormState,
-    onNameChange: (String) -> Unit,
-    onEmailChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onConfirmPasswordChange: (String) -> Unit,
-    onLoginClick: () -> Unit,
-    onRegisterClick: () -> Unit,
-    onRequestResetClick: () -> Unit,
+    state: LoginFormState,
+    handler: LoginFormHandler,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
     var loginMode by rememberSaveable { mutableStateOf(LoginMode.LOGIN) }
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
         LoginFields(
-            formState,
+            state,
+            handler,
             loginMode,
-            onNameChange = onNameChange,
-            onEmailChange = onEmailChange,
-            onPasswordChange = onPasswordChange,
-            onConfirmPasswordChange = onConfirmPasswordChange,
             enabled = enabled,
             modifier = Modifier.widthIn(max = 320.dp),
         )
         LoginButtons(
             loginMode,
-            onLoginClick = onLoginClick,
-            onRegisterClick = onRegisterClick,
-            onRequestResetClick = onRequestResetClick,
+            handler,
             onSwitchModeClick = { loginMode = it },
             enabled = enabled,
             modifier = Modifier.widthIn(max = 320.dp),
@@ -179,11 +151,8 @@ private fun LoginForm(
 @Composable
 private fun LoginFields(
     state: LoginFormState,
+    handler: LoginFormHandler,
     mode: LoginMode,
-    onNameChange: (String) -> Unit,
-    onEmailChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onConfirmPasswordChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -191,7 +160,7 @@ private fun LoginFields(
         AnimatedVisibility(mode == LoginMode.REGISTER) {
             ParkEasyTextField(
                 state = state.name,
-                onValueChange = onNameChange,
+                onValueChange = handler.onNameChange,
                 modifier = Modifier.fillMaxWidth(),
                 leadingIconImage = Icons.Filled.Person,
                 enabled = enabled,
@@ -201,7 +170,7 @@ private fun LoginFields(
         }
         ParkEasyTextField(
             state = state.email,
-            onValueChange = onEmailChange,
+            onValueChange = handler.onEmailChange,
             modifier = Modifier.fillMaxWidth(),
             enabled = enabled,
             labelId = R.string.email,
@@ -211,7 +180,7 @@ private fun LoginFields(
         AnimatedVisibility(mode != LoginMode.FORGOT) {
             ParkEasyTextField(
                 state = state.password,
-                onValueChange = onPasswordChange,
+                onValueChange = handler.onPasswordChange,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = enabled,
                 labelId = R.string.password,
@@ -223,9 +192,9 @@ private fun LoginFields(
         AnimatedVisibility(mode == LoginMode.REGISTER) {
             ParkEasyTextField(
                 state = state.confirmPassword,
-                onValueChange = onConfirmPasswordChange,
-                enabled = enabled,
+                onValueChange = handler.onConfirmPasswordChange,
                 modifier = Modifier.fillMaxWidth(),
+                enabled = enabled,
                 labelId = R.string.confirm_password,
                 leadingIconImage = ImageVector.vectorResource(R.drawable.password),
                 visualTransformation = PasswordVisualTransformation(),
@@ -238,9 +207,7 @@ private fun LoginFields(
 @Composable
 private fun LoginButtons(
     mode: LoginMode,
-    onLoginClick: () -> Unit,
-    onRegisterClick: () -> Unit,
-    onRequestResetClick: () -> Unit,
+    handler: LoginFormHandler,
     onSwitchModeClick: (LoginMode) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
@@ -259,9 +226,9 @@ private fun LoginButtons(
         Button(
             onClick =
                 when (mode) {
-                    LoginMode.LOGIN -> onLoginClick
-                    LoginMode.REGISTER -> onRegisterClick
-                    LoginMode.FORGOT -> onRequestResetClick
+                    LoginMode.LOGIN -> handler.onLoginClick
+                    LoginMode.REGISTER -> handler.onRegisterClick
+                    LoginMode.FORGOT -> handler.onRequestResetClick
                 },
             enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
@@ -330,26 +297,26 @@ private fun SwitchRegisterText(
     }
 }
 
-@Composable
-@Preview
-private fun PreviewLoginScreen() {
-    LoginScreen(LoginFormState(), {}, {}, {}, {}, {}, {}, {})
-}
-
-@Composable
-@Preview
-private fun PreviewLoginScreenError() {
-    LoginScreen(
-        LoginFormState(
-            email = FieldState(value = "not-an-email", error = "Invalid email"),
-            confirmPassword = FieldState("", error = "Password does not match"),
-        ),
-        {},
-        {},
-        {},
-        {},
-        {},
-        {},
-        {},
-    )
-}
+// @Composable
+// @Preview
+// private fun PreviewLoginScreen() {
+//    LoginScreen(LoginFormState(), {}, {}, {}, {}, {}, {}, {})
+// }
+//
+// @Composable
+// @Preview
+// private fun PreviewLoginScreenError() {
+//    LoginScreen(
+//        LoginFormState(
+//            email = FieldState(value = "not-an-email", error = "Invalid email"),
+//            confirmPassword = FieldState("", error = "Password does not match"),
+//        ),
+//        {},
+//        {},
+//        {},
+//        {},
+//        {},
+//        {},
+//        {},
+//    )
+// }
