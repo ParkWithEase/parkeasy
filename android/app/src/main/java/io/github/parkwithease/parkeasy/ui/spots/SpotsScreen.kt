@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
@@ -25,7 +26,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -245,28 +245,25 @@ fun AddSpotScreen(
             supportingText = { state.pricePerHour.error?.also { Text(it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
-        Row {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.charging_station))
-            }
-            Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
-                Switch(
-                    checked = state.chargingStation.value,
-                    onCheckedChange = onChargingStationChange,
-                )
-            }
-        }
-        Row {
-            Column(modifier = Modifier.weight(1f)) { Text(stringResource(R.string.plug_in)) }
-            Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
-                Switch(checked = state.plugIn.value, onCheckedChange = onPlugInChange)
-            }
-        }
-        Row {
-            Column(modifier = Modifier.weight(1f)) { Text(stringResource(R.string.shelter)) }
-            Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
-                Switch(checked = state.shelter.value, onCheckedChange = onShelterChange)
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            FilterChip(
+                selected = state.chargingStation.value,
+                onClick = { onChargingStationChange(!state.chargingStation.value) },
+                label = { Text(stringResource(R.string.charging_station)) },
+            )
+            FilterChip(
+                selected = state.plugIn.value,
+                onClick = { onPlugInChange(!state.plugIn.value) },
+                label = { Text(stringResource(R.string.plug_in)) },
+            )
+            FilterChip(
+                selected = state.shelter.value,
+                onClick = { onShelterChange(!state.shelter.value) },
+                label = { Text(stringResource(R.string.shelter)) },
+            )
         }
         Button(onClick = onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.add_spot))
