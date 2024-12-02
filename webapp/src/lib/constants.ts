@@ -15,3 +15,17 @@ export const DEFAULT_ACCOUNT_CREATION_ERROR = 'Wrong invalid email or invalid pa
 export const PASSWORD_RESET_TOKEN_GET_ERROR =
     "We shouldn't be doing this but for demo sake, your email doesn't exist";
 export const PASSWORD_RESET_SUCCESS_MESSAGE = 'Password changed successfully';
+
+export const LATITUDE = 49.88887;
+export const LONGITUDE = -97.13449;
+export const DISTANCE = 5000;
+
+//Constants for app/+page.svelte
+export const INIT_ZOOM = 0;
+export const MAX_ZOOM = 12;
+export const SELECTED_ZOOM = 11;
+export const DEFAULT_DISTANCE = 2000;
+export const MIN_DISTANCE_RADIUS = 100;
+export const MAX_DISTANCE_RADIUS = 5000;
+export const DISTANCE_RADIUS_STEP = 100;
+

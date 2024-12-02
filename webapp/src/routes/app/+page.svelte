@@ -10,16 +10,17 @@
     import { handleGetError } from '$lib/utils/error-handler';
     import DetailModal from '$lib/components/spot-listings/detail-modal.svelte';
     import type { AddressResult } from '$lib/types/address/address';
+    import { DEFAULT_DISTANCE, INIT_ZOOM, MAX_DISTANCE_RADIUS, MAX_ZOOM, MIN_DISTANCE_RADIUS, SELECTED_ZOOM, DISTANCE_RADIUS_STEP } from '$lib/constants';
 
     type ParkingSpot = components['schemas']['ParkingSpot'];
 
     const apiKey = import.meta.env.VITE_GEOCODING_API_KEY;
-    const maxZoom: number = 12;
-    const defaultDistance = 2000;
-    let distanceRadius = defaultDistance;
+    const maxZoom = MAX_ZOOM;
+    const defaultDistance = DEFAULT_DISTANCE;
+    let distance = defaultDistance;
 
-    let initZoom: number = 0;
-    const selectedZoom: number = 11;
+    let initZoom: number = INIT_ZOOM;
+    const selectedZoom: number = SELECTED_ZOOM;
     const offset: [number, number] = [0, -10];
 
     let mapCenter: [number, number] = [0, 0];
@@ -74,7 +75,7 @@
         if (searchUsed === false) {
             searchUsed = true;
         }
-        fetchSpots(location.geometry.coordinates, distanceRadius);
+        fetchSpots(location.geometry.coordinates, distance);
     };
 
     const handleClickOutside = (event: Event) => {
@@ -123,9 +124,9 @@
     };
 
     const handleRadiusChange = (radius: number) => {
-        distanceRadius = radius;
+        distance = radius;
         if (mapCenter[0] !== 0 && mapCenter[1] !== 0) {
-            fetchSpots(mapCenter, distanceRadius);
+            fetchSpots(mapCenter, distance);
         }
     };
 
@@ -159,11 +160,11 @@
 
         <div class="slider-container">
             <Slider
-                value={distanceRadius}
-                min={100}
-                max={5000}
-                step={100}
-                minLabel="1m"
+                value={distance}
+                min={MIN_DISTANCE_RADIUS}
+                max={MAX_DISTANCE_RADIUS}
+                step={DISTANCE_RADIUS_STEP}
+                minLabel="100m"
                 maxLabel="5km"
                 labelText="Distance Radius (metres)"
                 on:change={(event) => handleRadiusChange(event.detail)}
