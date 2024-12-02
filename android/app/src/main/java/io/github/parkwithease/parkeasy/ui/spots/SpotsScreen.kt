@@ -1,6 +1,5 @@
 package io.github.parkwithease.parkeasy.ui.spots
 
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -46,7 +45,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -131,6 +129,7 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
                     viewModel::onAddSpotClick,
                     viewModel::onPlusTime,
                     viewModel::onMinusTime,
+                    { viewModel.formState.times.value },
                 )
             }
         }
@@ -209,6 +208,7 @@ fun AddSpotScreen(
     onAddSpotClick: () -> Unit,
     plus: (elements: Iterable<Int>) -> Unit,
     minus: (elements: Iterable<Int>) -> Unit,
+    getSelectedIds: () -> Set<Int>,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -294,10 +294,9 @@ fun AddSpotScreen(
                 Switch(checked = state.shelter.value, onCheckedChange = onShelterChange)
             }
         }
-        val test by rememberUpdatedState(state.times.value)
         Row(Modifier.height(600.dp)) {
             ColumnHeader(Modifier.width(48.dp))
-            TimeGrid(test, plus, minus)
+            TimeGrid(getSelectedIds, plus, minus)
         }
         Button(onClick = onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.add_spot))
@@ -324,13 +323,15 @@ private fun ColumnHeader(
 
 @Composable
 private fun TimeGrid(
-    selectedIds: Set<Int>,
+    getSelectedIds: () -> Set<Int>,
     plus: (elements: Iterable<Int>) -> Unit,
     minus: (elements: Iterable<Int>) -> Unit,
     modifier: Modifier = Modifier,
     state: LazyGridState = rememberLazyGridState(),
     slots: List<Int> = List(NumColumns * NumRows) { it % NumColumns * NumRows + it / NumColumns },
 ) {
+    val selectedIds: Set<Int> = getSelectedIds()
+
     LazyVerticalGrid(
         state = state,
         columns = GridCells.Fixed(NumColumns),
@@ -338,7 +339,7 @@ private fun TimeGrid(
         modifier =
             modifier.timeGridDragHandler(
                 lazyGridState = state,
-                selectedIds = selectedIds,
+                getSelectedIds = getSelectedIds,
                 plus = plus,
                 minus = minus,
             ),
@@ -375,7 +376,7 @@ private fun TimeGrid(
 @Suppress("detekt:UnsafeCallOnNullableType") // code provided by a Google engineer -> probably fine
 private fun Modifier.timeGridDragHandler(
     lazyGridState: LazyGridState,
-    selectedIds: Set<Int>,
+    getSelectedIds: () -> Set<Int>,
     plus: (elements: Iterable<Int>) -> Unit,
     minus: (elements: Iterable<Int>) -> Unit,
 ) =
@@ -386,7 +387,6 @@ private fun Modifier.timeGridDragHandler(
                     itemInfo.size.toIntRect().contains(hitPoint.round() - itemInfo.offset)
                 }
                 ?.key as? Int
-
         var initialKey: Int? = null
         var currentKey: Int? = null
         var adding = false
@@ -395,6 +395,7 @@ private fun Modifier.timeGridDragHandler(
                 lazyGridState.gridItemKeyAtPosition(offset)?.let { key ->
                     initialKey = key
                     currentKey = key
+                    val selectedIds = getSelectedIds()
                     if (!selectedIds.contains(key)) {
                         plus(key..key)
                         adding = true
@@ -402,8 +403,6 @@ private fun Modifier.timeGridDragHandler(
                         minus(key..key)
                         adding = false
                     }
-                    Log.e("", selectedIds.contains(key).toString())
-                    Log.e("", selectedIds.toString())
                 }
             },
             onDragCancel = { initialKey = null },
