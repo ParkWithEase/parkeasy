@@ -221,9 +221,6 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
 }
 
 @Composable
-fun rememberLoginFormState(viewModel: LoginViewModel) = remember(viewModel) { viewModel.state }
-
-@Composable
 fun rememberLoginFormHandler(viewModel: LoginViewModel) =
     remember(viewModel) { viewModel.createHandler() }
 

@@ -3,11 +3,9 @@ package io.github.parkwithease.parkeasy.ui.login
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
@@ -24,7 +22,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
@@ -45,11 +42,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.LoginMode
+import io.github.parkwithease.parkeasy.ui.common.ClickableText
 import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
+import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
 
 @Composable
 fun LoginScreen(
@@ -62,9 +62,8 @@ fun LoginScreen(
     val latestOnNavigateFromLogin by rememberUpdatedState(onNavigateFromLogin)
 
     val formEnabled by viewModel.formEnabled.collectAsState()
-
-    val state = rememberLoginFormState(viewModel)
     val handler = rememberLoginFormHandler(viewModel)
+    var mode by rememberSaveable { mutableStateOf(LoginMode.LOGIN) }
 
     LaunchedEffect(loggedIn) {
         if (loggedIn) {
@@ -79,10 +78,17 @@ fun LoginScreen(
         modifier = modifier,
     ) { innerPadding ->
         LoginScreen(
-            state = state,
+            state = viewModel.state,
             handler = handler,
-            enabled = formEnabled,
+            mode = mode,
+            onSwitchReset = {
+                mode = if (mode == LoginMode.LOGIN) LoginMode.FORGOT else LoginMode.LOGIN
+            },
+            onSwitchRegister = {
+                mode = if (mode == LoginMode.LOGIN) LoginMode.REGISTER else LoginMode.LOGIN
+            },
             modifier = Modifier.padding(innerPadding),
+            enabled = formEnabled,
         )
     }
 }
@@ -91,6 +97,9 @@ fun LoginScreen(
 private fun LoginScreen(
     state: LoginFormState,
     handler: LoginFormHandler,
+    mode: LoginMode,
+    onSwitchReset: () -> Unit,
+    onSwitchRegister: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -114,6 +123,9 @@ private fun LoginScreen(
             LoginForm(
                 state = state,
                 handler = handler,
+                mode = mode,
+                onSwitchReset = onSwitchReset,
+                onSwitchRegister = onSwitchRegister,
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -126,24 +138,27 @@ private fun LoginScreen(
 private fun LoginForm(
     state: LoginFormState,
     handler: LoginFormHandler,
+    mode: LoginMode,
+    onSwitchReset: () -> Unit,
+    onSwitchRegister: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    var loginMode by rememberSaveable { mutableStateOf(LoginMode.LOGIN) }
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
         LoginFields(
-            state,
-            handler,
-            loginMode,
-            enabled = enabled,
+            state = state,
+            handler = handler,
+            mode = mode,
             modifier = Modifier.widthIn(max = 320.dp),
+            enabled = enabled,
         )
         LoginButtons(
-            loginMode,
-            handler,
-            onSwitchModeClick = { loginMode = it },
-            enabled = enabled,
+            handler = handler,
+            mode = mode,
+            onSwitchReset = onSwitchReset,
+            onSwitchRegister = onSwitchRegister,
             modifier = Modifier.widthIn(max = 320.dp),
+            enabled = enabled,
         )
     }
 }
@@ -162,9 +177,9 @@ private fun LoginFields(
                 state = state.name,
                 onValueChange = handler.onNameChange,
                 modifier = Modifier.fillMaxWidth(),
-                leadingIconImage = Icons.Filled.Person,
                 enabled = enabled,
                 labelId = R.string.name,
+                leadingIconImage = Icons.Filled.Person,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
             )
         }
@@ -208,20 +223,14 @@ private fun LoginFields(
 private fun LoginButtons(
     mode: LoginMode,
     handler: LoginFormHandler,
-    onSwitchModeClick: (LoginMode) -> Unit,
+    onSwitchReset: () -> Unit,
+    onSwitchRegister: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = modifier) {
         AnimatedVisibility(mode != LoginMode.REGISTER, modifier = Modifier.align(Alignment.End)) {
-            SwitchRequestResetText(
-                stringResource(
-                    if (mode == LoginMode.FORGOT) R.string.return_login
-                    else R.string.forgot_password
-                ),
-                if (mode == LoginMode.FORGOT) LoginMode.LOGIN else LoginMode.FORGOT,
-                onSwitchModeClick,
-            )
+            ClickableText(text = stringResource(R.string.forgot_password), onClick = onSwitchReset)
         }
         Button(
             onClick =
@@ -243,80 +252,37 @@ private fun LoginButtons(
                 )
             )
         }
-        AnimatedVisibility(mode != LoginMode.FORGOT) {
-            SwitchRegisterText(
-                stringResource(
-                    if (mode == LoginMode.REGISTER) R.string.already_registered
-                    else R.string.not_registered
-                ),
-                stringResource(
-                    if (mode == LoginMode.REGISTER) R.string.login_instead
-                    else R.string.register_instead
-                ),
-                if (mode == LoginMode.REGISTER) LoginMode.LOGIN else LoginMode.REGISTER,
-                onSwitchModeClick,
-                modifier = Modifier.fillMaxWidth(),
+        AnimatedVisibility(
+            mode != LoginMode.FORGOT,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        ) {
+            ClickableText(
+                supportingText =
+                    stringResource(
+                        if (mode == LoginMode.REGISTER) R.string.already_registered
+                        else R.string.not_registered
+                    ),
+                text =
+                    stringResource(
+                        if (mode == LoginMode.REGISTER) R.string.login_instead
+                        else R.string.register_instead
+                    ),
+                onClick = onSwitchRegister,
             )
         }
     }
 }
 
+@Preview
 @Composable
-private fun SwitchRequestResetText(
-    text: String,
-    revertMode: LoginMode,
-    onClick: (LoginMode) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text,
-        modifier = modifier.clickable { onClick(revertMode) }.padding(vertical = 16.dp),
-        color = MaterialTheme.colorScheme.primary,
-    )
-}
-
-@Composable
-private fun SwitchRegisterText(
-    supportingText: String,
-    clickableText: String,
-    revertMode: LoginMode,
-    onClick: (LoginMode) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(supportingText, color = MaterialTheme.colorScheme.onSurface)
-        Text(
-            clickableText,
-            Modifier.clickable { onClick(revertMode) }.padding(vertical = 16.dp),
-            color = MaterialTheme.colorScheme.primary,
+private fun PreviewLoginScreen() {
+    ParkEasyTheme {
+        LoginScreen(
+            state = LoginFormState(),
+            handler = LoginFormHandler(),
+            mode = LoginMode.LOGIN,
+            onSwitchReset = {},
+            onSwitchRegister = {},
         )
     }
 }
-
-// @Composable
-// @Preview
-// private fun PreviewLoginScreen() {
-//    LoginScreen(LoginFormState(), {}, {}, {}, {}, {}, {}, {})
-// }
-//
-// @Composable
-// @Preview
-// private fun PreviewLoginScreenError() {
-//    LoginScreen(
-//        LoginFormState(
-//            email = FieldState(value = "not-an-email", error = "Invalid email"),
-//            confirmPassword = FieldState("", error = "Password does not match"),
-//        ),
-//        {},
-//        {},
-//        {},
-//        {},
-//        {},
-//        {},
-//        {},
-//    )
-// }
