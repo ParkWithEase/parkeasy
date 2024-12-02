@@ -54,6 +54,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.LoginMode
+import io.github.parkwithease.parkeasy.ui.common.textOrNull
 
 @Composable
 fun LoginScreen(
@@ -198,7 +199,7 @@ private fun LoginFields(
                 Icons.Filled.Person,
                 KeyboardOptions(keyboardType = KeyboardType.Text),
                 isError = state.name.error != null,
-                supportingText = { state.name.error?.also { Text(it) } },
+                supportingText = state.name.error.textOrNull(),
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -210,7 +211,7 @@ private fun LoginFields(
             ImageVector.vectorResource(R.drawable.email),
             KeyboardOptions(keyboardType = KeyboardType.Email),
             isError = state.email.error != null,
-            supportingText = { state.email.error?.also { Text(it) } },
+            supportingText = state.email.error.textOrNull(),
             enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -223,7 +224,7 @@ private fun LoginFields(
                 KeyboardOptions(keyboardType = KeyboardType.Password),
                 visualTransformation = PasswordVisualTransformation(),
                 isError = state.password.error != null,
-                supportingText = { state.password.error?.also { Text(it) } },
+                supportingText = state.password.error.textOrNull(),
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -236,7 +237,7 @@ private fun LoginFields(
                 ImageVector.vectorResource(R.drawable.password),
                 KeyboardOptions(keyboardType = KeyboardType.Password),
                 isError = state.confirmPassword.error != null,
-                supportingText = { state.confirmPassword.error?.also { Text(it) } },
+                supportingText = state.confirmPassword.error.textOrNull(),
                 visualTransformation = PasswordVisualTransformation(),
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),

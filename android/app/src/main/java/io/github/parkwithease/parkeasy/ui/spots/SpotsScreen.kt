@@ -46,6 +46,7 @@ import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
+import io.github.parkwithease.parkeasy.ui.common.textOrNull
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("detekt:LongMethod")
@@ -197,7 +198,7 @@ fun AddSpotScreen(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             isError = state.streetAddress.error != null,
-            supportingText = { state.streetAddress.error?.also { Text(it) } },
+            supportingText = state.streetAddress.error.textOrNull(),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
@@ -207,7 +208,7 @@ fun AddSpotScreen(
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 isError = state.city.error != null,
-                supportingText = { state.city.error?.also { Text(it) } },
+                supportingText = state.city.error.textOrNull(),
             )
             OutlinedTextField(
                 value = state.state.value,
@@ -216,7 +217,7 @@ fun AddSpotScreen(
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 isError = state.state.error != null,
-                supportingText = { state.state.error?.also { Text(it) } },
+                supportingText = state.state.error.textOrNull(),
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -227,7 +228,7 @@ fun AddSpotScreen(
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 isError = state.countryCode.error != null,
-                supportingText = { state.countryCode.error?.also { Text(it) } },
+                supportingText = state.countryCode.error.textOrNull(),
             )
             OutlinedTextField(
                 value = state.postalCode.value,
@@ -236,7 +237,7 @@ fun AddSpotScreen(
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 isError = state.postalCode.error != null,
-                supportingText = { state.postalCode.error?.also { Text(it) } },
+                supportingText = state.postalCode.error.textOrNull(),
             )
         }
         OutlinedTextField(
@@ -246,7 +247,7 @@ fun AddSpotScreen(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             isError = state.pricePerHour.error != null,
-            supportingText = { state.pricePerHour.error?.also { Text(it) } },
+            supportingText = state.pricePerHour.error.textOrNull(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
         Row(
