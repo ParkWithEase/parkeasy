@@ -61,9 +61,9 @@ fun LoginScreen(
     val loggedIn by viewModel.loggedIn.collectAsState(false)
     val latestOnNavigateFromLogin by rememberUpdatedState(onNavigateFromLogin)
 
-    val formEnabled by viewModel.formEnabled.collectAsState()
     val handler = rememberLoginFormHandler(viewModel)
     var mode by rememberSaveable { mutableStateOf(LoginMode.LOGIN) }
+    val enabled by viewModel.formEnabled.collectAsState()
 
     LaunchedEffect(loggedIn) {
         if (loggedIn) {
@@ -73,24 +73,20 @@ fun LoginScreen(
 
     BackHandler(enabled = true) { onExitApp() }
 
-    Scaffold(
+    LoginScreen(
+        state = viewModel.state,
+        handler = handler,
+        mode = mode,
+        onSwitchReset = {
+            mode = if (mode == LoginMode.LOGIN) LoginMode.FORGOT else LoginMode.LOGIN
+        },
+        onSwitchRegister = {
+            mode = if (mode == LoginMode.LOGIN) LoginMode.REGISTER else LoginMode.LOGIN
+        },
         snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
         modifier = modifier,
-    ) { innerPadding ->
-        LoginScreen(
-            state = viewModel.state,
-            handler = handler,
-            mode = mode,
-            onSwitchReset = {
-                mode = if (mode == LoginMode.LOGIN) LoginMode.FORGOT else LoginMode.LOGIN
-            },
-            onSwitchRegister = {
-                mode = if (mode == LoginMode.LOGIN) LoginMode.REGISTER else LoginMode.LOGIN
-            },
-            modifier = Modifier.padding(innerPadding),
-            enabled = formEnabled,
-        )
-    }
+        enabled = enabled,
+    )
 }
 
 @Composable
@@ -100,36 +96,39 @@ private fun LoginScreen(
     mode: LoginMode,
     onSwitchReset: () -> Unit,
     onSwitchRegister: () -> Unit,
+    snackbarHost: @Composable (() -> Unit),
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    Surface(modifier = modifier) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier =
-                Modifier.padding(horizontal = 16.dp)
-                    .fillMaxSize()
-                    .imePadding()
-                    .verticalScroll(rememberScrollState(), reverseScrolling = true),
-        ) {
-            Box(modifier = Modifier.widthIn(min = 80.dp, max = 240.dp)) {
-                Image(
-                    painter = painterResource(R.drawable.logo_stacked_outlined),
-                    contentDescription = null,
-                    modifier = Modifier.aspectRatio(1f),
+    Scaffold(snackbarHost = snackbarHost, modifier = modifier) { innerPadding ->
+        Surface(modifier = modifier.padding(innerPadding)) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier =
+                    Modifier.padding(horizontal = 16.dp)
+                        .fillMaxSize()
+                        .imePadding()
+                        .verticalScroll(rememberScrollState(), reverseScrolling = true),
+            ) {
+                Box(modifier = Modifier.widthIn(min = 80.dp, max = 240.dp)) {
+                    Image(
+                        painter = painterResource(R.drawable.logo_stacked_outlined),
+                        contentDescription = null,
+                        modifier = Modifier.aspectRatio(1f),
+                    )
+                }
+                LoginForm(
+                    state = state,
+                    handler = handler,
+                    mode = mode,
+                    onSwitchReset = onSwitchReset,
+                    onSwitchRegister = onSwitchRegister,
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
             }
-            LoginForm(
-                state = state,
-                handler = handler,
-                mode = mode,
-                onSwitchReset = onSwitchReset,
-                onSwitchRegister = onSwitchRegister,
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
         }
     }
 }
@@ -283,6 +282,7 @@ private fun PreviewLoginScreen() {
             mode = LoginMode.LOGIN,
             onSwitchReset = {},
             onSwitchRegister = {},
+            snackbarHost = {},
         )
     }
 }
