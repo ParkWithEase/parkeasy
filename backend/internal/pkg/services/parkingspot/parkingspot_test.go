@@ -41,8 +41,6 @@ var testEntry = parkingspot.Entry{
 	OwnerID:    testOwnerID,
 }
 
-var testSpotUUID = uuid.New()
-
 // Geocode implements geocoding.Geocoder.
 func (m *mockGeocodingRepo) Geocode(ctx context.Context, address *geocoding.Address) ([]geocoding.Result, error) {
 	args := m.Called(address)
@@ -167,7 +165,7 @@ var sampleEntry = parkingspot.Entry{
 		Location:     sampleLocation,
 		Features:     models.ParkingSpotFeatures{},
 		PricePerHour: samplePricePerHour,
-		ID:           testSpotUUID,
+		ID:           testSpotID,
 	},
 	InternalID: testInternalID,
 	OwnerID:    testUserID,
@@ -448,7 +446,7 @@ func TestGetByUUID(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.On("GetByUUID", mock.Anything, testSpotUUID, mock.Anything, mock.Anything).
+		repo.On("GetByUUID", mock.Anything, testSpotID, mock.Anything, mock.Anything).
 			Return(testEntry, nil).Once()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
@@ -461,7 +459,7 @@ func TestGetByUUID(t *testing.T) {
 			ID:           testEntry.ID,
 		}
 
-		spot, err := srv.GetByUUID(ctx, testOwnerID, testSpotUUID)
+		spot, err := srv.GetByUUID(ctx, testOwnerID, testSpotID)
 		require.NoError(t, err)
 		assert.Equal(t, output, spot)
 		repo.AssertExpectations(t)
@@ -477,6 +475,7 @@ func TestUpdateByUUID(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
+		repo.AddGetCalls()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -486,12 +485,99 @@ func TestUpdateByUUID(t *testing.T) {
 			PricePerHour: samplePricePerHour,
 		}
 
-		repo.On("UpdateByUUID", mock.Anything, testSpotUUID, input).
-		Return(testEntry, sampleAvailability, nil).Once()
+		repo.On("UpdateByUUID", mock.Anything, testSpotID, input).
+			Return(testEntry, sampleAvailability, nil).Once()
 
-		_, err := srv.UpdateByUUID(ctx, testSpotUUID, input)
+		_, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
 		require.NoError(t, err)
 		repo.AssertExpectations(t)
+	})
+
+	t.Run("parking spot not found check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.AddGetCalls()
+		geoRepo := new(mockGeocodingRepo)
+		preferenceRepo := new(mockPreferenceSpotRepo)
+		srv := New(repo, geoRepo, preferenceRepo)
+
+		input := &models.ParkingSpotUpdateInput{
+			Availability: sampleAvailability,
+			PricePerHour: samplePricePerHour,
+		}
+
+		repo.On("UpdateByUUID", mock.Anything, uuid.Nil, input).
+			Return(parkingspot.Entry{}, []models.TimeUnit{}, models.ErrParkingSpotNotFound).Once()
+
+		_, err := srv.UpdateByUUID(ctx, testUserID, uuid.Nil, input)
+
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
+		}
+	})
+
+	t.Run("valid availability check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.AddGetCalls()
+		geoRepo := new(mockGeocodingRepo)
+		preferenceRepo := new(mockPreferenceSpotRepo)
+		srv := New(repo, geoRepo, preferenceRepo)
+
+		input := &models.ParkingSpotUpdateInput{
+			Availability: sampleAvailability,
+			PricePerHour: samplePricePerHour,
+		}
+		input.Availability[0].StartTime = time.Date(2024, time.October, 26, 10, 15, 0, 0, time.UTC)
+
+		_, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
+
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidTimeUnit)
+		}
+	})
+
+	t.Run("empty availability check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.AddGetCalls()
+		geoRepo := new(mockGeocodingRepo)
+		preferenceRepo := new(mockPreferenceSpotRepo)
+		srv := New(repo, geoRepo, preferenceRepo)
+
+		input := &models.ParkingSpotUpdateInput{
+			PricePerHour: samplePricePerHour,
+		}
+
+		_, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
+
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrNoAvailability)
+		}
+	})
+
+	t.Run("valid price per hour check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.AddGetCalls()
+		geoRepo := new(mockGeocodingRepo)
+		preferenceRepo := new(mockPreferenceSpotRepo)
+		srv := New(repo, geoRepo, preferenceRepo)
+
+		input := &models.ParkingSpotUpdateInput{
+			Availability: sampleAvailability,
+			PricePerHour: -0.01,
+		}
+
+		_, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
+
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidPricePerHour)
+		}
 	})
 }
 
@@ -504,13 +590,13 @@ func TestGetAvailByUUID(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.On("GetAvailByUUID", mock.Anything, testSpotUUID, sampleAvailability[0].StartTime, sampleAvailability[1].EndTime).
+		repo.On("GetAvailByUUID", mock.Anything, testSpotID, sampleAvailability[0].StartTime, sampleAvailability[1].EndTime).
 			Return(sampleAvailability, nil).Once()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
 
-		_, err := srv.GetAvailByUUID(ctx, testSpotUUID, sampleAvailability[0].StartTime, sampleAvailability[1].EndTime)
+		_, err := srv.GetAvailByUUID(ctx, testSpotID, sampleAvailability[0].StartTime, sampleAvailability[1].EndTime)
 		require.NoError(t, err)
 		repo.AssertExpectations(t)
 	})
@@ -519,13 +605,13 @@ func TestGetAvailByUUID(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.On("GetAvailByUUID", mock.Anything, testSpotUUID, sampleAvailability[0].StartTime, sampleAvailability[0].StartTime.AddDate(0, 0, 7)).
+		repo.On("GetAvailByUUID", mock.Anything, testSpotID, sampleAvailability[0].StartTime, sampleAvailability[0].StartTime.AddDate(0, 0, 7)).
 			Return(sampleAvailability, nil).Once()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
 
-		_, err := srv.GetAvailByUUID(ctx, testSpotUUID, sampleAvailability[0].StartTime, time.Time{})
+		_, err := srv.GetAvailByUUID(ctx, testSpotID, sampleAvailability[0].StartTime, time.Time{})
 		require.NoError(t, err)
 		repo.AssertExpectations(t)
 	})
@@ -583,7 +669,7 @@ func TestGetManyForUser(t *testing.T) {
 				Location:     sampleGetManyEntryOutput[0].Location,
 				Features:     sampleEntry.Features,
 				PricePerHour: samplePricePerHour,
-				ID:           testSpotUUID,
+				ID:           testSpotID,
 			},
 		}
 
@@ -623,7 +709,7 @@ func TestGetMany(t *testing.T) {
 					Location:     sampleGetManyEntryOutput[0].Location,
 					Features:     sampleEntry.Features,
 					PricePerHour: samplePricePerHour,
-					ID:           testSpotUUID,
+					ID:           testSpotID,
 				},
 				DistanceToLocation: sampleGetManyEntryOutput[0].DistanceToLocation,
 			},

@@ -121,8 +121,20 @@ func (s *Service) Create(ctx context.Context, userID int64, input *models.Parkin
 	return result.InternalID, out, nil
 }
 
-func (s *Service) UpdateByUUID(ctx context.Context, spotID uuid.UUID, input *models.ParkingSpotUpdateInput) (models.ParkingSpotWithAvailability, error) {
-	err := validateSpotDetails(input.Availability, input.PricePerHour)
+func (s *Service) UpdateByUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotUpdateInput) (models.ParkingSpotWithAvailability, error) {
+	getResult, err := s.repo.GetByUUID(ctx, spotID)
+	if err != nil {
+		if errors.Is(err, parkingspot.ErrNotFound) {
+			err = models.ErrParkingSpotNotFound
+		}
+		return models.ParkingSpotWithAvailability{}, err
+	}
+	if getResult.OwnerID != userID {
+		// Yields not found to prevent leaking existence information
+		return models.ParkingSpotWithAvailability{}, models.ErrCarNotFound
+	}
+	
+	err = validateSpotDetails(input.Availability, input.PricePerHour)
 	if err != nil {
 		return models.ParkingSpotWithAvailability{}, err
 	}
