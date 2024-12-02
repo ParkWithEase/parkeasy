@@ -102,6 +102,7 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
             viewModel.onPlugInChange(false)
             viewModel.onShelterChange(false)
             viewModel.onPricePerHourChange("")
+            viewModel.onMinusTime(0..NumRows*NumColumns)
             editMode = EditMode.ADD
             openBottomSheet = true
         },
