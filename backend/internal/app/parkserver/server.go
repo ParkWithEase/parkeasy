@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/geocoding"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/preferencespot"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/resettoken"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/routes"
 	"github.com/sourcegraph/conc"
@@ -65,8 +66,10 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 
 	geocodioRepository := geocoding.NewGeocodio(http.DefaultClient, c.GeocodioAPIKey)
 
+	preferenceSpotRepository := preferencespot.NewPostgres(db)
+
 	parkingSpotRepository := parkingSpotRepo.NewPostgres(db)
-	parkingSpotService := parkingspot.New(parkingSpotRepository, geocodioRepository)
+	parkingSpotService := parkingspot.New(parkingSpotRepository, geocodioRepository, preferenceSpotRepository)
 	parkingSpotRoute := routes.NewParkingSpotRoute(parkingSpotService, sessionManager)
 
 	carRepository := carRepo.NewPostgres(db)
