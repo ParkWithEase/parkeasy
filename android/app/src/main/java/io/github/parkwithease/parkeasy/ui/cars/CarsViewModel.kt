@@ -1,8 +1,10 @@
 package io.github.parkwithease.parkeasy.ui.cars
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -139,6 +141,18 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
             }
     }
 
+    fun resetForm() {
+        formState =
+            formState.run {
+                copy(
+                    color = FieldState(""),
+                    licensePlate = FieldState(""),
+                    make = FieldState(""),
+                    model = FieldState(""),
+                )
+            }
+    }
+
     private fun Result<Unit>.recoverRequestErrors(operationFailMsg: String): Result<Unit> =
         recover {
             when (it) {
@@ -203,11 +217,32 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
                 )
             }
     }
+
+    fun createHandler() =
+        AddCarFormHandler(
+            onColorChange = this::onColorChange,
+            onLicensePlateChange = this::onLicensePlateChange,
+            onMakeChange = this::onMakeChange,
+            onModelChange = this::onModelChange,
+            resetForm = this::resetForm,
+        )
 }
+
+@Composable
+fun rememberAddCarFormHandler(viewModel: CarsViewModel) =
+    remember(viewModel) { viewModel.createHandler() }
 
 data class AddCarFormState(
     val color: FieldState<String> = FieldState(""),
     val licensePlate: FieldState<String> = FieldState(""),
     val make: FieldState<String> = FieldState(""),
     val model: FieldState<String> = FieldState(""),
+)
+
+data class AddCarFormHandler(
+    val onColorChange: (String) -> Unit = {},
+    val onLicensePlateChange: (String) -> Unit = {},
+    val onMakeChange: (String) -> Unit = {},
+    val onModelChange: (String) -> Unit = {},
+    val resetForm: () -> Unit = {},
 )

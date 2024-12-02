@@ -101,7 +101,7 @@ private fun LoginScreen(
     enabled: Boolean = true,
 ) {
     Scaffold(snackbarHost = snackbarHost, modifier = modifier) { innerPadding ->
-        Surface(modifier = modifier.padding(innerPadding)) {
+        Surface(modifier = Modifier.padding(innerPadding)) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,

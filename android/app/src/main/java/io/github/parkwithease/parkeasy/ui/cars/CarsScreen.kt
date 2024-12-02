@@ -48,6 +48,7 @@ import io.github.parkwithease.parkeasy.ui.theme.Typography
 @Composable
 @Suppress("detekt:LongMethod")
 fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltViewModel()) {
+    val handler = rememberAddCarFormHandler(viewModel)
     val cars by viewModel.cars.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     var editMode by rememberSaveable { mutableStateOf(EditMode.ADD) }
@@ -62,8 +63,9 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
         cars,
         { car ->
             viewModel.currentlyEditingId = car.id
-            viewModel.onLicensePlateChange(car.details.licensePlate)
+            handler.resetForm()
             viewModel.onColorChange(car.details.color)
+            viewModel.onLicensePlateChange(car.details.licensePlate)
             viewModel.onMakeChange(car.details.make)
             viewModel.onModelChange(car.details.model)
             editMode = EditMode.EDIT
@@ -71,10 +73,7 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
         },
         {
             viewModel.currentlyEditingId = ""
-            viewModel.onLicensePlateChange("")
-            viewModel.onColorChange("")
-            viewModel.onMakeChange("")
-            viewModel.onModelChange("")
+            handler.resetForm()
             editMode = EditMode.ADD
             openBottomSheet = true
         },
@@ -100,10 +99,7 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
                 AddCarScreen(
                     editMode,
                     viewModel.formState,
-                    viewModel::onLicensePlateChange,
-                    viewModel::onColorChange,
-                    viewModel::onMakeChange,
-                    viewModel::onModelChange,
+                    handler,
                     viewModel::onAddCarClick,
                     viewModel::onEditCarClick,
                 )
@@ -172,10 +168,7 @@ fun AddCarButton(onShowAddCarClick: () -> Unit, modifier: Modifier = Modifier) {
 fun AddCarScreen(
     editMode: EditMode,
     state: AddCarFormState,
-    onLicensePlateChange: (String) -> Unit,
-    onColorChange: (String) -> Unit,
-    onMakeChange: (String) -> Unit,
-    onModelChange: (String) -> Unit,
+    handler: AddCarFormHandler,
     onAddCarClick: () -> Unit,
     onEditCarClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -187,25 +180,25 @@ fun AddCarScreen(
     ) {
         ParkEasyTextField(
             state = state.licensePlate,
-            onValueChange = onLicensePlateChange,
+            onValueChange = handler.onLicensePlateChange,
             modifier = Modifier.fillMaxWidth(),
             labelId = R.string.license_plate,
         )
         ParkEasyTextField(
             state = state.color,
-            onValueChange = onColorChange,
+            onValueChange = handler.onColorChange,
             modifier = Modifier.fillMaxWidth(),
             labelId = R.string.color,
         )
         ParkEasyTextField(
             state = state.make,
-            onValueChange = onMakeChange,
+            onValueChange = handler.onMakeChange,
             modifier = Modifier.fillMaxWidth(),
             labelId = R.string.make,
         )
         ParkEasyTextField(
             state = state.model,
-            onValueChange = onModelChange,
+            onValueChange = handler.onModelChange,
             modifier = Modifier.fillMaxWidth(),
             labelId = R.string.model,
         )
