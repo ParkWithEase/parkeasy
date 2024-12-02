@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.spots
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -64,9 +65,14 @@ import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.ui.common.isoDay
 import io.github.parkwithease.parkeasy.ui.common.startOfWeek
+import io.github.parkwithease.parkeasy.ui.common.timezone
 import io.github.parkwithease.parkeasy.ui.common.toShortDate
+import kotlin.time.DurationUnit
+import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toInstant
 
+private const val MinutesPerSlot = 30
 private const val NumColumns = 7
 private const val NumRows = 48
 
@@ -325,6 +331,7 @@ private fun ColumnHeader(
     }
 }
 
+@Suppress("detekt:LongMethod")
 @Composable
 private fun TimeGrid(
     getSelectedIds: () -> Set<Int>,
@@ -334,6 +341,12 @@ private fun TimeGrid(
     state: LazyGridState = rememberLazyGridState(),
     slots: List<Int> = List(NumColumns * NumRows) { it % NumColumns * NumRows + it / NumColumns },
 ) {
+    val disabledIds: List<Int> =
+        (0..Clock.System.now()
+                    .minus(startOfWeek().toInstant(timezone()))
+                    .toInt(DurationUnit.MINUTES) / MinutesPerSlot)
+            .asSequence()
+            .toList()
     val selectedIds: Set<Int> = getSelectedIds()
 
     LazyVerticalGrid(
@@ -343,6 +356,7 @@ private fun TimeGrid(
         modifier =
             modifier.timeGridDragHandler(
                 lazyGridState = state,
+                disabledIds = disabledIds,
                 getSelectedIds = getSelectedIds,
                 plus = plus,
                 minus = minus,
@@ -356,13 +370,18 @@ private fun TimeGrid(
             )
         }
         items(slots, key = { it }) { id ->
+            val disabled = disabledIds.contains(id)
             val selected = selectedIds.contains(id)
 
             Surface(
                 tonalElevation = 3.dp,
                 color =
-                    if (selected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.primaryContainer,
+                    if (disabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.primaryContainer
+                    },
                 modifier =
                     Modifier.height(12.dp)
                         .padding(top = if (id % 48 > 0 && id % 48 % 2 == 0) 3.dp else 0.dp)
@@ -371,10 +390,13 @@ private fun TimeGrid(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null, // do not show a ripple
                             onValueChange = {
-                                if (it) {
-                                    plus(id..id)
-                                } else {
-                                    minus(id..id)
+                                Log.e("", selectedIds.toString())
+                                if (!disabled) {
+                                    if (it) {
+                                        plus(id..id)
+                                    } else {
+                                        minus(id..id)
+                                    }
                                 }
                             },
                         ),
@@ -386,6 +408,7 @@ private fun TimeGrid(
 @Suppress("detekt:UnsafeCallOnNullableType") // code provided by a Google engineer -> probably fine
 private fun Modifier.timeGridDragHandler(
     lazyGridState: LazyGridState,
+    disabledIds: List<Int>,
     getSelectedIds: () -> Set<Int>,
     plus: (elements: Iterable<Int>) -> Unit,
     minus: (elements: Iterable<Int>) -> Unit,
@@ -403,15 +426,17 @@ private fun Modifier.timeGridDragHandler(
         detectDragGestures(
             onDragStart = { offset ->
                 lazyGridState.gridItemKeyAtPosition(offset)?.let { key ->
-                    initialKey = key
-                    currentKey = key
                     val selectedIds = getSelectedIds()
-                    if (!selectedIds.contains(key)) {
-                        plus(key..key)
-                        adding = true
-                    } else {
-                        minus(key..key)
-                        adding = false
+                    if (!disabledIds.contains(key)) {
+                        initialKey = key
+                        currentKey = key
+                        if (!selectedIds.contains(key)) {
+                            plus(key..key)
+                            adding = true
+                        } else {
+                            minus(key..key)
+                            adding = false
+                        }
                     }
                 }
             },
@@ -432,6 +457,7 @@ private fun Modifier.timeGridDragHandler(
                                 minus(initialKey!!..key)
                                 minus(key..initialKey!!)
                             }
+                            minus(disabledIds.min()..disabledIds.max())
                             currentKey = key
                         }
                     }
