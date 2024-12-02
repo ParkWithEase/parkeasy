@@ -56,7 +56,7 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
     var editMode by rememberSaveable { mutableStateOf(EditMode.ADD) }
 
     var openBottomSheet by rememberSaveable { mutableStateOf(false) }
-    val skipPartiallyExpanded by rememberSaveable { mutableStateOf(false) }
+    val skipPartiallyExpanded by rememberSaveable { mutableStateOf(true) }
     val bottomSheetState =
         rememberModalBottomSheetState(skipPartiallyExpanded = skipPartiallyExpanded)
 
@@ -67,7 +67,7 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
             viewModel.onStreetAddressChange("")
             viewModel.onCityChange("")
             viewModel.onStateChange("")
-            viewModel.onCountryCodeChange("")
+            viewModel.onCountryCodeChange("CA")
             viewModel.onPostalCodeChange("")
             viewModel.onChargingStationChange(false)
             viewModel.onPlugInChange(false)
@@ -188,7 +188,7 @@ fun AddSpotScreen(
     Column(
         verticalArrangement = Arrangement.spacedBy(2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.widthIn(max = 320.dp),
+        modifier = modifier.widthIn(max = 360.dp),
     ) {
         OutlinedTextField(
             value = state.streetAddress.value,
@@ -199,42 +199,46 @@ fun AddSpotScreen(
             isError = state.streetAddress.error != null,
             supportingText = { state.streetAddress.error?.also { Text(it) } },
         )
-        OutlinedTextField(
-            value = state.city.value,
-            onValueChange = onCityChange,
-            label = { Text(stringResource(R.string.city)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = state.city.error != null,
-            supportingText = { state.city.error?.also { Text(it) } },
-        )
-        OutlinedTextField(
-            value = state.state.value,
-            onValueChange = onStateChange,
-            label = { Text(stringResource(R.string.state)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = state.state.error != null,
-            supportingText = { state.state.error?.also { Text(it) } },
-        )
-        OutlinedTextField(
-            value = state.countryCode.value,
-            onValueChange = onCountryCodeChange,
-            label = { Text(stringResource(R.string.country)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = state.countryCode.error != null,
-            supportingText = { state.countryCode.error?.also { Text(it) } },
-        )
-        OutlinedTextField(
-            value = state.postalCode.value,
-            onValueChange = onPostalCodeChange,
-            label = { Text(stringResource(R.string.postal_code)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = state.postalCode.error != null,
-            supportingText = { state.postalCode.error?.also { Text(it) } },
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = state.city.value,
+                onValueChange = onCityChange,
+                label = { Text(stringResource(R.string.city)) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                isError = state.city.error != null,
+                supportingText = { state.city.error?.also { Text(it) } },
+            )
+            OutlinedTextField(
+                value = state.state.value,
+                onValueChange = onStateChange,
+                label = { Text(stringResource(R.string.state)) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                isError = state.state.error != null,
+                supportingText = { state.state.error?.also { Text(it) } },
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = state.countryCode.value,
+                onValueChange = onCountryCodeChange,
+                label = { Text(stringResource(R.string.country)) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                isError = state.countryCode.error != null,
+                supportingText = { state.countryCode.error?.also { Text(it) } },
+            )
+            OutlinedTextField(
+                value = state.postalCode.value,
+                onValueChange = onPostalCodeChange,
+                label = { Text(stringResource(R.string.postal_code)) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                isError = state.postalCode.error != null,
+                supportingText = { state.postalCode.error?.also { Text(it) } },
+            )
+        }
         OutlinedTextField(
             value = state.pricePerHour.value,
             onValueChange = onPricePerHourChange,

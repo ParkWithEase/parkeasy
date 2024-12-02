@@ -189,7 +189,7 @@ data class AddSpotFormState(
     val streetAddress: FieldState<String> = FieldState(""),
     val city: FieldState<String> = FieldState(""),
     val state: FieldState<String> = FieldState(""),
-    val countryCode: FieldState<String> = FieldState(""),
+    val countryCode: FieldState<String> = FieldState("CA"),
     val postalCode: FieldState<String> = FieldState(""),
     val chargingStation: FieldState<Boolean> = FieldState(false),
     val plugIn: FieldState<Boolean> = FieldState(false),
