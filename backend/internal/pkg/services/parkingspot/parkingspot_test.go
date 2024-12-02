@@ -33,14 +33,6 @@ const (
 	testOwnerID = int64(0)
 )
 
-var testEntry = parkingspot.Entry{
-	ParkingSpot: models.ParkingSpot{
-		Location: sampleLocation,
-	},
-	InternalID: 0,
-	OwnerID:    testOwnerID,
-}
-
 // Geocode implements geocoding.Geocoder.
 func (m *mockGeocodingRepo) Geocode(ctx context.Context, address *geocoding.Address) ([]geocoding.Result, error) {
 	args := m.Called(address)
@@ -447,16 +439,16 @@ func TestGetByUUID(t *testing.T) {
 
 		repo := new(mockRepo)
 		repo.On("GetByUUID", mock.Anything, testSpotID, mock.Anything, mock.Anything).
-			Return(testEntry, nil).Once()
+			Return(sampleEntry, nil).Once()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
 
 		output := models.ParkingSpot{
-			Location:     testEntry.Location,
-			Features:     testEntry.Features,
-			PricePerHour: testEntry.PricePerHour,
-			ID:           testEntry.ID,
+			Location:     sampleEntry.Location,
+			Features:     sampleEntry.Features,
+			PricePerHour: sampleEntry.PricePerHour,
+			ID:           sampleEntry.ID,
 		}
 
 		spot, err := srv.GetByUUID(ctx, testOwnerID, testSpotID)
@@ -486,10 +478,16 @@ func TestUpdateByUUID(t *testing.T) {
 		}
 
 		repo.On("UpdateByUUID", mock.Anything, testSpotID, input).
-			Return(testEntry, sampleAvailability, nil).Once()
+			Return(sampleEntry, sampleAvailability, nil).Once()
 
-		_, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
+		output := models.ParkingSpotWithAvailability{
+			Availability: sampleAvailability,
+			ParkingSpot:  sampleEntry.ParkingSpot,
+		}
+
+		spotWithAvail, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
 		require.NoError(t, err)
+		assert.Equal(t, output, spotWithAvail)
 		repo.AssertExpectations(t)
 	})
 
@@ -526,11 +524,16 @@ func TestUpdateByUUID(t *testing.T) {
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
 
+		invalidAvailability := make([]models.TimeUnit, len(sampleAvailability))
+		for i, unit := range sampleAvailability {
+			invalidAvailability[i] = unit
+		}
+		invalidAvailability[0].StartTime = time.Date(2024, time.October, 26, 10, 15, 0, 0, time.UTC)
+
 		input := &models.ParkingSpotUpdateInput{
-			Availability: sampleAvailability,
+			Availability: invalidAvailability,
 			PricePerHour: samplePricePerHour,
 		}
-		input.Availability[0].StartTime = time.Date(2024, time.October, 26, 10, 15, 0, 0, time.UTC)
 
 		_, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
 
