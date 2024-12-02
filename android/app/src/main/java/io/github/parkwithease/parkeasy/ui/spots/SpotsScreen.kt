@@ -62,6 +62,9 @@ import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
+import io.github.parkwithease.parkeasy.ui.common.isoDay
+import io.github.parkwithease.parkeasy.ui.common.startOfWeek
+import io.github.parkwithease.parkeasy.ui.common.toShortDate
 import kotlinx.datetime.LocalTime
 
 private const val NumColumns = 7
@@ -214,7 +217,7 @@ fun AddSpotScreen(
     Column(
         verticalArrangement = Arrangement.spacedBy(2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.widthIn(max = 320.dp),
+        modifier = modifier.widthIn(max = 360.dp),
     ) {
         OutlinedTextField(
             value = state.streetAddress.value,
@@ -313,8 +316,9 @@ private fun ColumnHeader(
         items(NumRows + 1) { num ->
             if (num % 2 == 0) {
                 Text(
-                    if (num == 0) "" else LocalTime((num / 2 - 1), 0).toString(),
+                    text = if (num == 0) "" else LocalTime((num / 2 - 1), 0).toString(),
                     Modifier.height(24.dp),
+                    style = MaterialTheme.typography.labelLarge,
                 )
             }
         }
@@ -344,7 +348,13 @@ private fun TimeGrid(
                 minus = minus,
             ),
     ) {
-        items(NumColumns) { Text("Test", Modifier.height(24.dp)) }
+        items(NumColumns) {
+            Text(
+                text = startOfWeek().isoDay(it + 1).toShortDate(),
+                Modifier.height(24.dp),
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
         items(slots, key = { it }) { id ->
             val selected = selectedIds.contains(id)
 

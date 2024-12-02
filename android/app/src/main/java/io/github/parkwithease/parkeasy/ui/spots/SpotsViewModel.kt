@@ -13,16 +13,13 @@ import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.model.SpotFeatures
 import io.github.parkwithease.parkeasy.model.SpotLocation
 import io.github.parkwithease.parkeasy.model.TimeSlot
+import io.github.parkwithease.parkeasy.ui.common.startOfWeek
+import io.github.parkwithease.parkeasy.ui.common.timezone
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.isoDayNumber
-import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
@@ -58,19 +55,8 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
 
     @Suppress("detekt:LongMethod")
     fun onAddSpotClick() {
-        val tz = TimeZone.currentSystemDefault()
-        val startOfWeek =
-            Clock.System.now()
-                .toLocalDateTime(tz)
-                .date
-                .apply {
-                    minus(
-                        dayOfWeek.isoDayNumber - 1, // Monday is 1, Sunday is 7
-                        DateTimeUnit.DAY,
-                    )
-                }
-                .atStartOfDayIn(tz)
-                .toLocalDateTime(tz)
+        val timezone = timezone()
+        val startOfWeek = startOfWeek()
         viewModelScope.launch {
             spotRepo
                 .createSpot(
@@ -82,18 +68,22 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                                     TimeSlot(
                                         startTime =
                                             startOfWeek
-                                                .toInstant(tz)
-                                                .plus(MinutesPerSlot * it, DateTimeUnit.MINUTE, tz)
-                                                .toLocalDateTime(tz),
+                                                .toInstant(timezone)
+                                                .plus(
+                                                    MinutesPerSlot * it,
+                                                    DateTimeUnit.MINUTE,
+                                                    timezone,
+                                                )
+                                                .toLocalDateTime(timezone),
                                         endTime =
                                             startOfWeek
-                                                .toInstant(tz)
+                                                .toInstant(timezone)
                                                 .plus(
                                                     MinutesPerSlot * (it + 1),
                                                     DateTimeUnit.MINUTE,
-                                                    tz,
+                                                    timezone,
                                                 )
-                                                .toLocalDateTime(tz),
+                                                .toLocalDateTime(timezone),
                                     )
                                 },
                         features =
