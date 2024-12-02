@@ -24,9 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
@@ -47,14 +45,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.LoginMode
-import io.github.parkwithease.parkeasy.ui.common.textOrNull
+import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 
 @Composable
 fun LoginScreen(
@@ -192,55 +189,47 @@ private fun LoginFields(
 ) {
     Column(modifier = modifier) {
         AnimatedVisibility(mode == LoginMode.REGISTER) {
-            LoginField(
-                state.name.value,
-                onNameChange,
-                stringResource(R.string.name),
-                Icons.Filled.Person,
-                KeyboardOptions(keyboardType = KeyboardType.Text),
-                isError = state.name.error != null,
-                supportingText = state.name.error.textOrNull(),
-                enabled = enabled,
+            ParkEasyTextField(
+                state = state.name,
+                onValueChange = onNameChange,
                 modifier = Modifier.fillMaxWidth(),
+                leadingIconImage = Icons.Filled.Person,
+                enabled = enabled,
+                labelId = R.string.name,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
             )
         }
-        LoginField(
-            state.email.value,
-            onEmailChange,
-            stringResource(R.string.email),
-            ImageVector.vectorResource(R.drawable.email),
-            KeyboardOptions(keyboardType = KeyboardType.Email),
-            isError = state.email.error != null,
-            supportingText = state.email.error.textOrNull(),
-            enabled = enabled,
+        ParkEasyTextField(
+            state = state.email,
+            onValueChange = onEmailChange,
             modifier = Modifier.fillMaxWidth(),
+            enabled = enabled,
+            labelId = R.string.email,
+            leadingIconImage = ImageVector.vectorResource(R.drawable.email),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         )
         AnimatedVisibility(mode != LoginMode.FORGOT) {
-            LoginField(
-                state.password.value,
-                onPasswordChange,
-                stringResource(R.string.password),
-                ImageVector.vectorResource(R.drawable.password),
-                KeyboardOptions(keyboardType = KeyboardType.Password),
-                visualTransformation = PasswordVisualTransformation(),
-                isError = state.password.error != null,
-                supportingText = state.password.error.textOrNull(),
-                enabled = enabled,
+            ParkEasyTextField(
+                state = state.password,
+                onValueChange = onPasswordChange,
                 modifier = Modifier.fillMaxWidth(),
+                enabled = enabled,
+                labelId = R.string.password,
+                leadingIconImage = ImageVector.vectorResource(R.drawable.password),
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             )
         }
         AnimatedVisibility(mode == LoginMode.REGISTER) {
-            LoginField(
-                state.confirmPassword.value,
-                onConfirmPasswordChange,
-                stringResource(R.string.confirm_password),
-                ImageVector.vectorResource(R.drawable.password),
-                KeyboardOptions(keyboardType = KeyboardType.Password),
-                isError = state.confirmPassword.error != null,
-                supportingText = state.confirmPassword.error.textOrNull(),
-                visualTransformation = PasswordVisualTransformation(),
+            ParkEasyTextField(
+                state = state.confirmPassword,
+                onValueChange = onConfirmPasswordChange,
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
+                labelId = R.string.confirm_password,
+                leadingIconImage = ImageVector.vectorResource(R.drawable.password),
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             )
         }
     }
@@ -303,34 +292,6 @@ private fun LoginButtons(
             )
         }
     }
-}
-
-@Composable
-private fun LoginField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    imageVector: ImageVector,
-    keyboardOptions: KeyboardOptions,
-    modifier: Modifier = Modifier,
-    isError: Boolean = false,
-    supportingText: @Composable (() -> Unit)? = null,
-    visualTransformation: VisualTransformation = VisualTransformation.None,
-    enabled: Boolean = true,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = { onValueChange(it) },
-        label = { Text(label) },
-        leadingIcon = { Icon(imageVector = imageVector, contentDescription = null) },
-        isError = isError,
-        visualTransformation = visualTransformation,
-        keyboardOptions = keyboardOptions,
-        enabled = enabled,
-        singleLine = true,
-        modifier = modifier,
-        supportingText = supportingText,
-    )
 }
 
 @Composable

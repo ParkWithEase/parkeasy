@@ -19,7 +19,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
@@ -41,8 +40,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.Car
 import io.github.parkwithease.parkeasy.model.EditMode
+import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
-import io.github.parkwithease.parkeasy.ui.common.textOrNull
 import io.github.parkwithease.parkeasy.ui.theme.Typography
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -186,41 +185,29 @@ fun AddCarScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.widthIn(max = 320.dp),
     ) {
-        OutlinedTextField(
-            value = state.licensePlate.value,
+        ParkEasyTextField(
+            state = state.licensePlate,
             onValueChange = onLicensePlateChange,
-            label = { Text(stringResource(R.string.license_plate)) },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = state.licensePlate.error != null,
-            supportingText = state.licensePlate.error.textOrNull(),
+            labelId = R.string.license_plate,
         )
-        OutlinedTextField(
-            value = state.color.value,
+        ParkEasyTextField(
+            state = state.color,
             onValueChange = onColorChange,
-            label = { Text(stringResource(R.string.color)) },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = state.color.error != null,
-            supportingText = state.color.error.textOrNull(),
+            labelId = R.string.color,
         )
-        OutlinedTextField(
-            value = state.make.value,
+        ParkEasyTextField(
+            state = state.make,
             onValueChange = onMakeChange,
-            label = { Text(stringResource(R.string.make)) },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = state.make.error != null,
-            supportingText = state.make.error.textOrNull(),
+            labelId = R.string.make,
         )
-        OutlinedTextField(
-            value = state.model.value,
+        ParkEasyTextField(
+            state = state.model,
             onValueChange = onModelChange,
-            label = { Text(stringResource(R.string.model)) },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = state.model.error != null,
-            supportingText = state.model.error.textOrNull(),
+            labelId = R.string.model,
         )
         Button(
             onClick = if (editMode == EditMode.ADD) onAddCarClick else onEditCarClick,

@@ -21,7 +21,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -45,8 +44,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.Spot
+import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
-import io.github.parkwithease.parkeasy.ui.common.textOrNull
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("detekt:LongMethod")
@@ -191,63 +190,45 @@ fun AddSpotScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.widthIn(max = 360.dp),
     ) {
-        OutlinedTextField(
-            value = state.streetAddress.value,
+        ParkEasyTextField(
+            state = state.streetAddress,
             onValueChange = onStreetAddressChange,
-            label = { Text(stringResource(R.string.street_address)) },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = state.streetAddress.error != null,
-            supportingText = state.streetAddress.error.textOrNull(),
+            labelId = R.string.street_address,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = state.city.value,
+            ParkEasyTextField(
+                state = state.city,
                 onValueChange = onCityChange,
-                label = { Text(stringResource(R.string.city)) },
                 modifier = Modifier.weight(1f),
-                singleLine = true,
-                isError = state.city.error != null,
-                supportingText = state.city.error.textOrNull(),
+                labelId = R.string.city,
             )
-            OutlinedTextField(
-                value = state.state.value,
+            ParkEasyTextField(
+                state = state.state,
                 onValueChange = onStateChange,
-                label = { Text(stringResource(R.string.state)) },
                 modifier = Modifier.weight(1f),
-                singleLine = true,
-                isError = state.state.error != null,
-                supportingText = state.state.error.textOrNull(),
+                labelId = R.string.state,
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = state.countryCode.value,
+            ParkEasyTextField(
+                state = state.countryCode,
                 onValueChange = onCountryCodeChange,
-                label = { Text(stringResource(R.string.country)) },
                 modifier = Modifier.weight(1f),
-                singleLine = true,
-                isError = state.countryCode.error != null,
-                supportingText = state.countryCode.error.textOrNull(),
+                labelId = R.string.country,
             )
-            OutlinedTextField(
-                value = state.postalCode.value,
+            ParkEasyTextField(
+                state = state.postalCode,
                 onValueChange = onPostalCodeChange,
-                label = { Text(stringResource(R.string.postal_code)) },
                 modifier = Modifier.weight(1f),
-                singleLine = true,
-                isError = state.postalCode.error != null,
-                supportingText = state.postalCode.error.textOrNull(),
+                labelId = R.string.postal_code,
             )
         }
-        OutlinedTextField(
-            value = state.pricePerHour.value,
+        ParkEasyTextField(
+            state = state.pricePerHour,
             onValueChange = onPricePerHourChange,
-            label = { Text(stringResource(R.string.price_per_hour)) },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = state.pricePerHour.error != null,
-            supportingText = state.pricePerHour.error.textOrNull(),
+            labelId = R.string.price_per_hour,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
         Row(
