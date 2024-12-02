@@ -36,6 +36,12 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
+    val profileRoutes =
+        listOf(
+            ProfileButtonRoute(R.string.cars, onNavigateToCars),
+            ProfileButtonRoute(R.string.spots, onNavigateToSpots),
+        )
+
     val loggedIn by viewModel.loggedIn.collectAsState(true)
     val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
 
@@ -50,9 +56,8 @@ fun ProfileScreen(
             snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
         ) { innerPadding ->
             ProfileScreen(
-                profile ?: Profile("", ""),
-                onNavigateToCars,
-                onNavigateToSpots,
+                profile,
+                profileRoutes,
                 viewModel::onLogoutClick,
                 Modifier.padding(innerPadding),
             )
@@ -63,8 +68,7 @@ fun ProfileScreen(
 @Composable
 fun ProfileScreen(
     profile: Profile,
-    onNavigateToCars: () -> Unit,
-    onNavigateToSpots: () -> Unit,
+    profileRoutes: List<ProfileButtonRoute>,
     onLogoutClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -75,8 +79,7 @@ fun ProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             ProfileDetails(profile)
-            ProfileButton(R.string.cars, onNavigateToCars)
-            ProfileButton(R.string.spots, onNavigateToSpots)
+            profileRoutes.forEach { ProfileButton(it.name, it.onNavigateTo) }
             LogoutButton(onLogoutClick)
         }
     }
@@ -128,3 +131,5 @@ fun LogoutButton(onLogoutClick: () -> Unit, modifier: Modifier = Modifier) {
         content = { Text(stringResource(R.string.logout)) },
     )
 }
+
+data class ProfileButtonRoute(@StringRes val name: Int, val onNavigateTo: () -> Unit)

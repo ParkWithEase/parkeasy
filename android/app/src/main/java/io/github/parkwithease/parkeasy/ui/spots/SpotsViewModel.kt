@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.spots
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -20,6 +21,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 @Suppress("detekt:TooManyFunctions")
 class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) : ViewModel() {
+    val snackbarState = SnackbarHostState()
+
     private val _spots = MutableStateFlow(emptyList<Spot>())
     val spots = _spots.asStateFlow()
 
@@ -32,7 +35,12 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
     fun onRefresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            _spots.value = spotRepo.getSpots()
+            spotRepo
+                .getSpots()
+                .onSuccess { _spots.value = it }
+                .onFailure {
+                    viewModelScope.launch { snackbarState.showSnackbar("Error retrieving spots") }
+                }
             _isRefreshing.value = false
         }
     }
@@ -67,7 +75,10 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                     )
                 )
                 .also { clearFieldErrors() }
-                ?.onSuccess { onRefresh() }
+                .onSuccess { onRefresh() }
+                .onFailure {
+                    viewModelScope.launch { snackbarState.showSnackbar("Error creating spot") }
+                }
         }
     }
 

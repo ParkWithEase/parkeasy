@@ -31,7 +31,9 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     val profile =
         refreshTrigger
             .onStart { emit(Unit) }
-            .map { userRepo.getUser() } // <- this flow gets user data on subscribe
+            .map {
+                userRepo.getUser().getOrDefault(Profile())
+            } // <- this flow gets user data on subscribe
             .stateIn(viewModelScope, SharingStarted.Lazily, Profile("", ""))
 
     fun onLogoutClick() {
