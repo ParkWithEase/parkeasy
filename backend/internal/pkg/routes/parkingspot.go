@@ -19,14 +19,16 @@ type ParkingSpotServicer interface {
 	//
 	// Returns the spot internal ID and the model.
 	Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (int64, models.ParkingSpotWithAvailability, error)
-	// Get the parking spot with `spotID` if `userID` has enough permission to view the resource.
+	// Get the parking spot with `spotID`.
 	GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error)
-	// Get many parking spots
+	// Get many parking spots.
 	GetMany(ctx context.Context, userID int64, count int, filter models.ParkingSpotFilter) (spots []models.ParkingSpotWithDistance, err error)
-	// Get a particular user's(seller's) parking spots
+	// Get a particular user's(seller's) parking spots.
 	GetManyForUser(ctx context.Context, userID int64, count int) (spots []models.ParkingSpot, err error)
-	// Get the availability from start time to end time for a parking spot
+	// Get the availability from start time to end time for a parking spot.
 	GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error)
+	// Update the parking spot with `spotID` if `userID` owns the resource.
+	UpdateByUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotUpdateInput) (models.ParkingSpotWithAvailability, error)
 	// Delete the parking spot with `spotID` if `userID` owns the resource.
 	// DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
 
@@ -226,45 +228,38 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
-			var detail error
-			switch {
-			case errors.Is(err, models.ErrParkingSpotDuplicate), errors.Is(err, models.ErrParkingSpotOwned), errors.Is(err, models.ErrInvalidAddress):
-				detail = &huma.ErrorDetail{
-					Location: "body.location",
-					Value:    input.Body.Location,
-				}
-			case errors.Is(err, models.ErrInvalidStreetAddress):
-				detail = &huma.ErrorDetail{
-					Location: "body.location.street_address",
-					Value:    input.Body.Location.StreetAddress,
-				}
-			case errors.Is(err, models.ErrCountryNotSupported):
-				detail = &huma.ErrorDetail{
-					Location: "body.location.country",
-					Value:    input.Body.Location.CountryCode,
-				}
-			case errors.Is(err, models.ErrProvinceNotSupported):
-				detail = &huma.ErrorDetail{
-					Location: "body.location.state",
-					Value:    input.Body.Location.State,
-				}
-			case errors.Is(err, models.ErrInvalidPostalCode):
-				detail = &huma.ErrorDetail{
-					Location: "body.location.postal_code",
-					Value:    input.Body.Location.PostalCode,
-				}
-			case errors.Is(err, models.ErrNoAvailability), errors.Is(err, models.ErrInvalidTimeUnit):
-				detail = &huma.ErrorDetail{
-					Location: "body.availability",
-					Value:    input.Body.Availability,
-				}
-			case errors.Is(err, models.ErrInvalidPricePerHour):
-				detail = &huma.ErrorDetail{
-					Location: "body.price_per_hour",
-					Value:    input.Body.PricePerHour,
-				}
-			}
+			detail := describeParkingSpotInputError(err, input.Body.Location, input.Body.Availability, input.Body.PricePerHour)
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
+		}
+		return &parkingSpotCreationOutput{Body: result}, nil
+	})
+
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID:   "update-parking-spot",
+		Method:        http.MethodPut,
+		Path:          "/spots/{id}",
+		Summary:       "Updates the specified parking spot",
+		Tags:          []string{ParkingSpotTag.Name},
+		Errors:        []int{http.StatusUnprocessableEntity, http.StatusNotFound},
+	}), func(ctx context.Context, input *struct {
+		ID   uuid.UUID `path:"id"`
+		Body models.ParkingSpotUpdateInput
+	},
+	) (*parkingSpotCreationOutput, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		result, err := r.service.UpdateByUUID(ctx, userID, input.ID, &input.Body)
+		if err != nil {
+			detail := describeParkingSpotInputError(err, models.ParkingSpotLocation{}, input.Body.Availability, input.Body.PricePerHour)
+			switch {
+			case errors.Is(err, models.ErrParkingSpotNotFound):
+				detail = &huma.ErrorDetail{
+					Location: "path.id",
+					Value:    input.ID,
+				}
+				return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
+			default:
+				return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
+			}
 		}
 		return &parkingSpotCreationOutput{Body: result}, nil
 	})
@@ -361,4 +356,51 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 
 		return &result, nil
 	})
+
+}
+
+// Returns a huma.ErrorDetail describing the error in input
+//
+// Returns nil if there are no description for the error
+func describeParkingSpotInputError(err error, location models.ParkingSpotLocation, availability []models.TimeUnit, pricePerHour float64) error {
+	switch {
+	case errors.Is(err, models.ErrParkingSpotDuplicate), errors.Is(err, models.ErrParkingSpotOwned), errors.Is(err, models.ErrInvalidAddress):
+		return &huma.ErrorDetail{
+			Location: "body.location",
+			Value:    location,
+		}
+	case errors.Is(err, models.ErrInvalidStreetAddress):
+		return &huma.ErrorDetail{
+			Location: "body.location.street_address",
+			Value:    location.StreetAddress,
+		}
+	case errors.Is(err, models.ErrCountryNotSupported):
+		return &huma.ErrorDetail{
+			Location: "body.location.country",
+			Value:    location.CountryCode,
+		}
+	case errors.Is(err, models.ErrProvinceNotSupported):
+		return &huma.ErrorDetail{
+			Location: "body.location.state",
+			Value:    location.State,
+		}
+	case errors.Is(err, models.ErrInvalidPostalCode):
+		return &huma.ErrorDetail{
+			Location: "body.location.postal_code",
+			Value:    location.PostalCode,
+		}
+	case errors.Is(err, models.ErrNoAvailability), errors.Is(err, models.ErrInvalidTimeUnit):
+		return &huma.ErrorDetail{
+			Location: "body.availability",
+			Value:    availability,
+		}
+	case errors.Is(err, models.ErrInvalidPricePerHour):
+		return &huma.ErrorDetail{
+			Location: "body.price_per_hour",
+			Value:    pricePerHour,
+		}
+	default:
+		return nil
+	}
+
 }

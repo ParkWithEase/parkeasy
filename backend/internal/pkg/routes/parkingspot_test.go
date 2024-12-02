@@ -53,6 +53,12 @@ func (m *mockParkingSpotService) GetManyForUser(ctx context.Context, userID int6
 	return args.Get(0).([]models.ParkingSpot), args.Error(1)
 }
 
+// UpdateByUUID implements ParkingSpotServicer.
+func (m *mockParkingSpotService) UpdateByUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotUpdateInput) (models.ParkingSpotWithAvailability, error) {
+	args := m.Called(ctx, userID, spotID, input)
+	return args.Get(0).(models.ParkingSpotWithAvailability), args.Error(1)
+}
+
 // CreatePreference implements ParkingSpotServicer.
 func (m *mockParkingSpotService) CreatePreference(ctx context.Context, userID int64, spotID uuid.UUID) error {
 	args := m.Called(ctx, userID, spotID)
@@ -93,9 +99,9 @@ var sampleLocation = models.ParkingSpotLocation{
 }
 
 var sampleFeatures = models.ParkingSpotFeatures{
-	Shelter:         false,
+	Shelter:         true,
 	PlugIn:          false,
-	ChargingStation: false,
+	ChargingStation: true,
 }
 
 var samplePricePerHour = float64(10.0)
@@ -464,6 +470,56 @@ func TestCreateParkingSpot(t *testing.T) {
 		}
 		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
+
+		srv.AssertExpectations(t)
+	})
+}
+
+func TestUpdateByUUID(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testOwnerID)
+
+	testInput := models.ParkingSpotUpdateInput{
+		Features:     sampleFeatures,
+		PricePerHour: samplePricePerHour,
+		Availability: sampleAvailability,
+	}
+
+	t.Run("all good", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		spotUUID := uuid.New()
+		srv.On("UpdateByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+			Return(models.ParkingSpotWithAvailability{
+				ParkingSpot: models.ParkingSpot{
+					Location:     sampleLocation,
+					Features:     sampleFeatures,
+					PricePerHour: samplePricePerHour,
+					ID:           spotUUID,
+				},
+				Availability: sampleAvailability,
+			}, nil).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String(), testInput)
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+
+		var spot models.ParkingSpotWithAvailability
+		err := json.NewDecoder(resp.Result().Body).Decode(&spot)
+		require.NoError(t, err)
+
+		assert.Equal(t, testInput.Availability, spot.Availability)
+		assert.Equal(t, testInput.PricePerHour, spot.PricePerHour)
+		assert.Equal(t, testInput.Features, spot.Features)
+		assert.Equal(t, spotUUID, spot.ID)
 
 		srv.AssertExpectations(t)
 	})
