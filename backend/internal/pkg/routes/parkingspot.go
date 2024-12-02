@@ -235,12 +235,12 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
-		OperationID:   "update-parking-spot",
-		Method:        http.MethodPut,
-		Path:          "/spots/{id}",
-		Summary:       "Updates the specified parking spot",
-		Tags:          []string{ParkingSpotTag.Name},
-		Errors:        []int{http.StatusUnprocessableEntity, http.StatusNotFound},
+		OperationID: "update-parking-spot",
+		Method:      http.MethodPut,
+		Path:        "/spots/{id}",
+		Summary:     "Updates the specified parking spot",
+		Tags:        []string{ParkingSpotTag.Name},
+		Errors:      []int{http.StatusUnprocessableEntity, http.StatusNotFound},
 	}), func(ctx context.Context, input *struct {
 		ID   uuid.UUID `path:"id"`
 		Body models.ParkingSpotUpdateInput
@@ -250,16 +250,13 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		result, err := r.service.UpdateByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
 			detail := describeParkingSpotInputError(err, models.ParkingSpotLocation{}, input.Body.Availability, input.Body.PricePerHour)
-			switch {
-			case errors.Is(err, models.ErrParkingSpotNotFound):
+			if errors.Is(err, models.ErrParkingSpotNotFound) {
 				detail = &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
-			default:
-				return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 			}
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 		return &parkingSpotCreationOutput{Body: result}, nil
 	})
