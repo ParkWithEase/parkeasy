@@ -26,6 +26,9 @@ import (
 	parkingSpotRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/parkingspot"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/parkingspot"
 
+	bookingRepo "github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/booking"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/services/booking"
+
 	"github.com/alexedwards/scs/pgxstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/danielgtaylor/huma/v2"
@@ -76,11 +79,16 @@ func (c *Config) RegisterRoutes(api huma.API, sessionManager *scs.SessionManager
 	healthService := health.New(c.DBPool)
 	healthRoute := routes.NewHealthRoute(healthService)
 
+	bookingRepository := bookingRepo.NewPostgres(db)
+	bookingService := booking.New(bookingRepository, parkingSpotRepository, carRepository)
+	bookingRoute := routes.NewBookingRoute(bookingService, sessionManager)
+
 	routes.UseHumaMiddlewares(api, sessionManager, userService)
 	huma.AutoRegister(api, authRoute)
 	huma.AutoRegister(api, userRoute)
 	huma.AutoRegister(api, parkingSpotRoute)
 	huma.AutoRegister(api, carRoute)
+	huma.AutoRegister(api, bookingRoute)
 	huma.AutoRegister(api, healthRoute)
 }
 

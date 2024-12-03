@@ -22,8 +22,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-var epsilon = 1e-5 // Acceptable variance for decimal values
-
 func TestPostgresIntegration(t *testing.T) {
 	t.Parallel()
 

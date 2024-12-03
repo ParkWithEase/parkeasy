@@ -30,9 +30,9 @@ type BookingWithTimes struct {
 }
 
 type BookingCreationInput struct {
-	ParkingSpotID uuid.UUID  `json:"parking_spot_id" doc:"ID of the parking spot being booked"`
+	ParkingSpotID uuid.UUID  `json:"parkingspot_id" doc:"ID of the parking spot being booked"`
 	CarID         uuid.UUID  `json:"car_id" doc:"ID of the car for which parking spot being booked"`
-	BookedTimes   []TimeUnit `json:"booked_times" doc:"The booked times of this booking"`
+	BookedTimes   []TimeUnit `json:"book_times" doc:"The booked times of this booking"`
 }
 
 type BookingCreationDBInput struct {
@@ -41,5 +41,5 @@ type BookingCreationDBInput struct {
 }
 
 type BookingFilter struct {
-	ParkingSpotID uuid.UUID `query:"parking_spot_id" doc:"id of the parking spot"`
+	ParkingSpotID uuid.UUID `query:"parkingspot_id" doc:"id of the parking spot"`
 }

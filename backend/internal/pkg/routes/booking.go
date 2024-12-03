@@ -40,11 +40,6 @@ type BookingRoute struct {
 	sessionGetter SessionDataGetter
 }
 
-// BookingOutput represents the output of the booking retrieval operation
-type bookingOutput struct {
-	Body models.Booking
-}
-
 type bookingListOutput struct {
 	Link []string         `header:"Link" doc:"Contains details on getting the next page of resources" example:"<https://example.com/bookings?after=gQL>; rel=\"next\""`
 	Body []models.Booking `nullable:"false"`
@@ -52,6 +47,10 @@ type bookingListOutput struct {
 
 type bookingWithTimesOutput struct {
 	Body models.BookingWithTimes
+}
+
+type bookedTimes struct {
+	Body []models.TimeUnit
 }
 
 var BookingTag = huma.Tag{
@@ -94,7 +93,33 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
 			var detail error
-			// TO-DO: handle all error cases from services
+			switch {
+			case errors.Is(err, models.ErrEmptyBookingTimes):
+				detail = &huma.ErrorDetail{
+					Location: "body.book_times",
+					Value:    input.Body.BookedTimes,
+				}
+			case errors.Is(err, models.ErrParkingSpotNotFound):
+				detail = &huma.ErrorDetail{
+					Location: "body.parkingspot_id",
+					Value:    input.Body.ParkingSpotID,
+				}
+			case errors.Is(err, models.ErrCarNotFound):
+				detail = &huma.ErrorDetail{
+					Location: "body.car_id",
+					Value:    input.Body.CarID,
+				}
+			case errors.Is(err, models.ErrCarNotOwned):
+				detail = &huma.ErrorDetail{
+					Location: "body.car_id",
+					Value:    input.Body.CarID,
+				}
+			case errors.Is(err, models.ErrDuplicateBooking):
+				detail = &huma.ErrorDetail{
+					Location: "body.book_times",
+					Value:    input.Body.BookedTimes,
+				}
+			}
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 		return &bookingWithTimesOutput{Body: result}, nil
@@ -107,13 +132,13 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		Summary:     "Get bookings associated to the current user (buyer)",
 		Tags:        []string{BookingTag.Name},
 	}), func(ctx context.Context, input *struct {
-		Filter *models.BookingFilter
+		Filter models.BookingFilter
 		After  models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
 		Count  int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of bookings that appear per page."`
 	},
 	) (*bookingListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		bookings, nextCursor, err := r.service.GetManyForBuyer(ctx, userID, input.Count, input.After, *input.Filter)
+		bookings, nextCursor, err := r.service.GetManyForBuyer(ctx, userID, input.Count, input.After, input.Filter)
 		if err != nil {
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
@@ -137,14 +162,21 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		Summary:     "Get leasings associated to the current user (seller)",
 		Tags:        []string{BookingTag.Name},
 	}), func(ctx context.Context, input *struct {
-		Filter *models.BookingFilter
+		Filter models.BookingFilter
 		After  models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
 		Count  int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of bookings that appear per page."`
 	},
 	) (*bookingListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		bookings, nextCursor, err := r.service.GetManyForSeller(ctx, userID, input.Count, input.After, *input.Filter)
+		bookings, nextCursor, err := r.service.GetManyForSeller(ctx, userID, input.Count, input.After, input.Filter)
 		if err != nil {
+			if errors.Is(err, models.ErrSpotNotOwned) {
+				detail := &huma.ErrorDetail{
+					Location: "path.parkingspot_id",
+					Value:    input.Filter.ParkingSpotID,
+				}
+				return nil, NewHumaError(ctx, http.StatusForbidden, err, detail)
+			}
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
 
@@ -174,15 +206,61 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		result, err := r.service.GetByUUID(ctx, userID, input.ID)
 		if err != nil {
-			if errors.Is(err, models.ErrBookingNotFound) {
-				detail := &huma.ErrorDetail{
+			var detail error
+			var status = http.StatusUnprocessableEntity
+
+			switch {
+			case errors.Is(err, models.ErrBookingNotFound):
+				detail = &huma.ErrorDetail{
 					Location: "path.id",
 					Value:    input.ID,
 				}
-				return nil, NewHumaError(ctx, http.StatusNotFound, err, detail)
+			case errors.Is(err, models.ErrInvalidRequest):
+				detail = &huma.ErrorDetail{
+					Location: "path.id",
+					Value:    input.ID,
+				}
+				status = http.StatusForbidden
 			}
-			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
+			return nil, NewHumaError(ctx, status, err, detail)
 		}
 		return &bookingWithTimesOutput{Body: result}, nil
+	})
+
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID: "get-booked-time-slots-of-a-booking",
+		Method:      http.MethodGet,
+		Path:        "/bookings/{id}/availability",
+		Summary:     "Get booked time slots for the booking",
+		Tags:        []string{ParkingSpotTag.Name},
+	}), func(ctx context.Context, input *struct {
+		ID uuid.UUID `path:"id"`
+	},
+	) (*bookedTimes, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		spots, err := r.service.GetBookedTimesByUUID(ctx, userID, input.ID)
+		if err != nil {
+			var detail error
+			var status = http.StatusUnprocessableEntity
+
+			switch {
+			case errors.Is(err, models.ErrBookingNotFound):
+				detail = &huma.ErrorDetail{
+					Location: "path.id",
+					Value:    input.ID,
+				}
+			case errors.Is(err, models.ErrInvalidRequest):
+				detail = &huma.ErrorDetail{
+					Location: "path.id",
+					Value:    input.ID,
+				}
+				status = http.StatusForbidden
+			}
+			return nil, NewHumaError(ctx, status, err, detail)
+		}
+
+		result := bookedTimes{Body: spots}
+
+		return &result, nil
 	})
 }

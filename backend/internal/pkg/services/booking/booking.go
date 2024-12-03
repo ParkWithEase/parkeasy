@@ -33,12 +33,12 @@ func New(repo booking.Repository, spotRepo parkingspot.Repository, carRepo car.R
 }
 
 func (s *Service) Create(ctx context.Context, userID int64, bookingDetails *models.BookingCreationInput) (int64, models.BookingWithTimes, error) {
-	//Check if atleast one timeunit is passed
+	// Check if atleast one timeunit is passed
 	if len(bookingDetails.BookedTimes) == 0 {
 		return 0, models.BookingWithTimes{}, models.ErrEmptyBookingTimes
 	}
 
-	//Check if the parking spot exists
+	// Check if the parking spot exists
 	parkingSpot, err := s.spotRepo.GetByUUID(ctx, bookingDetails.ParkingSpotID)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrNotFound) {
@@ -47,7 +47,7 @@ func (s *Service) Create(ctx context.Context, userID int64, bookingDetails *mode
 		return 0, models.BookingWithTimes{}, err
 	}
 
-	//Check if the car exists
+	// Check if the car exists
 	carEntry, err := s.carRepo.GetByUUID(ctx, bookingDetails.CarID)
 	if err != nil {
 		if errors.Is(err, car.ErrNotFound) {
