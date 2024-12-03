@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -61,10 +62,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.Spot
+import io.github.parkwithease.parkeasy.ui.common.MinutesPerSlot
 import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.ui.common.isoDay
-import io.github.parkwithease.parkeasy.ui.common.startOfWeek
+import io.github.parkwithease.parkeasy.ui.common.startOfNextAvailableDay
 import io.github.parkwithease.parkeasy.ui.common.timezone
 import io.github.parkwithease.parkeasy.ui.common.toShortDate
 import kotlin.time.DurationUnit
@@ -72,9 +74,8 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toInstant
 
-private const val MinutesPerSlot = 30
-private const val NumColumns = 7
-private const val NumRows = 48
+private const val NumColumns = 6
+private const val NumRows = 24
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("detekt:LongMethod")
@@ -259,7 +260,7 @@ fun AddSpotScreen(
                 label = { Text(stringResource(R.string.shelter)) },
             )
         }
-        Row(Modifier.height(600.dp)) {
+        Row(Modifier.height(336.dp)) {
             ColumnHeader(Modifier.width(48.dp))
             TimeGrid(getSelectedIds, handler.onPlusTime, handler.onMinusTime)
         }
@@ -275,10 +276,13 @@ private fun ColumnHeader(
     state: LazyGridState = rememberLazyGridState(),
 ) {
     LazyVerticalGrid(state = state, columns = GridCells.Fixed(1), modifier = modifier) {
-        items(NumRows + 1) { num ->
+        items(2) {
+            Text(text = "", Modifier.height(24.dp), style = MaterialTheme.typography.labelLarge)
+        }
+        items(NumRows) { num ->
             if (num % 2 == 0) {
                 Text(
-                    text = if (num == 0) "" else LocalTime((num / 2 - 1), 0).toString(),
+                    text = LocalTime((num / 2), 0).toString(),
                     Modifier.height(24.dp),
                     style = MaterialTheme.typography.labelLarge,
                 )
@@ -298,11 +302,13 @@ private fun TimeGrid(
     slots: List<Int> = List(NumColumns * NumRows) { it % NumColumns * NumRows + it / NumColumns },
 ) {
     val disabledIds: List<Int> =
-        (0..Clock.System.now()
-                    .minus(startOfWeek().toInstant(timezone()))
-                    .toInt(DurationUnit.MINUTES) / MinutesPerSlot)
-            .asSequence()
-            .toList()
+        if (Clock.System.now() > startOfNextAvailableDay().toInstant(timezone()))
+            (0..Clock.System.now()
+                        .minus(startOfNextAvailableDay().toInstant(timezone()))
+                        .toInt(DurationUnit.MINUTES) / MinutesPerSlot)
+                .asSequence()
+                .toList()
+        else emptyList()
     val selectedIds: Set<Int> = getSelectedIds()
 
     LazyVerticalGrid(
@@ -318,9 +324,16 @@ private fun TimeGrid(
                 minus = minus,
             ),
     ) {
+        items(count = NumColumns / 2, span = { GridItemSpan(2) }) {
+            Text(
+                text = startOfNextAvailableDay().isoDay(it + 1).toShortDate(),
+                Modifier.height(24.dp),
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
         items(NumColumns) {
             Text(
-                text = startOfWeek().isoDay(it + 1).toShortDate(),
+                text = if (it % 2 == 0) "AM" else "PM",
                 Modifier.height(24.dp),
                 style = MaterialTheme.typography.labelLarge,
             )
@@ -340,7 +353,7 @@ private fun TimeGrid(
                     },
                 modifier =
                     Modifier.height(12.dp)
-                        .padding(top = if (id % 48 > 0 && id % 48 % 2 == 0) 3.dp else 0.dp)
+                        .padding(top = if (id % 24 > 0 && id % 24 % 2 == 0) 3.dp else 0.dp)
                         .toggleable(
                             value = selected,
                             interactionSource = remember { MutableInteractionSource() },
