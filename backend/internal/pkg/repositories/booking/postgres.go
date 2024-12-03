@@ -310,8 +310,6 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 
 	smods = append(smods, psql.WhereAnd(whereMods...))
 	query := psql.Select(smods...)
-	str, _, err := query.Build()
-	fmt.Println(str)
 
 	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
 	if err != nil {
