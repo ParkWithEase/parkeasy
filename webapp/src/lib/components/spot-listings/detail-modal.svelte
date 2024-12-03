@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { goto } from '$app/navigation';
     import { Modal } from 'carbon-components-svelte';
     export let listing;
     export let open = false;
@@ -13,7 +14,7 @@
     primaryButtonText="Book now"
     on:open
     on:close
-    on:submit
+    on:submit={() => goto(`/app/booking/${listing.id}`)}
 >
     <div class="modal-content">
         <div class="listing-content">

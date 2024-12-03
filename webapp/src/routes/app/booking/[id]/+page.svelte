@@ -1,9 +1,21 @@
 <script lang="ts">
     import type { PageData } from './$types';
     import Background from '$lib/images/background.png';
-    import { Content, Button, TextInput, Form, ToastNotification } from 'carbon-components-svelte';
+    import {
+        Content,
+        Button,
+        TextInput,
+        Form,
+        ToastNotification,
+        TooltipIcon
+    } from 'carbon-components-svelte';
     import { TimeSlotStatus, TimeSlotStatusConverter } from '$lib/enum/timeslot-status';
-    import { DAY_IN_A_WEEK, ERROR_MESSAGE_TIME_OUT, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
+    import {
+        DAY_IN_A_WEEK,
+        ERROR_MESSAGE_TIME_OUT,
+        SPOT_PREFFERED_ICON_SIZE,
+        TOTAL_SEGMENTS_NUMBER
+    } from '$lib/constants';
     import { getMonday, getDateWithDayOffset } from '$lib/utils/datetime-util';
     import { createEmptyTable } from '$lib/utils/time-table-util';
     import { newClient } from '$lib/utils/client';
@@ -12,6 +24,7 @@
     import { fade } from 'svelte/transition';
     import AvailabilitySection from '$lib/components/spot-component/availability-section.svelte';
     import SpotInfo from '$lib/components/spot-component/spot-info.svelte';
+    import { Favorite, FavoriteFilled } from 'carbon-icons-svelte';
 
     export let data: PageData;
     type TimeUnit = components['schemas']['TimeUnit'];
@@ -19,7 +32,7 @@
     //Variable for location edit section
     let spot = data.spot;
     let availabilityTimeSlot = data.time_slots;
-
+    let spotPreferred: boolean = data.isPreferred;
     //temporarily use id from params
 
     //These are Variables for availability edit section
@@ -189,6 +202,40 @@
             availabilityTableEdit = availabilityTableEdit;
         }
     }
+
+    function setPreference() {
+        if (!spotPreferred) {
+            console.log('add preference');
+            client
+                .POST('/spots/{id}/preference', { params: { path: { id: spot?.id ?? '0' } } })
+                .then(({ error }) => {
+                    if (error) {
+                        errorMessage = getErrorMessage(error);
+                        toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+                    } else {
+                        spotPreferred = true;
+                    }
+                })
+                .catch((err) => {
+                    errorMessage = err;
+                });
+        } else {
+            console.log('remove preference');
+            client
+                .DELETE('/spots/{id}/preference', { params: { path: { id: spot?.id ?? '0' } } })
+                .then(({ error }) => {
+                    if (error) {
+                        errorMessage = getErrorMessage(error);
+                        toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+                    } else {
+                        spotPreferred = false;
+                    }
+                })
+                .catch((err) => {
+                    errorMessage = err;
+                });
+        }
+    }
 </script>
 
 <Content>
@@ -208,7 +255,20 @@
     {/if}
 
     <img src={Background} class="spot-info-image" alt="spot" />
-    <p class="spot-info-header">Location</p>
+    <div class="header-with-preference-option">
+        <p class="spot-info-header">Location</p>
+        <TooltipIcon
+            tooltipText={spotPreferred ? 'Remove from preferred list' : 'Add to preferred list'}
+            on:click={() => setPreference()}
+        >
+            <FavoriteFilled
+                style={`${spotPreferred ? 'fill:deeppink;' : 'fill:None;'} position:absolute; `}
+                size={SPOT_PREFFERED_ICON_SIZE}
+            />
+            <Favorite style="fill:black; position: absolute; " size={SPOT_PREFFERED_ICON_SIZE} />
+        </TooltipIcon>
+    </div>
+
     <SpotInfo bind:spot />
 
     <p class="spot-info-header">Availability</p>
@@ -237,3 +297,11 @@
         <Button type="submit">Submit</Button>
     </Form>
 </Content>
+
+<style>
+    .header-with-preference-option {
+        display: flex;
+        gap: 1rem;
+        align-self: center;
+    }
+</style>
