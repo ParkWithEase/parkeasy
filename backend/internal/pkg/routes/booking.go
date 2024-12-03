@@ -131,6 +131,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		Path:        "/users/bookings",
 		Summary:     "Get bookings associated to the current user (buyer)",
 		Tags:        []string{BookingTag.Name},
+		Errors:      []int{http.StatusUnprocessableEntity},
 	}), func(ctx context.Context, input *struct {
 		Filter models.BookingFilter
 		After  models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
@@ -161,6 +162,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		Path:        "/users/leasings",
 		Summary:     "Get leasings associated to the current user (seller)",
 		Tags:        []string{BookingTag.Name},
+		Errors:      []int{http.StatusUnprocessableEntity, http.StatusForbidden},
 	}), func(ctx context.Context, input *struct {
 		Filter models.BookingFilter
 		After  models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
@@ -198,7 +200,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		Path:        "/bookings/{id}",
 		Summary:     "Get information about a booking",
 		Tags:        []string{BookingTag.Name},
-		Errors:      []int{http.StatusNotFound},
+		Errors:      []int{http.StatusNotFound, http.StatusForbidden},
 	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
@@ -233,6 +235,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		Path:        "/bookings/{id}/availability",
 		Summary:     "Get booked time slots for the booking",
 		Tags:        []string{BookingTag.Name},
+		Errors:      []int{http.StatusNotFound, http.StatusForbidden},
 	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},
