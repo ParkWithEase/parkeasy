@@ -120,13 +120,7 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, spotID uuid.UUID,
 	}
 
 	// Get remaining booked times
-	bookedTimes, err := dbmodels.Timeunits.Query(
-		ctx, p.db,
-		sm.Columns(dbmodels.TimeunitColumns.Timerange),
-		psql.WhereAnd(
-			dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
-		),
-	).All()
+	bookedTimes, err := p.getBookedTimes(ctx, updated.Parkingspotid)
 	if err != nil {
 		return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: %w", err)
 	}
@@ -146,13 +140,7 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, spotID uuid.UUID,
 	}
 
 	// Get times from DB after update
-	bookedTimes, err = dbmodels.Timeunits.Query(
-		ctx, p.db,
-		sm.Columns(dbmodels.TimeunitColumns.Timerange),
-		psql.WhereAnd(
-			dbmodels.SelectWhere.Timeunits.Parkingspotid.EQ(updated.Parkingspotid),
-		),
-	).All()
+	bookedTimes, err = p.getBookedTimes(ctx, updated.Parkingspotid)
 	if err != nil {
 		return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: %w", err)
 	}
@@ -176,6 +164,14 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, spotID uuid.UUID,
 	availability := timeUnitsFromDB(newTimes)
 
 	return entry, availability, nil
+}
+
+func (p *PostgresRepository) getBookedTimes(ctx context.Context, spotID int64) (dbmodels.TimeunitSlice, error) {
+	return dbmodels.Timeunits.Query(
+		ctx, p.db,
+		sm.Columns(dbmodels.TimeunitColumns.Timerange),
+		psql.WhereAnd(dbmodels.SelectWhere.Timeunits.Parkingspotid.EQ(spotID)),
+	).All()
 }
 
 func timeUnitSetMinus(firstSet, secondSet []models.TimeUnit) []models.TimeUnit {
