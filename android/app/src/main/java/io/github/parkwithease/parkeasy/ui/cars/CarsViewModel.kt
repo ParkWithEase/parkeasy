@@ -13,6 +13,7 @@ import io.github.parkwithease.parkeasy.model.Car
 import io.github.parkwithease.parkeasy.model.CarDetails
 import io.github.parkwithease.parkeasy.model.ErrorDetail
 import io.github.parkwithease.parkeasy.model.ErrorModel
+import io.github.parkwithease.parkeasy.model.FieldState
 import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +39,12 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
     fun onRefresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            _cars.value = carRepo.getCars()
+            carRepo
+                .getCars()
+                .onSuccess { _cars.value = it }
+                .onFailure {
+                    viewModelScope.launch { snackbarState.showSnackbar("Error retrieving cars") }
+                }
             _isRefreshing.value = false
         }
     }
@@ -55,8 +61,8 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
                     )
                 )
                 .also { clearFieldErrors() }
-                ?.onSuccess { onRefresh() }
-                ?.recoverRequestErrors("Error adding car")
+                .onSuccess { onRefresh() }
+                .recoverRequestErrors("Error adding car")
         }
     }
 
@@ -76,25 +82,61 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
                     )
                 )
                 .also { clearFieldErrors() }
-                ?.onSuccess { onRefresh() }
-                ?.recoverRequestErrors("Error adding car")
+                .onSuccess { onRefresh() }
+                .recoverRequestErrors("Error adding car")
         }
     }
 
     fun onLicensePlateChange(value: String) {
-        formState = formState.run { copy(licensePlate = licensePlate.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    licensePlate =
+                        licensePlate.copy(
+                            value = value,
+                            error = if (value != "") null else "License plate cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onColorChange(value: String) {
-        formState = formState.run { copy(color = color.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    color =
+                        color.copy(
+                            value = value,
+                            error = if (value != "") null else "Colour cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onMakeChange(value: String) {
-        formState = formState.run { copy(make = make.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    make =
+                        make.copy(
+                            value = value,
+                            error = if (value != "") null else "Make cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onModelChange(value: String) {
-        formState = formState.run { copy(model = model.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    model =
+                        model.copy(
+                            value = value,
+                            error = if (value != "") null else "Model cannot be empty",
+                        )
+                )
+            }
     }
 
     private fun Result<Unit>.recoverRequestErrors(operationFailMsg: String): Result<Unit> =
@@ -120,6 +162,17 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
     private fun annotateErrorLocation(errors: List<ErrorDetail>) {
         for (err in errors) {
             when (err.location) {
+                "body" ->
+                    formState =
+                        formState.run {
+                            copy(
+                                licensePlate = licensePlate.copy(error = "Invalid license plate"),
+                                color = color.copy(error = "Invalid color"),
+                                make = make.copy(error = "Invalid make"),
+                                model = model.copy(error = "Invalid model"),
+                            )
+                        }
+
                 "body.license_plate" ->
                     formState =
                         formState.run {
@@ -152,11 +205,9 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
     }
 }
 
-data class AddCarFieldState(val value: String = "", val error: String? = null)
-
 data class AddCarFormState(
-    val color: AddCarFieldState = AddCarFieldState(),
-    val licensePlate: AddCarFieldState = AddCarFieldState(),
-    val make: AddCarFieldState = AddCarFieldState(),
-    val model: AddCarFieldState = AddCarFieldState(),
+    val color: FieldState<String> = FieldState(""),
+    val licensePlate: FieldState<String> = FieldState(""),
+    val make: FieldState<String> = FieldState(""),
+    val model: FieldState<String> = FieldState(""),
 )

@@ -80,7 +80,7 @@ android {
         compose = true
         buildConfig = true
     }
-    composeOptions { kotlinCompilerExtensionVersion = "1.5.1" }
+    composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
     lint {
         sarifReport = true
@@ -164,6 +164,9 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
+
+    // DateTime
+    implementation(libs.kotlinx.datetime)
 
     // Testing
     testImplementation(libs.junit)

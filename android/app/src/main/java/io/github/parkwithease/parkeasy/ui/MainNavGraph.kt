@@ -35,6 +35,6 @@ fun MainNavGraph(
             navBar = navBar,
         )
         carsScreen()
-        spotsScreen {}
+        spotsScreen()
     }
 }

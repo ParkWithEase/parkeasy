@@ -1,7 +1,8 @@
 <script lang="ts">
     import FormHeader from '$lib/components/form-header.svelte';
     import SubmitButton from '$lib/components/submit-button.svelte';
-    import { BACKEND_SERVER, INTERNAL_SERVER_ERROR } from '$lib/constants';
+    import { INTERNAL_SERVER_ERROR, PASSWORD_RESET_TOKEN_GET_ERROR } from '$lib/constants';
+    import { newClient } from '$lib/utils/client';
     import { Form, TextInput } from 'carbon-components-svelte';
 
     let email: string;
@@ -9,34 +10,23 @@
     let tokenProduced: boolean = false;
     let errorMessage: string;
 
-    async function getToken() {
-        try {
-            const response = await fetch(`${BACKEND_SERVER}/auth/password:forgot`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ email: email })
-            });
+    let client = newClient();
 
-            if (response.ok) {
-                const data = await response.json();
-                passwordToken = data.password_token;
-                if (passwordToken !== '') {
+    function getToken() {
+        client
+            .POST('/auth/password:forgot', { body: { email: email } })
+            .then(({ data, error }) => {
+                if (error || data.password_token == '') {
+                    errorMessage = PASSWORD_RESET_TOKEN_GET_ERROR;
+                } else {
+                    passwordToken = data.password_token;
                     tokenProduced = true;
                     errorMessage = '';
-                } else {
-                    errorMessage =
-                        "We shouldn't be doing this but for demo sake, your email doesn't exist";
                 }
-            } else {
-                const data = await response.json();
-                errorMessage = data.errors[0].message;
-            }
-        } catch (err) {
-            console.log(err);
-            errorMessage = INTERNAL_SERVER_ERROR;
-        }
+            })
+            .catch(() => {
+                errorMessage = INTERNAL_SERVER_ERROR;
+            });
     }
 </script>
 

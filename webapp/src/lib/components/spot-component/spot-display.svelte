@@ -1,10 +1,12 @@
 <script lang="ts">
     import BackgroundImage from '$lib/images/background.png';
-    import { Checkbox, Tag } from 'carbon-components-svelte';
-    export let spot;
+    import { Checkbox } from 'carbon-components-svelte';
+    import type { components } from '$lib/sdk/schema';
+    type ParkingSpot = components['schemas']['ParkingSpot'];
+    export let spot: ParkingSpot;
 </script>
 
-<a href={`your-spots/${spot.id}/spot-info`}>
+{#if spot}
     <div class="spot-info">
         <div>
             <img src={BackgroundImage} class="spot-image" alt="A parking spot" />
@@ -13,26 +15,23 @@
             <div>
                 <p class="spot-title">
                     {spot.location.street_address}, {spot.location.postal_code}
-                    {#if spot.isListed}
-                        <Tag type="green" style="font-size: 1rem;">listed</Tag>
-                    {/if}
                 </p>
                 <span style="font-size: 1rem"
                     >{spot.location.city}, {spot.location.state} {spot.location.country_code}</span
                 >
             </div>
             <div>
-                <Checkbox labelText="Shelter" checked={spot.features.shelter} readonly />
-                <Checkbox labelText="Plug-in" checked={spot.features.plug_in} readonly />
+                <Checkbox labelText="Shelter" checked={spot.features?.shelter} readonly />
+                <Checkbox labelText="Plug-in" checked={spot.features?.plug_in} readonly />
                 <Checkbox
                     labelText="Charging station"
-                    checked={spot.features.charging_station}
+                    checked={spot.features?.charging_station}
                     readonly
                 />
             </div>
         </div>
     </div>
-</a>
+{/if}
 
 <style>
     .spot-info {
@@ -43,6 +42,7 @@
         align-items: center;
         flex-direction: row;
         border: 1px solid #cfcfcfcf;
+        color: black;
     }
 
     .spot-image {
@@ -53,9 +53,5 @@
         line-height: 1;
         font-size: 1.5rem;
         padding-top: 0.5rem;
-    }
-
-    a {
-        all: unset;
     }
 </style>

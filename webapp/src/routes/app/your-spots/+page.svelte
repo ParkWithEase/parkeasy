@@ -14,7 +14,9 @@
 
     {#key data.spots}
         {#each data.spots as spot}
-            <SpotDisplay {spot} />
+            <a href={`/app/your-spots/${spot.id}/spot-info`} style="text-decoration: none;">
+                <SpotDisplay {spot} />
+            </a>
         {/each}
     {/key}
 </div>

@@ -52,6 +52,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
+import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.LoginMode
 
 @Composable
@@ -119,7 +120,7 @@ private fun LoginScreen(
             Box(modifier = Modifier.widthIn(min = 80.dp, max = 240.dp)) {
                 Image(
                     painter = painterResource(R.drawable.logo_stacked_outlined),
-                    contentDescription = stringResource(R.string.logo),
+                    contentDescription = null,
                     modifier = Modifier.aspectRatio(1f),
                 )
             }
@@ -320,7 +321,7 @@ private fun LoginField(
         value = value,
         onValueChange = { onValueChange(it) },
         label = { Text(label) },
-        leadingIcon = { Icon(imageVector = imageVector, contentDescription = label) },
+        leadingIcon = { Icon(imageVector = imageVector, contentDescription = null) },
         isError = isError,
         visualTransformation = visualTransformation,
         keyboardOptions = keyboardOptions,
@@ -378,8 +379,8 @@ private fun PreviewLoginScreen() {
 private fun PreviewLoginScreenError() {
     LoginScreen(
         LoginFormState(
-            email = LoginFieldState(value = "not-an-email", error = "Invalid email"),
-            confirmPassword = LoginFieldState(error = "Password does not match"),
+            email = FieldState(value = "not-an-email", error = "Invalid email"),
+            confirmPassword = FieldState("", error = "Password does not match"),
         ),
         {},
         {},

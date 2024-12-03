@@ -1,14 +1,7 @@
 <script lang="ts">
     import type { PageData } from './$types';
     import Background from '$lib/images/background.png';
-    import {
-        Content,
-        Checkbox,
-        Button,
-        TextInput,
-        Form,
-        ToastNotification
-    } from 'carbon-components-svelte';
+    import { Content, Button, TextInput, Form, ToastNotification } from 'carbon-components-svelte';
     import { TimeSlotStatus, TimeSlotStatusConverter } from '$lib/enum/timeslot-status';
     import { DAY_IN_A_WEEK, ERROR_MESSAGE_TIME_OUT, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
     import { getMonday, getDateWithDayOffset } from '$lib/utils/datetime-util';
@@ -18,6 +11,7 @@
     import { getErrorMessage } from '$lib/utils/error-handler';
     import { fade } from 'svelte/transition';
     import AvailabilitySection from '$lib/components/spot-component/availability-section.svelte';
+    import SpotInfo from '$lib/components/spot-component/spot-info.svelte';
 
     export let data: PageData;
     type TimeUnit = components['schemas']['TimeUnit'];
@@ -103,6 +97,8 @@
 
     function toNextWeek() {
         currentMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
+        const nextMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
+        nextMonday.setMinutes(nextMonday.getMinutes() - 30);
         if (!availabilityTablesInitial.get(currentMonday.getTime())) {
             client
                 .GET('/spots/{id}/availability', {
@@ -112,10 +108,7 @@
                         },
                         query: {
                             availability_start: currentMonday.toISOString(),
-                            availability_end: getDateWithDayOffset(
-                                currentMonday,
-                                DAY_IN_A_WEEK
-                            ).toISOString()
+                            availability_end: nextMonday.toISOString()
                         }
                     }
                 })
@@ -215,54 +208,8 @@
     {/if}
 
     <img src={Background} class="spot-info-image" alt="spot" />
-    <div class="spot-info-container">
-        <p class="spot-info-header">Location</p>
-        <div>
-            <p class="spot-info-label">Street Address</p>
-            <p class="spot-info-content">{spot?.location.street_address}</p>
-        </div>
-        <div>
-            <p class="spot-info-label">City</p>
-            <p class="spot-info-content">{spot?.location.city}</p>
-        </div>
-        <div>
-            <p class="spot-info-label">State/Provice</p>
-            <p class="spot-info-content">{spot?.location.state}</p>
-        </div>
-        <div>
-            <p class="spot-info-label">Country Code</p>
-            <p class="spot-info-content">{spot?.location.country_code}</p>
-        </div>
-        <div>
-            <p class="spot-info-label">Postal Code</p>
-            <p class="spot-info-content">{spot?.location.postal_code}</p>
-        </div>
-
-        <div>
-            <p class="spot-info-label">Utilities</p>
-            <Checkbox
-                name="shelter"
-                labelText="Shelter"
-                checked={spot?.features?.shelter}
-                style="pointer-events: none;"
-                readonly
-            />
-            <Checkbox
-                name="plug-in"
-                labelText="Plug-in"
-                checked={spot?.features?.plug_in}
-                style="pointer-events: none;"
-                readonly
-            />
-            <Checkbox
-                name="charging-station"
-                labelText="Charging Station"
-                checked={spot?.features?.charging_station}
-                style="pointer-events: none;"
-                readonly
-            />
-        </div>
-    </div>
+    <p class="spot-info-header">Location</p>
+    <SpotInfo bind:spot />
 
     <p class="spot-info-header">Availability</p>
 
@@ -290,29 +237,3 @@
         <Button type="submit">Submit</Button>
     </Form>
 </Content>
-
-<style>
-    .spot-info-image {
-        max-height: 20rem;
-    }
-
-    .spot-info-header {
-        font-size: 2rem;
-    }
-
-    .spot-info-label {
-        font-size: 0.8rem;
-    }
-
-    .spot-info-content {
-        font-size: 1.3rem;
-    }
-
-    .spot-info-container {
-        display: flex;
-        gap: 0.7rem;
-        flex-direction: column;
-        max-width: 20rem;
-        margin-bottom: 1rem;
-    }
-</style>

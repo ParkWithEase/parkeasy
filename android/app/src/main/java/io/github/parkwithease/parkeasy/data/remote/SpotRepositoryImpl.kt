@@ -1,13 +1,18 @@
 package io.github.parkwithease.parkeasy.data.remote
 
+import io.github.parkwithease.parkeasy.data.common.mapAPIError
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
+import io.github.parkwithease.parkeasy.model.LoggedOutException
 import io.github.parkwithease.parkeasy.model.Spot
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.cookie
 import io.ktor.client.request.get
-import io.ktor.http.HttpStatusCode
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -21,18 +26,27 @@ constructor(
     private val authRepo: AuthRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : SpotRepository {
-    override suspend fun getSpots(): List<Spot> {
-        val authCookie = authRepo.sessionFlow.firstOrNull()
-        var spots = emptyList<Spot>()
-        if (authCookie != null) {
-            val response =
-                withContext(ioDispatcher) {
-                    client.get("/user/spots") { cookie(authCookie.name, authCookie.value) }
+    override suspend fun getSpots(): Result<List<Spot>> =
+        authRepo.sessionFlow
+            .firstOrNull()
+            .runCatching {
+                if (this == null) throw LoggedOutException()
+                withContext(ioDispatcher) { client.get("/user/spots") { cookie(name, value) } }
+            }
+            .mapAPIError()
+            .let { result ->
+                result.mapCatching { if (result.isSuccess) it.body<List<Spot>>() else emptyList() }
+            }
+
+    override suspend fun createSpot(spot: Spot): Result<Unit> =
+        authRepo.sessionFlow.firstOrNull().runCatching {
+            if (this == null) throw LoggedOutException()
+            withContext(ioDispatcher) {
+                client.post("/spots") {
+                    contentType(ContentType.Application.Json)
+                    setBody(spot)
+                    cookie(name = name, value = value)
                 }
-            if (response.status == HttpStatusCode.OK) {
-                spots = response.body()
             }
         }
-        return spots
-    }
 }

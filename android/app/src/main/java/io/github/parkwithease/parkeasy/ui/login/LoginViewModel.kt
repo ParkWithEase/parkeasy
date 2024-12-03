@@ -12,6 +12,7 @@ import io.github.parkwithease.parkeasy.data.remote.APIException
 import io.github.parkwithease.parkeasy.data.remote.UserRepository
 import io.github.parkwithease.parkeasy.model.ErrorDetail
 import io.github.parkwithease.parkeasy.model.ErrorModel
+import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
 import io.github.parkwithease.parkeasy.model.ResetCredentials
@@ -89,18 +90,40 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     }
 
     fun onNameChange(value: String) {
-        formState = formState.run { copy(name = name.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    name =
+                        name.copy(
+                            value = value,
+                            error = if (value != "") null else "Name cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onEmailChange(value: String) {
-        formState = formState.run { copy(email = email.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    email =
+                        email.copy(
+                            value = value,
+                            error = if (value != "") null else "Email cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onPasswordChange(value: String) {
         formState =
             formState.run {
                 copy(
-                    password = password.copy(value = value),
+                    password =
+                        password.copy(
+                            value = value,
+                            error = if (value != "") null else "Password cannot be empty",
+                        ),
                     confirmPassword =
                         confirmPassword.copy(
                             error =
@@ -186,11 +209,9 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     }
 }
 
-data class LoginFieldState(val value: String = "", val error: String? = null)
-
 data class LoginFormState(
-    val name: LoginFieldState = LoginFieldState(),
-    val email: LoginFieldState = LoginFieldState(),
-    val password: LoginFieldState = LoginFieldState(),
-    val confirmPassword: LoginFieldState = LoginFieldState(),
+    val name: FieldState<String> = FieldState(""),
+    val email: FieldState<String> = FieldState(""),
+    val password: FieldState<String> = FieldState(""),
+    val confirmPassword: FieldState<String> = FieldState(""),
 )
