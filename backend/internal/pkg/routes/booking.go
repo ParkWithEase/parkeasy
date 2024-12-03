@@ -31,7 +31,7 @@ type BookingServicer interface {
 	// Get the booking with `bookingID` if `userID` has enough permission to view the resource.
 	GetByUUID(ctx context.Context, userID int64, bookingID uuid.UUID) (models.BookingWithTimes, error)
 	// Get booked times with `bookingID if `userID` has enough permission to view the resource.
-	GetBookedTimesByUUID(ctx context.Context, userID int64, bookinID uuid.UUID) ([]models.TimeUnit, error)
+	GetBookedTimesByUUID(ctx context.Context, userID int64, bookingID uuid.UUID) ([]models.TimeUnit, error)
 }
 
 // BookingRoute represents booking-related API routes
