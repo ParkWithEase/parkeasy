@@ -1,15 +1,26 @@
 package io.github.parkwithease.parkeasy.ui.spots
 
+import android.util.Log
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -20,6 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -32,20 +44,37 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.round
+import androidx.compose.ui.unit.toIntRect
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
+import io.github.parkwithease.parkeasy.ui.common.isoDay
+import io.github.parkwithease.parkeasy.ui.common.startOfWeek
+import io.github.parkwithease.parkeasy.ui.common.timezone
+import io.github.parkwithease.parkeasy.ui.common.toShortDate
+import kotlin.time.DurationUnit
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toInstant
+
+private const val MinutesPerSlot = 30
+private const val NumColumns = 7
+private const val NumRows = 48
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("detekt:LongMethod")
@@ -73,6 +102,7 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
             viewModel.onPlugInChange(false)
             viewModel.onShelterChange(false)
             viewModel.onPricePerHourChange("")
+            viewModel.onMinusTime(0..NumRows * NumColumns)
             editMode = EditMode.ADD
             openBottomSheet = true
         },
@@ -107,6 +137,9 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
                     viewModel::onShelterChange,
                     viewModel::onPricePerHourChange,
                     viewModel::onAddSpotClick,
+                    viewModel::onPlusTime,
+                    viewModel::onMinusTime,
+                    { viewModel.formState.times.value },
                 )
             }
         }
@@ -183,6 +216,9 @@ fun AddSpotScreen(
     onShelterChange: (Boolean) -> Unit,
     onPricePerHourChange: (String) -> Unit,
     onAddSpotClick: () -> Unit,
+    plus: (elements: Iterable<Int>) -> Unit,
+    minus: (elements: Iterable<Int>) -> Unit,
+    getSelectedIds: () -> Set<Int>,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -251,8 +287,165 @@ fun AddSpotScreen(
                 label = { Text(stringResource(R.string.shelter)) },
             )
         }
+        Row(Modifier.height(600.dp)) {
+            ColumnHeader(Modifier.width(48.dp))
+            TimeGrid(getSelectedIds, plus, minus)
+        }
         Button(onClick = onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.add_spot))
         }
     }
 }
+
+@Composable
+private fun ColumnHeader(
+    modifier: Modifier = Modifier,
+    state: LazyGridState = rememberLazyGridState(),
+) {
+    LazyVerticalGrid(state = state, columns = GridCells.Fixed(1), modifier = modifier) {
+        items(NumRows + 1) { num ->
+            if (num % 2 == 0) {
+                Text(
+                    text = if (num == 0) "" else LocalTime((num / 2 - 1), 0).toString(),
+                    Modifier.height(24.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+    }
+}
+
+@Suppress("detekt:LongMethod")
+@Composable
+private fun TimeGrid(
+    getSelectedIds: () -> Set<Int>,
+    plus: (elements: Iterable<Int>) -> Unit,
+    minus: (elements: Iterable<Int>) -> Unit,
+    modifier: Modifier = Modifier,
+    state: LazyGridState = rememberLazyGridState(),
+    slots: List<Int> = List(NumColumns * NumRows) { it % NumColumns * NumRows + it / NumColumns },
+) {
+    val disabledIds: List<Int> =
+        (0..Clock.System.now()
+                    .minus(startOfWeek().toInstant(timezone()))
+                    .toInt(DurationUnit.MINUTES) / MinutesPerSlot)
+            .asSequence()
+            .toList()
+    val selectedIds: Set<Int> = getSelectedIds()
+
+    LazyVerticalGrid(
+        state = state,
+        columns = GridCells.Fixed(NumColumns),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        modifier =
+            modifier.timeGridDragHandler(
+                lazyGridState = state,
+                disabledIds = disabledIds,
+                getSelectedIds = getSelectedIds,
+                plus = plus,
+                minus = minus,
+            ),
+    ) {
+        items(NumColumns) {
+            Text(
+                text = startOfWeek().isoDay(it + 1).toShortDate(),
+                Modifier.height(24.dp),
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+        items(slots, key = { it }) { id ->
+            val disabled = disabledIds.contains(id)
+            val selected = selectedIds.contains(id)
+
+            Surface(
+                tonalElevation = 3.dp,
+                color =
+                    if (disabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.primaryContainer
+                    },
+                modifier =
+                    Modifier.height(12.dp)
+                        .padding(top = if (id % 48 > 0 && id % 48 % 2 == 0) 3.dp else 0.dp)
+                        .toggleable(
+                            value = selected,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null, // do not show a ripple
+                            onValueChange = {
+                                Log.e("", selectedIds.toString())
+                                if (!disabled) {
+                                    if (it) {
+                                        plus(id..id)
+                                    } else {
+                                        minus(id..id)
+                                    }
+                                }
+                            },
+                        ),
+            ) {}
+        }
+    }
+}
+
+@Suppress("detekt:UnsafeCallOnNullableType") // code provided by a Google engineer -> probably fine
+private fun Modifier.timeGridDragHandler(
+    lazyGridState: LazyGridState,
+    disabledIds: List<Int>,
+    getSelectedIds: () -> Set<Int>,
+    plus: (elements: Iterable<Int>) -> Unit,
+    minus: (elements: Iterable<Int>) -> Unit,
+) =
+    pointerInput(Unit) {
+        fun LazyGridState.gridItemKeyAtPosition(hitPoint: Offset): Int? =
+            layoutInfo.visibleItemsInfo
+                .find { itemInfo ->
+                    itemInfo.size.toIntRect().contains(hitPoint.round() - itemInfo.offset)
+                }
+                ?.key as? Int
+        var initialKey: Int? = null
+        var currentKey: Int? = null
+        var adding = false
+        detectDragGestures(
+            onDragStart = { offset ->
+                lazyGridState.gridItemKeyAtPosition(offset)?.let { key ->
+                    val selectedIds = getSelectedIds()
+                    if (!disabledIds.contains(key)) {
+                        initialKey = key
+                        currentKey = key
+                        if (!selectedIds.contains(key)) {
+                            plus(key..key)
+                            adding = true
+                        } else {
+                            minus(key..key)
+                            adding = false
+                        }
+                    }
+                }
+            },
+            onDragCancel = { initialKey = null },
+            onDragEnd = { initialKey = null },
+            onDrag = { change, _ ->
+                if (initialKey != null) {
+                    lazyGridState.gridItemKeyAtPosition(change.position)?.let { key ->
+                        if (currentKey != key) {
+                            if (adding) {
+                                minus(initialKey!!..currentKey!!)
+                                minus(currentKey!!..initialKey!!)
+                                plus(initialKey!!..key)
+                                plus(key..initialKey!!)
+                            } else {
+                                plus(initialKey!!..currentKey!!)
+                                plus(currentKey!!..initialKey!!)
+                                minus(initialKey!!..key)
+                                minus(key..initialKey!!)
+                            }
+                            minus(disabledIds.min()..disabledIds.max())
+                            currentKey = key
+                        }
+                    }
+                }
+            },
+        )
+    }

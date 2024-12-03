@@ -1,7 +1,15 @@
 package io.github.parkwithease.parkeasy.model
 
+import java.time.format.DateTimeFormatter
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
 @Serializable
 data class Spot(
@@ -32,6 +40,23 @@ data class SpotLocation(
 
 @Serializable
 data class TimeSlot(
-    @SerialName("start_time") val startTime: String = "",
-    @SerialName("end_time") val endTime: String = "",
+    @Serializable(with = LocalDateTimeToRFC3339::class)
+    @SerialName("start_time")
+    val startTime: LocalDateTime,
+    @Serializable(with = LocalDateTimeToRFC3339::class)
+    @SerialName("end_time")
+    val endTime: LocalDateTime,
 )
+
+object LocalDateTimeToRFC3339 : KSerializer<LocalDateTime> {
+    private val format = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+
+    override val descriptor: SerialDescriptor
+        get() = TODO("Not yet implemented") // Seems like overkill to implement
+
+    override fun serialize(encoder: Encoder, value: LocalDateTime) =
+        encoder.encodeString(value.toJavaLocalDateTime().format(format))
+
+    override fun deserialize(decoder: Decoder): LocalDateTime =
+        java.time.LocalDateTime.parse(decoder.decodeString(), format).toKotlinLocalDateTime()
+}
