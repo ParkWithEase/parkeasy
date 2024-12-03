@@ -232,7 +232,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		Method:      http.MethodGet,
 		Path:        "/bookings/{id}/availability",
 		Summary:     "Get booked time slots for the booking",
-		Tags:        []string{ParkingSpotTag.Name},
+		Tags:        []string{BookingTag.Name},
 	}), func(ctx context.Context, input *struct {
 		ID uuid.UUID `path:"id"`
 	},

@@ -58,7 +58,7 @@ type ParkingspotsStmt = bob.QueryStmt[*Parkingspot, ParkingspotSlice]
 
 // parkingspotR is where relationships are stored.
 type parkingspotR struct {
-	ParkingspotidBookings  BookingSlice  // booking.booking_parkingspotid_fkey
+	ParkingspotidBookings        BookingSlice        // booking.booking_parkingspotid_fkey
 	UseridUser                   *User               // parkingspot.parkingspot_userid_fkey
 	ParkingspotidPreferencespots PreferencespotSlice // preferencespot.preferencespot_parkingspotid_fkey
 	ParkingspotidTimeunits       TimeunitSlice       // timeunit.timeunit_parkingspotid_fkey
@@ -494,7 +494,7 @@ func buildParkingspotWhere[Q psql.Filterable](cols parkingspotColumns) parkingsp
 
 type parkingspotJoins[Q dialect.Joinable] struct {
 	typ                          string
-	ParkingspotidBookings  func(context.Context) modAs[Q, bookingColumns]
+	ParkingspotidBookings        func(context.Context) modAs[Q, bookingColumns]
 	UseridUser                   func(context.Context) modAs[Q, userColumns]
 	ParkingspotidPreferencespots func(context.Context) modAs[Q, preferencespotColumns]
 	ParkingspotidTimeunits       func(context.Context) modAs[Q, timeunitColumns]
@@ -507,7 +507,7 @@ func (j parkingspotJoins[Q]) aliasedAs(alias string) parkingspotJoins[Q] {
 func buildParkingspotJoins[Q dialect.Joinable](cols parkingspotColumns, typ string) parkingspotJoins[Q] {
 	return parkingspotJoins[Q]{
 		typ:                          typ,
-		ParkingspotidBookings:  parkingspotsJoinParkingspotidBookings[Q](cols, typ),
+		ParkingspotidBookings:        parkingspotsJoinParkingspotidBookings[Q](cols, typ),
 		UseridUser:                   parkingspotsJoinUseridUser[Q](cols, typ),
 		ParkingspotidPreferencespots: parkingspotsJoinParkingspotidPreferencespots[Q](cols, typ),
 		ParkingspotidTimeunits:       parkingspotsJoinParkingspotidTimeunits[Q](cols, typ),
