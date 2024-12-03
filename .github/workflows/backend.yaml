@@ -1,8 +1,11 @@
 name: Backend CI
 
 on:
-  - pull_request
-  - merge_group
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - main
 
 concurrency:
   # Makes sure only one is run per PR
@@ -53,7 +56,7 @@ jobs:
 
   dbmodel:
     needs: [changes]
-    if: needs.changes.outputs.exists != 'false'
+    if: needs.changes.outputs.exists != 'false' && github.event_name != 'push'
 
     name: Backend DB model up-to-date
     runs-on: ubuntu-latest
@@ -98,7 +101,7 @@ jobs:
 
   build:
     needs: [changes]
-    if: needs.changes.outputs.exists != 'false'
+    if: needs.changes.outputs.exists != 'false' && github.event_name != 'push'
 
     name: Backend container build
     runs-on: ubuntu-latest
@@ -142,3 +145,39 @@ jobs:
         with:
           name: parkserver container
           path: ${{ runner.temp }}/parkserver.tar.zst
+
+  codeql:
+    needs: [changes]
+    if: needs.changes.outputs.exists != 'false'
+
+    name: Github CodeQL security scan for backend
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github
+            backend
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: |
+            backend/go.sum
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: go
+          build-mode: manual
+          queries: security-and-quality
+
+      - name: Build backend
+        run: go build ./cmd/parkserver
+        working-directory: backend
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:go"
