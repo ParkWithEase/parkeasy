@@ -899,3 +899,119 @@ func TestGetByUUID(t *testing.T) {
 		repo.AssertExpectations(t)
 	})
 }
+
+func TestGetBookedTimesByUUID(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	mockEntry := booking.EntryWithTimes{
+		Entry: booking.Entry{
+			Booking:    testBooking,
+			InternalID: testBookingInternalID,
+			BookerID:   testUserID,
+		},
+		BookedTimes: sampleTimeUnit,
+	}
+
+	t.Run("successfully retrieves booked times", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		spotRepo := new(mockParkingspotRepo)
+		service := New(repo, spotRepo, nil)
+
+		spotRepo.On("GetOwnerByUUID", mock.Anything, testSpotUUID).
+			Return(testUserID, nil).
+			Once()
+
+		repo.On("GetByUUID", mock.Anything, testBookingUUID).
+			Return(mockEntry, nil).
+			Once()
+
+		result, err := service.GetBookedTimesByUUID(ctx, testUserID, testBookingUUID)
+		require.NoError(t, err)
+		assert.Empty(t, cmp.Diff(sampleTimeUnit, result))
+		spotRepo.AssertExpectations(t)
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("returns error when booking not found", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		spotRepo := new(mockParkingspotRepo)
+		service := New(repo, spotRepo, nil)
+
+		repo.On("GetByUUID", mock.Anything, testBookingUUID).
+			Return(booking.EntryWithTimes{}, booking.ErrNotFound).
+			Once()
+
+		result, err := service.GetBookedTimesByUUID(ctx, testUserID, testBookingUUID)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrBookingNotFound)
+		}
+		assert.Empty(t, result)
+
+		repo.AssertExpectations(t)
+		spotRepo.AssertNotCalled(t, "GetOwnerByUUID")
+	})
+
+	t.Run("returns error when parking spot owner cannot be retrieved", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		spotRepo := new(mockParkingspotRepo)
+		service := New(repo, spotRepo, nil)
+
+		repo.On("GetByUUID", mock.Anything, testBookingUUID).
+			Return(mockEntry, nil).
+			Once()
+
+		spotRepo.On("GetOwnerByUUID", mock.Anything, testSpotUUID).
+			Return(int64(0), errors.New("database error")).
+			Once()
+
+		result, err := service.GetBookedTimesByUUID(ctx, testUserID, testBookingUUID)
+		require.Error(t, err)
+		assert.Empty(t, result)
+
+		spotRepo.AssertExpectations(t)
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("returns error when user is not the booker or seller", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		spotRepo := new(mockParkingspotRepo)
+		service := New(repo, spotRepo, nil)
+
+		mockEntry := booking.EntryWithTimes{
+			Entry: booking.Entry{
+				Booking:    testBooking,
+				BookerID:   int64(999),
+				InternalID: testBookingInternalID,
+			},
+			BookedTimes: sampleTimeUnit,
+		}
+
+		spotRepo.On("GetOwnerByUUID", mock.Anything, testSpotUUID).
+			Return(int64(888), nil). // Also not the user
+			Once()
+
+		repo.On("GetByUUID", mock.Anything, testBookingUUID).
+			Return(mockEntry, nil).
+			Once()
+
+		result, err := service.GetBookedTimesByUUID(ctx, testUserID, testBookingUUID)
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrInvalidRequest)
+		}
+		assert.Empty(t, result)
+
+		spotRepo.AssertExpectations(t)
+		repo.AssertExpectations(t)
+	})
+}
