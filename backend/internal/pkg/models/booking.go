@@ -9,6 +9,7 @@ import (
 var (
 	ErrBookingNotFound   = CodeNotFound.WithMsg("this booking does not exist")
 	ErrEmptyBookingTimes = CodeNotFound.WithMsg("can not create booking with no time slots")
+	ErrSpotNotOwned      = CodeForbidden.WithMsg("sellers can not view bookings for parking spots not owned")
 	ErrDuplicateBooking  = CodeDuplicate.WithMsg("one or more time slots are already booked")
 	ErrInvalidPaidAmount = CodeBookingInvalid.WithMsg("the specified paid amount is invalid")
 	ErrCarNotOwned       = CodeForbidden.WithMsg("specified car is not owned by the user")
