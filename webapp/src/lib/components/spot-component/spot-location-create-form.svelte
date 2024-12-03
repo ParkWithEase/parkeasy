@@ -88,7 +88,7 @@
             warningText = 'This application supports locations in Canada only!';
         } else {
             houseNumber = location.properties.housenumber ?? '';
-            streetAddress = `${location.properties.housenumber} ${location.properties.street}`;
+            streetAddress = `${houseNumber} ${location.properties.street}`;
             city = location.properties.city;
             state = location.properties.state_code;
             countryCode = location.properties.country_code?.toUpperCase();
@@ -102,7 +102,7 @@
     // Address verification using Geoapify API
     const verifyAddress = () => {
         const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(
-            `${houseNumber} ${streetAddress}, ${city}, ${state}, ${postalCode}, ${country}`
+            `${streetAddress}, ${city}, ${state}, ${postalCode.substring(0,3) + ' ' + postalCode.substring(3)}, ${country}`
         )}&apiKey=${apiKey}`;
 
         fetch(url)
@@ -117,8 +117,8 @@
                 const matchedAddress = result.features[0].properties;
                 // Validate all fields match exactly
                 const isMatch =
-                    matchedAddress.housenumber + ' ' + matchedAddress.street?.toLowerCase() ===
-                        streetAddress.toLowerCase() &&
+                    ((matchedAddress.housenumber ?? '') + ' ' + matchedAddress.street?.toLowerCase()).trim() ===
+                        streetAddress.toLowerCase().trim() &&
                     matchedAddress.city?.toLowerCase() === city.toLowerCase() &&
                     matchedAddress.state_code?.toLowerCase() === state.toLowerCase() &&
                     matchedAddress.postcode?.replace(/\s/g, '').toLowerCase() ===
@@ -197,7 +197,6 @@
             placeholder="House # & Street Address"
             readonly={isReadOnly}
             bind:value={streetAddress}
-            on:input={handleEdit}
             on:change={handleEdit}
         />
         <TextInput
