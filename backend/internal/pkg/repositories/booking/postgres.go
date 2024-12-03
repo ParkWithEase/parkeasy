@@ -132,6 +132,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 			booking.BookingInfo.ParkingSpotID,
 			booking.BookingInfo.CarID,
 			inserted.Createdat,
+			inserted.Userid,
 		),
 		BookedTimes: bookedSlots,
 	}
@@ -212,6 +213,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 			bookingResult.Parkingspotuuid,
 			bookingResult.Caruuid,
 			bookingResult.Createdat,
+			bookingResult.Userid,
 		),
 		BookedTimes: timeUnitsFromDB(timeResult),
 	}
@@ -341,6 +343,7 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 			get.Parkingspotuuid,
 			get.Caruuid,
 			get.Createdat,
+			get.Userid,
 		)
 
 		result = append(result, entry)
@@ -407,12 +410,14 @@ func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, af
 			continue
 		}
 
-		entry := formEntry(amount,
+		entry := formEntry(
+			amount,
 			get.Bookinguuid,
 			get.Bookingid,
 			get.Parkingspotuuid,
 			get.Caruuid,
 			get.Createdat,
+			get.Userid,
 		)
 
 		result = append(result, entry)
@@ -429,7 +434,7 @@ func timeUnitsFromDB(model []*dbmodels.Timeunit) []models.TimeUnit {
 	return result
 }
 
-func formEntry(amount float64, bookingUUID uuid.UUID, bookingID int64, parkingSpotUUID uuid.UUID, carID uuid.UUID, createdAt time.Time) Entry {
+func formEntry(amount float64, bookingUUID uuid.UUID, bookingID int64, parkingSpotUUID uuid.UUID, carID uuid.UUID, createdAt time.Time, bookerID int64) Entry {
 	return Entry{
 		Booking: models.Booking{
 			PaidAmount:    amount,
@@ -439,6 +444,7 @@ func formEntry(amount float64, bookingUUID uuid.UUID, bookingID int64, parkingSp
 			CreatedAt:     createdAt,
 		},
 		InternalID: bookingID,
+		BookerID:   bookerID,
 	}
 }
 

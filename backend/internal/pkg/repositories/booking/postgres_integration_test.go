@@ -264,6 +264,7 @@ func TestPostgresIntegration(t *testing.T) {
 			bookingCreationInput.BookingInfo.ParkingSpotID,
 			bookingCreationInput.BookingInfo.CarID,
 			createEntry.CreatedAt,
+			userID,
 		)
 
 		require.NoError(t, err)
@@ -353,6 +354,7 @@ func TestPostgresIntegration(t *testing.T) {
 				bookingCreationInput_1.BookingInfo.ParkingSpotID,
 				carEntry.ID,
 				createEntry.CreatedAt,
+				userID,
 			)
 			expectedAllBuyerEntries = append(expectedAllBuyerEntries, expectedCreateEntry)
 		}
@@ -376,6 +378,7 @@ func TestPostgresIntegration(t *testing.T) {
 				bookingCreationInput_2.BookingInfo.ParkingSpotID,
 				carEntry.ID,
 				createEntry.CreatedAt,
+				userID,
 			)
 			expectedEntries_1 = append(expectedEntries_1, expectedCreateEntry)
 		}
@@ -399,6 +402,7 @@ func TestPostgresIntegration(t *testing.T) {
 				bookingCreationInput_3.BookingInfo.ParkingSpotID,
 				carEntry_1.ID,
 				createEntry.CreatedAt,
+				userID_1,
 			)
 			expectedEntries_2 = append(expectedEntries_2, expectedCreateEntry)
 		}
@@ -593,6 +597,7 @@ func TestPostgresIntegration(t *testing.T) {
 			bookingCreationInput.BookingInfo.ParkingSpotID,
 			carEntry.ID,
 			createdBooking.CreatedAt,
+			userID,
 		)
 		assert.Empty(t, cmp.Diff(expectedEntry, retrievedEntry.Entry))
 		assert.Empty(t, cmp.Diff(bookingCreationInput.BookingInfo.BookedTimes, retrievedEntry.BookedTimes))
@@ -687,7 +692,7 @@ func TestPostgresIntegration(t *testing.T) {
 
 }
 
-func createExpectedEntry(internalID int64, bookingUUID uuid.UUID, paidAmount float64, spotID uuid.UUID, carID uuid.UUID, createdAt time.Time) Entry {
+func createExpectedEntry(internalID int64, bookingUUID uuid.UUID, paidAmount float64, spotID uuid.UUID, carID uuid.UUID, createdAt time.Time, bookerID int64) Entry {
 
 	return Entry{
 		Booking: models.Booking{
@@ -698,5 +703,6 @@ func createExpectedEntry(internalID int64, bookingUUID uuid.UUID, paidAmount flo
 			CreatedAt:     createdAt,
 		},
 		InternalID: internalID,
+		BookerID:   bookerID,
 	}
 }

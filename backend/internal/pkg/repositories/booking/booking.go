@@ -12,6 +12,7 @@ import (
 type Entry struct {
 	models.Booking
 	InternalID int64 // The internal ID of this booking
+	BookerID   int64
 }
 
 type EntryWithTimes struct {
