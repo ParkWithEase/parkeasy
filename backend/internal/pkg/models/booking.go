@@ -17,10 +17,10 @@ var (
 )
 
 type Booking struct {
-	PaidAmount    float64   `json:"paid_amount" doc:"the amount paid for the booking"`
 	ID            uuid.UUID `json:"id" doc:"ID of this resource"`
 	ParkingSpotID uuid.UUID `json:"parkingspot_id" doc:"the ID of parking spot associated with booking"`
 	CarID         uuid.UUID `json:"car_id" doc:"the ID of car associated with booking"`
+	PaidAmount    float64   `json:"paid_amount" doc:"the amount paid for the booking"`
 	CreatedAt     time.Time `json:"booking_time" doc:"time when the booking was made"`
 }
 

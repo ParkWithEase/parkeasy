@@ -268,7 +268,7 @@ func TestCreateBooking(t *testing.T) {
 		bookingID, result, err := service.Create(ctx, testUserID, testBookingDetails)
 		require.NoError(t, err)
 		assert.Equal(t, testBookingInternalID, bookingID)
-		assert.Equal(t, testpaidAmount, result.Booking.PaidAmount)
+		assert.Empty(t, cmp.Diff(testpaidAmount, result.Booking.PaidAmount))
 		assert.Empty(t, cmp.Diff(testBookingWithTimes, result))
 		spotRepo.AssertExpectations(t)
 		carRepo.AssertExpectations(t)
