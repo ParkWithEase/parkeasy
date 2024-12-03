@@ -80,6 +80,7 @@ private const val NumRows = 48
 @Suppress("detekt:LongMethod")
 @Composable
 fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltViewModel()) {
+    val handler = rememberAddSpotFormHandler(viewModel)
     val spots by viewModel.spots.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     var editMode by rememberSaveable { mutableStateOf(EditMode.ADD) }
@@ -93,16 +94,7 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
     SpotsScreen(
         spots,
         {
-            viewModel.onStreetAddressChange("")
-            viewModel.onCityChange("")
-            viewModel.onStateChange("")
-            viewModel.onCountryCodeChange("CA")
-            viewModel.onPostalCodeChange("")
-            viewModel.onChargingStationChange(false)
-            viewModel.onPlugInChange(false)
-            viewModel.onShelterChange(false)
-            viewModel.onPricePerHourChange("")
-            viewModel.onMinusTime(0..NumRows * NumColumns)
+            handler.resetForm()
             editMode = EditMode.ADD
             openBottomSheet = true
         },
@@ -127,18 +119,8 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
             ) {
                 AddSpotScreen(
                     viewModel.formState,
-                    viewModel::onStreetAddressChange,
-                    viewModel::onCityChange,
-                    viewModel::onStateChange,
-                    viewModel::onCountryCodeChange,
-                    viewModel::onPostalCodeChange,
-                    viewModel::onChargingStationChange,
-                    viewModel::onPlugInChange,
-                    viewModel::onShelterChange,
-                    viewModel::onPricePerHourChange,
+                    handler,
                     viewModel::onAddSpotClick,
-                    viewModel::onPlusTime,
-                    viewModel::onMinusTime,
                     { viewModel.formState.times.value },
                 )
             }
@@ -206,18 +188,8 @@ fun AddSpotButton(onShowAddSpotClick: () -> Unit, modifier: Modifier = Modifier)
 @Suppress("detekt:LongMethod")
 fun AddSpotScreen(
     state: AddSpotFormState,
-    onStreetAddressChange: (String) -> Unit,
-    onCityChange: (String) -> Unit,
-    onStateChange: (String) -> Unit,
-    onCountryCodeChange: (String) -> Unit,
-    onPostalCodeChange: (String) -> Unit,
-    onChargingStationChange: (Boolean) -> Unit,
-    onPlugInChange: (Boolean) -> Unit,
-    onShelterChange: (Boolean) -> Unit,
-    onPricePerHourChange: (String) -> Unit,
+    handler: AddSpotFormHandler,
     onAddSpotClick: () -> Unit,
-    plus: (elements: Iterable<Int>) -> Unit,
-    minus: (elements: Iterable<Int>) -> Unit,
     getSelectedIds: () -> Set<Int>,
     modifier: Modifier = Modifier,
 ) {
@@ -228,20 +200,20 @@ fun AddSpotScreen(
     ) {
         ParkEasyTextField(
             state = state.streetAddress,
-            onValueChange = onStreetAddressChange,
+            onValueChange = handler.onStreetAddressChange,
             modifier = Modifier.fillMaxWidth(),
             labelId = R.string.street_address,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ParkEasyTextField(
                 state = state.city,
-                onValueChange = onCityChange,
+                onValueChange = handler.onCityChange,
                 modifier = Modifier.weight(1f),
                 labelId = R.string.city,
             )
             ParkEasyTextField(
                 state = state.state,
-                onValueChange = onStateChange,
+                onValueChange = handler.onStateChange,
                 modifier = Modifier.weight(1f),
                 labelId = R.string.state,
             )
@@ -249,20 +221,20 @@ fun AddSpotScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ParkEasyTextField(
                 state = state.countryCode,
-                onValueChange = onCountryCodeChange,
+                onValueChange = handler.onCountryCodeChange,
                 modifier = Modifier.weight(1f),
                 labelId = R.string.country,
             )
             ParkEasyTextField(
                 state = state.postalCode,
-                onValueChange = onPostalCodeChange,
+                onValueChange = handler.onPostalCodeChange,
                 modifier = Modifier.weight(1f),
                 labelId = R.string.postal_code,
             )
         }
         ParkEasyTextField(
             state = state.pricePerHour,
-            onValueChange = onPricePerHourChange,
+            onValueChange = handler.onPricePerHourChange,
             modifier = Modifier.fillMaxWidth(),
             labelId = R.string.price_per_hour,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -273,23 +245,23 @@ fun AddSpotScreen(
         ) {
             FilterChip(
                 selected = state.chargingStation.value,
-                onClick = { onChargingStationChange(!state.chargingStation.value) },
+                onClick = { handler.onChargingStationChange(!state.chargingStation.value) },
                 label = { Text(stringResource(R.string.charging_station)) },
             )
             FilterChip(
                 selected = state.plugIn.value,
-                onClick = { onPlugInChange(!state.plugIn.value) },
+                onClick = { handler.onPlugInChange(!state.plugIn.value) },
                 label = { Text(stringResource(R.string.plug_in)) },
             )
             FilterChip(
                 selected = state.shelter.value,
-                onClick = { onShelterChange(!state.shelter.value) },
+                onClick = { handler.onShelterChange(!state.shelter.value) },
                 label = { Text(stringResource(R.string.shelter)) },
             )
         }
         Row(Modifier.height(600.dp)) {
             ColumnHeader(Modifier.width(48.dp))
-            TimeGrid(getSelectedIds, plus, minus)
+            TimeGrid(getSelectedIds, handler.onPlusTime, handler.onMinusTime)
         }
         Button(onClick = onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.add_spot))

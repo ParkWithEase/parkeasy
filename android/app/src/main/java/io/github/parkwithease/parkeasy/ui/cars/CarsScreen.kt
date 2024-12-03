@@ -62,8 +62,8 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
     CarsScreen(
         cars,
         { car ->
-            viewModel.currentlyEditingId = car.id
             handler.resetForm()
+            viewModel.currentlyEditingId = car.id
             viewModel.onColorChange(car.details.color)
             viewModel.onLicensePlateChange(car.details.licensePlate)
             viewModel.onMakeChange(car.details.make)
@@ -72,8 +72,8 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
             openBottomSheet = true
         },
         {
-            viewModel.currentlyEditingId = ""
             handler.resetForm()
+            viewModel.currentlyEditingId = ""
             editMode = EditMode.ADD
             openBottomSheet = true
         },

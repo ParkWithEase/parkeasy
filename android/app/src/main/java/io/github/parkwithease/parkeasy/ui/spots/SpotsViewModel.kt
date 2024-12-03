@@ -1,8 +1,10 @@
 package io.github.parkwithease.parkeasy.ui.spots
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,6 +18,8 @@ import io.github.parkwithease.parkeasy.model.TimeSlot
 import io.github.parkwithease.parkeasy.ui.common.startOfWeek
 import io.github.parkwithease.parkeasy.ui.common.timezone
 import javax.inject.Inject
+import kotlin.String
+import kotlin.collections.plus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -213,6 +217,24 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
             }
     }
 
+    fun resetForm() {
+        formState =
+            formState.run {
+                copy(
+                    streetAddress = FieldState(""),
+                    city = FieldState(""),
+                    state = FieldState(""),
+                    countryCode = FieldState("CA"),
+                    postalCode = FieldState(""),
+                    chargingStation = FieldState(false),
+                    plugIn = FieldState(false),
+                    shelter = FieldState(false),
+                    pricePerHour = FieldState(""),
+                    times = FieldState<Set<Int>>(emptySet()),
+                )
+            }
+    }
+
     private fun clearFieldErrors() {
         formState =
             formState.run {
@@ -224,7 +246,27 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                 )
             }
     }
+
+    fun createHandler() =
+        AddSpotFormHandler(
+            onStreetAddressChange = this::onStreetAddressChange,
+            onCityChange = this::onCityChange,
+            onStateChange = this::onStateChange,
+            onCountryCodeChange = this::onCountryCodeChange,
+            onPostalCodeChange = this::onPostalCodeChange,
+            onChargingStationChange = this::onChargingStationChange,
+            onPlugInChange = this::onPlugInChange,
+            onShelterChange = this::onShelterChange,
+            onPricePerHourChange = this::onPricePerHourChange,
+            onPlusTime = this::onPlusTime,
+            onMinusTime = this::onMinusTime,
+            resetForm = this::resetForm,
+        )
 }
+
+@Composable
+fun rememberAddSpotFormHandler(viewModel: SpotsViewModel) =
+    remember(viewModel) { viewModel.createHandler() }
 
 data class AddSpotFormState(
     val streetAddress: FieldState<String> = FieldState(""),
@@ -237,4 +279,19 @@ data class AddSpotFormState(
     val shelter: FieldState<Boolean> = FieldState(false),
     val pricePerHour: FieldState<String> = FieldState(""),
     val times: FieldState<Set<Int>> = FieldState<Set<Int>>(emptySet()),
+)
+
+data class AddSpotFormHandler(
+    val onStreetAddressChange: (String) -> Unit = {},
+    val onCityChange: (String) -> Unit = {},
+    val onStateChange: (String) -> Unit = {},
+    val onCountryCodeChange: (String) -> Unit = {},
+    val onPostalCodeChange: (String) -> Unit = {},
+    val onChargingStationChange: (Boolean) -> Unit = {},
+    val onPlugInChange: (Boolean) -> Unit = {},
+    val onShelterChange: (Boolean) -> Unit = {},
+    val onPricePerHourChange: (String) -> Unit = {},
+    val onPlusTime: (Iterable<Int>) -> Unit = {},
+    val onMinusTime: (Iterable<Int>) -> Unit = {},
+    val resetForm: () -> Unit = {},
 )
