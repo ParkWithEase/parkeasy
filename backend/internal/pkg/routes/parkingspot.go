@@ -228,7 +228,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		_, result, err := r.service.Create(ctx, userID, &input.Body)
 		if err != nil {
-			detail := describeParkingSpotInputError(err, input.Body.Location, input.Body.Availability, input.Body.PricePerHour)
+			detail := describeParkingSpotInputError(err, &input.Body.Location, input.Body.Availability, input.Body.PricePerHour)
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
 		return &parkingSpotCreationOutput{Body: result}, nil
@@ -242,14 +242,14 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		Tags:        []string{ParkingSpotTag.Name},
 		Errors:      []int{http.StatusUnprocessableEntity, http.StatusNotFound},
 	}), func(ctx context.Context, input *struct {
-		ID   uuid.UUID `path:"id"`
 		Body models.ParkingSpotUpdateInput
+		ID   uuid.UUID `path:"id"`
 	},
 	) (*parkingSpotCreationOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		result, err := r.service.UpdateByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
-			detail := describeParkingSpotInputError(err, models.ParkingSpotLocation{}, input.Body.Availability, input.Body.PricePerHour)
+			detail := describeParkingSpotInputError(err, &models.ParkingSpotLocation{}, input.Body.Availability, input.Body.PricePerHour)
 			if errors.Is(err, models.ErrParkingSpotNotFound) {
 				detail = &huma.ErrorDetail{
 					Location: "path.id",
@@ -353,13 +353,12 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 
 		return &result, nil
 	})
-
 }
 
 // Returns a huma.ErrorDetail describing the error in input
 //
 // Returns nil if there are no description for the error
-func describeParkingSpotInputError(err error, location models.ParkingSpotLocation, availability []models.TimeUnit, pricePerHour float64) error {
+func describeParkingSpotInputError(err error, location *models.ParkingSpotLocation, availability []models.TimeUnit, pricePerHour float64) error {
 	switch {
 	case errors.Is(err, models.ErrParkingSpotDuplicate), errors.Is(err, models.ErrParkingSpotOwned), errors.Is(err, models.ErrInvalidAddress):
 		return &huma.ErrorDetail{
@@ -399,5 +398,4 @@ func describeParkingSpotInputError(err error, location models.ParkingSpotLocatio
 	default:
 		return nil
 	}
-
 }

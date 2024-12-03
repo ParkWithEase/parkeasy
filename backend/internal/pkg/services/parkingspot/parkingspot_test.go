@@ -525,9 +525,7 @@ func TestUpdateByUUID(t *testing.T) {
 		srv := New(repo, geoRepo, preferenceRepo)
 
 		invalidAvailability := make([]models.TimeUnit, len(sampleAvailability))
-		for i, unit := range sampleAvailability {
-			invalidAvailability[i] = unit
-		}
+		copy(invalidAvailability, sampleAvailability)
 		invalidAvailability[0].StartTime = time.Date(2024, time.October, 26, 10, 15, 0, 0, time.UTC)
 
 		input := &models.ParkingSpotUpdateInput{

@@ -133,7 +133,7 @@ func (s *Service) UpdateByUUID(ctx context.Context, userID int64, spotID uuid.UU
 		// Yields not found to prevent leaking existence information
 		return models.ParkingSpotWithAvailability{}, models.ErrParkingSpotNotFound
 	}
-	
+
 	err = validateSpotDetails(input.Availability, input.PricePerHour)
 	if err != nil {
 		return models.ParkingSpotWithAvailability{}, err

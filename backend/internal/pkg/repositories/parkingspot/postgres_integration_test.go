@@ -115,7 +115,6 @@ func TestPostgresIntegration(t *testing.T) {
 	sampleAvailability := append([]models.TimeUnit(nil), sampleTimeUnit...)
 	sampleUpdateAvailability := append([]models.TimeUnit(nil), sampleUpdateTimeUnit...)
 
-
 	sampleLocation := models.ParkingSpotLocation{
 		PostalCode:    "L2E6T2",
 		CountryCode:   "CA",
@@ -149,7 +148,7 @@ func TestPostgresIntegration(t *testing.T) {
 	}
 
 	updateInput := models.ParkingSpotUpdateInput{
-		Features: sampleUpdateFeatures,
+		Features:     sampleUpdateFeatures,
 		PricePerHour: sampleUpdatePricePerHour,
 		Availability: sampleUpdateTimeUnit,
 	}
@@ -419,7 +418,7 @@ func TestPostgresIntegration(t *testing.T) {
 			// required since Restore() deletes the current DB
 			pool.Reset()
 		})
-	
+
 		// Create an entry
 		createEntry, _, err := repo.Create(ctx, userID, &creationInput)
 		require.NoError(t, err)

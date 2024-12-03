@@ -127,6 +127,9 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, spotID uuid.UUID,
 			dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
 		),
 	).All()
+	if err != nil {
+		return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: %w", err)
+	}
 
 	// Determine unbooked times to be inserted
 	newTimeUnits := timeUnitSetMinus(updateSpot.Availability, timeUnitsFromDB(bookedTimes))
@@ -150,11 +153,14 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, spotID uuid.UUID,
 			dbmodels.SelectWhere.Timeunits.Parkingspotid.EQ(updated.Parkingspotid),
 		),
 	).All()
+	if err != nil {
+		return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: %w", err)
+	}
 
 	// Compare state of times in DB after update with times from input
 	audit := timeUnitSetMinus(updateSpot.Availability, timeUnitsFromDB(bookedTimes))
 	if len(audit) != 0 {
-		return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: audit failed")
+		return Entry{}, []models.TimeUnit{}, errors.New("could not execute update: audit failed")
 	}
 
 	// Commit since audit passed

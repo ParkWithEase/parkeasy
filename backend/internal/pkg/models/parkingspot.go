@@ -83,5 +83,5 @@ type ParkingSpotFilter struct {
 type ParkingSpotUpdateInput struct {
 	Availability []TimeUnit          `json:"availability" nullable:"false"`
 	PricePerHour float64             `json:"price_per_hour" doc:"price per hour"`
-	Features     ParkingSpotFeatures `json:"features,omitempty"`	
+	Features     ParkingSpotFeatures `json:"features,omitempty"`
 }

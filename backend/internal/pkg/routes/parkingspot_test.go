@@ -517,7 +517,7 @@ func TestUpdateByUUID(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, testInput.Availability, spot.Availability)
-		assert.Equal(t, testInput.PricePerHour, spot.PricePerHour)
+		assert.InEpsilon(t, testInput.PricePerHour, spot.PricePerHour, 1e-5)
 		assert.Equal(t, testInput.Features, spot.Features)
 		assert.Equal(t, spotUUID, spot.ID)
 
