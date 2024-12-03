@@ -159,6 +159,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    '/spots/preference': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get preference spots associated to the current user */
+        get: operations['list-preference-spots'];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     '/spots/{id}': {
         parameters: {
             query?: never;
@@ -188,6 +205,25 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    '/spots/{id}/preference': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the preference state of the specified spot */
+        get: operations['get-preference-spot'];
+        put?: never;
+        /** Create a preference spot */
+        post: operations['create-preference-spot'];
+        /** Delete the specified preference */
+        delete: operations['delete-preference-spot'];
         options?: never;
         head?: never;
         patch?: never;
@@ -1126,7 +1162,7 @@ export interface operations {
                 longitude: number;
                 /** @description Latitude of the centre point */
                 latitude: number;
-                /** @description distance around the centre point */
+                /** @description distance around the centre point in meters */
                 distance?: number;
             };
             header?: never;
@@ -1193,6 +1229,59 @@ export interface operations {
                 };
                 content: {
                     'application/json': components['schemas']['ParkingSpotWithAvailability'];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'list-preference-spots': {
+        parameters: {
+            query?: {
+                /** @description Token used for requesting the next page of resources */
+                after?: string;
+                /** @description The maximum number of preference spots that appear per page. */
+                count?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    Link?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['ParkingSpot'][];
                 };
             };
             /** @description Unauthorized */
@@ -1297,6 +1386,149 @@ export interface operations {
                 content: {
                     'application/json': components['schemas']['TimeUnit'][];
                 };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'get-preference-spot': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': boolean;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'create-preference-spot': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'delete-preference-spot': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unauthorized */
             401: {
