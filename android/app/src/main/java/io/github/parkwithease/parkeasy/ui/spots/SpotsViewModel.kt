@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.spots
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -20,6 +21,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 @Suppress("detekt:TooManyFunctions")
 class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) : ViewModel() {
+    val snackbarState = SnackbarHostState()
+
     private val _spots = MutableStateFlow(emptyList<Spot>())
     val spots = _spots.asStateFlow()
 
@@ -32,7 +35,12 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
     fun onRefresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            _spots.value = spotRepo.getSpots()
+            spotRepo
+                .getSpots()
+                .onSuccess { _spots.value = it }
+                .onFailure {
+                    viewModelScope.launch { snackbarState.showSnackbar("Error retrieving spots") }
+                }
             _isRefreshing.value = false
         }
     }
@@ -67,28 +75,76 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                     )
                 )
                 .also { clearFieldErrors() }
-                ?.onSuccess { onRefresh() }
+                .onSuccess { onRefresh() }
+                .onFailure {
+                    viewModelScope.launch { snackbarState.showSnackbar("Error creating spot") }
+                }
         }
     }
 
     fun onStreetAddressChange(value: String) {
-        formState = formState.run { copy(streetAddress = streetAddress.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    streetAddress =
+                        streetAddress.copy(
+                            value = value,
+                            error = if (value != "") null else "Address cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onCityChange(value: String) {
-        formState = formState.run { copy(city = city.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    city =
+                        city.copy(
+                            value = value,
+                            error = if (value != "") null else "City cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onStateChange(value: String) {
-        formState = formState.run { copy(state = state.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    state =
+                        state.copy(
+                            value = value,
+                            error = if (value != "") null else "State cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onCountryCodeChange(value: String) {
-        formState = formState.run { copy(countryCode = countryCode.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    countryCode =
+                        countryCode.copy(
+                            value = value,
+                            error = if (value != "") null else "Country cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onPostalCodeChange(value: String) {
-        formState = formState.run { copy(postalCode = postalCode.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    postalCode =
+                        postalCode.copy(
+                            value = value,
+                            error = if (value != "") null else "Postal code cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onChargingStationChange(value: Boolean) {
@@ -104,7 +160,16 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
     }
 
     fun onPricePerHourChange(value: String) {
-        formState = formState.run { copy(pricePerHour = pricePerHour.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    pricePerHour =
+                        pricePerHour.copy(
+                            value = value,
+                            error = if (value != "") null else "Price cannot be empty",
+                        )
+                )
+            }
     }
 
     private fun clearFieldErrors() {

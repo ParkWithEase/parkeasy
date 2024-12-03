@@ -18,10 +18,7 @@ type Cursor struct {
 	ID int64    // The internal preference spot ID to use as anchor
 }
 
-var (
-	ErrDuplicatedPreference = errors.New("preference spot already exist in the database")
-	ErrNotFound             = errors.New("no preference spot found")
-)
+var ErrDuplicatedPreference = errors.New("preference spot already exist in the database")
 
 type Repository interface {
 	Create(ctx context.Context, userID int64, spotID int64) error

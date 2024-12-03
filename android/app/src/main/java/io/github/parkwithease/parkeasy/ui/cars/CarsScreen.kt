@@ -39,9 +39,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
-import io.github.parkwithease.parkeasy.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.model.Car
 import io.github.parkwithease.parkeasy.model.EditMode
+import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.ui.theme.Typography
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -191,6 +191,8 @@ fun AddCarScreen(
             label = { Text(stringResource(R.string.license_plate)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.licensePlate.error != null,
+            supportingText = { state.licensePlate.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.color.value,
@@ -198,6 +200,8 @@ fun AddCarScreen(
             label = { Text(stringResource(R.string.color)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.color.error != null,
+            supportingText = { state.color.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.make.value,
@@ -205,6 +209,8 @@ fun AddCarScreen(
             label = { Text(stringResource(R.string.make)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.make.error != null,
+            supportingText = { state.make.error?.also { Text(it) } },
         )
         OutlinedTextField(
             value = state.model.value,
@@ -212,6 +218,8 @@ fun AddCarScreen(
             label = { Text(stringResource(R.string.model)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            isError = state.model.error != null,
+            supportingText = { state.model.error?.also { Text(it) } },
         )
         Button(
             onClick = if (editMode == EditMode.ADD) onAddCarClick else onEditCarClick,
