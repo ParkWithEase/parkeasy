@@ -42,13 +42,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.LoginMode
 import io.github.parkwithease.parkeasy.ui.common.ClickableText
 import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
+import io.github.parkwithease.parkeasy.ui.common.PreviewAll
 import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
 
 @Composable
@@ -61,32 +63,30 @@ fun LoginScreen(
     val loggedIn by viewModel.loggedIn.collectAsState(false)
     val latestOnNavigateFromLogin by rememberUpdatedState(onNavigateFromLogin)
 
-    val handler = rememberLoginFormHandler(viewModel)
-    var mode by rememberSaveable { mutableStateOf(LoginMode.LOGIN) }
-    val enabled by viewModel.formEnabled.collectAsState()
-
-    LaunchedEffect(loggedIn) {
-        if (loggedIn) {
-            latestOnNavigateFromLogin()
-        }
-    }
-
     BackHandler(enabled = true) { onExitApp() }
 
-    LoginScreen(
-        state = viewModel.state,
-        handler = handler,
-        mode = mode,
-        onSwitchReset = {
-            mode = if (mode == LoginMode.LOGIN) LoginMode.FORGOT else LoginMode.LOGIN
-        },
-        onSwitchRegister = {
-            mode = if (mode == LoginMode.LOGIN) LoginMode.REGISTER else LoginMode.LOGIN
-        },
-        snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
-        modifier = modifier,
-        enabled = enabled,
-    )
+    if (loggedIn) {
+        LaunchedEffect(Unit) { latestOnNavigateFromLogin() }
+    } else {
+        val handler = rememberLoginFormHandler(viewModel)
+        var mode by rememberSaveable { mutableStateOf(LoginMode.LOGIN) }
+        val enabled by viewModel.formEnabled.collectAsState()
+
+        LoginScreen(
+            state = viewModel.state,
+            handler = handler,
+            mode = mode,
+            onSwitchReset = {
+                mode = if (mode == LoginMode.LOGIN) LoginMode.FORGOT else LoginMode.LOGIN
+            },
+            onSwitchRegister = {
+                mode = if (mode == LoginMode.LOGIN) LoginMode.REGISTER else LoginMode.LOGIN
+            },
+            snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
+            modifier = modifier,
+            enabled = enabled,
+        )
+    }
 }
 
 @Composable
@@ -100,16 +100,16 @@ private fun LoginScreen(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    Scaffold(snackbarHost = snackbarHost, modifier = modifier) { innerPadding ->
+    Scaffold(modifier = modifier, snackbarHost = snackbarHost) { innerPadding ->
         Surface(modifier = Modifier.padding(innerPadding)) {
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
                 modifier =
                     Modifier.padding(horizontal = 16.dp)
                         .fillMaxSize()
                         .imePadding()
                         .verticalScroll(rememberScrollState(), reverseScrolling = true),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(modifier = Modifier.widthIn(min = 80.dp, max = 240.dp)) {
                     Image(
@@ -124,8 +124,8 @@ private fun LoginScreen(
                     mode = mode,
                     onSwitchReset = onSwitchReset,
                     onSwitchRegister = onSwitchRegister,
-                    enabled = enabled,
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = enabled,
                 )
                 Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
             }
@@ -143,7 +143,7 @@ private fun LoginForm(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         LoginFields(
             state = state,
             handler = handler,
@@ -227,8 +227,11 @@ private fun LoginButtons(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = modifier) {
-        AnimatedVisibility(mode != LoginMode.REGISTER, modifier = Modifier.align(Alignment.End)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        AnimatedVisibility(
+            visible = mode != LoginMode.REGISTER,
+            modifier = Modifier.align(Alignment.End),
+        ) {
             ClickableText(text = stringResource(R.string.forgot_password), onClick = onSwitchReset)
         }
         Button(
@@ -252,7 +255,7 @@ private fun LoginButtons(
             )
         }
         AnimatedVisibility(
-            mode != LoginMode.FORGOT,
+            visible = mode != LoginMode.FORGOT,
             modifier = Modifier.align(Alignment.CenterHorizontally),
         ) {
             ClickableText(
@@ -272,17 +275,24 @@ private fun LoginButtons(
     }
 }
 
-@Preview
+@Suppress("detekt:UnusedPrivateMember")
+@PreviewAll
 @Composable
-private fun PreviewLoginScreen() {
+private fun LoginScreenPreview(
+    @PreviewParameter(LoginPreviewParameterProvider::class) mode: LoginMode
+) {
     ParkEasyTheme {
         LoginScreen(
             state = LoginFormState(),
             handler = LoginFormHandler(),
-            mode = LoginMode.LOGIN,
+            mode = mode,
             onSwitchReset = {},
             onSwitchRegister = {},
             snackbarHost = {},
         )
     }
+}
+
+class LoginPreviewParameterProvider : PreviewParameterProvider<LoginMode> {
+    override val values = sequenceOf(LoginMode.LOGIN, LoginMode.REGISTER, LoginMode.FORGOT)
 }

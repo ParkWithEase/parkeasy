@@ -24,9 +24,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-@HiltViewModel
-// XXX: Lots of handlers and transforms, consider consolidation or splitting
 @Suppress("detekt:TooManyFunctions")
+@HiltViewModel
 class LoginViewModel
 @Inject
 constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : ViewModel() {

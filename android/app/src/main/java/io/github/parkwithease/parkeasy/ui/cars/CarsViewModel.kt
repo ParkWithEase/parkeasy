@@ -22,8 +22,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-@HiltViewModel
 @Suppress("detekt:TooManyFunctions")
+@HiltViewModel
 class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : ViewModel() {
     val snackbarState = SnackbarHostState()
 

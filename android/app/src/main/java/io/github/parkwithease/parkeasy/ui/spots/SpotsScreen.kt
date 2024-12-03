@@ -77,8 +77,8 @@ import kotlinx.datetime.toInstant
 private const val NumColumns = 6
 private const val NumRows = 24
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Suppress("detekt:LongMethod")
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltViewModel()) {
     val handler = rememberAddSpotFormHandler(viewModel)
@@ -93,16 +93,16 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
 
     LaunchedEffect(Unit) { viewModel.onRefresh() }
     SpotsScreen(
-        spots,
-        {
+        spots = spots,
+        onShowAddSpotClick = {
             handler.resetForm()
             editMode = EditMode.ADD
             openBottomSheet = true
         },
-        isRefreshing,
-        viewModel::onRefresh,
-        viewModel.snackbarState,
-        modifier,
+        isRefreshing = isRefreshing,
+        onRefresh = viewModel::onRefresh,
+        snackbarHost = viewModel.snackbarState,
+        modifier = modifier,
     )
     if (openBottomSheet) {
         ModalBottomSheet(
@@ -110,15 +110,19 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
             sheetState = bottomSheetState,
         ) {
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
                 modifier =
                     Modifier.padding(horizontal = 16.dp)
                         .fillMaxWidth()
                         .imePadding()
                         .verticalScroll(rememberScrollState(), reverseScrolling = true),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                AddSpotScreen(viewModel.formState, handler, { viewModel.formState.times.value })
+                AddSpotScreen(
+                    state = viewModel.formState,
+                    handler = handler,
+                    getSelectedIds = { viewModel.formState.times.value },
+                )
             }
         }
     }
@@ -131,13 +135,13 @@ fun SpotsScreen(
     onShowAddSpotClick: () -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
-    snackbarState: SnackbarHostState,
+    snackbarHost: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
-        floatingActionButton = { AddSpotButton(onShowAddSpotClick = onShowAddSpotClick) },
         modifier = modifier,
-        snackbarHost = { SnackbarHost(hostState = snackbarState) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHost) },
+        floatingActionButton = { AddSpotButton(onShowAddSpotClick = onShowAddSpotClick) },
     ) { innerPadding ->
         Surface(Modifier.padding(innerPadding)) {
             PullToRefreshBox(
@@ -164,7 +168,7 @@ fun SpotCard(spot: Spot, onClick: (Spot) -> Unit, modifier: Modifier = Modifier)
                     modifier = Modifier.heightIn(max = 64.dp),
                 )
             }
-            Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                 Text(spot.location.streetAddress)
                 Text(spot.location.city + ' ' + spot.location.state)
                 Text(spot.location.countryCode + ' ' + spot.location.postalCode)
@@ -180,8 +184,8 @@ fun AddSpotButton(onShowAddSpotClick: () -> Unit, modifier: Modifier = Modifier)
     }
 }
 
-@Composable
 @Suppress("detekt:LongMethod")
+@Composable
 fun AddSpotScreen(
     state: AddSpotFormState,
     handler: AddSpotFormHandler,
@@ -189,9 +193,9 @@ fun AddSpotScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(
+        modifier = modifier.widthIn(max = 360.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.widthIn(max = 360.dp),
     ) {
         ParkEasyTextField(
             state = state.streetAddress,
@@ -306,9 +310,7 @@ private fun TimeGrid(
     val selectedIds: Set<Int> = getSelectedIds()
 
     LazyVerticalGrid(
-        state = state,
         columns = GridCells.Fixed(NumColumns),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
         modifier =
             modifier.timeGridDragHandler(
                 lazyGridState = state,
@@ -317,6 +319,8 @@ private fun TimeGrid(
                 onAddTime = onAddTime,
                 onRemoveTime = onRemoveTime,
             ),
+        state = state,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         items(count = NumColumns / 2, span = { GridItemSpan(2) }) {
             Text(

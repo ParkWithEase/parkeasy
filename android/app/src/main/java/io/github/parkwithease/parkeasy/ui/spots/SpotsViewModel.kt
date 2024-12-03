@@ -29,8 +29,8 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 
-@HiltViewModel
 @Suppress("detekt:TooManyFunctions")
+@HiltViewModel
 class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) : ViewModel() {
     val snackbarState = SnackbarHostState()
 

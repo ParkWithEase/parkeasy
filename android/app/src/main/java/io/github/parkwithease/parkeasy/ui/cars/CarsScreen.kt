@@ -44,9 +44,9 @@ import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.ui.theme.Typography
 
+@Suppress("detekt:LongMethod")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Suppress("detekt:LongMethod")
 fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltViewModel()) {
     val handler = rememberAddCarFormHandler(viewModel)
     val cars by viewModel.cars.collectAsState()
@@ -60,8 +60,8 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
 
     LaunchedEffect(Unit) { viewModel.onRefresh() }
     CarsScreen(
-        cars,
-        { car ->
+        cars = cars,
+        onCarClick = { car ->
             handler.resetForm()
             viewModel.currentlyEditingId = car.id
             viewModel.onColorChange(car.details.color)
@@ -71,16 +71,16 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
             editMode = EditMode.EDIT
             openBottomSheet = true
         },
-        {
+        onShowAddCarClick = {
             handler.resetForm()
             viewModel.currentlyEditingId = ""
             editMode = EditMode.ADD
             openBottomSheet = true
         },
-        isRefreshing,
-        viewModel::onRefresh,
-        { SnackbarHost(hostState = viewModel.snackbarState) },
-        modifier,
+        isRefreshing = isRefreshing,
+        onRefresh = viewModel::onRefresh,
+        snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
+        modifier = modifier,
     )
     if (openBottomSheet) {
         ModalBottomSheet(
@@ -88,20 +88,20 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
             sheetState = bottomSheetState,
         ) {
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
                 modifier =
                     Modifier.padding(horizontal = 16.dp)
                         .fillMaxWidth()
                         .imePadding()
                         .verticalScroll(rememberScrollState(), reverseScrolling = true),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 AddCarScreen(
-                    editMode,
-                    viewModel.formState,
-                    handler,
-                    viewModel::onAddCarClick,
-                    viewModel::onEditCarClick,
+                    state = viewModel.formState,
+                    handler = handler,
+                    onAddCarClick = viewModel::onAddCarClick,
+                    onEditCarClick = viewModel::onEditCarClick,
+                    editMode = editMode,
                 )
             }
         }
@@ -120,9 +120,9 @@ fun CarsScreen(
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
-        floatingActionButton = { AddCarButton(onShowAddCarClick = onShowAddCarClick) },
-        snackbarHost = snackbarHost,
         modifier = modifier,
+        snackbarHost = snackbarHost,
+        floatingActionButton = { AddCarButton(onShowAddCarClick = onShowAddCarClick) },
     ) { innerPadding ->
         Surface(Modifier.padding(innerPadding)) {
             PullToRefreshBox(
@@ -149,7 +149,7 @@ fun CarCard(car: Car, onClick: (Car) -> Unit, modifier: Modifier = Modifier) {
                     modifier = Modifier.heightIn(max = 64.dp),
                 )
             }
-            Column(horizontalAlignment = Alignment.End, modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                 Text(text = car.details.licensePlate, style = Typography.headlineLarge)
                 Text(car.details.color + ' ' + car.details.make + " " + car.details.model)
             }
@@ -166,17 +166,17 @@ fun AddCarButton(onShowAddCarClick: () -> Unit, modifier: Modifier = Modifier) {
 
 @Composable
 fun AddCarScreen(
-    editMode: EditMode,
     state: AddCarFormState,
     handler: AddCarFormHandler,
     onAddCarClick: () -> Unit,
     onEditCarClick: () -> Unit,
+    editMode: EditMode,
     modifier: Modifier = Modifier,
 ) {
     Column(
+        modifier = modifier.widthIn(max = 320.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.widthIn(max = 320.dp),
     ) {
         ParkEasyTextField(
             state = state.licensePlate,

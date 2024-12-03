@@ -1,6 +1,5 @@
 package io.github.parkwithease.parkeasy.ui.map
 
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -16,6 +15,13 @@ import com.maplibre.compose.MapView
 import com.maplibre.compose.camera.CameraState
 import com.maplibre.compose.camera.MapViewCamera
 import com.maplibre.compose.rememberSaveableMapViewCamera
+import io.github.parkwithease.parkeasy.ui.common.PreviewAll
+import io.github.parkwithease.parkeasy.ui.navbar.NavBar
+import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
+
+// Somewhere above Winnipeg
+private const val DefaultLatitude = 49.9
+private const val DefaultLongitude = -97.1
 
 @Composable
 fun MapScreen(
@@ -30,23 +36,36 @@ fun MapScreen(
     if (!loggedIn) {
         LaunchedEffect(Unit) { latestOnNavigateToLogin() }
     } else {
-        Scaffold(modifier = modifier, bottomBar = navBar) { innerPadding ->
-            MapScreen(modifier = Modifier.padding(innerPadding))
-        }
+        MapScreen(map = { MapLibreMap(modifier = it) }, navBar = navBar, modifier = modifier)
     }
 }
 
 @Composable
-fun MapScreen(modifier: Modifier = Modifier) {
-    // Somewhere above Winnipeg
-    val cameraState = CameraState.Centered(latitude = 49.9, longitude = -97.1)
+fun MapScreen(
+    map: @Composable ((modifier: Modifier) -> Unit),
+    navBar: @Composable (() -> Unit),
+    modifier: Modifier = Modifier,
+) {
+    Scaffold(modifier = modifier, bottomBar = navBar) { innerPadding ->
+        Surface(modifier = Modifier.padding(innerPadding)) { map(Modifier) }
+    }
+}
+
+@Composable
+fun MapLibreMap(modifier: Modifier = Modifier) {
+    val cameraState = CameraState.Centered(latitude = DefaultLatitude, longitude = DefaultLongitude)
     val mapViewCamera = rememberSaveableMapViewCamera(MapViewCamera(state = cameraState))
 
-    Surface(modifier) {
-        MapView(
-            modifier = Modifier.fillMaxSize(),
-            styleUrl = LocalMapLibreStyleProvider.current.getStyleUrl(),
-            camera = mapViewCamera,
-        )
-    }
+    MapView(
+        modifier = modifier,
+        styleUrl = LocalMapLibreStyleProvider.current.getStyleUrl(),
+        camera = mapViewCamera,
+    )
+}
+
+@Suppress("detekt:UnusedPrivateMember")
+@PreviewAll
+@Composable
+private fun MapScreenPreview() {
+    ParkEasyTheme { MapScreen(map = {}, navBar = { NavBar() }) }
 }
