@@ -207,7 +207,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		result, err := r.service.GetByUUID(ctx, userID, input.ID)
 		if err != nil {
 			var detail error
-			var status = http.StatusUnprocessableEntity
+			status := http.StatusUnprocessableEntity
 
 			switch {
 			case errors.Is(err, models.ErrBookingNotFound):
@@ -241,7 +241,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		spots, err := r.service.GetBookedTimesByUUID(ctx, userID, input.ID)
 		if err != nil {
 			var detail error
-			var status = http.StatusUnprocessableEntity
+			status := http.StatusUnprocessableEntity
 
 			switch {
 			case errors.Is(err, models.ErrBookingNotFound):

@@ -68,7 +68,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		Bookingid: omitnull.From(inserted.Bookingid),
 	}}
 
-	//Variable for OR clauses in where, used for timeslots timeranges
+	// Variable for OR clauses in where, used for timeslots timeranges
 	var whereOrMods []mods.Where[*dialect.UpdateQuery]
 	for _, time := range booking.BookingInfo.BookedTimes {
 		whereOrMods = append(whereOrMods, um.Where(
@@ -82,7 +82,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 		))
 	}
 
-	//Variable for AND clauses in where
+	// Variable for AND clauses in where
 	var whereMods []mods.Where[*dialect.UpdateQuery]
 	whereMods = append(
 		whereMods,

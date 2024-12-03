@@ -59,7 +59,7 @@ func TestPostgresIntegration(t *testing.T) {
 	const testEmail_1 = "j.smith@gmail.com"
 	const testPasswordHash_1 = "some other hash"
 
-	//Create authemtication and user records
+	// Create authemtication and user records
 	authUUID, _ := authRepo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
 	authUUID_1, _ := authRepo.Create(ctx, testEmail_1, models.HashedPassword(testPasswordHash_1))
 	userID, _ := userRepo.Create(ctx, authUUID, profile)
@@ -687,11 +687,9 @@ func TestPostgresIntegration(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, userID, bookerID)
 	})
-
 }
 
 func createExpectedEntry(internalID int64, bookingUUID uuid.UUID, paidAmount float64, spotID uuid.UUID, carID uuid.UUID, createdAt time.Time, bookerID int64) Entry {
-
 	return Entry{
 		Booking: models.Booking{
 			PaidAmount:    paidAmount,

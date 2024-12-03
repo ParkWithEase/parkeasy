@@ -55,7 +55,7 @@ func (s *Service) Create(ctx context.Context, userID int64, bookingDetails *mode
 		}
 		return 0, models.BookingWithTimes{}, err
 	}
-	//Check if the car belongs to the user
+	// Check if the car belongs to the user
 	if carEntry.OwnerID != userID {
 		return 0, models.BookingWithTimes{}, models.ErrCarNotOwned
 	}
@@ -90,7 +90,7 @@ func (s *Service) GetManyForSeller(ctx context.Context, userID int64, count int,
 	}
 
 	var parkingSpot *parkingspot.Entry
-	var dbFilter = &booking.Filter{}
+	dbFilter := &booking.Filter{}
 
 	// Check if a valid parkingspot is passed for filtering
 	if filter.ParkingSpotID != uuid.Nil {
@@ -147,7 +147,7 @@ func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, 
 	}
 
 	var parkingSpot *parkingspot.Entry
-	var dbFilter = &booking.Filter{}
+	dbFilter := &booking.Filter{}
 
 	// Check if a valid parkingspot is passed for filtering
 	if filter.ParkingSpotID != uuid.Nil {
