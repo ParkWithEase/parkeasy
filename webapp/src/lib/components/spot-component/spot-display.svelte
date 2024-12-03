@@ -1,36 +1,37 @@
 <script lang="ts">
     import BackgroundImage from '$lib/images/background.png';
-    import { Checkbox, Tag } from 'carbon-components-svelte';
-    export let spot;
+    import { Checkbox } from 'carbon-components-svelte';
+    import type { components } from '$lib/sdk/schema';
+    type ParkingSpot = components['schemas']['ParkingSpot'];
+    export let spot: ParkingSpot;
 </script>
 
-<div class="spot-info">
-    <div>
-        <img src={BackgroundImage} class="spot-image" alt="A parking spot" />
-    </div>
-    <div>
+{#if spot}
+    <div class="spot-info">
         <div>
-            <p class="spot-title">
-                {spot.location.street_address}, {spot.location.postal_code}
-                {#if spot.isListed}
-                    <Tag type="green" style="font-size: 1rem;">listed</Tag>
-                {/if}
-            </p>
-            <span style="font-size: 1rem"
-                >{spot.location.city}, {spot.location.state} {spot.location.country_code}</span
-            >
+            <img src={BackgroundImage} class="spot-image" alt="A parking spot" />
         </div>
         <div>
-            <Checkbox labelText="Shelter" checked={spot.features.shelter} readonly />
-            <Checkbox labelText="Plug-in" checked={spot.features.plug_in} readonly />
-            <Checkbox
-                labelText="Charging station"
-                checked={spot.features.charging_station}
-                readonly
-            />
+            <div>
+                <p class="spot-title">
+                    {spot.location.street_address}, {spot.location.postal_code}
+                </p>
+                <span style="font-size: 1rem"
+                    >{spot.location.city}, {spot.location.state} {spot.location.country_code}</span
+                >
+            </div>
+            <div>
+                <Checkbox labelText="Shelter" checked={spot.features?.shelter} readonly />
+                <Checkbox labelText="Plug-in" checked={spot.features?.plug_in} readonly />
+                <Checkbox
+                    labelText="Charging station"
+                    checked={spot.features?.charging_station}
+                    readonly
+                />
+            </div>
         </div>
     </div>
-</div>
+{/if}
 
 <style>
     .spot-info {
