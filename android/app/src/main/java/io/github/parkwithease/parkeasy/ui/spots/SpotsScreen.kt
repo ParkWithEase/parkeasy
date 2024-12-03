@@ -118,12 +118,7 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
                         .imePadding()
                         .verticalScroll(rememberScrollState(), reverseScrolling = true),
             ) {
-                AddSpotScreen(
-                    viewModel.formState,
-                    handler,
-                    viewModel::onAddSpotClick,
-                    { viewModel.formState.times.value },
-                )
+                AddSpotScreen(viewModel.formState, handler, { viewModel.formState.times.value })
             }
         }
     }
@@ -190,7 +185,6 @@ fun AddSpotButton(onShowAddSpotClick: () -> Unit, modifier: Modifier = Modifier)
 fun AddSpotScreen(
     state: AddSpotFormState,
     handler: AddSpotFormHandler,
-    onAddSpotClick: () -> Unit,
     getSelectedIds: () -> Set<Int>,
     modifier: Modifier = Modifier,
 ) {
@@ -262,9 +256,9 @@ fun AddSpotScreen(
         }
         Row(Modifier.height(336.dp)) {
             ColumnHeader(Modifier.width(48.dp))
-            TimeGrid(getSelectedIds, handler.onPlusTime, handler.onMinusTime)
+            TimeGrid(getSelectedIds, handler.onAddTime, handler.onDeleteTime)
         }
-        Button(onClick = onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
+        Button(onClick = handler.onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.add_spot))
         }
     }
@@ -295,8 +289,8 @@ private fun ColumnHeader(
 @Composable
 private fun TimeGrid(
     getSelectedIds: () -> Set<Int>,
-    plus: (elements: Iterable<Int>) -> Unit,
-    minus: (elements: Iterable<Int>) -> Unit,
+    onAddTime: (elements: Iterable<Int>) -> Unit,
+    onRemoveTime: (elements: Iterable<Int>) -> Unit,
     modifier: Modifier = Modifier,
     state: LazyGridState = rememberLazyGridState(),
     slots: List<Int> = List(NumColumns * NumRows) { it % NumColumns * NumRows + it / NumColumns },
@@ -320,8 +314,8 @@ private fun TimeGrid(
                 lazyGridState = state,
                 disabledIds = disabledIds,
                 getSelectedIds = getSelectedIds,
-                plus = plus,
-                minus = minus,
+                plus = onAddTime,
+                minus = onRemoveTime,
             ),
     ) {
         items(count = NumColumns / 2, span = { GridItemSpan(2) }) {
@@ -362,9 +356,9 @@ private fun TimeGrid(
                                 Log.e("", selectedIds.toString())
                                 if (!disabled) {
                                     if (it) {
-                                        plus(id..id)
+                                        onAddTime(id..id)
                                     } else {
-                                        minus(id..id)
+                                        onRemoveTime(id..id)
                                     }
                                 }
                             },
