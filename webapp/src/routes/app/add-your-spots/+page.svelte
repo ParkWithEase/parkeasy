@@ -82,7 +82,8 @@
         newPricePerHour = 0;
     }
 
-    function handleSubmitAvailability() {
+    function handleSubmitAvailability(event: Event) {
+        event.preventDefault();
         if (toTimeUnits(availabilityTables).length > 0) {
             currentIndex += 1;
             isAvailabilityStepCompleted = true;

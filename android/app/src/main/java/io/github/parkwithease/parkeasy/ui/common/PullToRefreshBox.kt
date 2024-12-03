@@ -1,4 +1,4 @@
-package io.github.parkwithease.parkeasy.common
+package io.github.parkwithease.parkeasy.ui.common
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

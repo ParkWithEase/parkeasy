@@ -63,7 +63,7 @@ fun NavBar(modifier: Modifier = Modifier, navController: NavController = remembe
                 icon = {
                     Icon(
                         if (selected) topLevelRoute.selectedIcon else topLevelRoute.unselectedIcon,
-                        contentDescription = topLevelRoute.name,
+                        contentDescription = null,
                     )
                 },
                 label = { Text(topLevelRoute.name) },

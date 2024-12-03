@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.spots
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -12,14 +13,24 @@ import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.model.SpotFeatures
 import io.github.parkwithease.parkeasy.model.SpotLocation
 import io.github.parkwithease.parkeasy.model.TimeSlot
+import io.github.parkwithease.parkeasy.ui.common.startOfWeek
+import io.github.parkwithease.parkeasy.ui.common.timezone
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+
+private const val MinutesPerSlot = 30
 
 @HiltViewModel
 @Suppress("detekt:TooManyFunctions")
 class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) : ViewModel() {
+    val snackbarState = SnackbarHostState()
+
     private val _spots = MutableStateFlow(emptyList<Spot>())
     val spots = _spots.asStateFlow()
 
@@ -32,23 +43,49 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
     fun onRefresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            _spots.value = spotRepo.getSpots()
+            spotRepo
+                .getSpots()
+                .onSuccess { _spots.value = it }
+                .onFailure {
+                    viewModelScope.launch { snackbarState.showSnackbar("Error retrieving spots") }
+                }
             _isRefreshing.value = false
         }
     }
 
+    @Suppress("detekt:LongMethod")
     fun onAddSpotClick() {
+        val timezone = timezone()
+        val startOfWeek = startOfWeek()
         viewModelScope.launch {
             spotRepo
                 .createSpot(
                     Spot(
                         availability =
-                            listOf(
-                                TimeSlot(
-                                    startTime = "2024-11-04T01:30:00-06:00",
-                                    endTime = "2024-11-04T02:00:00-06:00",
-                                )
-                            ),
+                            formState.times.value
+                                .sortedBy { it }
+                                .map {
+                                    TimeSlot(
+                                        startTime =
+                                            startOfWeek
+                                                .toInstant(timezone)
+                                                .plus(
+                                                    MinutesPerSlot * it,
+                                                    DateTimeUnit.MINUTE,
+                                                    timezone,
+                                                )
+                                                .toLocalDateTime(timezone),
+                                        endTime =
+                                            startOfWeek
+                                                .toInstant(timezone)
+                                                .plus(
+                                                    MinutesPerSlot * (it + 1),
+                                                    DateTimeUnit.MINUTE,
+                                                    timezone,
+                                                )
+                                                .toLocalDateTime(timezone),
+                                    )
+                                },
                         features =
                             SpotFeatures(
                                 chargingStation = formState.chargingStation.value,
@@ -67,28 +104,76 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                     )
                 )
                 .also { clearFieldErrors() }
-                ?.onSuccess { onRefresh() }
+                .onSuccess { onRefresh() }
+                .onFailure {
+                    viewModelScope.launch { snackbarState.showSnackbar("Error creating spot") }
+                }
         }
     }
 
     fun onStreetAddressChange(value: String) {
-        formState = formState.run { copy(streetAddress = streetAddress.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    streetAddress =
+                        streetAddress.copy(
+                            value = value,
+                            error = if (value != "") null else "Address cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onCityChange(value: String) {
-        formState = formState.run { copy(city = city.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    city =
+                        city.copy(
+                            value = value,
+                            error = if (value != "") null else "City cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onStateChange(value: String) {
-        formState = formState.run { copy(state = state.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    state =
+                        state.copy(
+                            value = value,
+                            error = if (value != "") null else "State cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onCountryCodeChange(value: String) {
-        formState = formState.run { copy(countryCode = countryCode.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    countryCode =
+                        countryCode.copy(
+                            value = value,
+                            error = if (value != "") null else "Country cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onPostalCodeChange(value: String) {
-        formState = formState.run { copy(postalCode = postalCode.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    postalCode =
+                        postalCode.copy(
+                            value = value,
+                            error = if (value != "") null else "Postal code cannot be empty",
+                        )
+                )
+            }
     }
 
     fun onChargingStationChange(value: Boolean) {
@@ -104,7 +189,28 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
     }
 
     fun onPricePerHourChange(value: String) {
-        formState = formState.run { copy(pricePerHour = pricePerHour.copy(value = value)) }
+        formState =
+            formState.run {
+                copy(
+                    pricePerHour =
+                        pricePerHour.copy(
+                            value = value,
+                            error = if (value != "") null else "Price cannot be empty",
+                        )
+                )
+            }
+    }
+
+    fun onPlusTime(elements: Iterable<Int>) {
+        formState =
+            formState.run { copy(times = times.copy(value = formState.times.value.plus(elements))) }
+    }
+
+    fun onMinusTime(elements: Iterable<Int>) {
+        formState =
+            formState.run {
+                copy(times = times.copy(value = formState.times.value.minus(elements)))
+            }
     }
 
     private fun clearFieldErrors() {
@@ -130,4 +236,5 @@ data class AddSpotFormState(
     val plugIn: FieldState<Boolean> = FieldState(false),
     val shelter: FieldState<Boolean> = FieldState(false),
     val pricePerHour: FieldState<String> = FieldState(""),
+    val times: FieldState<Set<Int>> = FieldState<Set<Int>>(emptySet()),
 )

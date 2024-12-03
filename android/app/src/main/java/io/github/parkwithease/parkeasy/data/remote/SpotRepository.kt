@@ -6,15 +6,15 @@ interface SpotRepository {
     /**
      * Gets logged in user's spots.
      *
-     * @return a List of Spots.
+     * @return a Result of List of Spots on success, failing Result otherwise.
      */
-    suspend fun getSpots(): List<Spot>
+    suspend fun getSpots(): Result<List<Spot>>
 
     /**
      * Creates a spot in the repository.
      *
      * @param spot the Spot to add to the repository.
-     * @return Result
+     * @return whether the creation was successful or not.
      */
-    suspend fun createSpot(spot: Spot): Result<Unit>?
+    suspend fun createSpot(spot: Spot): Result<Unit>
 }
