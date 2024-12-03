@@ -6,7 +6,7 @@ require (
 	github.com/aarondl/opt v0.0.0-20230114172057-b91f370c41f0
 	github.com/alecthomas/kong v1.4.0
 	github.com/alexedwards/scs/pgxstore v0.0.0-20240316134038-7e11d57e8885
-	github.com/danielgtaylor/huma/v2 v2.25.0
+	github.com/danielgtaylor/huma/v2 v2.26.0
 	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/golang-migrate/migrate/v4 v4.18.1
 	github.com/google/go-cmp v0.6.0
