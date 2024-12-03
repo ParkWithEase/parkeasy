@@ -97,8 +97,10 @@ constructor(
                 result.mapCatching { if (result.isSuccess) it.body<Profile>() else Profile() }
             }
 
-    // Update authentication status based on the response assuming that the request alters
-    // authentication status
+    /**
+     * Update authentication status based on the [HttpResponse], assuming that the request alters
+     * authentication status
+     */
     private suspend fun Result<HttpResponse>.updateAuthCookie(): Result<HttpResponse> =
         onSuccess { response ->
                 response

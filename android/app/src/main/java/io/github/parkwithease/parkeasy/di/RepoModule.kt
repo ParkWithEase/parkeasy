@@ -15,7 +15,7 @@ import io.github.parkwithease.parkeasy.data.remote.UserRepositoryImpl
 
 @Module
 @InstallIn(SingletonComponent::class)
-@Suppress("Unused")
+@Suppress("Unused") // IntelliJ does not recognize that these are used
 interface RepoModule {
     @Binds fun bindAuthRepository(authRepositoryImpl: AuthRepositoryImpl): AuthRepository
 

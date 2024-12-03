@@ -6,7 +6,10 @@ import io.ktor.client.call.body
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.isSuccess
 
-// Convert API error into a failing Result
+/**
+ * Map a [Result] with an unsuccessful [HttpResponse] to an unsuccessful [Result] with an
+ * [APIException] or itself if the [HttpResponse] was successful.
+ */
 suspend fun Result<HttpResponse>.mapAPIError(): Result<HttpResponse> = mapCatching {
     if (!it.status.isSuccess()) throw APIException(it.body<ErrorModel>())
     it

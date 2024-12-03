@@ -9,7 +9,7 @@ interface UserRepository {
     /**
      * Attempts to log user in with given credentials.
      *
-     * @param credentials the login credentials.
+     * @param credentials - the login credentials.
      * @return whether the login was successful or not.
      */
     suspend fun login(credentials: LoginCredentials): Result<Unit>
@@ -17,7 +17,7 @@ interface UserRepository {
     /**
      * Attempts to register a new user with the given credentials.
      *
-     * @param credentials the registration credentials.
+     * @param credentials - the registration credentials.
      * @return whether the registration was successful or not.
      */
     suspend fun register(credentials: RegistrationCredentials): Result<Unit>
@@ -32,7 +32,7 @@ interface UserRepository {
     /**
      * Requests for a password reset token to be sent.
      *
-     * @param credentials for the account which the password reset token is for.
+     * @param credentials - for the account which the password reset token is for.
      * @return whether the request was successful or not.
      */
     suspend fun requestReset(credentials: ResetCredentials): Result<Unit>
@@ -40,7 +40,7 @@ interface UserRepository {
     /**
      * Gets the user details.
      *
-     * @return Result with Profile of the user if valid user, failing Result otherwise.
+     * @return Result with [Profile] of the user if valid user, failing [Result] otherwise.
      */
     suspend fun getUser(): Result<Profile>
 }
