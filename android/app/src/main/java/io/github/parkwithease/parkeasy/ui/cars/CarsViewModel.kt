@@ -224,6 +224,8 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
             onLicensePlateChange = this::onLicensePlateChange,
             onMakeChange = this::onMakeChange,
             onModelChange = this::onModelChange,
+            onAddCarClick = this::onAddCarClick,
+            onEditCarClick = this::onEditCarClick,
             resetForm = this::resetForm,
         )
 }
@@ -244,5 +246,7 @@ data class AddCarFormHandler(
     val onLicensePlateChange: (String) -> Unit = {},
     val onMakeChange: (String) -> Unit = {},
     val onModelChange: (String) -> Unit = {},
+    val onAddCarClick: () -> Unit = {},
+    val onEditCarClick: () -> Unit = {},
     val resetForm: () -> Unit = {},
 )

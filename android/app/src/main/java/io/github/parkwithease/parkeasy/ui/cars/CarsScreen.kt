@@ -96,13 +96,7 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                AddCarScreen(
-                    state = viewModel.formState,
-                    handler = handler,
-                    onAddCarClick = viewModel::onAddCarClick,
-                    onEditCarClick = viewModel::onEditCarClick,
-                    editMode = editMode,
-                )
+                AddCarScreen(state = viewModel.formState, handler = handler, editMode = editMode)
             }
         }
     }
@@ -168,8 +162,6 @@ fun AddCarButton(onShowAddCarClick: () -> Unit, modifier: Modifier = Modifier) {
 fun AddCarScreen(
     state: AddCarFormState,
     handler: AddCarFormHandler,
-    onAddCarClick: () -> Unit,
-    onEditCarClick: () -> Unit,
     editMode: EditMode,
     modifier: Modifier = Modifier,
 ) {
@@ -203,7 +195,8 @@ fun AddCarScreen(
             labelId = R.string.model,
         )
         Button(
-            onClick = if (editMode == EditMode.ADD) onAddCarClick else onEditCarClick,
+            onClick =
+                if (editMode == EditMode.ADD) handler.onAddCarClick else handler.onEditCarClick,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
