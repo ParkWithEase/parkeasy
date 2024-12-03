@@ -314,8 +314,8 @@ private fun TimeGrid(
                 lazyGridState = state,
                 disabledIds = disabledIds,
                 getSelectedIds = getSelectedIds,
-                plus = onAddTime,
-                minus = onRemoveTime,
+                onAddTime = onAddTime,
+                onRemoveTime = onRemoveTime,
             ),
     ) {
         items(count = NumColumns / 2, span = { GridItemSpan(2) }) {
@@ -373,8 +373,8 @@ private fun Modifier.timeGridDragHandler(
     lazyGridState: LazyGridState,
     disabledIds: List<Int>,
     getSelectedIds: () -> Set<Int>,
-    plus: (elements: Iterable<Int>) -> Unit,
-    minus: (elements: Iterable<Int>) -> Unit,
+    onAddTime: (elements: Iterable<Int>) -> Unit,
+    onRemoveTime: (elements: Iterable<Int>) -> Unit,
 ) =
     pointerInput(Unit) {
         fun LazyGridState.gridItemKeyAtPosition(hitPoint: Offset): Int? =
@@ -394,10 +394,10 @@ private fun Modifier.timeGridDragHandler(
                         initialKey = key
                         currentKey = key
                         if (!selectedIds.contains(key)) {
-                            plus(key..key)
+                            onAddTime(key..key)
                             adding = true
                         } else {
-                            minus(key..key)
+                            onRemoveTime(key..key)
                             adding = false
                         }
                     }
@@ -410,17 +410,17 @@ private fun Modifier.timeGridDragHandler(
                     lazyGridState.gridItemKeyAtPosition(change.position)?.let { key ->
                         if (currentKey != key) {
                             if (adding) {
-                                minus(initialKey!!..currentKey!!)
-                                minus(currentKey!!..initialKey!!)
-                                plus(initialKey!!..key)
-                                plus(key..initialKey!!)
+                                onRemoveTime(initialKey!!..currentKey!!)
+                                onRemoveTime(currentKey!!..initialKey!!)
+                                onAddTime(initialKey!!..key)
+                                onAddTime(key..initialKey!!)
                             } else {
-                                plus(initialKey!!..currentKey!!)
-                                plus(currentKey!!..initialKey!!)
-                                minus(initialKey!!..key)
-                                minus(key..initialKey!!)
+                                onAddTime(initialKey!!..currentKey!!)
+                                onAddTime(currentKey!!..initialKey!!)
+                                onRemoveTime(initialKey!!..key)
+                                onRemoveTime(key..initialKey!!)
                             }
-                            minus(disabledIds.min()..disabledIds.max())
+                            onRemoveTime(disabledIds.min()..disabledIds.max())
                             currentKey = key
                         }
                     }
