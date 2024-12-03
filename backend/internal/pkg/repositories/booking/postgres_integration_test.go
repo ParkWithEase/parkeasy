@@ -629,7 +629,6 @@ func TestPostgresIntegration(t *testing.T) {
 		// Test retrieval of booked times
 		bookedTimes, err := repo.GetBookedTimesByUUID(ctx, createdBooking.ID)
 		require.NoError(t, err)
-		// require.Equal(t, bookingCreationInput.BookedTimes, bookedTimes)
 		assert.Empty(t, cmp.Diff(bookingCreationInput.BookingInfo.BookedTimes, bookedTimes))
 	})
 
@@ -649,6 +648,41 @@ func TestPostgresIntegration(t *testing.T) {
 			assert.ErrorIs(t, err, ErrNotFound, "should return ErrNotFound for non-existent booking ID")
 		}
 		assert.Empty(t, bookedTimes, "expected no booked times for non-existent booking")
+	})
+
+	t.Run("GetBookerByUUID - non-existent booking ID", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+			pool.Reset()
+		})
+
+		// Test with Nil
+		nonExistentUUID := uuid.Nil
+
+		// Test retrieval for non-existent booking
+		bookerID, err := repo.GetBookerByUUID(ctx, nonExistentUUID)
+		if assert.Error(t, err, "fetching booker for a non existent booking should fail") {
+			assert.ErrorIs(t, err, ErrNotFound, "should return ErrNotFound for non-existent booking ID")
+		}
+		assert.Empty(t, bookerID, "expected no bookedID for non-existent booking")
+	})
+
+	t.Run("GetBookerByUUID - valid booking", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+			pool.Reset()
+		})
+
+		// Create a booking with valid times
+		createdBooking, err := repo.Create(ctx, userID, parkingSpotEntry.InternalID, carID, &bookingCreationInput)
+		require.NoError(t, err, "could not create booking")
+
+		// Test retrieval of booked times
+		bookerID, err := repo.GetBookerByUUID(ctx, createdBooking.ID)
+		require.NoError(t, err)
+		assert.Equal(t, userID, bookerID)
 	})
 
 }

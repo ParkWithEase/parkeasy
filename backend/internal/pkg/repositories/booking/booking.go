@@ -37,6 +37,7 @@ var (
 type Repository interface {
 	Create(ctx context.Context, userID int64, spotID int64, carID int64, booking *models.BookingCreationDBInput) (EntryWithTimes, error)
 	GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error)
+	GetBookerByUUID(ctx context.Context, bookingID uuid.UUID) (int64, error)
 	GetManyForSeller(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error)
 	GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error)
 	GetBookedTimesByUUID(ctx context.Context, bookingUUID uuid.UUID) ([]models.TimeUnit, error)
