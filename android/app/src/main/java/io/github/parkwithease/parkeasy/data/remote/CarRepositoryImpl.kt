@@ -40,7 +40,7 @@ constructor(
                 result.mapCatching { if (result.isSuccess) it.body<List<Car>>() else emptyList() }
             }
 
-    override suspend fun deleteCar(id: String): Result<Boolean> {
+    override suspend fun deleteCar(id: String): Result<Unit> {
         TODO("Not yet implemented")
     }
 

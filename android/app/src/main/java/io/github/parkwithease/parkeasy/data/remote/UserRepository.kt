@@ -27,7 +27,7 @@ interface UserRepository {
      *
      * @return whether the logout was successful or not.
      */
-    suspend fun logout(): Boolean
+    suspend fun logout(): Result<Unit>
 
     /**
      * Requests for a password reset token to be sent.

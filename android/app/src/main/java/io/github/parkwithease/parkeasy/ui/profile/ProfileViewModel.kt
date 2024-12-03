@@ -36,11 +36,8 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
             } // <- this flow gets user data on subscribe
             .stateIn(viewModelScope, SharingStarted.Lazily, Profile("", ""))
 
-    fun onLogoutClick() {
+    fun onLogoutClick() =
         viewModelScope.launch {
-            snackbarState.showSnackbar(
-                if (userRepo.logout()) "Logged out successfully" else "Error logging out"
-            )
+            userRepo.logout().onSuccess { snackbarState.showSnackbar("Logged out successfully") }
         }
-    }
 }

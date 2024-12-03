@@ -16,7 +16,7 @@ interface CarRepository {
      *
      * @return whether deleting the car was successful or not.
      */
-    suspend fun deleteCar(id: String): Result<Boolean>
+    suspend fun deleteCar(id: String): Result<Unit>
 
     /**
      * Gets a car's details by id.

@@ -58,17 +58,18 @@ constructor(
             .updateAuthCookie()
             .map {}
 
-    override suspend fun logout(): Boolean =
+    override suspend fun logout(): Result<Unit> =
         authRepo.sessionFlow
             .firstOrNull()
-            ?.runCatching {
+            .runCatching {
+                if (this == null) throw LoggedOutException()
                 withContext(ioDispatcher) {
                     client.delete("/auth") { cookie(name = name, value = value) }
                 }
             }
-            ?.mapAPIError()
-            ?.updateAuthCookie()
-            .let { it == null || it.onFailure { e -> throw e }.isSuccess }
+            .mapAPIError()
+            .updateAuthCookie()
+            .map {}
 
     override suspend fun requestReset(credentials: ResetCredentials): Result<Unit> =
         runCatching {
