@@ -7,6 +7,3 @@ CREATE TABLE IF NOT EXISTS TimeUnit (
   PRIMARY KEY (TimeRange, ParkingSpotId),
   EXCLUDE USING GIST (TimeRange WITH &&, ParkingSpotId WITH =)
 );
-
-ALTER TABLE TimeUnit
-ADD BookingId BIGINT DEFAULT NULL REFERENCES Booking(BookingID);
