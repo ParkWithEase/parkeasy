@@ -32,14 +32,14 @@ func New(repo booking.Repository, spotRepo parkingspot.Repository, carRepo car.R
 	}
 }
 
-func (s *Service) Create(ctx context.Context, userID int64, bookingDetails *models.BookingCreationInput) (int64, models.BookingWithTimes, error) {
+func (s *Service) Create(ctx context.Context, userID int64, spotUUID uuid.UUID, bookingDetails *models.BookingCreationInput) (int64, models.BookingWithTimes, error) {
 	// Check if atleast one timeunit is passed
 	if len(bookingDetails.BookedTimes) == 0 {
 		return 0, models.BookingWithTimes{}, models.ErrEmptyBookingTimes
 	}
 
 	// Check if the parking spot exists
-	parkingSpot, err := s.spotRepo.GetByUUID(ctx, bookingDetails.ParkingSpotID)
+	parkingSpot, err := s.spotRepo.GetByUUID(ctx, spotUUID)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrNotFound) {
 			err = models.ErrParkingSpotNotFound
@@ -62,12 +62,15 @@ func (s *Service) Create(ctx context.Context, userID int64, bookingDetails *mode
 
 	// Calculate amount for booking
 	amount := calculateAmount(len(bookingDetails.BookedTimes), parkingSpot.PricePerHour)
-	creationInput := models.BookingCreationDBInput{
-		BookingInfo: *bookingDetails,
+	creationInput := booking.CreateInput{
+		BookedTimes: bookingDetails.BookedTimes,
+		UserID:      userID,
+		SpotID:      parkingSpot.InternalID,
+		CarID:       carEntry.InternalID,
 		PaidAmount:  amount,
 	}
 
-	result, err := s.repo.Create(ctx, userID, parkingSpot.InternalID, carEntry.InternalID, &creationInput)
+	result, err := s.repo.Create(ctx, &creationInput)
 	if err != nil {
 		if errors.Is(err, booking.ErrTimeAlreadyBooked) {
 			err = models.ErrDuplicateBooking
@@ -209,7 +212,7 @@ func (s *Service) GetByUUID(ctx context.Context, userID int64, bookingID uuid.UU
 
 	// Check if the user is booker or seller
 	if (userID != entry.BookerID) && (userID != spotOwner) {
-		return models.BookingWithTimes{}, models.ErrInvalidRequest
+		return models.BookingWithTimes{}, models.ErrBookingNotFound
 	}
 
 	result := models.BookingWithTimes{
@@ -237,7 +240,7 @@ func (s *Service) GetBookedTimesByUUID(ctx context.Context, userID int64, bookin
 
 	// Only the booker or seller can request the booked times
 	if (userID != entry.BookerID) && (userID != spotOwner) {
-		return []models.TimeUnit{}, models.ErrInvalidRequest
+		return []models.TimeUnit{}, models.ErrBookingNotFound
 	}
 
 	return entry.BookedTimes, nil

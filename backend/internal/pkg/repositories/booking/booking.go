@@ -29,6 +29,14 @@ type Cursor struct {
 	ID int64    // The internal booking ID to use as anchor
 }
 
+type CreateInput struct {
+	BookedTimes []models.TimeUnit
+	UserID      int64
+	SpotID      int64
+	CarID       int64
+	PaidAmount  float64
+}
+
 var (
 	ErrTimeAlreadyBooked = errors.New("one or more times is already booked")
 	ErrNotFound          = errors.New("no booking found")
@@ -36,7 +44,7 @@ var (
 )
 
 type Repository interface {
-	Create(ctx context.Context, userID int64, spotID int64, carID int64, booking *models.BookingCreationDBInput) (EntryWithTimes, error)
+	Create(ctx context.Context, booking *CreateInput) (EntryWithTimes, error)
 	GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error)
 	GetManyForOwner(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error)
 	GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error)

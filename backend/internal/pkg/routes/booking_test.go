@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -26,8 +27,8 @@ type mockBookingService struct {
 }
 
 // Create implements BookingServicer.
-func (m *mockBookingService) Create(ctx context.Context, userID int64, bookingDetails *models.BookingCreationInput) (int64, models.BookingWithTimes, error) {
-	args := m.Called(ctx, userID, bookingDetails)
+func (m *mockBookingService) Create(ctx context.Context, userID int64, spotID uuid.UUID, bookingDetails *models.BookingCreationInput) (int64, models.BookingWithTimes, error) {
+	args := m.Called(ctx, userID, spotID, bookingDetails)
 	return args.Get(0).(int64), args.Get(1).(models.BookingWithTimes), args.Error(2)
 }
 
@@ -82,9 +83,8 @@ var (
 )
 
 var bookingInput = models.BookingCreationInput{
-	ParkingSpotID: spotUUID,
-	CarID:         carUUID,
-	BookedTimes:   sampleBookTimes,
+	CarID:       carUUID,
+	BookedTimes: sampleBookTimes,
 }
 
 var testBooking = models.Booking{
@@ -125,14 +125,14 @@ func TestCreateBooking(t *testing.T) {
 		t.Parallel()
 
 		mockService := new(mockBookingService)
-		mockService.On("Create", mock.Anything, userID, &bookingInput).
+		mockService.On("Create", mock.Anything, userID, spotUUID, &bookingInput).
 			Return(int64(1), testBookingWithTimes, nil).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.PostCtx(ctx, "/book", bookingInput)
+		resp := api.PostCtx(ctx, fmt.Sprintf("/spots/%v/bookings", spotUUID), bookingInput)
 
 		var booking models.BookingWithTimes
 		err := json.NewDecoder(resp.Result().Body).Decode(&booking)
@@ -148,22 +148,22 @@ func TestCreateBooking(t *testing.T) {
 		t.Parallel()
 
 		mockService := new(mockBookingService)
-		mockService.On("Create", mock.Anything, userID, &bookingInput).
+		mockService.On("Create", mock.Anything, userID, spotUUID, &bookingInput).
 			Return(int64(0), models.BookingWithTimes{}, models.ErrParkingSpotNotFound).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.PostCtx(ctx, "/book", bookingInput)
+		resp := api.PostCtx(ctx, fmt.Sprintf("/spots/%v/bookings", spotUUID), bookingInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
 		require.NoError(t, json.NewDecoder(resp.Result().Body).Decode(&errModel))
 
 		testDetail := huma.ErrorDetail{
-			Location: "body.parkingspot_id",
-			Value:    jsonAnyify(bookingInput.ParkingSpotID),
+			Location: "path.id",
+			Value:    jsonAnyify(spotUUID),
 		}
 
 		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
@@ -176,21 +176,21 @@ func TestCreateBooking(t *testing.T) {
 		t.Parallel()
 
 		mockService := new(mockBookingService)
-		mockService.On("Create", mock.Anything, userID, &bookingInput).
+		mockService.On("Create", mock.Anything, userID, spotUUID, &bookingInput).
 			Return(int64(0), models.BookingWithTimes{}, models.ErrDuplicateBooking).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.PostCtx(ctx, "/book", bookingInput)
+		resp := api.PostCtx(ctx, fmt.Sprintf("/spots/%v/bookings", spotUUID), bookingInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
 		require.NoError(t, json.NewDecoder(resp.Result().Body).Decode(&errModel))
 
 		testDetail := huma.ErrorDetail{
-			Location: "body.book_times",
+			Location: "body.booked_times",
 			Value:    jsonAnyify(bookingInput.BookedTimes),
 		}
 
@@ -204,30 +204,30 @@ func TestCreateBooking(t *testing.T) {
 		t.Parallel()
 
 		emptyBookingInput := models.BookingCreationInput{
-			ParkingSpotID: spotUUID,
-			CarID:         carUUID,
+			CarID:       carUUID,
+			BookedTimes: []models.TimeUnit{},
 		}
 
 		mockService := new(mockBookingService)
-		mockService.On("Create", mock.Anything, userID, &emptyBookingInput).
+		mockService.On("Create", mock.Anything, userID, spotUUID, &emptyBookingInput).
 			Return(int64(0), models.BookingWithTimes{}, models.ErrEmptyBookingTimes).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.PostCtx(ctx, "/book", emptyBookingInput)
+		resp := api.PostCtx(ctx, fmt.Sprintf("/spots/%v/bookings", spotUUID), emptyBookingInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
 		require.NoError(t, json.NewDecoder(resp.Result().Body).Decode(&errModel))
 
 		testDetail := huma.ErrorDetail{
-			Location: "body.book_times",
+			Location: "body.booked_times",
 			Value:    jsonAnyify(emptyBookingInput.BookedTimes),
 		}
 
-		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
+		assert.Equal(t, models.CodeBookingInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 
 		mockService.AssertExpectations(t)
@@ -237,19 +237,19 @@ func TestCreateBooking(t *testing.T) {
 		t.Parallel()
 
 		testBookingInput := models.BookingCreationInput{
-			ParkingSpotID: spotUUID,
-			CarID:         uuid.Nil,
+			CarID:       uuid.Nil,
+			BookedTimes: []models.TimeUnit{},
 		}
 
 		mockService := new(mockBookingService)
-		mockService.On("Create", mock.Anything, userID, &testBookingInput).
+		mockService.On("Create", mock.Anything, userID, spotUUID, &testBookingInput).
 			Return(int64(0), models.BookingWithTimes{}, models.ErrCarNotFound).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.PostCtx(ctx, "/book", testBookingInput)
+		resp := api.PostCtx(ctx, fmt.Sprintf("/spots/%v/bookings", spotUUID), testBookingInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
@@ -270,14 +270,14 @@ func TestCreateBooking(t *testing.T) {
 		t.Parallel()
 
 		mockService := new(mockBookingService)
-		mockService.On("Create", mock.Anything, userID, &bookingInput).
+		mockService.On("Create", mock.Anything, userID, spotUUID, &bookingInput).
 			Return(int64(0), models.BookingWithTimes{}, models.ErrCarNotOwned).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.PostCtx(ctx, "/book", bookingInput)
+		resp := api.PostCtx(ctx, fmt.Sprintf("/spots/%v/bookings", spotUUID), bookingInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
@@ -296,14 +296,14 @@ func TestCreateBooking(t *testing.T) {
 
 	t.Run("unexpected error returns 500", func(t *testing.T) {
 		mockService := new(mockBookingService)
-		mockService.On("Create", mock.Anything, userID, &bookingInput).
+		mockService.On("Create", mock.Anything, userID, spotUUID, &bookingInput).
 			Return(int64(0), models.BookingWithTimes{}, errors.New("unexpected error")).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.PostCtx(ctx, "/book", bookingInput)
+		resp := api.PostCtx(ctx, fmt.Sprintf("/spots/%v/bookings", spotUUID), bookingInput)
 		assert.Equal(t, http.StatusInternalServerError, resp.Result().StatusCode)
 
 		mockService.AssertExpectations(t)
@@ -621,15 +621,15 @@ func TestListLeasingsForSeller(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		query := "?count=10&parkingspot_id=" + invalidFilter.ParkingSpotID.String()
-		resp := api.GetCtx(ctx, "/user/leasings"+query)
+		query := "?count=10"
+		resp := api.GetCtx(ctx, fmt.Sprintf("/spots/%v/leasings%v", invalidFilter.ParkingSpotID, query))
 		assert.Equal(t, http.StatusForbidden, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
 		require.NoError(t, json.NewDecoder(resp.Result().Body).Decode(&errModel))
 
 		testDetail := huma.ErrorDetail{
-			Location: "query.parkingspot_id",
+			Location: "path.id",
 			Value:    jsonAnyify(invalidFilter.ParkingSpotID),
 		}
 		assert.Equal(t, models.CodeForbidden.TypeURI(), errModel.Type)
@@ -697,7 +697,7 @@ func TestGetBooking(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		resp := api.GetCtx(ctx, "/bookings/"+bookingUUID.String())
-		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
 		require.NoError(t, json.NewDecoder(resp.Result().Body).Decode(&errModel))
@@ -708,33 +708,6 @@ func TestGetBooking(t *testing.T) {
 		}
 
 		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
-		assert.Contains(t, errModel.Errors, &testDetail)
-		mockService.AssertExpectations(t)
-	})
-
-	t.Run("invalid request", func(t *testing.T) {
-		t.Parallel()
-
-		mockService := new(mockBookingService)
-		mockService.On("GetByUUID", mock.Anything, userID, bookingUUID).
-			Return(models.BookingWithTimes{}, models.ErrInvalidRequest).Once()
-
-		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
-		_, api := humatest.New(t)
-		huma.AutoRegister(api, route)
-
-		resp := api.GetCtx(ctx, "/bookings/"+bookingUUID.String())
-		assert.Equal(t, http.StatusForbidden, resp.Result().StatusCode)
-
-		var errModel huma.ErrorModel
-		require.NoError(t, json.NewDecoder(resp.Result().Body).Decode(&errModel))
-
-		testDetail := huma.ErrorDetail{
-			Location: "path.id",
-			Value:    jsonAnyify(bookingUUID),
-		}
-
-		assert.Equal(t, models.CodeForbidden.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 		mockService.AssertExpectations(t)
 	})
@@ -798,7 +771,7 @@ func TestGetBookedTimeSlotsOfABooking(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		resp := api.GetCtx(ctx, "/bookings/"+bookingUUID.String()+"/availability")
-		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+		assert.Equal(t, http.StatusNotFound, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
 		require.NoError(t, json.NewDecoder(resp.Result().Body).Decode(&errModel))
@@ -809,33 +782,6 @@ func TestGetBookedTimeSlotsOfABooking(t *testing.T) {
 		}
 
 		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
-		assert.Contains(t, errModel.Errors, &testDetail)
-		mockService.AssertExpectations(t)
-	})
-
-	t.Run("invalid request", func(t *testing.T) {
-		t.Parallel()
-
-		mockService := new(mockBookingService)
-		mockService.On("GetBookedTimesByUUID", mock.Anything, userID, bookingUUID).
-			Return([]models.TimeUnit{}, models.ErrInvalidRequest).Once()
-
-		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
-		_, api := humatest.New(t)
-		huma.AutoRegister(api, route)
-
-		resp := api.GetCtx(ctx, "/bookings/"+bookingUUID.String()+"/availability")
-		assert.Equal(t, http.StatusForbidden, resp.Result().StatusCode)
-
-		var errModel huma.ErrorModel
-		require.NoError(t, json.NewDecoder(resp.Result().Body).Decode(&errModel))
-
-		testDetail := huma.ErrorDetail{
-			Location: "path.id",
-			Value:    jsonAnyify(bookingUUID),
-		}
-
-		assert.Equal(t, models.CodeForbidden.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &testDetail)
 		mockService.AssertExpectations(t)
 	})

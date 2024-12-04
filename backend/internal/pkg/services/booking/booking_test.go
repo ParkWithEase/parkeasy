@@ -96,8 +96,8 @@ func (m *mockParkingspotRepo) GetMany(ctx context.Context, limit int, filter *pa
 }
 
 // Create implements booking.Repository.
-func (m *mockRepo) Create(ctx context.Context, userID, spotID, carID int64, book *models.BookingCreationDBInput) (booking.EntryWithTimes, error) {
-	args := m.Called(ctx, userID, spotID, carID, book)
+func (m *mockRepo) Create(ctx context.Context, input *booking.CreateInput) (booking.EntryWithTimes, error) {
+	args := m.Called(ctx, input)
 	return args.Get(0).(booking.EntryWithTimes), args.Error(1)
 }
 
@@ -194,9 +194,8 @@ var (
 	testpaidAmount = (float64(len(sampleTimeUnit)) / 2) * testPrice
 
 	testBookingDetails = &models.BookingCreationInput{
-		ParkingSpotID: testSpotUUID,
-		CarID:         testCarUUID,
-		BookedTimes:   sampleTimeUnit,
+		CarID:       testCarUUID,
+		BookedTimes: sampleTimeUnit,
 	}
 
 	testBooking = models.Booking{
@@ -249,14 +248,23 @@ func TestCreateBooking(t *testing.T) {
 		carRepo.On("GetByUUID", mock.Anything, testCarUUID).
 			Return(testCarEntry, nil).
 			Once()
-		repo.On("Create", mock.Anything, testUserID, testSpotEntry.InternalID, testCarEntry.InternalID, mock.AnythingOfType("*models.BookingCreationDBInput")).
+
+		expectedCreationInput := booking.CreateInput{
+			BookedTimes: testBookingDetails.BookedTimes,
+			UserID:      testUserID,
+			SpotID:      testSpotInternalID,
+			CarID:       testCarInternalID,
+			PaidAmount:  testpaidAmount,
+		}
+
+		repo.On("Create", mock.Anything, &expectedCreationInput).
 			Return(testBookingEntryWithTimes, nil).
 			Once()
 
-		bookingID, result, err := service.Create(ctx, testUserID, testBookingDetails)
+		bookingID, result, err := service.Create(ctx, testUserID, testSpotUUID, testBookingDetails)
 		require.NoError(t, err)
 		assert.Equal(t, testBookingInternalID, bookingID)
-		assert.Empty(t, cmp.Diff(testpaidAmount, result.Booking.PaidAmount))
+		assert.Empty(t, cmp.Diff(testpaidAmount, result.PaidAmount))
 		assert.Empty(t, cmp.Diff(testBookingWithTimes, result))
 		spotRepo.AssertExpectations(t)
 		carRepo.AssertExpectations(t)
@@ -271,12 +279,8 @@ func TestCreateBooking(t *testing.T) {
 		spotRepo := new(mockParkingspotRepo)
 		service := New(repo, spotRepo, carRepo)
 
-		emptyDetails := &models.BookingCreationInput{
-			ParkingSpotID: testSpotUUID,
-			CarID:         testCarUUID,
-			BookedTimes:   []models.TimeUnit{},
-		}
-		_, _, err := service.Create(ctx, testUserID, emptyDetails)
+		emptyDetails := &models.BookingCreationInput{}
+		_, _, err := service.Create(ctx, testUserID, testSpotUUID, emptyDetails)
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrEmptyBookingTimes)
 		}
@@ -296,7 +300,7 @@ func TestCreateBooking(t *testing.T) {
 			Return(parkingspot.Entry{}, parkingspot.ErrNotFound).
 			Once()
 
-		_, _, err := service.Create(ctx, testUserID, testBookingDetails)
+		_, _, err := service.Create(ctx, testUserID, testSpotUUID, testBookingDetails)
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
 		}
@@ -320,7 +324,7 @@ func TestCreateBooking(t *testing.T) {
 			Return(car.Entry{}, car.ErrNotFound).
 			Once()
 
-		_, _, err := service.Create(ctx, testUserID, testBookingDetails)
+		_, _, err := service.Create(ctx, testUserID, testSpotUUID, testBookingDetails)
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrCarNotFound)
 		}
@@ -354,7 +358,7 @@ func TestCreateBooking(t *testing.T) {
 			Return(carEntry, nil).
 			Once()
 
-		_, _, err := service.Create(ctx, testUserID, testBookingDetails)
+		_, _, err := service.Create(ctx, testUserID, testSpotUUID, testBookingDetails)
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrCarNotOwned)
 		}
@@ -377,11 +381,11 @@ func TestCreateBooking(t *testing.T) {
 		carRepo.On("GetByUUID", mock.Anything, testCarUUID).
 			Return(testCarEntry, nil).
 			Once()
-		repo.On("Create", mock.Anything, testUserID, testSpotEntry.InternalID, testCarEntry.InternalID, mock.AnythingOfType("*models.BookingCreationDBInput")).
+		repo.On("Create", mock.Anything, mock.AnythingOfType("*booking.CreateInput")).
 			Return(booking.EntryWithTimes{}, booking.ErrTimeAlreadyBooked).
 			Once()
 
-		_, _, err := service.Create(ctx, testUserID, testBookingDetails)
+		_, _, err := service.Create(ctx, testUserID, testSpotUUID, testBookingDetails)
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrDuplicateBooking)
 		}
@@ -853,7 +857,7 @@ func TestGetByUUID(t *testing.T) {
 		repo.AssertExpectations(t)
 	})
 
-	t.Run("returns error when user is not the booker or seller", func(t *testing.T) {
+	t.Run("returns not found when user is not the booker or seller", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
@@ -879,7 +883,7 @@ func TestGetByUUID(t *testing.T) {
 
 		result, err := service.GetByUUID(ctx, testUserID, testBookingUUID)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrInvalidRequest)
+			assert.ErrorIs(t, err, models.ErrBookingNotFound)
 		}
 		assert.Empty(t, result)
 
@@ -969,7 +973,7 @@ func TestGetBookedTimesByUUID(t *testing.T) {
 		repo.AssertExpectations(t)
 	})
 
-	t.Run("returns error when user is not the booker or seller", func(t *testing.T) {
+	t.Run("returns not found when user is not the booker or seller", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
@@ -995,7 +999,7 @@ func TestGetBookedTimesByUUID(t *testing.T) {
 
 		result, err := service.GetBookedTimesByUUID(ctx, testUserID, testBookingUUID)
 		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrInvalidRequest)
+			assert.ErrorIs(t, err, models.ErrBookingNotFound)
 		}
 		assert.Empty(t, result)
 

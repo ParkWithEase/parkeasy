@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbmodels"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbtype"
@@ -40,7 +39,7 @@ type getManyResult struct {
 	Caruuid         uuid.UUID `db:"caruuid" `
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID, spotID, carID int64, booking *models.BookingCreationDBInput) (EntryWithTimes, error) {
+func (p *PostgresRepository) Create(ctx context.Context, booking *CreateInput) (EntryWithTimes, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return EntryWithTimes{}, fmt.Errorf("could not start a transaction: %w", err)
@@ -53,9 +52,9 @@ func (p *PostgresRepository) Create(ctx context.Context, userID, spotID, carID i
 	}
 
 	inserted, err := dbmodels.Bookings.Insert(ctx, tx, &dbmodels.BookingSetter{
-		Userid:        omit.From(userID),
-		Parkingspotid: omit.From(spotID),
-		Carid:         omit.From(carID),
+		Userid:        omit.From(booking.UserID),
+		Parkingspotid: omit.From(booking.SpotID),
+		Carid:         omit.From(booking.CarID),
 		Paidamount:    omit.From(paidAmount),
 	})
 	if err != nil {
@@ -69,14 +68,14 @@ func (p *PostgresRepository) Create(ctx context.Context, userID, spotID, carID i
 	}}
 
 	// Variable for OR clauses in where, used for timeslots timeranges
-	timeslots := timeSlotsToSQLExpr(booking)
+	timeslots := timeSlotsToSQLExpr(booking.BookedTimes)
 
 	// Variable for AND clauses in where
 	var whereMods []mods.Where[*dialect.UpdateQuery]
 	whereMods = append(
 		whereMods,
 		dbmodels.UpdateWhere.Timeunits.Bookingid.IsNull(),
-		dbmodels.UpdateWhere.Timeunits.Parkingspotid.EQ(spotID),
+		dbmodels.UpdateWhere.Timeunits.Parkingspotid.EQ(booking.SpotID),
 		um.Where(timeslots),
 	)
 
@@ -89,7 +88,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID, spotID, carID i
 	}
 	defer updatedCursor.Close()
 
-	bookedSlots := make([]models.TimeUnit, 0, len(booking.BookingInfo.BookedTimes))
+	bookedSlots := make([]models.TimeUnit, 0, len(booking.BookedTimes))
 	for updatedCursor.Next() {
 		dbtime, err := updatedCursor.Get()
 		if err != nil {
@@ -99,39 +98,43 @@ func (p *PostgresRepository) Create(ctx context.Context, userID, spotID, carID i
 		bookedSlots = append(bookedSlots, timeUnitFromDB(dbtime))
 	}
 	// Check if the count matches the expected number of booked times
-	if len(bookedSlots) != len(booking.BookingInfo.BookedTimes) {
+	if len(bookedSlots) != len(booking.BookedTimes) {
 		return EntryWithTimes{}, ErrTimeAlreadyBooked
 	}
 	//------------------------------------------------
+
+	type bookingUUIDs struct {
+		Parkingspotuuid uuid.UUID
+		Caruuid         uuid.UUID
+	}
+	uuidQuery := psql.Select(
+		sm.Columns(dbmodels.ParkingspotColumns.Parkingspotuuid, dbmodels.CarColumns.Caruuid),
+		sm.From(dbmodels.Bookings.Name(ctx)),
+		dbmodels.SelectJoins.Bookings.InnerJoin.ParkingspotidParkingspot(ctx),
+		dbmodels.SelectJoins.Bookings.InnerJoin.CaridCar(ctx),
+		dbmodels.SelectWhere.Bookings.Bookingid.EQ(inserted.Bookingid),
+	)
+	ids, err := bob.One(ctx, tx, uuidQuery, scan.StructMapper[bookingUUIDs]())
+	if err != nil {
+		return EntryWithTimes{}, fmt.Errorf("could not get car and spot uuids: %w", err)
+	}
 
 	err = tx.Commit()
 	if err != nil {
 		return EntryWithTimes{}, fmt.Errorf("could not commit transaction: %w", err)
 	}
 
-	amount, ok := inserted.Paidamount.Float64()
-	if !ok {
-		return EntryWithTimes{}, fmt.Errorf("could not convert %v to float64", inserted.Paidamount)
-	}
-
 	entry := EntryWithTimes{
-		Entry: formEntry(amount,
-			inserted.Bookinguuid,
-			booking.BookingInfo.ParkingSpotID,
-			booking.BookingInfo.CarID,
-			inserted.Createdat,
-			inserted.Bookingid,
-			inserted.Userid,
-		),
+		Entry:       formEntry(inserted, ids.Parkingspotuuid, ids.Caruuid),
 		BookedTimes: bookedSlots,
 	}
 
 	return entry, nil
 }
 
-func timeSlotsToSQLExpr(booking *models.BookingCreationDBInput) dialect.Expression {
+func timeSlotsToSQLExpr(units []models.TimeUnit) dialect.Expression {
 	var expression dialect.Expression
-	for _, bookTime := range booking.BookingInfo.BookedTimes {
+	for _, bookTime := range units {
 		test := dbmodels.TimeunitColumns.Timerange.OP(
 			"&&",
 			psql.Arg(dbtype.Tstzrange{
@@ -209,20 +212,8 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 		return EntryWithTimes{}, err
 	}
 
-	amount, ok := bookingResult.Paidamount.Float64()
-	if !ok {
-		return EntryWithTimes{}, fmt.Errorf("could not convert %v to float64", bookingResult.Paidamount)
-	}
-
 	entry := EntryWithTimes{
-		Entry: formEntry(amount,
-			bookingResult.Bookinguuid,
-			bookingResult.Parkingspotuuid,
-			bookingResult.Caruuid,
-			bookingResult.Createdat,
-			bookingResult.Bookingid,
-			bookingResult.Userid,
-		),
+		Entry:       formEntry(&bookingResult.Booking, bookingResult.Parkingspotuuid, bookingResult.Caruuid),
 		BookedTimes: timeUnitsFromDB(timeResult),
 	}
 
@@ -277,26 +268,11 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 	for entryCursor.Next() {
 		get, err := entryCursor.Get()
 		if err != nil {
-			return []Entry{}, fmt.Errorf("could not fetch booking details: %w", err)
+			log.Err(err).Msg("error iterating get many cursor")
+			break
 		}
 
-		amount, ok := get.Paidamount.Float64()
-		if !ok {
-			// if there is an error converting amount to float
-			log.Err(err).Msg("error while converting amount to float")
-			continue
-		}
-
-		entry := formEntry(amount,
-			get.Bookinguuid,
-			get.Parkingspotuuid,
-			get.Caruuid,
-			get.Createdat,
-			get.Bookingid,
-			get.Userid,
-		)
-
-		result = append(result, entry)
+		result = append(result, formEntry(&get.Booking, get.Parkingspotuuid, get.Caruuid))
 	}
 
 	return result, nil
@@ -350,27 +326,10 @@ func (p *PostgresRepository) GetManyForOwner(ctx context.Context, limit int, aft
 	for entryCursor.Next() {
 		get, err := entryCursor.Get()
 		if err != nil {
-			return []Entry{}, fmt.Errorf("could not fetch booking details: %w", err)
+			log.Err(err).Msg("error iterating get many cursor")
+			break
 		}
-
-		amount, ok := get.Paidamount.Float64()
-		if !ok {
-			// if there is an error converting amount to float
-			log.Err(err).Msg("error while converting amount to float")
-			continue
-		}
-
-		entry := formEntry(
-			amount,
-			get.Bookinguuid,
-			get.Parkingspotuuid,
-			get.Caruuid,
-			get.Createdat,
-			get.Bookingid,
-			get.Userid,
-		)
-
-		result = append(result, entry)
+		result = append(result, formEntry(&get.Booking, get.Parkingspotuuid, get.Caruuid))
 	}
 
 	return result, nil
@@ -384,17 +343,19 @@ func timeUnitsFromDB(model []*dbmodels.Timeunit) []models.TimeUnit {
 	return result
 }
 
-func formEntry(amount float64, bookingUUID, parkingSpotUUID, carID uuid.UUID, createdAt time.Time, bookingID, bookerID int64) Entry {
+func formEntry(entry *dbmodels.Booking, spotUUID, carUUID uuid.UUID) Entry {
+	amount, _ := entry.Paidamount.Float64()
+
 	return Entry{
 		Booking: models.Booking{
+			CreatedAt:     entry.Createdat,
 			PaidAmount:    amount,
-			ID:            bookingUUID,
-			ParkingSpotID: parkingSpotUUID,
-			CarID:         carID,
-			CreatedAt:     createdAt,
+			ID:            entry.Bookinguuid,
+			ParkingSpotID: spotUUID,
+			CarID:         carUUID,
 		},
-		InternalID: bookingID,
-		BookerID:   bookerID,
+		InternalID: entry.Bookingid,
+		BookerID:   entry.Userid,
 	}
 }
 
