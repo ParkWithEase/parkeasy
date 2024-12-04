@@ -1,27 +1,28 @@
 package io.github.parkwithease.parkeasy.ui.cars
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.parkwithease.parkeasy.data.remote.APIException
 import io.github.parkwithease.parkeasy.data.remote.CarRepository
 import io.github.parkwithease.parkeasy.model.Car
 import io.github.parkwithease.parkeasy.model.CarDetails
 import io.github.parkwithease.parkeasy.model.ErrorDetail
 import io.github.parkwithease.parkeasy.model.ErrorModel
 import io.github.parkwithease.parkeasy.model.FieldState
-import java.io.IOException
+import io.github.parkwithease.parkeasy.ui.common.recoverRequestErrors
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-@HiltViewModel
 @Suppress("detekt:TooManyFunctions")
+@HiltViewModel
 class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : ViewModel() {
     val snackbarState = SnackbarHostState()
 
@@ -42,9 +43,12 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
             carRepo
                 .getCars()
                 .onSuccess { _cars.value = it }
-                .onFailure {
-                    viewModelScope.launch { snackbarState.showSnackbar("Error retrieving cars") }
-                }
+                .recoverRequestErrors(
+                    "Error retrieving cars",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
             _isRefreshing.value = false
         }
     }
@@ -62,7 +66,12 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
                 )
                 .also { clearFieldErrors() }
                 .onSuccess { onRefresh() }
-                .recoverRequestErrors("Error adding car")
+                .recoverRequestErrors(
+                    "Error adding car",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
         }
     }
 
@@ -83,7 +92,12 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
                 )
                 .also { clearFieldErrors() }
                 .onSuccess { onRefresh() }
-                .recoverRequestErrors("Error adding car")
+                .recoverRequestErrors(
+                    "Error adding car",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
         }
     }
 
@@ -139,21 +153,17 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
             }
     }
 
-    private fun Result<Unit>.recoverRequestErrors(operationFailMsg: String): Result<Unit> =
-        recover {
-            when (it) {
-                is APIException -> {
-                    errorToForm(it.error)
-                    viewModelScope.launch { snackbarState.showSnackbar(operationFailMsg) }
-                }
-                is IOException -> {
-                    viewModelScope.launch {
-                        snackbarState.showSnackbar("Could not connect to server, are you online?")
-                    }
-                }
-                else -> throw it
+    fun resetForm() {
+        formState =
+            formState.run {
+                copy(
+                    color = FieldState(""),
+                    licensePlate = FieldState(""),
+                    make = FieldState(""),
+                    model = FieldState(""),
+                )
             }
-        }
+    }
 
     private fun errorToForm(error: ErrorModel) {
         annotateErrorLocation(error.errors)
@@ -191,7 +201,6 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
         }
     }
 
-    // Clear errors set via external services
     private fun clearFieldErrors() {
         formState =
             formState.run {
@@ -203,11 +212,36 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
                 )
             }
     }
+
+    fun createHandler() =
+        AddCarFormHandler(
+            onColorChange = this::onColorChange,
+            onLicensePlateChange = this::onLicensePlateChange,
+            onMakeChange = this::onMakeChange,
+            onModelChange = this::onModelChange,
+            onAddCarClick = this::onAddCarClick,
+            onEditCarClick = this::onEditCarClick,
+            resetForm = this::resetForm,
+        )
 }
+
+@Composable
+fun rememberAddCarFormHandler(viewModel: CarsViewModel) =
+    remember(viewModel) { viewModel.createHandler() }
 
 data class AddCarFormState(
     val color: FieldState<String> = FieldState(""),
     val licensePlate: FieldState<String> = FieldState(""),
     val make: FieldState<String> = FieldState(""),
     val model: FieldState<String> = FieldState(""),
+)
+
+data class AddCarFormHandler(
+    val onColorChange: (String) -> Unit = {},
+    val onLicensePlateChange: (String) -> Unit = {},
+    val onMakeChange: (String) -> Unit = {},
+    val onModelChange: (String) -> Unit = {},
+    val onAddCarClick: () -> Unit = {},
+    val onEditCarClick: () -> Unit = {},
+    val resetForm: () -> Unit = {},
 )

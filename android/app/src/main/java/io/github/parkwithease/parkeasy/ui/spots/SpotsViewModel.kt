@@ -1,21 +1,29 @@
 package io.github.parkwithease.parkeasy.ui.spots
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.parkwithease.parkeasy.data.remote.SpotRepository
+import io.github.parkwithease.parkeasy.model.ErrorDetail
+import io.github.parkwithease.parkeasy.model.ErrorModel
 import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.model.SpotFeatures
 import io.github.parkwithease.parkeasy.model.SpotLocation
 import io.github.parkwithease.parkeasy.model.TimeSlot
-import io.github.parkwithease.parkeasy.ui.common.startOfWeek
+import io.github.parkwithease.parkeasy.ui.common.MinutesPerSlot
+import io.github.parkwithease.parkeasy.ui.common.recoverRequestErrors
+import io.github.parkwithease.parkeasy.ui.common.startOfNextAvailableDay
 import io.github.parkwithease.parkeasy.ui.common.timezone
 import javax.inject.Inject
+import kotlin.String
+import kotlin.collections.plus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -24,10 +32,8 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 
-private const val MinutesPerSlot = 30
-
-@HiltViewModel
 @Suppress("detekt:TooManyFunctions")
+@HiltViewModel
 class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) : ViewModel() {
     val snackbarState = SnackbarHostState()
 
@@ -46,9 +52,12 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
             spotRepo
                 .getSpots()
                 .onSuccess { _spots.value = it }
-                .onFailure {
-                    viewModelScope.launch { snackbarState.showSnackbar("Error retrieving spots") }
-                }
+                .recoverRequestErrors(
+                    "Error retrieving parking spots",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
             _isRefreshing.value = false
         }
     }
@@ -56,7 +65,7 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
     @Suppress("detekt:LongMethod")
     fun onAddSpotClick() {
         val timezone = timezone()
-        val startOfWeek = startOfWeek()
+        val startOfDay = startOfNextAvailableDay()
         viewModelScope.launch {
             spotRepo
                 .createSpot(
@@ -67,7 +76,7 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                                 .map {
                                     TimeSlot(
                                         startTime =
-                                            startOfWeek
+                                            startOfDay
                                                 .toInstant(timezone)
                                                 .plus(
                                                     MinutesPerSlot * it,
@@ -76,7 +85,7 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                                                 )
                                                 .toLocalDateTime(timezone),
                                         endTime =
-                                            startOfWeek
+                                            startOfDay
                                                 .toInstant(timezone)
                                                 .plus(
                                                     MinutesPerSlot * (it + 1),
@@ -100,14 +109,17 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                                 countryCode = formState.countryCode.value,
                                 postalCode = formState.postalCode.value,
                             ),
-                        pricePerHour = formState.pricePerHour.value.toDoubleOrNull() ?: -1.0,
+                        pricePerHour = formState.pricePerHour.value.toDoubleOrNull() ?: -0.0,
                     )
                 )
                 .also { clearFieldErrors() }
                 .onSuccess { onRefresh() }
-                .onFailure {
-                    viewModelScope.launch { snackbarState.showSnackbar("Error creating spot") }
-                }
+                .recoverRequestErrors(
+                    "Error adding parking spot",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
         }
     }
 
@@ -195,22 +207,100 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                     pricePerHour =
                         pricePerHour.copy(
                             value = value,
-                            error = if (value != "") null else "Price cannot be empty",
+                            error =
+                                if (value == "") "Price cannot be empty"
+                                else if (value.toDoubleOrNull() == null) "Price must be a number"
+                                else null,
                         )
                 )
             }
     }
 
-    fun onPlusTime(elements: Iterable<Int>) {
+    fun onAddTime(elements: Iterable<Int>) {
         formState =
             formState.run { copy(times = times.copy(value = formState.times.value.plus(elements))) }
     }
 
-    fun onMinusTime(elements: Iterable<Int>) {
+    fun onDeleteTime(elements: Iterable<Int>) {
         formState =
             formState.run {
                 copy(times = times.copy(value = formState.times.value.minus(elements)))
             }
+    }
+
+    fun resetForm() {
+        formState =
+            formState.run {
+                copy(
+                    streetAddress = FieldState(""),
+                    city = FieldState(""),
+                    state = FieldState(""),
+                    countryCode = FieldState("CA"),
+                    postalCode = FieldState(""),
+                    chargingStation = FieldState(false),
+                    plugIn = FieldState(false),
+                    shelter = FieldState(false),
+                    pricePerHour = FieldState(""),
+                    times = FieldState<Set<Int>>(emptySet()),
+                )
+            }
+    }
+
+    private fun errorToForm(error: ErrorModel) {
+        when (error.type) {
+            else -> annotateErrorLocation(error.errors)
+        }
+    }
+
+    @Suppress("detekt:CyclomaticComplexMethod")
+    private fun annotateErrorLocation(errors: List<ErrorDetail>) {
+        for (err in errors) {
+            when (err.location) {
+                "body" ->
+                    formState =
+                        formState.run {
+                            copy(
+                                streetAddress =
+                                    streetAddress.copy(error = "Invalid street address"),
+                                city = city.copy(error = "Invalid city"),
+                                state = state.copy(error = "Invalid state"),
+                                countryCode = countryCode.copy(error = "Invalid country code"),
+                                postalCode = postalCode.copy(error = "Invalid postal code"),
+                                pricePerHour = pricePerHour.copy(error = "Invalid price"),
+                            )
+                        }
+
+                "body.location.street_address" ->
+                    formState =
+                        formState.run {
+                            copy(
+                                streetAddress = streetAddress.copy(error = "Invalid street address")
+                            )
+                        }
+                "body.location.city" ->
+                    formState = formState.run { copy(city = city.copy(error = "Invalid city")) }
+                "body.location.state" ->
+                    formState = formState.run { copy(state = state.copy(error = "Invalid state")) }
+
+                "body.location.country_code" ->
+                    formState =
+                        formState.run {
+                            copy(countryCode = countryCode.copy(error = "Invalid country code"))
+                        }
+
+                "body.location.postal_code" ->
+                    formState =
+                        formState.run {
+                            copy(postalCode = postalCode.copy(error = "Invalid postal code"))
+                        }
+
+                "body.price_per_hour" ->
+                    formState =
+                        formState.run {
+                            copy(pricePerHour = pricePerHour.copy(error = "Invalid price"))
+                        }
+            }
+        }
     }
 
     private fun clearFieldErrors() {
@@ -221,20 +311,59 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                     city = city.copy(error = null),
                     state = state.copy(error = null),
                     countryCode = countryCode.copy(error = null),
+                    postalCode = postalCode.copy(error = null),
+                    pricePerHour = pricePerHour.copy(error = null),
                 )
             }
     }
+
+    fun createHandler() =
+        AddSpotFormHandler(
+            onStreetAddressChange = this::onStreetAddressChange,
+            onCityChange = this::onCityChange,
+            onStateChange = this::onStateChange,
+            onCountryCodeChange = this::onCountryCodeChange,
+            onPostalCodeChange = this::onPostalCodeChange,
+            onChargingStationChange = this::onChargingStationChange,
+            onPlugInChange = this::onPlugInChange,
+            onShelterChange = this::onShelterChange,
+            onPricePerHourChange = this::onPricePerHourChange,
+            onAddTime = this::onAddTime,
+            onDeleteTime = this::onDeleteTime,
+            onAddSpotClick = this::onAddSpotClick,
+            resetForm = this::resetForm,
+        )
 }
+
+@Composable
+fun rememberAddSpotFormHandler(viewModel: SpotsViewModel) =
+    remember(viewModel) { viewModel.createHandler() }
 
 data class AddSpotFormState(
     val streetAddress: FieldState<String> = FieldState(""),
     val city: FieldState<String> = FieldState(""),
     val state: FieldState<String> = FieldState(""),
-    val countryCode: FieldState<String> = FieldState(""),
+    val countryCode: FieldState<String> = FieldState("CA"),
     val postalCode: FieldState<String> = FieldState(""),
     val chargingStation: FieldState<Boolean> = FieldState(false),
     val plugIn: FieldState<Boolean> = FieldState(false),
     val shelter: FieldState<Boolean> = FieldState(false),
     val pricePerHour: FieldState<String> = FieldState(""),
     val times: FieldState<Set<Int>> = FieldState<Set<Int>>(emptySet()),
+)
+
+data class AddSpotFormHandler(
+    val onStreetAddressChange: (String) -> Unit = {},
+    val onCityChange: (String) -> Unit = {},
+    val onStateChange: (String) -> Unit = {},
+    val onCountryCodeChange: (String) -> Unit = {},
+    val onPostalCodeChange: (String) -> Unit = {},
+    val onChargingStationChange: (Boolean) -> Unit = {},
+    val onPlugInChange: (Boolean) -> Unit = {},
+    val onShelterChange: (Boolean) -> Unit = {},
+    val onPricePerHourChange: (String) -> Unit = {},
+    val onAddTime: (Iterable<Int>) -> Unit = {},
+    val onDeleteTime: (Iterable<Int>) -> Unit = {},
+    val onAddSpotClick: () -> Unit = {},
+    val resetForm: () -> Unit = {},
 )

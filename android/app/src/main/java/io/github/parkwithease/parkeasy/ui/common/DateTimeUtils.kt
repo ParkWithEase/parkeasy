@@ -7,10 +7,10 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.format
-import kotlinx.datetime.isoDayNumber
-import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
+
+const val MinutesPerSlot = 30
 
 val format =
     LocalDate.Format {
@@ -21,16 +21,11 @@ val format =
 
 fun timezone() = TimeZone.currentSystemDefault()
 
-fun startOfWeek() =
+fun startOfNextAvailableDay() =
     Clock.System.now()
+        .plus(MinutesPerSlot, DateTimeUnit.MINUTE)
         .toLocalDateTime(timezone())
         .date
-        .apply {
-            minus(
-                dayOfWeek.isoDayNumber - 1, // Monday is 1, Sunday is 7
-                DateTimeUnit.DAY,
-            )
-        }
         .atStartOfDayIn(timezone())
         .toLocalDateTime(timezone())
 

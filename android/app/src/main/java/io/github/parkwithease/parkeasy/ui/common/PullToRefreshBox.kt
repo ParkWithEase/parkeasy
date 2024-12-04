@@ -37,9 +37,9 @@ fun <T> PullToRefreshBox(
                 modifier = Modifier.padding(4.dp),
             ) {
                 LazyColumn(
-                    Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     items(items) { item -> ListItem({ card(item, onClick) }) }
                 }
