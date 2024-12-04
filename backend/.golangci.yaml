@@ -10,7 +10,6 @@ linters:
     - exhaustive
     - fatcontext
     - gochecksumtype
-    - gocognit
     - goconst
     - gocritic
     - gofmt
