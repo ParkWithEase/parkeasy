@@ -221,7 +221,7 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
             formState.run { copy(times = times.copy(value = formState.times.value.plus(elements))) }
     }
 
-    fun onDeleteTime(elements: Iterable<Int>) {
+    fun onRemoveTime(elements: Iterable<Int>) {
         formState =
             formState.run {
                 copy(times = times.copy(value = formState.times.value.minus(elements)))
@@ -329,7 +329,7 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
             onShelterChange = this::onShelterChange,
             onPricePerHourChange = this::onPricePerHourChange,
             onAddTime = this::onAddTime,
-            onDeleteTime = this::onDeleteTime,
+            onRemoveTime = this::onRemoveTime,
             onAddSpotClick = this::onAddSpotClick,
             resetForm = this::resetForm,
         )
@@ -363,7 +363,7 @@ data class AddSpotFormHandler(
     val onShelterChange: (Boolean) -> Unit = {},
     val onPricePerHourChange: (String) -> Unit = {},
     val onAddTime: (Iterable<Int>) -> Unit = {},
-    val onDeleteTime: (Iterable<Int>) -> Unit = {},
+    val onRemoveTime: (Iterable<Int>) -> Unit = {},
     val onAddSpotClick: () -> Unit = {},
     val resetForm: () -> Unit = {},
 )
