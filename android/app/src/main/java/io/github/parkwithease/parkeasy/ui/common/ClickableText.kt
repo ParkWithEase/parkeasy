@@ -64,7 +64,7 @@ fun ClickableText(
         }
         Text(
             text = text,
-            modifier = Modifier.clickable { onClick },
+            modifier = Modifier.clickable(onClick = onClick),
             color = MaterialTheme.colorScheme.primary,
             fontSize = fontSize,
             fontStyle = fontStyle,
