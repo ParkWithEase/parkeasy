@@ -17,20 +17,17 @@ import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.model.SpotFeatures
 import io.github.parkwithease.parkeasy.model.SpotLocation
 import io.github.parkwithease.parkeasy.model.TimeSlot
-import io.github.parkwithease.parkeasy.ui.common.MinutesPerSlot
 import io.github.parkwithease.parkeasy.ui.common.recoverRequestErrors
-import io.github.parkwithease.parkeasy.ui.common.startOfNextAvailableDay
-import io.github.parkwithease.parkeasy.ui.common.timezone
+import io.github.parkwithease.parkeasy.ui.common.startOfNextAvailableDayInstant
+import io.github.parkwithease.parkeasy.ui.common.toIndex
+import io.github.parkwithease.parkeasy.ui.common.toLocalDateTime
 import javax.inject.Inject
 import kotlin.String
 import kotlin.collections.plus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.plus
-import kotlinx.datetime.toInstant
-import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.Clock.System.now
 
 @Suppress("detekt:TooManyFunctions")
 @HiltViewModel
@@ -64,35 +61,17 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
 
     @Suppress("detekt:LongMethod")
     fun onAddSpotClick() {
-        val timezone = timezone()
-        val startOfDay = startOfNextAvailableDay()
         viewModelScope.launch {
             spotRepo
                 .createSpot(
                     Spot(
                         availability =
-                            formState.times.value
+                            formState.selectedIds.value
                                 .sortedBy { it }
                                 .map {
                                     TimeSlot(
-                                        startTime =
-                                            startOfDay
-                                                .toInstant(timezone)
-                                                .plus(
-                                                    MinutesPerSlot * it,
-                                                    DateTimeUnit.MINUTE,
-                                                    timezone,
-                                                )
-                                                .toLocalDateTime(timezone),
-                                        endTime =
-                                            startOfDay
-                                                .toInstant(timezone)
-                                                .plus(
-                                                    MinutesPerSlot * (it + 1),
-                                                    DateTimeUnit.MINUTE,
-                                                    timezone,
-                                                )
-                                                .toLocalDateTime(timezone),
+                                        startTime = it.toLocalDateTime(),
+                                        endTime = (it + 1).toLocalDateTime(),
                                     )
                                 },
                         features =
@@ -218,13 +197,21 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
 
     fun onAddTime(elements: Iterable<Int>) {
         formState =
-            formState.run { copy(times = times.copy(value = formState.times.value.plus(elements))) }
+            formState.run {
+                copy(
+                    selectedIds =
+                        selectedIds.copy(value = formState.selectedIds.value.plus(elements))
+                )
+            }
     }
 
     fun onRemoveTime(elements: Iterable<Int>) {
         formState =
             formState.run {
-                copy(times = times.copy(value = formState.times.value.minus(elements)))
+                copy(
+                    selectedIds =
+                        selectedIds.copy(value = formState.selectedIds.value.minus(elements))
+                )
             }
     }
 
@@ -241,7 +228,13 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                     plugIn = FieldState(false),
                     shelter = FieldState(false),
                     pricePerHour = FieldState(""),
-                    times = FieldState<Set<Int>>(emptySet()),
+                    selectedIds = FieldState(emptySet()),
+                    disabledIds =
+                        FieldState(
+                            if (now() > startOfNextAvailableDayInstant())
+                                (0..now().toIndex()).toSet()
+                            else emptySet()
+                        ),
                 )
             }
     }
@@ -256,7 +249,8 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
     private fun annotateErrorLocation(errors: List<ErrorDetail>) {
         for (err in errors) {
             when (err.location) {
-                "body" ->
+                "body",
+                "body.location" ->
                     formState =
                         formState.run {
                             copy(
@@ -282,10 +276,10 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                 "body.location.state" ->
                     formState = formState.run { copy(state = state.copy(error = "Invalid state")) }
 
-                "body.location.country_code" ->
+                "body.location.country" ->
                     formState =
                         formState.run {
-                            copy(countryCode = countryCode.copy(error = "Invalid country code"))
+                            copy(countryCode = countryCode.copy(error = "Invalid country"))
                         }
 
                 "body.location.postal_code" ->
@@ -349,7 +343,8 @@ data class AddSpotFormState(
     val plugIn: FieldState<Boolean> = FieldState(false),
     val shelter: FieldState<Boolean> = FieldState(false),
     val pricePerHour: FieldState<String> = FieldState(""),
-    val times: FieldState<Set<Int>> = FieldState<Set<Int>>(emptySet()),
+    val selectedIds: FieldState<Set<Int>> = FieldState(emptySet()),
+    val disabledIds: FieldState<Set<Int>> = FieldState(emptySet()),
 )
 
 data class AddSpotFormHandler(

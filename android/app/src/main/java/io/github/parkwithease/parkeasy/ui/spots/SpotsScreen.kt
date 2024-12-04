@@ -96,7 +96,8 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
             AddSpotScreen(
                 state = viewModel.formState,
                 handler = handler,
-                getSelectedIds = { viewModel.formState.times.value },
+                getSelectedIds = { viewModel.formState.selectedIds.value },
+                disabledIds = viewModel.formState.disabledIds.value,
             )
         }
     }
@@ -164,6 +165,7 @@ fun AddSpotScreen(
     state: AddSpotFormState,
     handler: AddSpotFormHandler,
     getSelectedIds: () -> Set<Int>,
+    disabledIds: Set<Int>,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -238,7 +240,7 @@ fun AddSpotScreen(
                 label = { Text(stringResource(R.string.shelter)) },
             )
         }
-        TimeGrid(getSelectedIds, handler.onAddTime, handler.onRemoveTime)
+        TimeGrid(getSelectedIds, disabledIds, handler.onAddTime, handler.onRemoveTime)
         Button(onClick = handler.onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.add_spot))
         }
@@ -307,6 +309,7 @@ private fun AddCarScreenPreview(
                 state = state,
                 handler = AddSpotFormHandler(),
                 getSelectedIds = { emptySet() },
+                disabledIds = emptySet(),
             )
         }
     }
@@ -327,6 +330,7 @@ private fun ExpandedAddCarScreenPreview(
                 state = state,
                 handler = AddSpotFormHandler(),
                 getSelectedIds = { emptySet() },
+                disabledIds = emptySet(),
             )
         }
     }
@@ -356,6 +360,7 @@ private fun AddCarScreenTimeGridPreview(
                 state = AddSpotFormState(),
                 handler = AddSpotFormHandler(),
                 getSelectedIds = { selectedIds },
+                disabledIds = emptySet(),
             )
         }
     }
