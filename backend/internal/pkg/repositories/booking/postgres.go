@@ -69,18 +69,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID, spotID, carID i
 	}}
 
 	// Variable for OR clauses in where, used for timeslots timeranges
-	var whereOrMods []mods.Where[*dialect.UpdateQuery]
-	for _, bookTime := range booking.BookingInfo.BookedTimes {
-		whereOrMods = append(whereOrMods, um.Where(
-			dbmodels.TimeunitColumns.Timerange.OP(
-				"&&",
-				psql.Arg(dbtype.Tstzrange{
-					Start: bookTime.StartTime,
-					End:   bookTime.EndTime,
-				}),
-			),
-		))
-	}
+	whereOrMods := timeSlotsToWhere(booking)
 
 	// Variable for AND clauses in where
 	var whereMods []mods.Where[*dialect.UpdateQuery]
@@ -138,6 +127,22 @@ func (p *PostgresRepository) Create(ctx context.Context, userID, spotID, carID i
 	}
 
 	return entry, nil
+}
+
+func timeSlotsToWhere(booking *models.BookingCreationDBInput) []mods.Where[*dialect.UpdateQuery] {
+	var whereOrMods []mods.Where[*dialect.UpdateQuery]
+	for _, bookTime := range booking.BookingInfo.BookedTimes {
+		whereOrMods = append(whereOrMods, um.Where(
+			dbmodels.TimeunitColumns.Timerange.OP(
+				"&&",
+				psql.Arg(dbtype.Tstzrange{
+					Start: bookTime.StartTime,
+					End:   bookTime.EndTime,
+				}),
+			),
+		))
+	}
+	return whereOrMods
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error) {
