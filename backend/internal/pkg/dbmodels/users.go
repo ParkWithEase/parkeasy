@@ -51,6 +51,7 @@ type UsersStmt = bob.QueryStmt[*User, UserSlice]
 
 // userR is where relationships are stored.
 type userR struct {
+	UseridBookings        BookingSlice        // booking.booking_userid_fkey
 	UseridCars            CarSlice            // car.car_userid_fkey
 	UseridParkingspots    ParkingspotSlice    // parkingspot.parkingspot_userid_fkey
 	UseridPreferencespots PreferencespotSlice // preferencespot.preferencespot_userid_fkey
@@ -305,6 +306,7 @@ func buildUserWhere[Q psql.Filterable](cols userColumns) userWhere[Q] {
 
 type userJoins[Q dialect.Joinable] struct {
 	typ                   string
+	UseridBookings        func(context.Context) modAs[Q, bookingColumns]
 	UseridCars            func(context.Context) modAs[Q, carColumns]
 	UseridParkingspots    func(context.Context) modAs[Q, parkingspotColumns]
 	UseridPreferencespots func(context.Context) modAs[Q, preferencespotColumns]
@@ -318,6 +320,7 @@ func (j userJoins[Q]) aliasedAs(alias string) userJoins[Q] {
 func buildUserJoins[Q dialect.Joinable](cols userColumns, typ string) userJoins[Q] {
 	return userJoins[Q]{
 		typ:                   typ,
+		UseridBookings:        usersJoinUseridBookings[Q](cols, typ),
 		UseridCars:            usersJoinUseridCars[Q](cols, typ),
 		UseridParkingspots:    usersJoinUseridParkingspots[Q](cols, typ),
 		UseridPreferencespots: usersJoinUseridPreferencespots[Q](cols, typ),
@@ -420,6 +423,25 @@ func (o UserSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	return nil
 }
 
+func usersJoinUseridBookings[Q dialect.Joinable](from userColumns, typ string) func(context.Context) modAs[Q, bookingColumns] {
+	return func(ctx context.Context) modAs[Q, bookingColumns] {
+		return modAs[Q, bookingColumns]{
+			c: BookingColumns,
+			f: func(to bookingColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Bookings.Name(ctx).As(to.Alias())).On(
+						to.Userid.EQ(from.Userid),
+					))
+				}
+
+				return mods
+			},
+		}
+	}
+}
+
 func usersJoinUseridCars[Q dialect.Joinable](from userColumns, typ string) func(context.Context) modAs[Q, carColumns] {
 	return func(ctx context.Context) modAs[Q, carColumns] {
 		return modAs[Q, carColumns]{
@@ -494,6 +516,24 @@ func usersJoinAuthuuidAuth[Q dialect.Joinable](from userColumns, typ string) fun
 			},
 		}
 	}
+}
+
+// UseridBookings starts a query for related objects on booking
+func (o *User) UseridBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
+	return Bookings.Query(ctx, exec, append(mods,
+		sm.Where(BookingColumns.Userid.EQ(psql.Arg(o.Userid))),
+	)...)
+}
+
+func (os UserSlice) UseridBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
+	PKArgs := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgs[i] = psql.ArgGroup(o.Userid)
+	}
+
+	return Bookings.Query(ctx, exec, append(mods,
+		sm.Where(psql.Group(BookingColumns.Userid).In(PKArgs...)),
+	)...)
 }
 
 // UseridCars starts a query for related objects on car
@@ -574,6 +614,20 @@ func (o *User) Preload(name string, retrieved any) error {
 	}
 
 	switch name {
+	case "UseridBookings":
+		rels, ok := retrieved.(BookingSlice)
+		if !ok {
+			return fmt.Errorf("user cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.UseridBookings = rels
+
+		for _, rel := range rels {
+			if rel != nil {
+				rel.R.UseridUser = o
+			}
+		}
+		return nil
 	case "UseridCars":
 		rels, ok := retrieved.(CarSlice)
 		if !ok {
@@ -631,6 +685,78 @@ func (o *User) Preload(name string, retrieved any) error {
 	default:
 		return fmt.Errorf("user has no relationship %q", name)
 	}
+}
+
+func ThenLoadUserUseridBookings(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
+	return psql.Loader(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+		loader, isLoader := retrieved.(interface {
+			LoadUserUseridBookings(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+		})
+		if !isLoader {
+			return fmt.Errorf("object %T cannot load UserUseridBookings", retrieved)
+		}
+
+		err := loader.LoadUserUseridBookings(ctx, exec, queryMods...)
+
+		// Don't cause an issue due to missing relationships
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+
+		return err
+	})
+}
+
+// LoadUserUseridBookings loads the user's UseridBookings into the .R struct
+func (o *User) LoadUserUseridBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.UseridBookings = nil
+
+	related, err := o.UseridBookings(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, rel := range related {
+		rel.R.UseridUser = o
+	}
+
+	o.R.UseridBookings = related
+	return nil
+}
+
+// LoadUserUseridBookings loads the user's UseridBookings into the .R struct
+func (os UserSlice) LoadUserUseridBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	bookings, err := os.UseridBookings(ctx, exec, mods...).All()
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		o.R.UseridBookings = nil
+	}
+
+	for _, o := range os {
+		for _, rel := range bookings {
+			if o.Userid != rel.Userid {
+				continue
+			}
+
+			rel.R.UseridUser = o
+
+			o.R.UseridBookings = append(o.R.UseridBookings, rel)
+		}
+	}
+
+	return nil
 }
 
 func ThenLoadUserUseridCars(queryMods ...bob.Mod[*dialect.SelectQuery]) psql.Loader {
@@ -932,6 +1058,72 @@ func (os UserSlice) LoadUserAuthuuidAuth(ctx context.Context, exec bob.Executor,
 			o.R.AuthuuidAuth = rel
 			break
 		}
+	}
+
+	return nil
+}
+
+func insertUserUseridBookings0(ctx context.Context, exec bob.Executor, bookings1 []*BookingSetter, user0 *User) (BookingSlice, error) {
+	for i := range bookings1 {
+		bookings1[i].Userid = omit.From(user0.Userid)
+	}
+
+	ret, err := Bookings.InsertMany(ctx, exec, bookings1...)
+	if err != nil {
+		return ret, fmt.Errorf("insertUserUseridBookings0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachUserUseridBookings0(ctx context.Context, exec bob.Executor, count int, bookings1 BookingSlice, user0 *User) (BookingSlice, error) {
+	setter := &BookingSetter{
+		Userid: omit.From(user0.Userid),
+	}
+
+	err := Bookings.Update(ctx, exec, setter, bookings1...)
+	if err != nil {
+		return nil, fmt.Errorf("attachUserUseridBookings0: %w", err)
+	}
+
+	return bookings1, nil
+}
+
+func (user0 *User) InsertUseridBookings(ctx context.Context, exec bob.Executor, related ...*BookingSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	bookings1, err := insertUserUseridBookings0(ctx, exec, related, user0)
+	if err != nil {
+		return err
+	}
+
+	user0.R.UseridBookings = append(user0.R.UseridBookings, bookings1...)
+
+	for _, rel := range bookings1 {
+		rel.R.UseridUser = user0
+	}
+	return nil
+}
+
+func (user0 *User) AttachUseridBookings(ctx context.Context, exec bob.Executor, related ...*Booking) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	bookings1 := BookingSlice(related)
+
+	_, err = attachUserUseridBookings0(ctx, exec, len(related), bookings1, user0)
+	if err != nil {
+		return err
+	}
+
+	user0.R.UseridBookings = append(user0.R.UseridBookings, bookings1...)
+
+	for _, rel := range related {
+		rel.R.UseridUser = user0
 	}
 
 	return nil

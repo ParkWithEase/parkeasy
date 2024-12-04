@@ -1,0 +1,2 @@
+ALTER TABLE TimeUnit
+DROP COLUMN BookingId;

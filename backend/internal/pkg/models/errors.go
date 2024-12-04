@@ -21,6 +21,7 @@ var (
 	CodeProvinceNotSupported = NewUserErrorCode("province-not-supported", "2024-10-21")
 	CodeNoProfile            = NewUserErrorCode("no-profile", "2024-10-13")
 	CodeUnhealthy            = NewUserErrorCode("unhealthy", "2024-10-14")
+	CodeBookingInvalid       = NewUserErrorCode("booking-invalid", "2024-10-28")
 )
 
 // Error code for clients.
