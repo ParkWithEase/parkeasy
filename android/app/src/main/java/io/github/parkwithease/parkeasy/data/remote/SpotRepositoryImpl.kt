@@ -11,7 +11,6 @@ import io.ktor.client.request.cookie
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import javax.inject.Inject
@@ -36,10 +35,7 @@ constructor(
             }
             .mapAPIError()
             .let { result ->
-                result.mapCatching {
-                    if (it is HttpResponse && result.isSuccess) it.body<List<Spot>>()
-                    else emptyList()
-                }
+                result.mapCatching { if (result.isSuccess) it.body<List<Spot>>() else emptyList() }
             }
 
     override suspend fun createSpot(spot: Spot): Result<Unit> =
