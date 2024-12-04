@@ -152,11 +152,6 @@ func timeSlotsToSQLExpr(units []models.TimeUnit) dialect.Expression {
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error) {
-	log := zerolog.Ctx(ctx).
-		With().
-		Str("component", "booking.Postgres").
-		Logger()
-
 	// Build select mods
 	smods := []bob.Mod[*dialect.SelectQuery]{
 		sm.Columns(dbmodels.Bookings.Columns()),
@@ -173,26 +168,12 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	query := psql.Select(smods...)
 
 	// Execute the query
-	cursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
+	var bookingResult getManyResult
+	bookingResult, err := bob.One(ctx, p.db, query, scan.StructMapper[getManyResult]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
 		}
-		return EntryWithTimes{}, err
-	}
-	defer cursor.Close()
-
-	var bookingResult getManyResult
-
-	if !cursor.Next() {
-		// No results found in cursor
-		log.Info().Msg("no results found in cursor")
-		return EntryWithTimes{}, ErrNotFound
-	}
-
-	bookingResult, err = cursor.Get()
-	if err != nil {
-		log.Err(err).Msg("error retrieving record from cursor")
 		return EntryWithTimes{}, err
 	}
 
