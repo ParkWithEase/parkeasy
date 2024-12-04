@@ -69,7 +69,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID, spotID, carID i
 	}}
 
 	// Variable for OR clauses in where, used for timeslots timeranges
-	whereOrMods := timeSlotsToWhere(booking)
+	timeslots := timeSlotsToSQLExpr(booking)
 
 	// Variable for AND clauses in where
 	var whereMods []mods.Where[*dialect.UpdateQuery]
@@ -77,7 +77,7 @@ func (p *PostgresRepository) Create(ctx context.Context, userID, spotID, carID i
 		whereMods,
 		dbmodels.UpdateWhere.Timeunits.Bookingid.IsNull(),
 		dbmodels.UpdateWhere.Timeunits.Parkingspotid.EQ(spotID),
-		psql.WhereOr(whereOrMods...),
+		um.Where(timeslots),
 	)
 
 	umods = append(umods, psql.WhereAnd(whereMods...), um.Returning(dbmodels.Timeunits.Columns()))
@@ -129,20 +129,23 @@ func (p *PostgresRepository) Create(ctx context.Context, userID, spotID, carID i
 	return entry, nil
 }
 
-func timeSlotsToWhere(booking *models.BookingCreationDBInput) []mods.Where[*dialect.UpdateQuery] {
-	var whereOrMods []mods.Where[*dialect.UpdateQuery]
+func timeSlotsToSQLExpr(booking *models.BookingCreationDBInput) dialect.Expression {
+	var expression dialect.Expression
 	for _, bookTime := range booking.BookingInfo.BookedTimes {
-		whereOrMods = append(whereOrMods, um.Where(
-			dbmodels.TimeunitColumns.Timerange.OP(
-				"&&",
-				psql.Arg(dbtype.Tstzrange{
-					Start: bookTime.StartTime,
-					End:   bookTime.EndTime,
-				}),
-			),
-		))
+		test := dbmodels.TimeunitColumns.Timerange.OP(
+			"&&",
+			psql.Arg(dbtype.Tstzrange{
+				Start: bookTime.StartTime,
+				End:   bookTime.EndTime,
+			}),
+		)
+		if expression.Base == nil {
+			expression = test
+		} else {
+			expression = expression.Or(test)
+		}
 	}
-	return whereOrMods
+	return expression
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error) {
