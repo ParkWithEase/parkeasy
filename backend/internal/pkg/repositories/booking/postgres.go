@@ -226,62 +226,6 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	return entry, nil
 }
 
-func (p *PostgresRepository) GetBookedTimesByUUID(ctx context.Context, bookingUUID uuid.UUID) ([]models.TimeUnit, error) {
-	// Query timeunits
-	result, err := dbmodels.Timeunits.Query(
-		ctx, p.db,
-		sm.Columns(dbmodels.TimeunitColumns.Timerange),
-		sm.Columns(dbmodels.TimeunitColumns.Bookingid),
-		psql.WhereAnd(
-			dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingUUID),
-		),
-		dbmodels.SelectJoins.Timeunits.InnerJoin.BookingidBooking(ctx),
-		sm.OrderBy(psql.F("lower", dbmodels.TimeunitColumns.Timerange)),
-	).All()
-	if err != nil {
-		return nil, err
-	}
-
-	// If no rows found
-	if len(result) == 0 {
-		// Ignore errors here, just treat it as not existing
-
-		// Check if the booking exists
-		exists, _ := dbmodels.Bookings.Query(
-			ctx, p.db,
-			sm.Columns(1),
-			dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingUUID),
-		).Exists()
-
-		if !exists {
-			return nil, ErrNotFound
-		}
-
-		// No time units is not an error
-		return []models.TimeUnit{}, nil
-	}
-
-	return timeUnitsFromDB(result), nil
-}
-
-func (p *PostgresRepository) GetBookerByUUID(ctx context.Context, bookingID uuid.UUID) (int64, error) {
-	result, err := dbmodels.Bookings.Query(
-		ctx, p.db,
-		sm.Columns(
-			dbmodels.BookingColumns.Userid,
-		),
-		dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingID),
-	).One()
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			err = ErrNotFound
-		}
-		return 0, err
-	}
-
-	return result.Userid, nil
-}
-
 func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error) {
 	log := zerolog.Ctx(ctx).
 		With().
