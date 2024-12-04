@@ -129,7 +129,7 @@ func (s *Service) GetManyForOwner(ctx context.Context, userID int64, count int, 
 		if err != nil {
 			log.Err(err).
 				Int64("userid", userID).
-				Int64("bookingid", bookingEntries[len(bookingEntries)-2].InternalID).
+				Int64("bookingid", bookingEntries[len(bookingEntries)-1].InternalID).
 				Msg("could not encode next cursor")
 		}
 	}
@@ -181,7 +181,7 @@ func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, 
 		if err != nil {
 			log.Err(err).
 				Int64("userid", userID).
-				Int64("bookingid", bookingEntries[len(bookingEntries)-2].InternalID).
+				Int64("bookingid", bookingEntries[len(bookingEntries)-1].InternalID).
 				Msg("could not encode next cursor")
 		}
 	}
