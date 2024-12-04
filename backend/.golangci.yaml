@@ -140,3 +140,6 @@ issues:
 
   exclude-files:
     - internal/pkg/dbmodels
+
+run:
+  timeout: 3m
