@@ -23,6 +23,7 @@ fun ParkEasyTextField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    visuallyEnabled: Boolean = enabled,
     readOnly: Boolean = false,
     textStyle: TextStyle = LocalTextStyle.current,
     @StringRes labelId: Int? = null,
@@ -44,7 +45,23 @@ fun ParkEasyTextField(
     minLines: Int = 1,
     interactionSource: MutableInteractionSource? = null,
     shape: Shape = OutlinedTextFieldDefaults.shape,
-    colors: TextFieldColors = OutlinedTextFieldDefaults.colors(),
+    colors: TextFieldColors =
+        if (visuallyEnabled)
+            OutlinedTextFieldDefaults.colors().run {
+                copy(
+                    disabledTextColor = unfocusedTextColor,
+                    disabledLabelColor = unfocusedLabelColor,
+                    disabledContainerColor = unfocusedContainerColor,
+                    disabledPrefixColor = unfocusedPrefixColor,
+                    disabledSuffixColor = unfocusedSuffixColor,
+                    disabledIndicatorColor = unfocusedIndicatorColor,
+                    disabledPlaceholderColor = unfocusedPlaceholderColor,
+                    disabledLeadingIconColor = unfocusedLeadingIconColor,
+                    disabledTrailingIconColor = unfocusedTrailingIconColor,
+                    disabledSupportingTextColor = unfocusedSupportingTextColor,
+                )
+            }
+        else OutlinedTextFieldDefaults.colors(),
 ) {
     OutlinedTextField(
         value = state.value,

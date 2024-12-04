@@ -4,13 +4,11 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
@@ -26,7 +24,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
+import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.Profile
+import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 import io.github.parkwithease.parkeasy.ui.common.PreviewAll
 import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
@@ -91,19 +91,22 @@ fun ProfileScreen(
 @Composable
 fun ProfileDetails(profile: Profile, modifier: Modifier = Modifier) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedTextField(
-            value = profile.name,
+        ParkEasyTextField(
+            state = FieldState(profile.name),
             onValueChange = {},
-            modifier = Modifier.fillMaxWidth(),
+            enabled = false,
+            visuallyEnabled = true,
             readOnly = true,
-            label = { Text(stringResource(R.string.name)) },
+            labelId = R.string.name,
             singleLine = true,
         )
-        OutlinedTextField(
-            value = profile.email,
+        ParkEasyTextField(
+            state = FieldState(profile.email),
             onValueChange = {},
+            enabled = false,
+            visuallyEnabled = true,
             readOnly = true,
-            label = { Text(stringResource(R.string.email)) },
+            labelId = R.string.email,
             singleLine = true,
         )
     }
@@ -140,7 +143,8 @@ private fun ProfileScreenPreview() {
     ParkEasyTheme {
         ProfileScreen(
             profile = Profile(),
-            profileRoutes = listOf(ProfileButtonRoute(R.string.cars, {})),
+            profileRoutes =
+                listOf(ProfileButtonRoute(R.string.cars) {}, ProfileButtonRoute(R.string.spots) {}),
             onLogoutClick = {},
             navBar = { NavBar() },
             snackbarHost = {},
