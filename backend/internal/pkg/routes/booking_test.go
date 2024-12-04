@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
+	"github.com/peterhellberg/link"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -67,11 +70,14 @@ var sampleBookTimes = []models.TimeUnit{
 }
 
 var (
-	spotUUID    = uuid.New()
-	carUUID     = uuid.New()
-	bookingUUID = uuid.New()
-	bookTime    = time.Now()
-	userID      = int64(1)
+	spotUUID      = uuid.New()
+	spotUUID_1    = uuid.New()
+	carUUID       = uuid.New()
+	carUUID_1     = uuid.New()
+	bookingUUID   = uuid.New()
+	bookingUUID_1 = uuid.New()
+	bookTime      = time.Now()
+	userID        = int64(1)
 
 	testPrice = float64(10)
 )
@@ -90,9 +96,22 @@ var testBooking = models.Booking{
 	CreatedAt:     bookTime,
 }
 
-var testBookingWithTImes = models.BookingWithTimes{
+var testBooking_1 = models.Booking{
+	ID:            bookingUUID_1,
+	ParkingSpotID: spotUUID_1,
+	CarID:         carUUID_1,
+	PaidAmount:    testPrice,
+	CreatedAt:     bookTime,
+}
+
+var testBookingWithTimes = models.BookingWithTimes{
 	Booking:     testBooking,
 	BookedTimes: sampleBookTimes,
+}
+
+var testBookings = []models.Booking{
+	testBooking,
+	testBooking_1,
 }
 
 // Test cases for Create Booking
@@ -108,7 +127,7 @@ func TestCreateBooking(t *testing.T) {
 
 		mockService := new(mockBookingService)
 		mockService.On("Create", mock.Anything, userID, &bookingInput).
-			Return(int64(1), testBookingWithTImes, nil).Once()
+			Return(int64(1), testBookingWithTimes, nil).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
@@ -182,6 +201,100 @@ func TestCreateBooking(t *testing.T) {
 		mockService.AssertExpectations(t)
 	})
 
+	t.Run("empty book times", func(t *testing.T) {
+		t.Parallel()
+
+		emptyBookingInput := models.BookingCreationInput{
+			ParkingSpotID: spotUUID,
+			CarID:         carUUID,
+		}
+
+		mockService := new(mockBookingService)
+		mockService.On("Create", mock.Anything, userID, &emptyBookingInput).
+			Return(int64(0), models.BookingWithTimes{}, models.ErrEmptyBookingTimes).Once()
+
+		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		resp := api.PostCtx(ctx, "/book", emptyBookingInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		require.NoError(t, json.NewDecoder(resp.Result().Body).Decode(&errModel))
+
+		testDetail := huma.ErrorDetail{
+			Location: "body.book_times",
+			Value:    jsonAnyify(emptyBookingInput.BookedTimes),
+		}
+
+		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &testDetail)
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("non existent car", func(t *testing.T) {
+		t.Parallel()
+
+		testBookingInput := models.BookingCreationInput{
+			ParkingSpotID: spotUUID,
+			CarID:         uuid.Nil,
+		}
+
+		mockService := new(mockBookingService)
+		mockService.On("Create", mock.Anything, userID, &testBookingInput).
+			Return(int64(0), models.BookingWithTimes{}, models.ErrCarNotFound).Once()
+
+		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		resp := api.PostCtx(ctx, "/book", testBookingInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		require.NoError(t, json.NewDecoder(resp.Result().Body).Decode(&errModel))
+
+		testDetail := huma.ErrorDetail{
+			Location: "body.car_id",
+			Value:    jsonAnyify(testBookingInput.CarID),
+		}
+
+		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &testDetail)
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("car not owned", func(t *testing.T) {
+		t.Parallel()
+
+		mockService := new(mockBookingService)
+		mockService.On("Create", mock.Anything, userID, &bookingInput).
+			Return(int64(0), models.BookingWithTimes{}, models.ErrCarNotOwned).Once()
+
+		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		resp := api.PostCtx(ctx, "/book", bookingInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		require.NoError(t, json.NewDecoder(resp.Result().Body).Decode(&errModel))
+
+		testDetail := huma.ErrorDetail{
+			Location: "body.car_id",
+			Value:    jsonAnyify(bookingInput.CarID),
+		}
+
+		assert.Equal(t, models.CodeForbidden.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &testDetail)
+
+		mockService.AssertExpectations(t)
+	})
+
 	t.Run("unexpected error returns 500", func(t *testing.T) {
 		mockService := new(mockBookingService)
 		mockService.On("Create", mock.Anything, userID, &bookingInput).
@@ -196,4 +309,186 @@ func TestCreateBooking(t *testing.T) {
 
 		mockService.AssertExpectations(t)
 	})
+}
+
+func TestListBookingsForBuyer(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), userID)
+
+	t.Run("successfully list bookings with pagination", func(t *testing.T) {
+		t.Parallel()
+
+		mockService := new(mockBookingService)
+		mockService.On("GetManyForBuyer", mock.Anything, userID, 10, models.Cursor(""), models.BookingFilter{}).
+			Return(testBookings, models.Cursor(""), nil).Once()
+
+		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		resp := api.GetCtx(ctx, "/users/bookings?count=10")
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+
+		var bookings []models.Booking
+		err := json.NewDecoder(resp.Result().Body).Decode(&bookings)
+		require.NoError(t, err)
+		if assert.Len(t, bookings, 2) {
+			assert.Empty(t, cmp.Diff(testBookings, bookings))
+		}
+
+		// Check for pagination link
+		links := link.ParseResponse(resp.Result())
+		if len(links) > 0 {
+			_, ok := links["next"]
+			assert.False(t, ok, "no links with rel=next should be sent without next cursor")
+		}
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("paginating cursor is forwarded", func(t *testing.T) {
+		t.Parallel()
+
+		mockService := new(mockBookingService)
+		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		const testCursor = models.Cursor("cursor")
+		mockService.On("GetManyForBuyer", mock.Anything, userID, 10, testCursor, models.BookingFilter{}).
+			Return([]models.Booking{}, models.Cursor(""), nil).Once()
+
+		resp := api.GetCtx(ctx, "/users/bookings?count=10&after="+string(testCursor))
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+
+		var booking []models.Booking
+		err := json.NewDecoder(resp.Result().Body).Decode(&booking)
+		require.NoError(t, err)
+		assert.Empty(t, booking)
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("paginating header is set", func(t *testing.T) {
+		t.Parallel()
+
+		mockService := new(mockBookingService)
+		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		mockService.On("GetManyForBuyer", mock.Anything, userID, 1, models.Cursor(""), models.BookingFilter{}).
+			Return([]models.Booking{testBooking}, models.Cursor("cursor"), nil).Once()
+
+		resp := api.GetCtx(ctx, "/users/bookings?count=1")
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+		links := link.ParseResponse(resp.Result())
+		if assert.NotEmpty(t, links) {
+			nextLinks, ok := links["next"]
+			if assert.True(t, ok, "there should be links with rel=next") {
+				nextURL, err := url.Parse(nextLinks.URI)
+				require.NoError(t, err)
+				assert.Equal(t, "/users/bookings", nextURL.Path)
+				queries, err := url.ParseQuery(nextURL.RawQuery)
+				require.NoError(t, err)
+				assert.Equal(t, "1", queries.Get("count"))
+				assert.Equal(t, "cursor", queries.Get("after"))
+			}
+		}
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("respect server URL if set", func(t *testing.T) {
+		t.Parallel()
+
+		mockService := new(mockBookingService)
+		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		api.OpenAPI().Servers = append(api.OpenAPI().Servers, &huma.Server{
+			URL: "http://localhost",
+		})
+		huma.AutoRegister(api, route)
+
+		mockService.On("GetManyForBuyer", mock.Anything, userID, 1, models.Cursor(""), models.BookingFilter{}).
+			Return([]models.Booking{testBooking}, models.Cursor("cursor"), nil).Once()
+
+		resp := api.GetCtx(ctx, "/users/bookings?count=1")
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+		links := link.ParseResponse(resp.Result())
+		if assert.NotEmpty(t, links) {
+			nextLinks, ok := links["next"]
+			if assert.True(t, ok, "there should be links with rel=next") {
+				nextURL, err := url.Parse(nextLinks.URI)
+				require.NoError(t, err)
+				assert.Equal(t, "http", nextURL.Scheme)
+				assert.Equal(t, "localhost", nextURL.Host)
+				assert.Equal(t, "/users/bookings", nextURL.Path)
+				queries, err := url.ParseQuery(nextURL.RawQuery)
+				require.NoError(t, err)
+				assert.Equal(t, "1", queries.Get("count"))
+				assert.Equal(t, "cursor", queries.Get("after"))
+			}
+		}
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("handle pagination with 'after' cursor", func(t *testing.T) {
+		t.Parallel()
+		const testCursor = models.Cursor("cursor")
+
+		mockService := new(mockBookingService)
+		mockService.On("GetManyForBuyer", mock.Anything, userID, 10, testCursor, models.BookingFilter{}).
+			Return(testBookings, models.Cursor(""), nil).Once()
+
+		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		resp := api.GetCtx(ctx, "/users/bookings?count=10&after="+string(testCursor))
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+
+		var bookings []models.Booking
+		err := json.NewDecoder(resp.Result().Body).Decode(&bookings)
+		require.NoError(t, err)
+		assert.Empty(t, cmp.Diff(testBookings, bookings))
+
+		// Ensure no next link is provided when there are no more results
+		links := resp.Result().Header["Link"]
+		assert.Empty(t, links)
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("unexpected error returns 500", func(t *testing.T) {
+		t.Parallel()
+
+		mockService := new(mockBookingService)
+		mockService.On("GetManyForBuyer", mock.Anything, userID, 10, models.Cursor(""), models.BookingFilter{}).
+			Return([]models.Booking{}, models.Cursor(""), errors.New("unexpected error")).Once()
+
+		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		resp := api.GetCtx(ctx, "/users/bookings?count=10")
+		assert.Equal(t, http.StatusInternalServerError, resp.Result().StatusCode)
+
+		mockService.AssertExpectations(t)
+	})
+}
+
+// Helper function to parse Link header
+func parseLinkHeader(linkHeader string) (*url.URL, error) {
+	// Example Link header: </users/bookings?count=10&after=test-cursor>; rel="next"
+	var urlStr string
+	n, err := fmt.Sscanf(linkHeader, "<%s>; rel=\"next\"", &urlStr)
+	if err != nil || n != 1 {
+		return nil, fmt.Errorf("invalid Link header format")
+	}
+	return url.Parse(urlStr)
 }
