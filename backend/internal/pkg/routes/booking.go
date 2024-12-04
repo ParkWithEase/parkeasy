@@ -22,7 +22,7 @@ type BookingServicer interface {
 	//
 	// If there are more entries following the result, a non-empty cursor will be returned
 	// which can be passed to the next invocation to get the next entries.
-	GetManyForSeller(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error)
+	GetManyForOwner(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error)
 	// Get at most `count` bookings associated with the given `userID` that satisfies the given filter conditions.
 	//
 	// If there are more entries following the result, a non-empty cursor will be returned
@@ -128,7 +128,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 	huma.Register(api, *withUserID(&huma.Operation{
 		OperationID: "list-bookings",
 		Method:      http.MethodGet,
-		Path:        "/users/bookings",
+		Path:        "/user/bookings",
 		Summary:     "Get bookings associated to the current user (buyer)",
 		Tags:        []string{BookingTag.Name},
 		Errors:      []int{http.StatusUnprocessableEntity},
@@ -149,7 +149,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 
 		result := bookingListOutput{Body: bookings}
 		if nextCursor != "" {
-			nextURL := apiPrefix.JoinPath("/users/bookings")
+			nextURL := apiPrefix.JoinPath("/user/bookings")
 			nextURL.RawQuery = url.Values{
 				"count": []string{strconv.Itoa(input.Count)},
 				"after": []string{string(nextCursor)},
@@ -162,7 +162,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 	huma.Register(api, *withUserID(&huma.Operation{
 		OperationID: "list-leasings",
 		Method:      http.MethodGet,
-		Path:        "/users/leasings",
+		Path:        "/user/leasings",
 		Summary:     "Get leasings associated to the current user (seller)",
 		Tags:        []string{BookingTag.Name},
 		Errors:      []int{http.StatusUnprocessableEntity, http.StatusForbidden},
@@ -176,7 +176,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		filter := models.BookingFilter{
 			ParkingSpotID: input.ParkingSpotID,
 		}
-		bookings, nextCursor, err := r.service.GetManyForSeller(ctx, userID, input.Count, input.After, filter)
+		bookings, nextCursor, err := r.service.GetManyForOwner(ctx, userID, input.Count, input.After, filter)
 		if err != nil {
 			if errors.Is(err, models.ErrSpotNotOwned) {
 				detail := &huma.ErrorDetail{
@@ -190,7 +190,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 
 		result := bookingListOutput{Body: bookings}
 		if nextCursor != "" {
-			nextURL := apiPrefix.JoinPath("/users/leasings")
+			nextURL := apiPrefix.JoinPath("/user/leasings")
 			nextURL.RawQuery = url.Values{
 				"count": []string{strconv.Itoa(input.Count)},
 				"after": []string{string(nextCursor)},

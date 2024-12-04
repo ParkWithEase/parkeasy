@@ -84,7 +84,7 @@ func (s *Service) Create(ctx context.Context, userID int64, bookingDetails *mode
 	return result.InternalID, out, nil
 }
 
-func (s *Service) GetManyForSeller(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) (bookings []models.Booking, next models.Cursor, err error) {
+func (s *Service) GetManyForOwner(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) (bookings []models.Booking, next models.Cursor, err error) {
 	if count <= 0 {
 		return []models.Booking{}, "", nil
 	}
@@ -114,7 +114,7 @@ func (s *Service) GetManyForSeller(ctx context.Context, userID int64, count int,
 
 	cursor := decodeCursor(after)
 	count = min(count, MaximumCount)
-	bookingEntries, err := s.repo.GetManyForSeller(ctx, count+1, cursor, userID, dbFilter)
+	bookingEntries, err := s.repo.GetManyForOwner(ctx, count+1, cursor, userID, dbFilter)
 	if err != nil {
 		return nil, "", err
 	}

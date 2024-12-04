@@ -493,7 +493,7 @@ func TestPostgresIntegration(t *testing.T) {
 			filter := Filter{}
 
 			for idx := 0; idx < len(expectedAllSellerEntries); idx += 4 {
-				getManyEntries, err := repo.GetManyForSeller(ctx, 4, cursor, userID, &filter)
+				getManyEntries, err := repo.GetManyForOwner(ctx, 4, cursor, userID, &filter)
 				require.NoError(t, err)
 				if assert.LessOrEqual(t, 1, len(getManyEntries), "expecting at least one entry") {
 					cursor = omit.From(Cursor{
@@ -520,7 +520,7 @@ func TestPostgresIntegration(t *testing.T) {
 			}
 
 			for idx := 0; idx < len(expectedEntries_1); idx += 4 {
-				getManyEntries, err := repo.GetManyForSeller(ctx, 4, cursor, userID, &filter)
+				getManyEntries, err := repo.GetManyForOwner(ctx, 4, cursor, userID, &filter)
 				require.NoError(t, err)
 				if assert.LessOrEqual(t, 1, len(getManyEntries), "expecting at least one entry") {
 					cursor = omit.From(Cursor{
@@ -541,7 +541,7 @@ func TestPostgresIntegration(t *testing.T) {
 		t.Run("cursor too close to zero (before the bookings for seller spots begin)", func(t *testing.T) {
 			t.Parallel()
 
-			entries, err := repo.GetManyForSeller(ctx, 50, omit.From(Cursor{ID: 0}), userID, &Filter{})
+			entries, err := repo.GetManyForOwner(ctx, 50, omit.From(Cursor{ID: 0}), userID, &Filter{})
 			require.NoError(t, err)
 			assert.Empty(t, entries)
 		})
@@ -549,7 +549,7 @@ func TestPostgresIntegration(t *testing.T) {
 		t.Run("non-existent seller", func(t *testing.T) {
 			t.Parallel()
 
-			entries, err := repo.GetManyForSeller(ctx, 50, omit.Val[Cursor]{}, userID+100, &Filter{})
+			entries, err := repo.GetManyForOwner(ctx, 50, omit.Val[Cursor]{}, userID+100, &Filter{})
 			require.NoError(t, err)
 			assert.Empty(t, entries)
 		})
@@ -557,7 +557,7 @@ func TestPostgresIntegration(t *testing.T) {
 		t.Run("non-existent spot for seller", func(t *testing.T) {
 			t.Parallel()
 
-			entries, err := repo.GetManyForSeller(ctx, 50, omit.Val[Cursor]{}, userID+100, &Filter{SpotID: 100000})
+			entries, err := repo.GetManyForOwner(ctx, 50, omit.Val[Cursor]{}, userID+100, &Filter{SpotID: 100000})
 			require.NoError(t, err)
 			assert.Empty(t, entries)
 		})
@@ -565,7 +565,7 @@ func TestPostgresIntegration(t *testing.T) {
 		t.Run("not owned spot for seller", func(t *testing.T) {
 			t.Parallel()
 
-			entries, err := repo.GetManyForSeller(ctx, 50, omit.Val[Cursor]{}, userID_1, &Filter{SpotID: parkingSpotEntry.InternalID})
+			entries, err := repo.GetManyForOwner(ctx, 50, omit.Val[Cursor]{}, userID_1, &Filter{SpotID: parkingSpotEntry.InternalID})
 			require.NoError(t, err)
 			assert.Empty(t, entries)
 		})

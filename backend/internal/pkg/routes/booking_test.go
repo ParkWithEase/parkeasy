@@ -31,8 +31,8 @@ func (m *mockBookingService) Create(ctx context.Context, userID int64, bookingDe
 	return args.Get(0).(int64), args.Get(1).(models.BookingWithTimes), args.Error(2)
 }
 
-// GetManyForSeller implements BookingServicer.
-func (m *mockBookingService) GetManyForSeller(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error) {
+// GetManyForOwner implements BookingServicer.
+func (m *mockBookingService) GetManyForOwner(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error) {
 	args := m.Called(ctx, userID, count, after, filter)
 	return args.Get(0).([]models.Booking), args.Get(1).(models.Cursor), args.Error(2)
 }
@@ -328,7 +328,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.GetCtx(ctx, "/users/bookings?count=10")
+		resp := api.GetCtx(ctx, "/user/bookings?count=10")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
 		var bookings []models.Booking
@@ -360,7 +360,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 		mockService.On("GetManyForBuyer", mock.Anything, userID, 10, testCursor, models.BookingFilter{}).
 			Return([]models.Booking{}, models.Cursor(""), nil).Once()
 
-		resp := api.GetCtx(ctx, "/users/bookings?count=10&after="+string(testCursor))
+		resp := api.GetCtx(ctx, "/user/bookings?count=10&after="+string(testCursor))
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
 		var booking []models.Booking
@@ -382,7 +382,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 		mockService.On("GetManyForBuyer", mock.Anything, userID, 1, models.Cursor(""), models.BookingFilter{}).
 			Return([]models.Booking{testBooking}, models.Cursor("cursor"), nil).Once()
 
-		resp := api.GetCtx(ctx, "/users/bookings?count=1")
+		resp := api.GetCtx(ctx, "/user/bookings?count=1")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 		links := link.ParseResponse(resp.Result())
 		if assert.NotEmpty(t, links) {
@@ -390,7 +390,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 			if assert.True(t, ok, "there should be links with rel=next") {
 				nextURL, err := url.Parse(nextLinks.URI)
 				require.NoError(t, err)
-				assert.Equal(t, "/users/bookings", nextURL.Path)
+				assert.Equal(t, "/user/bookings", nextURL.Path)
 				queries, err := url.ParseQuery(nextURL.RawQuery)
 				require.NoError(t, err)
 				assert.Equal(t, "1", queries.Get("count"))
@@ -415,7 +415,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 		mockService.On("GetManyForBuyer", mock.Anything, userID, 1, models.Cursor(""), models.BookingFilter{}).
 			Return([]models.Booking{testBooking}, models.Cursor("cursor"), nil).Once()
 
-		resp := api.GetCtx(ctx, "/users/bookings?count=1")
+		resp := api.GetCtx(ctx, "/user/bookings?count=1")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 		links := link.ParseResponse(resp.Result())
 		if assert.NotEmpty(t, links) {
@@ -425,7 +425,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, "http", nextURL.Scheme)
 				assert.Equal(t, "localhost", nextURL.Host)
-				assert.Equal(t, "/users/bookings", nextURL.Path)
+				assert.Equal(t, "/user/bookings", nextURL.Path)
 				queries, err := url.ParseQuery(nextURL.RawQuery)
 				require.NoError(t, err)
 				assert.Equal(t, "1", queries.Get("count"))
@@ -448,7 +448,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.GetCtx(ctx, "/users/bookings?count=10&after="+string(testCursor))
+		resp := api.GetCtx(ctx, "/user/bookings?count=10&after="+string(testCursor))
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
 		var bookings []models.Booking
@@ -474,7 +474,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.GetCtx(ctx, "/users/bookings?count=10")
+		resp := api.GetCtx(ctx, "/user/bookings?count=10")
 		assert.Equal(t, http.StatusInternalServerError, resp.Result().StatusCode)
 
 		mockService.AssertExpectations(t)
@@ -492,14 +492,14 @@ func TestListLeasingsForSeller(t *testing.T) {
 		t.Parallel()
 
 		mockService := new(mockBookingService)
-		mockService.On("GetManyForSeller", mock.Anything, userID, 10, models.Cursor(""), models.BookingFilter{}).
+		mockService.On("GetManyForOwner", mock.Anything, userID, 10, models.Cursor(""), models.BookingFilter{}).
 			Return(testBookings, models.Cursor(""), nil).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.GetCtx(ctx, "/users/leasings?count=10")
+		resp := api.GetCtx(ctx, "/user/leasings?count=10")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
 		var bookings []models.Booking
@@ -524,14 +524,14 @@ func TestListLeasingsForSeller(t *testing.T) {
 
 		mockService := new(mockBookingService)
 		const testCursor = models.Cursor("cursor")
-		mockService.On("GetManyForSeller", mock.Anything, userID, 10, testCursor, models.BookingFilter{}).
+		mockService.On("GetManyForOwner", mock.Anything, userID, 10, testCursor, models.BookingFilter{}).
 			Return([]models.Booking{}, models.Cursor(""), nil).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.GetCtx(ctx, "/users/leasings?count=10&after="+string(testCursor))
+		resp := api.GetCtx(ctx, "/user/leasings?count=10&after="+string(testCursor))
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
 		var bookings []models.Booking
@@ -546,14 +546,14 @@ func TestListLeasingsForSeller(t *testing.T) {
 		t.Parallel()
 
 		mockService := new(mockBookingService)
-		mockService.On("GetManyForSeller", mock.Anything, userID, 1, models.Cursor(""), models.BookingFilter{}).
+		mockService.On("GetManyForOwner", mock.Anything, userID, 1, models.Cursor(""), models.BookingFilter{}).
 			Return([]models.Booking{testBooking}, models.Cursor("cursor"), nil).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.GetCtx(ctx, "/users/leasings?count=1")
+		resp := api.GetCtx(ctx, "/user/leasings?count=1")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 		links := link.ParseResponse(resp.Result())
 		if assert.NotEmpty(t, links) {
@@ -561,7 +561,7 @@ func TestListLeasingsForSeller(t *testing.T) {
 			if assert.True(t, ok, "there should be links with rel=next") {
 				nextURL, err := url.Parse(nextLinks.URI)
 				require.NoError(t, err)
-				assert.Equal(t, "/users/leasings", nextURL.Path)
+				assert.Equal(t, "/user/leasings", nextURL.Path)
 				queries, err := url.ParseQuery(nextURL.RawQuery)
 				require.NoError(t, err)
 				assert.Equal(t, "1", queries.Get("count"))
@@ -583,10 +583,10 @@ func TestListLeasingsForSeller(t *testing.T) {
 		})
 		huma.AutoRegister(api, route)
 
-		mockService.On("GetManyForSeller", mock.Anything, userID, 1, models.Cursor(""), models.BookingFilter{}).
+		mockService.On("GetManyForOwner", mock.Anything, userID, 1, models.Cursor(""), models.BookingFilter{}).
 			Return([]models.Booking{testBooking}, models.Cursor("cursor"), nil).Once()
 
-		resp := api.GetCtx(ctx, "/users/leasings?count=1")
+		resp := api.GetCtx(ctx, "/user/leasings?count=1")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 		links := link.ParseResponse(resp.Result())
 		if assert.NotEmpty(t, links) {
@@ -596,7 +596,7 @@ func TestListLeasingsForSeller(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, "http", nextURL.Scheme)
 				assert.Equal(t, "localhost", nextURL.Host)
-				assert.Equal(t, "/users/leasings", nextURL.Path)
+				assert.Equal(t, "/user/leasings", nextURL.Path)
 				queries, err := url.ParseQuery(nextURL.RawQuery)
 				require.NoError(t, err)
 				assert.Equal(t, "1", queries.Get("count"))
@@ -614,7 +614,7 @@ func TestListLeasingsForSeller(t *testing.T) {
 		invalidFilter := models.BookingFilter{
 			ParkingSpotID: uuid.New(),
 		}
-		mockService.On("GetManyForSeller", mock.Anything, userID, 10, models.Cursor(""), invalidFilter).
+		mockService.On("GetManyForOwner", mock.Anything, userID, 10, models.Cursor(""), invalidFilter).
 			Return([]models.Booking{}, models.Cursor(""), models.ErrSpotNotOwned).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
@@ -622,7 +622,7 @@ func TestListLeasingsForSeller(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		query := "?count=10&parkingspot_id=" + invalidFilter.ParkingSpotID.String()
-		resp := api.GetCtx(ctx, "/users/leasings"+query)
+		resp := api.GetCtx(ctx, "/user/leasings"+query)
 		assert.Equal(t, http.StatusForbidden, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
@@ -642,14 +642,14 @@ func TestListLeasingsForSeller(t *testing.T) {
 		t.Parallel()
 
 		mockService := new(mockBookingService)
-		mockService.On("GetManyForSeller", mock.Anything, userID, 10, models.Cursor(""), models.BookingFilter{}).
+		mockService.On("GetManyForOwner", mock.Anything, userID, 10, models.Cursor(""), models.BookingFilter{}).
 			Return([]models.Booking{}, models.Cursor(""), errors.New("unexpected error")).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		resp := api.GetCtx(ctx, "/users/leasings?count=10")
+		resp := api.GetCtx(ctx, "/user/leasings?count=10")
 		assert.Equal(t, http.StatusInternalServerError, resp.Result().StatusCode)
 
 		mockService.AssertExpectations(t)

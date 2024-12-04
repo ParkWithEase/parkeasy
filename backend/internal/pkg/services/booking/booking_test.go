@@ -107,14 +107,8 @@ func (m *mockRepo) GetByUUID(ctx context.Context, bookingID uuid.UUID) (booking.
 	return args.Get(0).(booking.EntryWithTimes), args.Error(1)
 }
 
-// GetByUUID implements booking.Repository.
-func (m *mockRepo) GetBookerByUUID(ctx context.Context, bookingID uuid.UUID) (int64, error) {
-	args := m.Called(ctx, bookingID)
-	return args.Get(0).(int64), args.Error(1)
-}
-
-// GetManyForSeller implements booking.Repository.
-func (m *mockRepo) GetManyForSeller(ctx context.Context, limit int, after omit.Val[booking.Cursor], userID int64, filter *booking.Filter) ([]booking.Entry, error) {
+// GetManyForOwner implements booking.Repository.
+func (m *mockRepo) GetManyForOwner(ctx context.Context, limit int, after omit.Val[booking.Cursor], userID int64, filter *booking.Filter) ([]booking.Entry, error) {
 	args := m.Called(ctx, limit, after, userID, filter)
 	return args.Get(0).([]booking.Entry), args.Error(1)
 }
@@ -123,12 +117,6 @@ func (m *mockRepo) GetManyForSeller(ctx context.Context, limit int, after omit.V
 func (m *mockRepo) GetManyForBuyer(ctx context.Context, limit int, after omit.Val[booking.Cursor], userID int64, filter *booking.Filter) ([]booking.Entry, error) {
 	args := m.Called(ctx, limit, after, userID, filter)
 	return args.Get(0).([]booking.Entry), args.Error(1)
-}
-
-// GetBookedTimesByUUID implements booking.Repository.
-func (m *mockRepo) GetBookedTimesByUUID(ctx context.Context, bookingUUID uuid.UUID) ([]models.TimeUnit, error) {
-	args := m.Called(ctx, bookingUUID)
-	return args.Get(0).([]models.TimeUnit), args.Error(1)
 }
 
 // Define constants and sample for consistent test values
@@ -617,7 +605,7 @@ func TestGetManyForBuyer(t *testing.T) {
 	})
 }
 
-func TestGetManyForSeller(t *testing.T) {
+func TestGetManyForOwner(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -630,11 +618,11 @@ func TestGetManyForSeller(t *testing.T) {
 		spotRepo := new(mockParkingspotRepo)
 		service := New(repo, spotRepo, nil)
 
-		bookings, cursor, err := service.GetManyForSeller(ctx, testUserID, 0, "", models.BookingFilter{})
+		bookings, cursor, err := service.GetManyForOwner(ctx, testUserID, 0, "", models.BookingFilter{})
 		require.NoError(t, err)
 		assert.Empty(t, bookings)
 		assert.Equal(t, models.Cursor(""), cursor)
-		repo.AssertNotCalled(t, "GetManyForSeller")
+		repo.AssertNotCalled(t, "GetManyForOwner")
 	})
 
 	t.Run("returns empty result when parking spot does not exist", func(t *testing.T) {
@@ -651,12 +639,12 @@ func TestGetManyForSeller(t *testing.T) {
 			Return(parkingspot.Entry{}, parkingspot.ErrNotFound).
 			Once()
 
-		bookings, cursor, err := service.GetManyForSeller(ctx, testUserID, 10, "", filter)
+		bookings, cursor, err := service.GetManyForOwner(ctx, testUserID, 10, "", filter)
 		require.NoError(t, err)
 		assert.Empty(t, bookings)
 		assert.Equal(t, models.Cursor(""), cursor)
 		spotRepo.AssertExpectations(t)
-		repo.AssertNotCalled(t, "GetManyForSeller")
+		repo.AssertNotCalled(t, "GetManyForOwner")
 	})
 
 	t.Run("fails when parking spot is not owned by the user", func(t *testing.T) {
@@ -678,14 +666,14 @@ func TestGetManyForSeller(t *testing.T) {
 			Return(spotEntry, nil).
 			Once()
 
-		bookings, cursor, err := service.GetManyForSeller(ctx, testUserID, 10, "", filter)
+		bookings, cursor, err := service.GetManyForOwner(ctx, testUserID, 10, "", filter)
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrSpotNotOwned)
 		}
 		assert.Nil(t, bookings)
 		assert.Empty(t, cursor)
 		spotRepo.AssertExpectations(t)
-		repo.AssertNotCalled(t, "GetManyForSeller")
+		repo.AssertNotCalled(t, "GetManyForOwner")
 	})
 
 	t.Run("successfully retrieves bookings without filters", func(t *testing.T) {
@@ -702,11 +690,11 @@ func TestGetManyForSeller(t *testing.T) {
 			},
 		}
 
-		repo.On("GetManyForSeller", mock.Anything, 11, omit.Val[booking.Cursor]{}, testUserID, &booking.Filter{}).
+		repo.On("GetManyForOwner", mock.Anything, 11, omit.Val[booking.Cursor]{}, testUserID, &booking.Filter{}).
 			Return(mockBookings, nil).
 			Once()
 
-		bookings, cursor, err := service.GetManyForSeller(ctx, testUserID, 10, "", models.BookingFilter{})
+		bookings, cursor, err := service.GetManyForOwner(ctx, testUserID, 10, "", models.BookingFilter{})
 		require.NoError(t, err)
 		assert.Len(t, bookings, 1)
 		assert.Empty(t, cursor)
@@ -738,11 +726,11 @@ func TestGetManyForSeller(t *testing.T) {
 		spotRepo.On("GetByUUID", mock.Anything, testSpotUUID).
 			Return(spotEntry, nil).
 			Once()
-		repo.On("GetManyForSeller", mock.Anything, 11, omit.Val[booking.Cursor]{}, testUserID, &booking.Filter{SpotID: testSpotInternalID}).
+		repo.On("GetManyForOwner", mock.Anything, 11, omit.Val[booking.Cursor]{}, testUserID, &booking.Filter{SpotID: testSpotInternalID}).
 			Return(mockBookings, nil).
 			Once()
 
-		bookings, cursor, err := service.GetManyForSeller(ctx, testUserID, 10, "", filter)
+		bookings, cursor, err := service.GetManyForOwner(ctx, testUserID, 10, "", filter)
 		require.NoError(t, err)
 		assert.Len(t, bookings, 1)
 		assert.Empty(t, cursor)
@@ -758,11 +746,11 @@ func TestGetManyForSeller(t *testing.T) {
 		spotRepo := new(mockParkingspotRepo)
 		service := New(repo, spotRepo, nil)
 
-		repo.On("GetManyForSeller", mock.Anything, 11, omit.Val[booking.Cursor]{}, testUserID, &booking.Filter{}).
+		repo.On("GetManyForOwner", mock.Anything, 11, omit.Val[booking.Cursor]{}, testUserID, &booking.Filter{}).
 			Return([]booking.Entry{}, assert.AnError).
 			Once()
 
-		bookings, cursor, err := service.GetManyForSeller(ctx, testUserID, 10, "", models.BookingFilter{})
+		bookings, cursor, err := service.GetManyForOwner(ctx, testUserID, 10, "", models.BookingFilter{})
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, assert.AnError, err)
 		}

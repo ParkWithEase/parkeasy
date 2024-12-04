@@ -299,7 +299,7 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 	return result, nil
 }
 
-func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error) {
+func (p *PostgresRepository) GetManyForOwner(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error) {
 	log := zerolog.Ctx(ctx).
 		With().
 		Str("component", "booking.Postgres").
