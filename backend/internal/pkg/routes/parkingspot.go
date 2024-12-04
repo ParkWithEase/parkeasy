@@ -395,6 +395,11 @@ func describeParkingSpotInputError(err error, location *models.ParkingSpotLocati
 			Location: "body.price_per_hour",
 			Value:    pricePerHour,
 		}
+	case errors.Is(err, models.ErrBookedTimeUnitModified):
+		return &huma.ErrorDetail{
+			Location: "body.availability",
+			Value:    availability,
+		}
 	default:
 		return nil
 	}

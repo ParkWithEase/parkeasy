@@ -638,6 +638,34 @@ func TestUpdateByUUID(t *testing.T) {
 
 		srv.AssertExpectations(t)
 	})
+
+	t.Run("modify booked time unit check", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		testUUID := uuid.New()
+		srv.On("UpdateByUUID", mock.Anything, testOwnerID, testUUID, &testInput).
+			Return(models.ParkingSpotWithAvailability{}, models.ErrBookedTimeUnitModified).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testUUID.String(), testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Location: "body.availability",
+			Value:    jsonAnyify(testInput.Availability),
+		})
+
+		srv.AssertExpectations(t)
+	})
 }
 
 func TestGetParkingSpot(t *testing.T) {
