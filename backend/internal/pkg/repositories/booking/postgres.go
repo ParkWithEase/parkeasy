@@ -40,7 +40,7 @@ type getManyResult struct {
 	Caruuid         uuid.UUID `db:"caruuid" `
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID int64, carID int64, booking *models.BookingCreationDBInput) (EntryWithTimes, error) {
+func (p *PostgresRepository) Create(ctx context.Context, userID, spotID, carID int64, booking *models.BookingCreationDBInput) (EntryWithTimes, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return EntryWithTimes{}, fmt.Errorf("could not start a transaction: %w", err)
@@ -70,13 +70,13 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 
 	// Variable for OR clauses in where, used for timeslots timeranges
 	var whereOrMods []mods.Where[*dialect.UpdateQuery]
-	for _, time := range booking.BookingInfo.BookedTimes {
+	for _, bookTime := range booking.BookingInfo.BookedTimes {
 		whereOrMods = append(whereOrMods, um.Where(
 			dbmodels.TimeunitColumns.Timerange.OP(
 				"&&",
 				psql.Arg(dbtype.Tstzrange{
-					Start: time.StartTime,
-					End:   time.EndTime,
+					Start: bookTime.StartTime,
+					End:   bookTime.EndTime,
 				}),
 			),
 		))
@@ -128,10 +128,10 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spotID in
 	entry := EntryWithTimes{
 		Entry: formEntry(amount,
 			inserted.Bookinguuid,
-			inserted.Bookingid,
 			booking.BookingInfo.ParkingSpotID,
 			booking.BookingInfo.CarID,
 			inserted.Createdat,
+			inserted.Bookingid,
 			inserted.Userid,
 		),
 		BookedTimes: bookedSlots,
@@ -173,16 +173,16 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 
 	var bookingResult getManyResult
 
-	if cursor.Next() {
-		bookingResult, err = cursor.Get()
-		if err != nil {
-			log.Err(err).Msg("error retrieving record from cursor")
-			return EntryWithTimes{}, err
-		}
-	} else {
+	if !cursor.Next() {
 		// No results found in cursor
 		log.Info().Msg("no results found in cursor")
 		return EntryWithTimes{}, ErrNotFound
+	}
+
+	bookingResult, err = cursor.Get()
+	if err != nil {
+		log.Err(err).Msg("error retrieving record from cursor")
+		return EntryWithTimes{}, err
 	}
 
 	timeResult, err := dbmodels.Timeunits.Query(
@@ -209,10 +209,10 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	entry := EntryWithTimes{
 		Entry: formEntry(amount,
 			bookingResult.Bookinguuid,
-			bookingResult.Bookingid,
 			bookingResult.Parkingspotuuid,
 			bookingResult.Caruuid,
 			bookingResult.Createdat,
+			bookingResult.Bookingid,
 			bookingResult.Userid,
 		),
 		BookedTimes: timeUnitsFromDB(timeResult),
@@ -306,9 +306,9 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 		dbmodels.SelectJoins.Bookings.InnerJoin.CaridCar(ctx),
 		sm.Limit(limit),
 		sm.OrderBy(dbmodels.BookingColumns.Bookingid).Desc(),
+		psql.WhereAnd(whereMods...),
 	)
 
-	smods = append(smods, psql.WhereAnd(whereMods...))
 	query := psql.Select(smods...)
 
 	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
@@ -337,10 +337,10 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 
 		entry := formEntry(amount,
 			get.Bookinguuid,
-			get.Bookingid,
 			get.Parkingspotuuid,
 			get.Caruuid,
 			get.Createdat,
+			get.Bookingid,
 			get.Userid,
 		)
 
@@ -379,9 +379,9 @@ func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, af
 		dbmodels.SelectJoins.Bookings.InnerJoin.CaridCar(ctx),
 		sm.Limit(limit),
 		sm.OrderBy(dbmodels.BookingColumns.Bookingid).Desc(),
+		psql.WhereAnd(whereMods...),
 	)
 
-	smods = append(smods, psql.WhereAnd(whereMods...))
 	query := psql.Select(smods...)
 
 	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
@@ -411,10 +411,10 @@ func (p *PostgresRepository) GetManyForSeller(ctx context.Context, limit int, af
 		entry := formEntry(
 			amount,
 			get.Bookinguuid,
-			get.Bookingid,
 			get.Parkingspotuuid,
 			get.Caruuid,
 			get.Createdat,
+			get.Bookingid,
 			get.Userid,
 		)
 
@@ -432,7 +432,7 @@ func timeUnitsFromDB(model []*dbmodels.Timeunit) []models.TimeUnit {
 	return result
 }
 
-func formEntry(amount float64, bookingUUID uuid.UUID, bookingID int64, parkingSpotUUID uuid.UUID, carID uuid.UUID, createdAt time.Time, bookerID int64) Entry {
+func formEntry(amount float64, bookingUUID, parkingSpotUUID, carID uuid.UUID, createdAt time.Time, bookingID, bookerID int64) Entry {
 	return Entry{
 		Booking: models.Booking{
 			PaidAmount:    amount,

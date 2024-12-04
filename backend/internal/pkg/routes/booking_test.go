@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -857,15 +856,4 @@ func TestGetBookedTimeSlotsOfABooking(t *testing.T) {
 
 		mockService.AssertExpectations(t)
 	})
-}
-
-// Helper function to parse Link header
-func parseLinkHeader(linkHeader string) (*url.URL, error) {
-	// Example Link header: </users/bookings?count=10&after=test-cursor>; rel="next"
-	var urlStr string
-	n, err := fmt.Sscanf(linkHeader, "<%s>; rel=\"next\"", &urlStr)
-	if err != nil || n != 1 {
-		return nil, errors.New("invalid Link header format")
-	}
-	return url.Parse(urlStr)
 }

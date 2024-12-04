@@ -689,7 +689,7 @@ func TestPostgresIntegration(t *testing.T) {
 	})
 }
 
-func createExpectedEntry(internalID int64, bookingUUID uuid.UUID, paidAmount float64, spotID uuid.UUID, carID uuid.UUID, createdAt time.Time, bookerID int64) Entry {
+func createExpectedEntry(internalID int64, bookingUUID uuid.UUID, paidAmount float64, spotID, carID uuid.UUID, createdAt time.Time, bookerID int64) Entry {
 	return Entry{
 		Booking: models.Booking{
 			PaidAmount:    paidAmount,

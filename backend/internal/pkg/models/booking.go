@@ -17,11 +17,11 @@ var (
 )
 
 type Booking struct {
+	CreatedAt     time.Time `json:"booking_time" doc:"time when the booking was made"`
+	PaidAmount    float64   `json:"paid_amount" doc:"the amount paid for the booking"`
 	ID            uuid.UUID `json:"id" doc:"ID of this resource"`
 	ParkingSpotID uuid.UUID `json:"parkingspot_id" doc:"the ID of parking spot associated with booking"`
 	CarID         uuid.UUID `json:"car_id" doc:"the ID of car associated with booking"`
-	PaidAmount    float64   `json:"paid_amount" doc:"the amount paid for the booking"`
-	CreatedAt     time.Time `json:"booking_time" doc:"time when the booking was made"`
 }
 
 type BookingWithTimes struct {
@@ -30,9 +30,9 @@ type BookingWithTimes struct {
 }
 
 type BookingCreationInput struct {
+	BookedTimes   []TimeUnit `json:"book_times" doc:"The booked times of this booking"`
 	ParkingSpotID uuid.UUID  `json:"parkingspot_id" doc:"ID of the parking spot being booked"`
 	CarID         uuid.UUID  `json:"car_id" doc:"ID of the car for which parking spot being booked"`
-	BookedTimes   []TimeUnit `json:"book_times" doc:"The booked times of this booking"`
 }
 
 type BookingCreationDBInput struct {

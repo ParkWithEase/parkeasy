@@ -134,8 +134,8 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		Errors:      []int{http.StatusUnprocessableEntity},
 	}), func(ctx context.Context, input *struct {
 		ParkingSpotID uuid.UUID     `query:"parkingspot_id" doc:"id of the parking spot"`
-		After         models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
 		Count         int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of bookings that appear per page."`
+		After         models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
 	},
 	) (*bookingListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
@@ -168,8 +168,8 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		Errors:      []int{http.StatusUnprocessableEntity, http.StatusForbidden},
 	}), func(ctx context.Context, input *struct {
 		ParkingSpotID uuid.UUID     `query:"parkingspot_id" doc:"id of the parking spot"`
-		After         models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
 		Count         int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of bookings that appear per page."`
+		After         models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
 	},
 	) (*bookingListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)

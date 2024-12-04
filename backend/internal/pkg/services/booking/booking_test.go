@@ -96,7 +96,7 @@ func (m *mockParkingspotRepo) GetMany(ctx context.Context, limit int, filter *pa
 }
 
 // Create implements booking.Repository.
-func (m *mockRepo) Create(ctx context.Context, userID int64, spotID int64, carID int64, book *models.BookingCreationDBInput) (booking.EntryWithTimes, error) {
+func (m *mockRepo) Create(ctx context.Context, userID, spotID, carID int64, book *models.BookingCreationDBInput) (booking.EntryWithTimes, error) {
 	args := m.Called(ctx, userID, spotID, carID, book)
 	return args.Get(0).(booking.EntryWithTimes), args.Error(1)
 }
