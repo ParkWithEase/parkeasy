@@ -25,8 +25,8 @@ type Booking struct {
 }
 
 type BookingWithTimes struct {
-	Booking
 	BookedTimes []TimeUnit `json:"booked_times" doc:"The booked times of this booking"`
+	Booking
 }
 
 type BookingCreationInput struct {
