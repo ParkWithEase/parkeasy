@@ -16,8 +16,8 @@ type Entry struct {
 }
 
 type EntryWithTimes struct {
+	BookedTimes []models.TimeUnit
 	Entry
-	BookedTimes []models.TimeUnit // The booked times of this booking
 }
 
 type Filter struct {
