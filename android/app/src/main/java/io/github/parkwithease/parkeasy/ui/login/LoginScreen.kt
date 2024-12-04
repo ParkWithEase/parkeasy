@@ -275,6 +275,10 @@ private fun LoginButtons(
     }
 }
 
+private class LoginPreviewParameterProvider : PreviewParameterProvider<LoginMode> {
+    override val values = sequenceOf(LoginMode.LOGIN, LoginMode.REGISTER, LoginMode.FORGOT)
+}
+
 @Suppress("detekt:UnusedPrivateMember")
 @PreviewAll
 @Composable
@@ -291,8 +295,4 @@ private fun LoginScreenPreview(
             snackbarHost = {},
         )
     }
-}
-
-class LoginPreviewParameterProvider : PreviewParameterProvider<LoginMode> {
-    override val values = sequenceOf(LoginMode.LOGIN, LoginMode.REGISTER, LoginMode.FORGOT)
 }

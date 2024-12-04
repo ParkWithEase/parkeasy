@@ -20,10 +20,12 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,13 +37,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.Car
+import io.github.parkwithease.parkeasy.model.CarDetails
 import io.github.parkwithease.parkeasy.model.EditMode
+import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
+import io.github.parkwithease.parkeasy.ui.common.PreviewAll
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
+import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
 import io.github.parkwithease.parkeasy.ui.theme.Typography
 
 @Suppress("detekt:LongMethod")
@@ -87,17 +95,7 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
             onDismissRequest = { openBottomSheet = false },
             sheetState = bottomSheetState,
         ) {
-            Column(
-                modifier =
-                    Modifier.padding(horizontal = 16.dp)
-                        .fillMaxWidth()
-                        .imePadding()
-                        .verticalScroll(rememberScrollState(), reverseScrolling = true),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                AddCarScreen(state = viewModel.formState, handler = handler, editMode = editMode)
-            }
+            AddCarScreen(state = viewModel.formState, handler = handler, editMode = editMode)
         }
     }
 }
@@ -166,8 +164,14 @@ fun AddCarScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.widthIn(max = 320.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .imePadding()
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState(), reverseScrolling = true)
+                .widthIn(max = 320.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ParkEasyTextField(
@@ -204,6 +208,70 @@ fun AddCarScreen(
                     if (editMode == EditMode.ADD) R.string.add_car else R.string.edit_car
                 )
             )
+        }
+    }
+}
+
+@Suppress("detekt:UnusedPrivateMember")
+@PreviewAll
+@Composable
+private fun CarsScreenPreview() {
+    val exampleCars =
+        listOf(
+                CarDetails("Red", "MV1", "Red Bull", "RB20"),
+                CarDetails("Red", "SP11", "Red Bull", "RB20"),
+                CarDetails("Silver", "LH44", "Mercedes", "W15"),
+                CarDetails("Silver", "GR63", "Mercedes", "W15"),
+                CarDetails("Scarlet", "CL16", "Ferrari", "SF-24"),
+                CarDetails("Scarlet", "CS55", "Ferrari", "SF-24"),
+                CarDetails("Papaya", "LN4", "McLaren", "MCL38"),
+                CarDetails("Papaya", "OP81", "McLaren", "MCL38"),
+            )
+            .map { Car(it, "") }
+    ParkEasyTheme {
+        CarsScreen(
+            cars = exampleCars,
+            onCarClick = {},
+            onShowAddCarClick = {},
+            isRefreshing = false,
+            onRefresh = {},
+            snackbarHost = {},
+        )
+    }
+}
+
+private class AddCarPreviewParameterProvider : PreviewParameterProvider<AddCarFormState> {
+    override val values =
+        sequenceOf(
+            AddCarFormState(),
+            AddCarFormState(
+                color = FieldState("Red"),
+                licensePlate = FieldState("MV1"),
+                make = FieldState("Red Bull"),
+                model = FieldState("RB20"),
+            ),
+            AddCarFormState(
+                color = FieldState("", "Color cannot be empty"),
+                licensePlate = FieldState("", "License plate cannot be empty"),
+                make = FieldState("", "Make cannot be empty"),
+                model = FieldState("", "Model cannot be empty"),
+            ),
+        )
+}
+
+@Suppress("detekt:UnusedPrivateMember")
+@OptIn(ExperimentalMaterial3Api::class)
+@PreviewAll
+@Composable
+private fun AddCarScreenPreview(
+    @PreviewParameter(AddCarPreviewParameterProvider::class) state: AddCarFormState
+) {
+    ParkEasyTheme {
+        ModalBottomSheet(
+            onDismissRequest = {},
+            sheetState = rememberStandardBottomSheetState(initialValue = SheetValue.Expanded),
+        ) {
+            AddCarScreen(state = state, handler = AddCarFormHandler(), editMode = EditMode.ADD)
         }
     }
 }
