@@ -275,16 +275,14 @@ private fun LoginButtons(
     }
 }
 
-private class LoginPreviewParameterProvider : PreviewParameterProvider<LoginMode> {
+private class LoginModeProvider : PreviewParameterProvider<LoginMode> {
     override val values = sequenceOf(LoginMode.LOGIN, LoginMode.REGISTER, LoginMode.FORGOT)
 }
 
 @Suppress("detekt:UnusedPrivateMember")
 @PreviewAll
 @Composable
-private fun LoginScreenPreview(
-    @PreviewParameter(LoginPreviewParameterProvider::class) mode: LoginMode
-) {
+private fun LoginScreenPreview(@PreviewParameter(LoginModeProvider::class) mode: LoginMode) {
     ParkEasyTheme {
         LoginScreen(
             state = LoginFormState(),

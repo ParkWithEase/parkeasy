@@ -1,3 +1,5 @@
+@file:Suppress("detekt:TooManyFunctions")
+
 package io.github.parkwithease.parkeasy.ui.spots
 
 import android.util.Log
@@ -7,6 +9,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -35,11 +38,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,20 +59,25 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.compose.ui.unit.toIntRect
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.EditMode
+import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.ui.common.MinutesPerSlot
 import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
+import io.github.parkwithease.parkeasy.ui.common.PreviewAll
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.ui.common.isoDay
 import io.github.parkwithease.parkeasy.ui.common.startOfNextAvailableDay
 import io.github.parkwithease.parkeasy.ui.common.timezone
 import io.github.parkwithease.parkeasy.ui.common.toShortDate
+import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
 import kotlin.time.DurationUnit
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalTime
@@ -101,7 +110,7 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
         },
         isRefreshing = isRefreshing,
         onRefresh = viewModel::onRefresh,
-        snackbarHost = viewModel.snackbarState,
+        snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
         modifier = modifier,
     )
     if (openBottomSheet) {
@@ -109,21 +118,11 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
             onDismissRequest = { openBottomSheet = false },
             sheetState = bottomSheetState,
         ) {
-            Column(
-                modifier =
-                    Modifier.padding(horizontal = 16.dp)
-                        .fillMaxWidth()
-                        .imePadding()
-                        .verticalScroll(rememberScrollState(), reverseScrolling = true),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                AddSpotScreen(
-                    state = viewModel.formState,
-                    handler = handler,
-                    getSelectedIds = { viewModel.formState.times.value },
-                )
-            }
+            AddSpotScreen(
+                state = viewModel.formState,
+                handler = handler,
+                getSelectedIds = { viewModel.formState.times.value },
+            )
         }
     }
 }
@@ -135,12 +134,12 @@ fun SpotsScreen(
     onShowAddSpotClick: () -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
-    snackbarHost: SnackbarHostState,
+    snackbarHost: @Composable (() -> Unit),
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier,
-        snackbarHost = { SnackbarHost(hostState = snackbarHost) },
+        snackbarHost = snackbarHost,
         floatingActionButton = { AddSpotButton(onShowAddSpotClick = onShowAddSpotClick) },
     ) { innerPadding ->
         Surface(Modifier.padding(innerPadding)) {
@@ -193,8 +192,14 @@ fun AddSpotScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.widthIn(max = 360.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .imePadding()
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState(), reverseScrolling = true)
+                .widthIn(max = 360.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ParkEasyTextField(
@@ -432,3 +437,119 @@ private fun Modifier.timeGridDragHandler(
             },
         )
     }
+
+@Suppress("detekt:UnusedPrivateMember")
+@OptIn(ExperimentalMaterial3Api::class)
+@PreviewAll
+@Composable
+private fun SpotsScreenPreview() {
+    val spots = listOf(Spot())
+    ParkEasyTheme {
+        SpotsScreen(
+            spots = spots,
+            onShowAddSpotClick = {},
+            isRefreshing = false,
+            onRefresh = {},
+            snackbarHost = {},
+        )
+    }
+}
+
+private class AddSpotFormStateProvider : PreviewParameterProvider<AddSpotFormState> {
+    override val values =
+        sequenceOf(
+            AddSpotFormState(),
+            AddSpotFormState(
+                streetAddress = FieldState("66 Chancellors Cir"),
+                city = FieldState("Winnipeg"),
+                state = FieldState("MB"),
+                countryCode = FieldState("CA"),
+                postalCode = FieldState("R3T2N2"),
+                chargingStation = FieldState(true),
+                plugIn = FieldState(true),
+                shelter = FieldState(false),
+                pricePerHour = FieldState("4.49"),
+            ),
+            AddSpotFormState(
+                streetAddress = FieldState("", "Address cannot be empty"),
+                city = FieldState("", "City cannot be empty"),
+                state = FieldState("", "State cannot be empty"),
+                countryCode = FieldState("", "Country cannot be empty"),
+                postalCode = FieldState("", "Postal code cannot be empty"),
+                chargingStation = FieldState(false),
+                plugIn = FieldState(false),
+                shelter = FieldState(false),
+                pricePerHour = FieldState("", "Price cannot be empty"),
+            ),
+        )
+}
+
+@Suppress("detekt:UnusedPrivateMember")
+@OptIn(ExperimentalMaterial3Api::class)
+@PreviewAll
+@Composable
+private fun AddCarScreenPreview(
+    @PreviewParameter(AddSpotFormStateProvider::class) state: AddSpotFormState
+) {
+    ParkEasyTheme {
+        ModalBottomSheet(
+            onDismissRequest = {},
+            sheetState = rememberStandardBottomSheetState(initialValue = SheetValue.Expanded),
+        ) {
+            AddSpotScreen(
+                state = state,
+                handler = AddSpotFormHandler(),
+                getSelectedIds = { emptySet() },
+            )
+        }
+    }
+}
+
+@Suppress("detekt:UnusedPrivateMember")
+@OptIn(ExperimentalMaterial3Api::class)
+@PreviewAll
+@Composable
+private fun ExpandedAddCarScreenPreview(
+    @PreviewParameter(AddSpotFormStateProvider::class) state: AddSpotFormState
+) {
+    ParkEasyTheme {
+        Surface(
+            Modifier.fillMaxSize()
+        ) { // Can't actually preview fully expanded BottomSheets apparently
+            AddSpotScreen(
+                state = state,
+                handler = AddSpotFormHandler(),
+                getSelectedIds = { emptySet() },
+            )
+        }
+    }
+}
+
+private class AvailabilityProvider : PreviewParameterProvider<Set<Int>> {
+    override val values =
+        sequenceOf(
+            (0..72).toSet(),
+            (72..144).toSet(),
+            (49..94).toSet(),
+            (0..72).map { it * 2 }.toSet(),
+            (0..72).map { it * 2 + 1 }.toSet(),
+        )
+}
+
+@Suppress("detekt:UnusedPrivateMember")
+@OptIn(ExperimentalMaterial3Api::class)
+@PreviewAll
+@Composable
+private fun AddCarScreenTimeGridPreview(
+    @PreviewParameter(AvailabilityProvider::class) selectedIds: Set<Int>
+) {
+    ParkEasyTheme {
+        Surface(Modifier.fillMaxSize()) {
+            AddSpotScreen(
+                state = AddSpotFormState(),
+                handler = AddSpotFormHandler(),
+                getSelectedIds = { selectedIds },
+            )
+        }
+    }
+}

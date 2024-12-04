@@ -216,7 +216,7 @@ fun AddCarScreen(
 @PreviewAll
 @Composable
 private fun CarsScreenPreview() {
-    val exampleCars =
+    val cars =
         listOf(
                 CarDetails("Red", "MV1", "Red Bull", "RB20"),
                 CarDetails("Red", "SP11", "Red Bull", "RB20"),
@@ -230,7 +230,7 @@ private fun CarsScreenPreview() {
             .map { Car(it, "") }
     ParkEasyTheme {
         CarsScreen(
-            cars = exampleCars,
+            cars = cars,
             onCarClick = {},
             onShowAddCarClick = {},
             isRefreshing = false,
@@ -240,7 +240,7 @@ private fun CarsScreenPreview() {
     }
 }
 
-private class AddCarPreviewParameterProvider : PreviewParameterProvider<AddCarFormState> {
+private class AddCarFormStateProvider : PreviewParameterProvider<AddCarFormState> {
     override val values =
         sequenceOf(
             AddCarFormState(),
@@ -264,7 +264,7 @@ private class AddCarPreviewParameterProvider : PreviewParameterProvider<AddCarFo
 @PreviewAll
 @Composable
 private fun AddCarScreenPreview(
-    @PreviewParameter(AddCarPreviewParameterProvider::class) state: AddCarFormState
+    @PreviewParameter(AddCarFormStateProvider::class) state: AddCarFormState
 ) {
     ParkEasyTheme {
         ModalBottomSheet(
