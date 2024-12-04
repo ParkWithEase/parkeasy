@@ -10,7 +10,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
-import io.github.parkwithease.parkeasy.data.remote.APIException
 import io.github.parkwithease.parkeasy.data.remote.UserRepository
 import io.github.parkwithease.parkeasy.model.ErrorDetail
 import io.github.parkwithease.parkeasy.model.ErrorModel
@@ -18,7 +17,7 @@ import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.LoginCredentials
 import io.github.parkwithease.parkeasy.model.RegistrationCredentials
 import io.github.parkwithease.parkeasy.model.ResetCredentials
-import java.io.IOException
+import io.github.parkwithease.parkeasy.ui.common.recoverRequestErrors
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,7 +46,12 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
                 .onSuccess {
                     viewModelScope.launch { snackbarState.showSnackbar("Logged in successfully") }
                 }
-                .recoverRequestErrors("Login failed")
+                .recoverRequestErrors(
+                    "Login failed",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
             _formEnabled.value = true
         }
     }
@@ -69,7 +73,12 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
                 .onSuccess {
                     viewModelScope.launch { snackbarState.showSnackbar("Registered successfully") }
                 }
-                .recoverRequestErrors("Error registering")
+                .recoverRequestErrors(
+                    "Error registering",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
             _formEnabled.value = true
         }
     }
@@ -85,7 +94,12 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
                         snackbarState.showSnackbar("Reset email sent\nJk... we're working on it")
                     }
                 }
-                .recoverRequestErrors("Error resetting password")
+                .recoverRequestErrors(
+                    "Error resetting password",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
             _formEnabled.value = true
         }
     }
@@ -148,22 +162,6 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
             }
     }
 
-    private fun Result<Unit>.recoverRequestErrors(operationFailMsg: String): Result<Unit> =
-        recover {
-            when (it) {
-                is APIException -> {
-                    errorToForm(it.error)
-                    viewModelScope.launch { snackbarState.showSnackbar(operationFailMsg) }
-                }
-                is IOException -> {
-                    viewModelScope.launch {
-                        snackbarState.showSnackbar("Could not connect to server, are you online?")
-                    }
-                }
-                else -> throw it
-            }
-        }
-
     private fun errorToForm(error: ErrorModel) {
         when (error.type) {
             ErrorModel.TYPE_INVALID_CREDENTIALS -> {
@@ -195,7 +193,6 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
         }
     }
 
-    // Clear errors set via external services
     private fun clearFieldErrors() {
         state =
             state.run {

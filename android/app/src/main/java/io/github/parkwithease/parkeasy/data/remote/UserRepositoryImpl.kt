@@ -41,8 +41,8 @@ constructor(
                     }
                 }
             }
-            .mapAPIError()
             .updateAuthCookie()
+            .mapAPIError()
             .map {}
 
     override suspend fun register(credentials: RegistrationCredentials): Result<Unit> =
@@ -54,8 +54,8 @@ constructor(
                     }
                 }
             }
-            .mapAPIError()
             .updateAuthCookie()
+            .mapAPIError()
             .map {}
 
     override suspend fun logout(): Result<Unit> =
@@ -67,8 +67,8 @@ constructor(
                     client.delete("/auth") { cookie(name = name, value = value) }
                 }
             }
-            .mapAPIError()
             .updateAuthCookie()
+            .mapAPIError()
             .map {}
 
     override suspend fun requestReset(credentials: ResetCredentials): Result<Unit> =
@@ -94,7 +94,9 @@ constructor(
             }
             .mapAPIError()
             .let { result ->
-                result.mapCatching { if (result.isSuccess) it.body<Profile>() else Profile() }
+                result.mapCatching {
+                    if (it is HttpResponse && result.isSuccess) it.body<Profile>() else Profile()
+                }
             }
 
     /**

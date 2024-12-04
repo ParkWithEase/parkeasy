@@ -9,14 +9,13 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.parkwithease.parkeasy.data.remote.APIException
 import io.github.parkwithease.parkeasy.data.remote.CarRepository
 import io.github.parkwithease.parkeasy.model.Car
 import io.github.parkwithease.parkeasy.model.CarDetails
 import io.github.parkwithease.parkeasy.model.ErrorDetail
 import io.github.parkwithease.parkeasy.model.ErrorModel
 import io.github.parkwithease.parkeasy.model.FieldState
-import java.io.IOException
+import io.github.parkwithease.parkeasy.ui.common.recoverRequestErrors
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,9 +43,12 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
             carRepo
                 .getCars()
                 .onSuccess { _cars.value = it }
-                .onFailure {
-                    viewModelScope.launch { snackbarState.showSnackbar("Error retrieving cars") }
-                }
+                .recoverRequestErrors(
+                    "Error retrieving cars",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
             _isRefreshing.value = false
         }
     }
@@ -64,7 +66,12 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
                 )
                 .also { clearFieldErrors() }
                 .onSuccess { onRefresh() }
-                .recoverRequestErrors("Error adding car")
+                .recoverRequestErrors(
+                    "Error adding car",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
         }
     }
 
@@ -85,7 +92,12 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
                 )
                 .also { clearFieldErrors() }
                 .onSuccess { onRefresh() }
-                .recoverRequestErrors("Error adding car")
+                .recoverRequestErrors(
+                    "Error adding car",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
         }
     }
 
@@ -153,22 +165,6 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
             }
     }
 
-    private fun Result<Unit>.recoverRequestErrors(operationFailMsg: String): Result<Unit> =
-        recover {
-            when (it) {
-                is APIException -> {
-                    errorToForm(it.error)
-                    viewModelScope.launch { snackbarState.showSnackbar(operationFailMsg) }
-                }
-                is IOException -> {
-                    viewModelScope.launch {
-                        snackbarState.showSnackbar("Could not connect to server, are you online?")
-                    }
-                }
-                else -> throw it
-            }
-        }
-
     private fun errorToForm(error: ErrorModel) {
         annotateErrorLocation(error.errors)
     }
@@ -205,7 +201,6 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
         }
     }
 
-    // Clear errors set via external services
     private fun clearFieldErrors() {
         formState =
             formState.run {

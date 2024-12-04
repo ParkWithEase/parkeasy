@@ -10,12 +10,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.parkwithease.parkeasy.data.remote.SpotRepository
+import io.github.parkwithease.parkeasy.model.ErrorDetail
+import io.github.parkwithease.parkeasy.model.ErrorModel
 import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.model.SpotFeatures
 import io.github.parkwithease.parkeasy.model.SpotLocation
 import io.github.parkwithease.parkeasy.model.TimeSlot
 import io.github.parkwithease.parkeasy.ui.common.MinutesPerSlot
+import io.github.parkwithease.parkeasy.ui.common.recoverRequestErrors
 import io.github.parkwithease.parkeasy.ui.common.startOfNextAvailableDay
 import io.github.parkwithease.parkeasy.ui.common.timezone
 import javax.inject.Inject
@@ -49,9 +52,12 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
             spotRepo
                 .getSpots()
                 .onSuccess { _spots.value = it }
-                .onFailure {
-                    viewModelScope.launch { snackbarState.showSnackbar("Error retrieving spots") }
-                }
+                .recoverRequestErrors(
+                    "Error retrieving parking spots",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
             _isRefreshing.value = false
         }
     }
@@ -103,14 +109,17 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                                 countryCode = formState.countryCode.value,
                                 postalCode = formState.postalCode.value,
                             ),
-                        pricePerHour = formState.pricePerHour.value.toDoubleOrNull() ?: -1.0,
+                        pricePerHour = formState.pricePerHour.value.toDoubleOrNull() ?: -0.0,
                     )
                 )
                 .also { clearFieldErrors() }
                 .onSuccess { onRefresh() }
-                .onFailure {
-                    viewModelScope.launch { snackbarState.showSnackbar("Error creating spot") }
-                }
+                .recoverRequestErrors(
+                    "Error adding parking spot",
+                    { errorToForm(it) },
+                    snackbarState,
+                    viewModelScope,
+                )
         }
     }
 
@@ -198,7 +207,10 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                     pricePerHour =
                         pricePerHour.copy(
                             value = value,
-                            error = if (value != "") null else "Price cannot be empty",
+                            error =
+                                if (value == "") "Price cannot be empty"
+                                else if (value.toDoubleOrNull() == null) "Price must be a number"
+                                else null,
                         )
                 )
             }
@@ -234,6 +246,63 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
             }
     }
 
+    private fun errorToForm(error: ErrorModel) {
+        when (error.type) {
+            else -> annotateErrorLocation(error.errors)
+        }
+    }
+
+    @Suppress("detekt:CyclomaticComplexMethod")
+    private fun annotateErrorLocation(errors: List<ErrorDetail>) {
+        for (err in errors) {
+            when (err.location) {
+                "body" ->
+                    formState =
+                        formState.run {
+                            copy(
+                                streetAddress =
+                                    streetAddress.copy(error = "Invalid street address"),
+                                city = city.copy(error = "Invalid city"),
+                                state = state.copy(error = "Invalid state"),
+                                countryCode = countryCode.copy(error = "Invalid country code"),
+                                postalCode = postalCode.copy(error = "Invalid postal code"),
+                                pricePerHour = pricePerHour.copy(error = "Invalid price"),
+                            )
+                        }
+
+                "body.location.street_address" ->
+                    formState =
+                        formState.run {
+                            copy(
+                                streetAddress = streetAddress.copy(error = "Invalid street address")
+                            )
+                        }
+                "body.location.city" ->
+                    formState = formState.run { copy(city = city.copy(error = "Invalid city")) }
+                "body.location.state" ->
+                    formState = formState.run { copy(state = state.copy(error = "Invalid state")) }
+
+                "body.location.country_code" ->
+                    formState =
+                        formState.run {
+                            copy(countryCode = countryCode.copy(error = "Invalid country code"))
+                        }
+
+                "body.location.postal_code" ->
+                    formState =
+                        formState.run {
+                            copy(postalCode = postalCode.copy(error = "Invalid postal code"))
+                        }
+
+                "body.price_per_hour" ->
+                    formState =
+                        formState.run {
+                            copy(pricePerHour = pricePerHour.copy(error = "Invalid price"))
+                        }
+            }
+        }
+    }
+
     private fun clearFieldErrors() {
         formState =
             formState.run {
@@ -242,6 +311,8 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                     city = city.copy(error = null),
                     state = state.copy(error = null),
                     countryCode = countryCode.copy(error = null),
+                    postalCode = postalCode.copy(error = null),
+                    pricePerHour = pricePerHour.copy(error = null),
                 )
             }
     }

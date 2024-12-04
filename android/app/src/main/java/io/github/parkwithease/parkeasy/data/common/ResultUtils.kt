@@ -10,7 +10,7 @@ import io.ktor.http.isSuccess
  * Map a [Result] with an unsuccessful [HttpResponse] to an unsuccessful [Result] with an
  * [APIException] or itself if the [HttpResponse] was successful.
  */
-suspend fun Result<HttpResponse>.mapAPIError(): Result<HttpResponse> = mapCatching {
-    if (!it.status.isSuccess()) throw APIException(it.body<ErrorModel>())
+suspend fun Result<Any>.mapAPIError(): Result<Any> = mapCatching {
+    if (it is HttpResponse && !it.status.isSuccess()) throw APIException(it.body<ErrorModel>())
     it
 }
