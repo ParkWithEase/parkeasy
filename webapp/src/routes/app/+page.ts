@@ -3,7 +3,6 @@ import { handleGetError } from '$lib/utils/error-handler';
 import type { PageLoad } from './$types';
 import { LATITUDE, LONGITUDE, DISTANCE } from '$lib/constants';
 
-
 export const load: PageLoad = async ({ fetch }) => {
     const client = newClient({ fetch });
 

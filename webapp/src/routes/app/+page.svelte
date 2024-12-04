@@ -10,7 +10,15 @@
     import { handleGetError } from '$lib/utils/error-handler';
     import DetailModal from '$lib/components/spot-listings/detail-modal.svelte';
     import type { AddressResult } from '$lib/types/address/address';
-    import { DEFAULT_DISTANCE, INIT_ZOOM, MAX_DISTANCE_RADIUS, MAX_ZOOM, MIN_DISTANCE_RADIUS, SELECTED_ZOOM, DISTANCE_RADIUS_STEP } from '$lib/constants';
+    import {
+        DEFAULT_DISTANCE,
+        INIT_ZOOM,
+        MAX_DISTANCE_RADIUS,
+        MAX_ZOOM,
+        MIN_DISTANCE_RADIUS,
+        SELECTED_ZOOM,
+        DISTANCE_RADIUS_STEP
+    } from '$lib/constants';
 
     type ParkingSpot = components['schemas']['ParkingSpot'];
 

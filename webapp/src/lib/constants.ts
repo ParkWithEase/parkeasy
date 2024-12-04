@@ -30,4 +30,3 @@ export const DEFAULT_DISTANCE = 2000;
 export const MIN_DISTANCE_RADIUS = 100;
 export const MAX_DISTANCE_RADIUS = 5000;
 export const DISTANCE_RADIUS_STEP = 100;
-

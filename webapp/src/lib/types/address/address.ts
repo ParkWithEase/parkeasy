@@ -7,7 +7,10 @@ export type AddressResult = {
             license: string;
             url: string;
         };
+        postcode: string;
         country: string;
+        housenumber: string;
+        street: string;
         country_code: string;
         state: string;
         city: string;

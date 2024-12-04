@@ -20,14 +20,14 @@
     let warningModalOpen: boolean = false;
     let warningText: string = '';
 
-    export let isReadOnly: boolean;
-    export let isVerified: boolean;
+    let isVerified: boolean;
+    let houseNumber: string;
+    let country: string;
 
-    export let houseNumber: number;
+    export let isReadOnly: boolean;
     export let streetAddress: string;
     export let city: string;
     export let state: string;
-    export let country: string;
     export let countryCode: string;
     export let postalCode: string;
     export let hasShelter: boolean;
@@ -102,7 +102,7 @@
     // Address verification using Geoapify API
     const verifyAddress = () => {
         const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(
-            `${streetAddress}, ${city}, ${state}, ${postalCode.substring(0,3) + ' ' + postalCode.substring(3)}, ${country}`
+            `${streetAddress}, ${city}, ${state}, ${postalCode.substring(0, 3) + ' ' + postalCode.substring(3)}, ${country}`
         )}&apiKey=${apiKey}`;
 
         fetch(url)
@@ -117,8 +117,11 @@
                 const matchedAddress = result.features[0].properties;
                 // Validate all fields match exactly
                 const isMatch =
-                    ((matchedAddress.housenumber ?? '') + ' ' + matchedAddress.street?.toLowerCase()).trim() ===
-                        streetAddress.toLowerCase().trim() &&
+                    (
+                        (matchedAddress.housenumber ?? '') +
+                        ' ' +
+                        matchedAddress.street?.toLowerCase()
+                    ).trim() === streetAddress.toLowerCase().trim() &&
                     matchedAddress.city?.toLowerCase() === city.toLowerCase() &&
                     matchedAddress.state_code?.toLowerCase() === state.toLowerCase() &&
                     matchedAddress.postcode?.replace(/\s/g, '').toLowerCase() ===
@@ -182,7 +185,7 @@
             {/if}
         {/if}
         <Modal
-            open={warningModalOpen}
+            bind:open={warningModalOpen}
             modalHeading="Error - Please check Address"
             primaryButtonText="Re-enter address"
             on:close
@@ -219,6 +222,7 @@
             style={isReadOnly ? 'pointer-events: none;' : ' '}
             labelText="Province"
             bind:selected={state}
+            on:change={() => handleEdit()}
         >
             {#each provinceData.keys() as key}
                 <SelectItem value={key} text={provinceData.get(key)} />
