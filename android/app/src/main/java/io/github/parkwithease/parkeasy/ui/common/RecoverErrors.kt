@@ -13,17 +13,19 @@ fun Result<Any>.recoverRequestErrors(
     handleError: (ErrorModel) -> Unit,
     snackbarState: SnackbarHostState,
     scope: CoroutineScope,
-): Result<Any> = recover {
-    when (it) {
-        is APIException -> {
-            handleError(it.error)
-            scope.launch { snackbarState.showSnackbar(operationFailMsg) }
-        }
-        is IOException -> {
-            scope.launch {
-                snackbarState.showSnackbar("Could not connect to server, are you online?")
+): Result<Unit> =
+    recover {
+            when (it) {
+                is APIException -> {
+                    handleError(it.error)
+                    scope.launch { snackbarState.showSnackbar(operationFailMsg) }
+                }
+                is IOException -> {
+                    scope.launch {
+                        snackbarState.showSnackbar("Could not connect to server, are you online?")
+                    }
+                }
+                else -> throw it
             }
         }
-        else -> throw it
-    }
-}
+        .map {}
