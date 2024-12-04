@@ -133,13 +133,16 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		Tags:        []string{BookingTag.Name},
 		Errors:      []int{http.StatusUnprocessableEntity},
 	}), func(ctx context.Context, input *struct {
-		Filter models.BookingFilter
-		After  models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
-		Count  int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of bookings that appear per page."`
+		ParkingSpotID uuid.UUID     `query:"parkingspot_id" doc:"id of the parking spot"`
+		After         models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
+		Count         int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of bookings that appear per page."`
 	},
 	) (*bookingListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		bookings, nextCursor, err := r.service.GetManyForBuyer(ctx, userID, input.Count, input.After, input.Filter)
+		filter := models.BookingFilter{
+			ParkingSpotID: input.ParkingSpotID,
+		}
+		bookings, nextCursor, err := r.service.GetManyForBuyer(ctx, userID, input.Count, input.After, filter)
 		if err != nil {
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err)
 		}
@@ -164,18 +167,21 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		Tags:        []string{BookingTag.Name},
 		Errors:      []int{http.StatusUnprocessableEntity, http.StatusForbidden},
 	}), func(ctx context.Context, input *struct {
-		Filter models.BookingFilter
-		After  models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
-		Count  int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of bookings that appear per page."`
+		ParkingSpotID uuid.UUID     `query:"parkingspot_id" doc:"id of the parking spot"`
+		After         models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
+		Count         int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of bookings that appear per page."`
 	},
 	) (*bookingListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		bookings, nextCursor, err := r.service.GetManyForSeller(ctx, userID, input.Count, input.After, input.Filter)
+		filter := models.BookingFilter{
+			ParkingSpotID: input.ParkingSpotID,
+		}
+		bookings, nextCursor, err := r.service.GetManyForSeller(ctx, userID, input.Count, input.After, filter)
 		if err != nil {
 			if errors.Is(err, models.ErrSpotNotOwned) {
 				detail := &huma.ErrorDetail{
-					Location: "path.parkingspot_id",
-					Value:    input.Filter.ParkingSpotID,
+					Location: "query.parkingspot_id",
+					Value:    input.ParkingSpotID,
 				}
 				return nil, NewHumaError(ctx, http.StatusForbidden, err, detail)
 			}
