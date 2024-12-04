@@ -580,6 +580,30 @@ func TestUpdateByUUID(t *testing.T) {
 			assert.ErrorIs(t, err, models.ErrInvalidPricePerHour)
 		}
 	})
+
+	t.Run("modify booked time unit check", func(t *testing.T) {
+		t.Parallel()
+
+		repo := new(mockRepo)
+		repo.AddGetCalls()
+		geoRepo := new(mockGeocodingRepo)
+		preferenceRepo := new(mockPreferenceSpotRepo)
+		srv := New(repo, geoRepo, preferenceRepo)
+
+		input := &models.ParkingSpotUpdateInput{
+			Availability: sampleAvailability,
+			PricePerHour: samplePricePerHour,
+		}
+
+		repo.On("UpdateByUUID", mock.Anything, testSpotID, input).
+			Return(parkingspot.Entry{}, []models.TimeUnit{}, models.ErrBookedTimeUnitModified).Once()
+
+		_, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
+
+		if assert.Error(t, err) {
+			assert.ErrorIs(t, err, models.ErrBookedTimeUnitModified)
+		}
+	})
 }
 
 func TestGetAvailByUUID(t *testing.T) {

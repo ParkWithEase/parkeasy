@@ -120,35 +120,33 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, spotID uuid.UUID,
 	}
 
 	// Get remaining booked times
-	bookedTimes, err := p.getBookedTimes(ctx, updated.Parkingspotid)
+	bookedTimeUnitsDB, err := getBookedTimes(ctx, tx, updated.Parkingspotid)
 	if err != nil {
 		return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: %w", err)
 	}
 
 	// Determine unbooked times to be inserted
-	newTimeUnits := timeUnitSetMinus(updateSpot.Availability, timeUnitsFromDB(bookedTimes))
+	newTimeUnits := timeUnitSetMinus(updateSpot.Availability, timeUnitsFromDB(bookedTimeUnitsDB))
 
 	// Insert unbooked times
 	newTimesSetter := timeSetterFromInput(newTimeUnits, updated.Parkingspotid)
-	newTimes := make(dbmodels.TimeunitSlice, 0, 8)
-	for _, setter := range newTimesSetter {
-		insertedTimes, err := dbmodels.Timeunits.Insert(ctx, p.db, setter)
-		if err != nil {
-			return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: %w", err)
-		}
-		newTimes = append(newTimes, insertedTimes)
-	}
-
-	// Get times from DB after update
-	bookedTimes, err = p.getBookedTimes(ctx, updated.Parkingspotid)
+	_, err = dbmodels.Timeunits.InsertMany(ctx, p.db, newTimesSetter...)
 	if err != nil {
 		return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: %w", err)
 	}
 
-	// Compare state of times in DB after update with times from input
-	audit := timeUnitSetMinus(updateSpot.Availability, timeUnitsFromDB(bookedTimes))
-	if len(audit) != 0 {
-		return Entry{}, []models.TimeUnit{}, errors.New("could not execute update: audit failed")
+	// Get times from DB after update
+	timeUnitsDB, err := getBookedTimes(ctx, tx, updated.Parkingspotid)
+	if err != nil {
+		return Entry{}, []models.TimeUnit{}, fmt.Errorf("could not execute update: %w", err)
+	}
+
+	// Ensure state of times in DB after update are 1:1 with times from update input
+	newAvailMinusTimeUnitsDB := timeUnitSetMinus(updateSpot.Availability, timeUnitsFromDB(timeUnitsDB))
+	timeUnitsDBMinusNewAvail := timeUnitSetMinus(timeUnitsFromDB(timeUnitsDB), updateSpot.Availability)
+	if len(newAvailMinusTimeUnitsDB) != 0 || len(timeUnitsDBMinusNewAvail) != 0 {
+		// Audit failure must mean update availability input is attempting to removed a booked time unit
+		return Entry{}, []models.TimeUnit{}, ErrDeleteBookedTimeUnit
 	}
 
 	// Commit since audit passed
@@ -161,14 +159,14 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, spotID uuid.UUID,
 	if err != nil {
 		return Entry{}, nil, fmt.Errorf("could not adapt dbmodels.Parkingspot: %w", err)
 	}
-	availability := timeUnitsFromDB(newTimes)
+	availability := timeUnitsFromDB(timeUnitsDB)
 
 	return entry, availability, nil
 }
 
-func (p *PostgresRepository) getBookedTimes(ctx context.Context, spotID int64) (dbmodels.TimeunitSlice, error) {
+func getBookedTimes(ctx context.Context, tx bob.Tx, spotID int64) (dbmodels.TimeunitSlice, error) {
 	return dbmodels.Timeunits.Query(
-		ctx, p.db,
+		ctx, tx,
 		sm.Columns(dbmodels.TimeunitColumns.Timerange),
 		psql.WhereAnd(dbmodels.SelectWhere.Timeunits.Parkingspotid.EQ(spotID)),
 	).All()
