@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.common
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.KeyboardActions
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import io.github.parkwithease.parkeasy.model.FieldState
@@ -30,7 +32,8 @@ fun ParkEasyTextField(
     labelString: String? = labelId?.let { stringResource(it) },
     label: @Composable (() -> Unit)? = labelString.textOrNull(),
     placeholder: @Composable (() -> Unit)? = null,
-    leadingIconImage: ImageVector? = null,
+    @DrawableRes leadingIconId: Int? = null,
+    leadingIconImage: ImageVector? = leadingIconId?.let { ImageVector.vectorResource(it) },
     leadingIcon: @Composable (() -> Unit)? = leadingIconImage.imageOrNull(),
     trailingIcon: @Composable (() -> Unit)? = null,
     prefix: @Composable (() -> Unit)? = null,

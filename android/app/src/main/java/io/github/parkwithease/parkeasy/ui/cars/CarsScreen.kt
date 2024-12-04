@@ -136,7 +136,7 @@ fun CarCard(car: Car, onClick: (Car) -> Unit, modifier: Modifier = Modifier) {
         Row(modifier = Modifier.padding(8.dp)) {
             Column(modifier = Modifier.weight(1f)) {
                 Image(
-                    painter = painterResource(R.drawable.wordmark_outlined),
+                    painter = painterResource(R.drawable.wordmark),
                     contentDescription = null,
                     modifier = Modifier.heightIn(max = 64.dp),
                 )
