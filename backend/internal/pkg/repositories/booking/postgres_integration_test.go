@@ -66,7 +66,7 @@ func TestPostgresIntegration(t *testing.T) {
 	userID_1, _ := userRepo.Create(ctx, authUUID_1, profile_1)
 
 	// Test variables for car
-	sampleDetails := []models.CarDetails{
+	sampleCarDetails := []models.CarDetails{
 		{
 			LicensePlate: "HTV 670",
 			Make:         "Honda",
@@ -80,8 +80,8 @@ func TestPostgresIntegration(t *testing.T) {
 			Color:        "Black",
 		},
 	}
-	_, carEntry, _ := carRepo.Create(ctx, userID, &models.CarCreationInput{CarDetails: sampleDetails[0]})
-	_, carEntry_1, _ := carRepo.Create(ctx, userID_1, &models.CarCreationInput{CarDetails: sampleDetails[1]})
+	_, carEntry, _ := carRepo.Create(ctx, userID, &models.CarCreationInput{CarDetails: sampleCarDetails[0]})
+	_, carEntry_1, _ := carRepo.Create(ctx, userID_1, &models.CarCreationInput{CarDetails: sampleCarDetails[1]})
 
 	// Test variables for parking spots
 	sampleTimeUnit := []models.TimeUnit{
@@ -248,26 +248,26 @@ func TestPostgresIntegration(t *testing.T) {
 
 		createEntry, err := repo.Create(ctx, &bookingCreationInput)
 
-		expectedCreateEntry := createExpectedEntry(createEntry.InternalID,
-			createEntry.ID,
+		expectedCreateEntry := createExpectedEntry(createEntry.Entry.InternalID,
+			createEntry.Entry.ID,
 			bookingCreationInput.PaidAmount,
 			parkingSpotEntry.ID,
 			carEntry.ID,
-			createEntry.CreatedAt,
+			createEntry.Entry.CreatedAt,
 			bookingCreationInput.UserID,
 		)
 
 		require.NoError(t, err)
-		require.NotNil(t, createEntry.ID)
-		require.NotNil(t, createEntry.CreatedAt)
+		require.NotNil(t, createEntry.Entry.ID)
+		require.NotNil(t, createEntry.Entry.CreatedAt)
 		assert.Empty(t, cmp.Diff(expectedCreateEntry, createEntry.Entry))
 		assert.Empty(t, cmp.Diff(bookingCreationInput.BookedTimes, createEntry.BookedTimes))
 
 		// Testing get
-		getEntry, err := repo.GetByUUID(ctx, createEntry.ID)
+		getEntry, err := repo.GetByUUID(ctx, createEntry.Entry.ID)
 		require.NoError(t, err)
-		require.NotNil(t, getEntry.ID)
-		require.NotNil(t, getEntry.CreatedAt)
+		require.NotNil(t, getEntry.Entry.ID)
+		require.NotNil(t, getEntry.Entry.CreatedAt)
 		assert.Empty(t, cmp.Diff(expectedCreateEntry, getEntry.Entry))
 		assert.Empty(t, cmp.Diff(bookingCreationInput.BookedTimes, getEntry.BookedTimes))
 	})
@@ -326,12 +326,12 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		expectedAllBuyerEntries := make([]EntryWithLocation, 0, 8)
-		expectedAllSellerEntries := make([]EntryWithLocation, 0, 8)
+		expectedAllBuyerEntries := make([]EntryWithDetails, 0, 8)
+		expectedAllSellerEntries := make([]EntryWithDetails, 0, 8)
 		// Create another to test for entries corresponding to a particular spot
-		expectedEntries_1 := make([]EntryWithLocation, 0, 8)
+		expectedEntries_1 := make([]EntryWithDetails, 0, 8)
 		// Create another one to test get many for seller
-		expectedEntries_2 := make([]EntryWithLocation, 0, 8)
+		expectedEntries_2 := make([]EntryWithDetails, 0, 8)
 
 		// Create multiple bookings and expected get many output
 		for eidx := range sampleTimeUnit {
@@ -342,16 +342,17 @@ func TestPostgresIntegration(t *testing.T) {
 			createEntry, err := repo.Create(ctx, &input)
 			require.NoError(t, err)
 
-			expectedCreateEntry := EntryWithLocation{
-				Entry: createExpectedEntry(createEntry.InternalID,
-					createEntry.ID,
+			expectedCreateEntry := EntryWithDetails{
+				Entry: createExpectedEntry(createEntry.Entry.InternalID,
+					createEntry.Entry.ID,
 					input.PaidAmount,
 					parkingSpotEntry.ID,
 					carEntry.ID,
-					createEntry.CreatedAt,
-					createEntry.BookerID,
+					createEntry.Entry.CreatedAt,
+					createEntry.Entry.BookerID,
 				),
 				ParkingSpotLocation: parkingSpotEntry.Location,
+				CarDetails:          carEntry.Details,
 			}
 			expectedAllBuyerEntries = append(expectedAllBuyerEntries, expectedCreateEntry)
 		}
@@ -370,16 +371,17 @@ func TestPostgresIntegration(t *testing.T) {
 			createEntry, err := repo.Create(ctx, &input)
 			require.NoError(t, err)
 
-			expectedCreateEntry := EntryWithLocation{
-				Entry: createExpectedEntry(createEntry.InternalID,
-					createEntry.ID,
+			expectedCreateEntry := EntryWithDetails{
+				Entry: createExpectedEntry(createEntry.Entry.InternalID,
+					createEntry.Entry.ID,
 					input.PaidAmount,
 					parkingSpotEntry_1.ID,
 					carEntry_1.ID,
-					createEntry.CreatedAt,
+					createEntry.Entry.CreatedAt,
 					userID,
 				),
 				ParkingSpotLocation: parkingSpotEntry_1.Location,
+				CarDetails:          carEntry_1.Details,
 			}
 			expectedEntries_1 = append(expectedEntries_1, expectedCreateEntry)
 		}
@@ -396,16 +398,17 @@ func TestPostgresIntegration(t *testing.T) {
 			createEntry, err := repo.Create(ctx, &input)
 			require.NoError(t, err)
 
-			expectedCreateEntry := EntryWithLocation{
-				Entry: createExpectedEntry(createEntry.InternalID,
-					createEntry.ID,
+			expectedCreateEntry := EntryWithDetails{
+				Entry: createExpectedEntry(createEntry.Entry.InternalID,
+					createEntry.Entry.ID,
 					input.PaidAmount,
 					parkingSpotEntry_2.ID,
 					carEntry_1.ID,
-					createEntry.CreatedAt,
+					createEntry.Entry.CreatedAt,
 					userID_1,
 				),
 				ParkingSpotLocation: parkingSpotEntry_2.Location,
+				CarDetails:          carEntry_1.Details,
 			}
 			expectedEntries_2 = append(expectedEntries_2, expectedCreateEntry)
 		}
@@ -426,14 +429,14 @@ func TestPostgresIntegration(t *testing.T) {
 				require.NoError(t, err)
 				if assert.LessOrEqual(t, 1, len(getManyEntries), "expecting at least one entry") {
 					cursor = omit.From(Cursor{
-						ID: getManyEntries[len(getManyEntries)-1].InternalID,
+						ID: getManyEntries[len(getManyEntries)-1].Entry.InternalID,
 					})
 				}
 
 				for eidx, entry := range getManyEntries {
 					unitIdx := len(expectedAllBuyerEntries) - (idx + eidx) - 1
 					if unitIdx < len(expectedAllBuyerEntries) {
-						require.NotNil(t, getManyEntries[eidx].ID)
+						require.NotNil(t, getManyEntries[eidx].Entry.ID)
 						assert.Empty(t, cmp.Diff(expectedAllBuyerEntries[unitIdx], entry))
 					}
 				}
@@ -453,14 +456,14 @@ func TestPostgresIntegration(t *testing.T) {
 				require.NoError(t, err)
 				if assert.LessOrEqual(t, 1, len(getManyEntries), "expecting at least one entry") {
 					cursor = omit.From(Cursor{
-						ID: getManyEntries[len(getManyEntries)-1].InternalID,
+						ID: getManyEntries[len(getManyEntries)-1].Entry.InternalID,
 					})
 				}
 
 				for eidx, entry := range getManyEntries {
 					unitIdx := len(expectedEntries_1) - (idx + eidx) - 1
 					if unitIdx < len(expectedEntries_1) {
-						require.NotNil(t, getManyEntries[eidx].ID)
+						require.NotNil(t, getManyEntries[eidx].Entry.ID)
 						assert.Empty(t, cmp.Diff(expectedEntries_1[unitIdx], entry))
 					}
 				}
@@ -502,14 +505,14 @@ func TestPostgresIntegration(t *testing.T) {
 				require.NoError(t, err)
 				if assert.LessOrEqual(t, 1, len(getManyEntries), "expecting at least one entry") {
 					cursor = omit.From(Cursor{
-						ID: getManyEntries[len(getManyEntries)-1].InternalID,
+						ID: getManyEntries[len(getManyEntries)-1].Entry.InternalID,
 					})
 				}
 
 				for eidx, entry := range getManyEntries {
 					unitIdx := len(expectedAllSellerEntries) - (idx + eidx) - 1
 					if unitIdx < len(expectedAllSellerEntries) {
-						require.NotNil(t, getManyEntries[eidx].ID)
+						require.NotNil(t, getManyEntries[eidx].Entry.ID)
 						assert.Empty(t, cmp.Diff(expectedAllSellerEntries[unitIdx], entry))
 					}
 				}
@@ -529,14 +532,14 @@ func TestPostgresIntegration(t *testing.T) {
 				require.NoError(t, err)
 				if assert.LessOrEqual(t, 1, len(getManyEntries), "expecting at least one entry") {
 					cursor = omit.From(Cursor{
-						ID: getManyEntries[len(getManyEntries)-1].InternalID,
+						ID: getManyEntries[len(getManyEntries)-1].Entry.InternalID,
 					})
 				}
 
 				for eidx, entry := range getManyEntries {
 					unitIdx := len(expectedEntries_1) - (idx + eidx) - 1
 					if unitIdx < len(expectedEntries_1) {
-						require.NotNil(t, getManyEntries[eidx].ID)
+						require.NotNil(t, getManyEntries[eidx].Entry.ID)
 						assert.Empty(t, cmp.Diff(expectedEntries_1[unitIdx], entry))
 					}
 				}
@@ -590,21 +593,23 @@ func TestPostgresIntegration(t *testing.T) {
 		require.NoError(t, err, "could not create booking")
 
 		// Test retrieval by UUID
-		retrievedEntry, err := repo.GetByUUID(ctx, createdBooking.ID)
+		retrievedEntry, err := repo.GetByUUID(ctx, createdBooking.Entry.ID)
 		require.NoError(t, err)
 		require.NotNil(t, retrievedEntry.Entry)
-		require.NotNil(t, retrievedEntry.CreatedAt)
+		require.NotNil(t, retrievedEntry.Entry.CreatedAt)
 
 		// Validate data
-		expectedEntry := createExpectedEntry(createdBooking.InternalID,
-			createdBooking.ID,
+		expectedEntry := createExpectedEntry(createdBooking.Entry.InternalID,
+			createdBooking.Entry.ID,
 			bookingCreationInput.PaidAmount,
 			parkingSpotEntry.ID,
 			carEntry.ID,
-			createdBooking.CreatedAt,
+			createdBooking.Entry.CreatedAt,
 			userID,
 		)
 		assert.Empty(t, cmp.Diff(expectedEntry, retrievedEntry.Entry))
+		assert.Empty(t, cmp.Diff(sampleLocation, retrievedEntry.ParkingSpotLocation))
+		assert.Empty(t, cmp.Diff(sampleCarDetails[0], retrievedEntry.CarDetails))
 		assert.Empty(t, cmp.Diff(bookingCreationInput.BookedTimes, retrievedEntry.BookedTimes))
 	})
 
