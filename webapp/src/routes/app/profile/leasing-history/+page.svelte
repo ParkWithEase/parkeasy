@@ -33,7 +33,7 @@
 <div class="list-container">
     {#key data.leasing_transactions}
         {#each data.leasing_transactions as transaction}
-            <a href={`/app/leasing-transaction/${transaction.id}`} style="text-decoration: none;">
+            <a href={`/app/transaction/${transaction.id}`} style="text-decoration: none;">
                 <SpotTransactionDisplay {transaction} transaction_type={TransactionType.BOOK} />
             </a>
         {/each}

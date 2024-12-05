@@ -4,7 +4,7 @@
     import { Information, Purchase } from 'carbon-icons-svelte';
     let currentSpotID: string = $page.params['id'];
     let spotBookingLink = `/app/booking/${currentSpotID}/spot-booking`;
-    let spotBookingLinkHistory = `/app/booking/${currentSpotID}/spot-booking-history`;
+    let spotBookingLinkHistory = `/app/booking/${currentSpotID}/booking-history`;
     import { responsiveState } from '$lib/stores/responsive';
     let shouldReponse: boolean = false;
     responsiveState.subscribe((value) => {

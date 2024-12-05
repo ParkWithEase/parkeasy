@@ -33,7 +33,6 @@ export function getErrorMessage(errorDetails?: ErrorModel): string {
         case 401:
             redirect(307, '/auth/login');
             break;
-        case 422:
         case 500:
             error(500, { message: errorDetails.detail ?? INTERNAL_SERVER_ERROR, ...errorDetails });
             break;

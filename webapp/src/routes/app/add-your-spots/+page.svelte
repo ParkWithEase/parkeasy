@@ -17,7 +17,6 @@
         Form,
         ProgressIndicator,
         ProgressStep,
-        TextInput,
         Button,
         ToastNotification,
         NumberInput
@@ -122,6 +121,10 @@
                 } else {
                     goto(`/app/your-spots/${data.id}/spot-info`, { replaceState: true });
                 }
+            })
+            .catch((err) => {
+                errorMessage = getErrorMessage(err);
+                toastTimeOut = ERROR_MESSAGE_TIME_OUT;
             });
     }
 
@@ -139,21 +142,6 @@
         }
     }
 </script>
-
-{#if showToast}
-    <div transition:fade class="error-message">
-        <ToastNotification
-            bind:timeout={toastTimeOut}
-            kind="error"
-            fullWidth
-            title="Error"
-            subtitle={errorMessage}
-            on:close={() => {
-                toastTimeOut = 0;
-            }}
-        />
-    </div>
-{/if}
 
 <div class="add-page-layout">
     <div style="position:sticky; top: 4rem;">
@@ -211,15 +199,28 @@
                         bind:value={newPricePerHour}
                     />
                 </div>
+
+                {#if showToast}
+                    <div transition:fade class="error-message">
+                        <ToastNotification
+                            bind:timeout={toastTimeOut}
+                            kind="error"
+                            fullWidth
+                            title="Error"
+                            subtitle={errorMessage}
+                            on:close={() => {
+                                toastTimeOut = 0;
+                            }}
+                        />
+                    </div>
+                {/if}
                 {#if currentIndex == 1}
                     <Button kind="secondary" on:click={clearEditRecords}>Clear</Button>
                     <Button type="submit">Submit</Button>
+                {:else if currentIndex == 2}
+                    <Button on:click={handleSubmitAll}>Confirm</Button>
                 {/if}
             </Form>
-        {/if}
-
-        {#if currentIndex == 2}
-            <Button on:click={handleSubmitAll}>Confirm</Button>
         {/if}
     </div>
 </div>
