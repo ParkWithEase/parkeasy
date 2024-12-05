@@ -5,7 +5,7 @@ import paginate from '$lib/utils/paginate';
 
 export const load: PageLoad = async ({ fetch, params }) => {
     const client = newClient({ fetch });
-    const paging = paginate(client, '/spots/{id}/leasings', {
+    const paging = paginate(client, '/spots/{id}/bookings', {
         params: { path: { id: params.id }, query: { count: 5 } }
     });
     const pageResult = await paging.next();
@@ -13,7 +13,7 @@ export const load: PageLoad = async ({ fetch, params }) => {
     handleGetError(err);
 
     return {
-        leasing_transaction: data ?? [],
+        booking_transactions: data ?? [],
         hasNext: !pageResult.done,
         paging: paging
     };

@@ -29,7 +29,7 @@
 <div>
     {#key data.spots}
         {#each data.spots as spot}
-            <a href={`/app/booking/${spot.id}`} style="text-decoration: none;">
+            <a href={`/app/booking/${spot.id}/spot-booking`} style="text-decoration: none;">
                 <SpotDisplay {spot} />
             </a>
         {/each}

@@ -15,9 +15,15 @@ type Entry struct {
 	BookerID   int64
 }
 
+type EntryWithDetails struct {
+	ParkingSpotLocation models.ParkingSpotLocation
+	CarDetails          models.CarDetails
+	Entry
+}
+
 type EntryWithTimes struct {
 	BookedTimes []models.TimeUnit
-	Entry
+	EntryWithDetails
 }
 
 type Filter struct {
@@ -46,6 +52,6 @@ var (
 type Repository interface {
 	Create(ctx context.Context, booking *CreateInput) (EntryWithTimes, error)
 	GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error)
-	GetManyForOwner(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error)
-	GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error)
+	GetManyForOwner(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]EntryWithDetails, error)
+	GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]EntryWithDetails, error)
 }

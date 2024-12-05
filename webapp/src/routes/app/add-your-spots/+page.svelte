@@ -17,9 +17,9 @@
         Form,
         ProgressIndicator,
         ProgressStep,
-        TextInput,
         Button,
-        ToastNotification
+        ToastNotification,
+        NumberInput
     } from 'carbon-components-svelte';
     import { fade } from 'svelte/transition';
 
@@ -84,7 +84,7 @@
 
     function handleSubmitAvailability(event: Event) {
         event.preventDefault();
-        if (toTimeUnits(availabilityTables).length > 0) {
+        if (toTimeUnits(availabilityTables, [TimeSlotStatus.AVAILABLE]).length > 0) {
             currentIndex += 1;
             isAvailabilityStepCompleted = true;
         } else {
@@ -111,7 +111,7 @@
                         street_address: streetAddress
                     },
                     price_per_hour: newPricePerHour,
-                    availability: toTimeUnits(availabilityTables)
+                    availability: toTimeUnits(availabilityTables, [TimeSlotStatus.AVAILABLE])
                 }
             })
             .then(({ data, error: err }) => {
@@ -121,6 +121,10 @@
                 } else {
                     goto(`/app/your-spots/${data.id}/spot-info`, { replaceState: true });
                 }
+            })
+            .catch((err) => {
+                errorMessage = getErrorMessage(err);
+                toastTimeOut = ERROR_MESSAGE_TIME_OUT;
             });
     }
 
@@ -138,21 +142,6 @@
         }
     }
 </script>
-
-{#if showToast}
-    <div transition:fade class="error-message">
-        <ToastNotification
-            bind:timeout={toastTimeOut}
-            kind="error"
-            fullWidth
-            title="Error"
-            subtitle={errorMessage}
-            on:close={() => {
-                toastTimeOut = 0;
-            }}
-        />
-    </div>
-{/if}
 
 <div class="add-page-layout">
     <div style="position:sticky; top: 4rem;">
@@ -199,26 +188,39 @@
             />
             <Form on:submit={handleSubmitAvailability}>
                 <div class="price-field">
-                    <TextInput
-                        labelText="Price per hour"
+                    <NumberInput
+                        label="Price per hour"
+                        hideSteppers
+                        step={0.01}
+                        min={0}
                         name="price-per-hour"
                         helperText="Price in CAD"
-                        type="number"
                         required
-                        readonly={currentIndex == 2}
-                        min={0}
                         bind:value={newPricePerHour}
                     />
                 </div>
+
+                {#if showToast}
+                    <div transition:fade class="error-message">
+                        <ToastNotification
+                            bind:timeout={toastTimeOut}
+                            kind="error"
+                            fullWidth
+                            title="Error"
+                            subtitle={errorMessage}
+                            on:close={() => {
+                                toastTimeOut = 0;
+                            }}
+                        />
+                    </div>
+                {/if}
                 {#if currentIndex == 1}
                     <Button kind="secondary" on:click={clearEditRecords}>Clear</Button>
                     <Button type="submit">Submit</Button>
+                {:else if currentIndex == 2}
+                    <Button on:click={handleSubmitAll}>Confirm</Button>
                 {/if}
             </Form>
-        {/if}
-
-        {#if currentIndex == 2}
-            <Button on:click={handleSubmitAll}>Confirm</Button>
         {/if}
     </div>
 </div>
