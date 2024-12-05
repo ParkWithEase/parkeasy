@@ -33,10 +33,21 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 	}
 }
 
-type getManyWithDetails struct {
-	dbmodels.Parkingspot
-	dbmodels.Car
+type getManyResult struct {
+	Postalcode    string `db:"postalcode" `
+	Countrycode   string `db:"countrycode" `
+	City          string `db:"city" `
+	State         string `db:"state" `
+	Streetaddress string `db:"streetaddress" `
+	Licenseplate  string `db:"licenseplate" `
+	Make          string `db:"make" `
+	Model         string `db:"model" `
+	Color         string `db:"color" `
 	dbmodels.Booking
+	Longitude       decimal.Decimal `db:"longitude" `
+	Latitude        decimal.Decimal `db:"latitude" `
+	Caruuid         uuid.UUID       `db:"caruuid" `
+	Parkingspotuuid uuid.UUID       `db:"parkingspotuuid" `
 }
 
 func (p *PostgresRepository) Create(ctx context.Context, booking *CreateInput) (EntryWithTimes, error) {
@@ -259,7 +270,7 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 
 	query := psql.Select(smods...)
 
-	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyWithDetails]())
+	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return []EntryWithDetails{}, nil
@@ -349,7 +360,7 @@ func (p *PostgresRepository) GetManyForOwner(ctx context.Context, limit int, aft
 
 	query := psql.Select(smods...)
 
-	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyWithDetails]())
+	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return []EntryWithDetails{}, nil
