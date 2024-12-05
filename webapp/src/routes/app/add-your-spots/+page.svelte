@@ -19,7 +19,8 @@
         ProgressStep,
         TextInput,
         Button,
-        ToastNotification
+        ToastNotification,
+        NumberInput
     } from 'carbon-components-svelte';
     import { fade } from 'svelte/transition';
 
@@ -199,14 +200,14 @@
             />
             <Form on:submit={handleSubmitAvailability}>
                 <div class="price-field">
-                    <TextInput
-                        labelText="Price per hour"
+                    <NumberInput
+                        label="Price per hour"
+                        hideSteppers
+                        step={0.01}
+                        min={0}
                         name="price-per-hour"
                         helperText="Price in CAD"
-                        type="number"
                         required
-                        readonly={currentIndex == 2}
-                        min={0}
                         bind:value={newPricePerHour}
                     />
                 </div>

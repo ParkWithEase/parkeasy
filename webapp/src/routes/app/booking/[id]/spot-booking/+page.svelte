@@ -8,7 +8,8 @@
         Form,
         ToastNotification,
         TooltipIcon,
-        FormGroup
+        FormGroup,
+        NumberInput
     } from 'carbon-components-svelte';
     import { TimeSlotStatus, TimeSlotStatusConverter } from '$lib/enum/timeslot-status';
     import {
@@ -380,13 +381,15 @@
                 />
             </div>
             <div class="price-field">
-                <TextInput
-                    labelText="Total price"
+                <NumberInput
+                    label="Price per hour"
+                    hideSteppers
+                    step={0.01}
+                    min={0}
                     name="price-per-hour"
                     helperText="Price in CAD"
-                    type="number"
-                    style="pointer-events: none;"
-                    bind:value={total}
+                    required
+                    bind:value={newPricePerHour}
                 />
             </div>
             <FormGroup>
@@ -426,7 +429,7 @@
                             {selectedCar ? selectedCar.details.license_plate : 'Select Your Car'}
                         </div>
                         <TooltipIcon
-                            style="margin-left: auto"
+                            style="margin-left: auto; pointer-events: none;"
                             icon={ChevronSortDown}
                             tooltipText={'select your car'}
                         ></TooltipIcon>
