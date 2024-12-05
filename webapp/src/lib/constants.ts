@@ -16,6 +16,9 @@ export const ACCOUNT_CREATE_SUCCESS =
 export const DEFAULT_ACCOUNT_CREATION_ERROR = 'Wrong invalid email or invalid password';
 export const PASSWORD_RESET_TOKEN_GET_ERROR =
     "We shouldn't be doing this but for demo sake, your email doesn't exist";
+export const BOOK_WITHOUT_SLOTS_ERROR = 'Cannot book without any slots selected';
+export const BOOK_WITHOUT_CAR = 'Cannot book without any car selected';
+
 export const PASSWORD_RESET_SUCCESS_MESSAGE = 'Password changed successfully';
 
 export const LATITUDE = 49.88887;

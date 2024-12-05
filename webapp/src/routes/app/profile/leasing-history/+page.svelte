@@ -1,78 +1,47 @@
 <script lang="ts">
-    import LeasingHistoryDisplay from '$lib/components/history-list-component/history-list-display.svelte';
-    let leasingList = [
-        {
-            booking_id: '000101010',
-            address: "Chancellor's Circle",
-            postalCode: 'X1X1X1',
-            price: 10.26,
-            time_from: 800,
-            time_to: 1000,
-            duration: 2
-        },
-        {
-            booking_id: '000101099',
-            address: 'St. Vital',
-            postalCode: 'ABC123',
-            price: 31.48,
-            time_from: 1600,
-            time_to: 2030,
-            duration: 4.5
-        },
-        {
-            booking_id: '000101010',
-            address: "Chancellor's Circle",
-            postalCode: 'X1X1X1',
-            price: 10.26,
-            time_from: 800,
-            time_to: 1000,
-            duration: 2
-        },
-        {
-            booking_id: '000101099',
-            address: 'St. Vital',
-            postalCode: 'ABC123',
-            price: 31.48,
-            time_from: 1600,
-            time_to: 2030,
-            duration: 4.5
-        },
-        {
-            booking_id: '000101010',
-            address: "Chancellor's Circle",
-            postalCode: 'X1X1X1',
-            price: 10.26,
-            time_from: 800,
-            time_to: 1000,
-            duration: 2
-        },
-        {
-            booking_id: '000101099',
-            address: 'St. Vital',
-            postalCode: 'ABC123',
-            price: 31.48,
-            time_from: 1600,
-            time_to: 2030,
-            duration: 4.5
-        }
-    ];
+    import SpotTransactionDisplay from '$lib/components/transaction/spot-transaction-display.svelte';
+    import { TransactionType } from '$lib/enum/transaction_type';
+    import IntersectionObserver from 'svelte-intersection-observer';
+    import type { PageData } from './$types';
+
+    export let data: PageData;
+
+    let loadLock = false;
+    let canLoadMore = data.hasNext;
+    let loadTrigger: HTMLElement | null = null;
+    let intersecting: boolean;
+
+    $: while (intersecting && canLoadMore && !loadLock) {
+        loadLock = true;
+        data.paging
+            .next()
+            .then(({ value: { data: leasing_transactions }, done }) => {
+                if (leasing_transactions) {
+                    data.leasing_transactions = [
+                        ...data.leasing_transactions,
+                        ...leasing_transactions
+                    ];
+                }
+                canLoadMore = !done;
+            })
+            .finally(() => {
+                loadLock = false;
+            });
+    }
 </script>
 
 <div class="list-container">
-    {#key leasingList}
-        {#each leasingList as leasing}
-            <div class="leasing-info-container">
-                <LeasingHistoryDisplay booking={leasing}></LeasingHistoryDisplay>
-            </div>
+    {#key data.leasing_transactions}
+        {#each data.leasing_transactions as transaction}
+            <a href={`/app/transaction/${transaction.id}`} style="text-decoration: none;">
+                <SpotTransactionDisplay {transaction} transaction_type={TransactionType.BOOK} />
+            </a>
         {/each}
     {/key}
 </div>
 
-<style>
-    .leasing-info-container {
-        display: flex;
-        flex-direction: row;
-        color: rgb(0, 0, 0);
-        border: 1px solid #cfcfcfcf;
-    }
-</style>
+<IntersectionObserver element={loadTrigger} bind:intersecting>
+    {#if canLoadMore}
+        <div bind:this={loadTrigger}>Loading...</div>
+    {/if}
+</IntersectionObserver>

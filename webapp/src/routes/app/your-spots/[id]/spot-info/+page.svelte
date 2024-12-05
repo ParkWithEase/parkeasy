@@ -1,7 +1,13 @@
 <script lang="ts">
     import type { PageData } from './$types';
     import Background from '$lib/images/background.png';
-    import { Content, Button, TextInput, Form, ToastNotification } from 'carbon-components-svelte';
+    import {
+        Content,
+        Button,
+        Form,
+        ToastNotification,
+        NumberInput
+    } from 'carbon-components-svelte';
     import { TimeSlotStatus, TimeSlotStatusConverter } from '$lib/enum/timeslot-status';
     import { DAY_IN_A_WEEK, ERROR_MESSAGE_TIME_OUT, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
     import { getMonday, getDateWithDayOffset } from '$lib/utils/datetime-util';
@@ -157,10 +163,10 @@
 
     function handleSubmitAvailability(event: Event) {
         event.preventDefault();
+        checkAvailabilityChange();
         //TODO: change parking spot price + availability using the edit records.
         // Clear the edit records on success
         // Might need to check if anything actually change and
-        console.log(checkAvailabilityChange());
     }
 
     function resetAvailabilityEdit() {
@@ -224,11 +230,13 @@
 
     <Form on:submit={handleSubmitAvailability}>
         <div class="price-field">
-            <TextInput
-                labelText="Price per hour"
+            <NumberInput
+                label="Price per hour"
+                hideSteppers
+                step={0.01}
+                min={0}
                 name="price-per-hour"
                 helperText="Price in CAD"
-                type="number"
                 required
                 bind:value={newPricePerHour}
             />

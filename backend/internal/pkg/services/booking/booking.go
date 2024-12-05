@@ -80,16 +80,16 @@ func (s *Service) Create(ctx context.Context, userID int64, spotUUID uuid.UUID, 
 	}
 
 	out := models.BookingWithTimes{
-		Booking:     result.Booking,
+		Booking:     result.Entry.Booking,
 		BookedTimes: result.BookedTimes,
 	}
 
-	return result.InternalID, out, nil
+	return result.Entry.InternalID, out, nil
 }
 
-func (s *Service) GetManyForOwner(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) (bookings []models.Booking, next models.Cursor, err error) {
+func (s *Service) GetManyForOwner(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) (bookings []models.BookingWithDetails, next models.Cursor, err error) {
 	if count <= 0 {
-		return []models.Booking{}, "", nil
+		return []models.BookingWithDetails{}, "", nil
 	}
 
 	var parkingSpot *parkingspot.Entry
@@ -101,7 +101,7 @@ func (s *Service) GetManyForOwner(ctx context.Context, userID int64, count int, 
 		// If any error occurs then just return empty slice as there will be no bookings
 		// corresponding to a non existent spot
 		if err != nil {
-			return []models.Booking{}, "", nil
+			return []models.BookingWithDetails{}, "", nil
 		}
 
 		// Check if the parking spot is owned by the seller
@@ -126,27 +126,32 @@ func (s *Service) GetManyForOwner(ctx context.Context, userID int64, count int, 
 		bookingEntries = bookingEntries[:len(bookingEntries)-1]
 
 		next, err = encodeCursor(booking.Cursor{
-			ID: bookingEntries[len(bookingEntries)-1].InternalID,
+			ID: bookingEntries[len(bookingEntries)-1].Entry.InternalID,
 		})
 		// This is an issue, but not enough to abort the request
 		if err != nil {
 			log.Err(err).
 				Int64("userid", userID).
-				Int64("bookingid", bookingEntries[len(bookingEntries)-1].InternalID).
+				Int64("bookingid", bookingEntries[len(bookingEntries)-1].Entry.InternalID).
 				Msg("could not encode next cursor")
 		}
 	}
 
-	result := make([]models.Booking, 0, len(bookingEntries))
-	for _, entry := range bookingEntries {
-		result = append(result, entry.Booking)
+	result := make([]models.BookingWithDetails, 0, len(bookingEntries))
+	for idx := range bookingEntries {
+		entry := &bookingEntries[idx]
+		result = append(result, models.BookingWithDetails{
+			Booking:             entry.Entry.Booking,
+			ParkingSpotLocation: entry.ParkingSpotLocation,
+			CarDetails:          entry.CarDetails,
+		})
 	}
 	return result, next, nil
 }
 
-func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) (bookings []models.Booking, next models.Cursor, err error) {
+func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) (bookings []models.BookingWithDetails, next models.Cursor, err error) {
 	if count <= 0 {
-		return []models.Booking{}, "", nil
+		return []models.BookingWithDetails{}, "", nil
 	}
 
 	var parkingSpot *parkingspot.Entry
@@ -158,7 +163,7 @@ func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, 
 		// If any error occurs then just return empty slice as there will be no bookings
 		// corresponding to a non existent spot
 		if err != nil {
-			return []models.Booking{}, "", nil
+			return []models.BookingWithDetails{}, "", nil
 		}
 
 		parkingSpot = &spotEntry
@@ -178,45 +183,54 @@ func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, 
 		bookingEntries = bookingEntries[:len(bookingEntries)-1]
 
 		next, err = encodeCursor(booking.Cursor{
-			ID: bookingEntries[len(bookingEntries)-1].InternalID,
+			ID: bookingEntries[len(bookingEntries)-1].Entry.InternalID,
 		})
 		// This is an issue, but not enough to abort the request
 		if err != nil {
 			log.Err(err).
 				Int64("userid", userID).
-				Int64("bookingid", bookingEntries[len(bookingEntries)-1].InternalID).
+				Int64("bookingid", bookingEntries[len(bookingEntries)-1].Entry.InternalID).
 				Msg("could not encode next cursor")
 		}
 	}
 
-	result := make([]models.Booking, 0, len(bookingEntries))
-	for _, entry := range bookingEntries {
-		result = append(result, entry.Booking)
+	result := make([]models.BookingWithDetails, 0, len(bookingEntries))
+	for idx := range bookingEntries {
+		entry := &bookingEntries[idx]
+		result = append(result, models.BookingWithDetails{
+			Booking:             entry.Entry.Booking,
+			ParkingSpotLocation: entry.ParkingSpotLocation,
+			CarDetails:          entry.CarDetails,
+		})
 	}
 	return result, next, nil
 }
 
-func (s *Service) GetByUUID(ctx context.Context, userID int64, bookingID uuid.UUID) (models.BookingWithTimes, error) {
+func (s *Service) GetByUUID(ctx context.Context, userID int64, bookingID uuid.UUID) (models.BookingWithDetailsAndTimes, error) {
 	entry, err := s.repo.GetByUUID(ctx, bookingID)
 	if err != nil {
 		if errors.Is(err, booking.ErrNotFound) {
-			return models.BookingWithTimes{}, models.ErrBookingNotFound
+			return models.BookingWithDetailsAndTimes{}, models.ErrBookingNotFound
 		}
 	}
 
 	// Retrieve the parkingspot owner ID
-	spotOwner, err := s.spotRepo.GetOwnerByUUID(ctx, entry.ParkingSpotID)
+	spotOwner, err := s.spotRepo.GetOwnerByUUID(ctx, entry.Entry.ParkingSpotID)
 	if err != nil {
-		return models.BookingWithTimes{}, err
+		return models.BookingWithDetailsAndTimes{}, err
 	}
 
 	// Check if the user is booker or seller
-	if (userID != entry.BookerID) && (userID != spotOwner) {
-		return models.BookingWithTimes{}, models.ErrBookingNotFound
+	if (userID != entry.Entry.BookerID) && (userID != spotOwner) {
+		return models.BookingWithDetailsAndTimes{}, models.ErrBookingNotFound
 	}
 
-	result := models.BookingWithTimes{
-		Booking:     entry.Booking,
+	result := models.BookingWithDetailsAndTimes{
+		BookingWithDetails: models.BookingWithDetails{
+			Booking:             entry.Entry.Booking,
+			ParkingSpotLocation: entry.ParkingSpotLocation,
+			CarDetails:          entry.CarDetails,
+		},
 		BookedTimes: entry.BookedTimes,
 	}
 
@@ -233,13 +247,13 @@ func (s *Service) GetBookedTimesByUUID(ctx context.Context, userID int64, bookin
 	}
 
 	// Retrieve the parkingspot owner ID
-	spotOwner, err := s.spotRepo.GetOwnerByUUID(ctx, entry.ParkingSpotID)
+	spotOwner, err := s.spotRepo.GetOwnerByUUID(ctx, entry.Entry.ParkingSpotID)
 	if err != nil {
 		return []models.TimeUnit{}, err
 	}
 
 	// Only the booker or seller can request the booked times
-	if (userID != entry.BookerID) && (userID != spotOwner) {
+	if (userID != entry.Entry.BookerID) && (userID != spotOwner) {
 		return []models.TimeUnit{}, models.ErrBookingNotFound
 	}
 

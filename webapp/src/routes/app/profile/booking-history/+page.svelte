@@ -1,42 +1,47 @@
 <script lang="ts">
-    import BookingHistoryDisplay from '$lib/components/history-list-component/history-list-display.svelte';
-    let bookingList = [
-        {
-            booking_id: '000101010',
-            address: "Chancellor's Circle",
-            postalCode: 'X1X1X1',
-            price: 10.26,
-            time_from: 800,
-            time_to: 1000,
-            duration: 2
-        },
-        {
-            booking_id: '000101099',
-            address: 'St. Vital',
-            postalCode: 'ABC123',
-            price: 31.48,
-            time_from: 1600,
-            time_to: 2030,
-            duration: 4.5
-        }
-    ];
+    import SpotTransactionDisplay from '$lib/components/transaction/spot-transaction-display.svelte';
+    import { TransactionType } from '$lib/enum/transaction_type';
+    import type { PageData } from './$types';
+    import IntersectionObserver from 'svelte-intersection-observer';
+
+    export let data: PageData;
+
+    let loadLock = false;
+    let canLoadMore = data.hasNext;
+    let loadTrigger: HTMLElement | null = null;
+    let intersecting: boolean;
+
+    $: while (intersecting && canLoadMore && !loadLock) {
+        loadLock = true;
+        data.paging
+            .next()
+            .then(({ value: { data: booking_transactions }, done }) => {
+                if (booking_transactions) {
+                    data.booking_transactions = [
+                        ...data.booking_transactions,
+                        ...booking_transactions
+                    ];
+                }
+                canLoadMore = !done;
+            })
+            .finally(() => {
+                loadLock = false;
+            });
+    }
 </script>
 
 <div class="list-container">
-    {#key bookingList}
-        {#each bookingList as booking}
-            <div class="booking-info-container">
-                <BookingHistoryDisplay {booking}></BookingHistoryDisplay>
-            </div>
+    {#key data.booking_transactions}
+        {#each data.booking_transactions as transaction}
+            <a href={`/app/transaction/${transaction.id}`} style="text-decoration: none;">
+                <SpotTransactionDisplay {transaction} transaction_type={TransactionType.BOOK} />
+            </a>
         {/each}
     {/key}
 </div>
 
-<style>
-    .booking-info-container {
-        display: flex;
-        flex-direction: row;
-        color: rgb(0, 0, 0);
-        border: 1px solid #cfcfcfcf;
-    }
-</style>
+<IntersectionObserver element={loadTrigger} bind:intersecting>
+    {#if canLoadMore}
+        <div bind:this={loadTrigger}>Loading...</div>
+    {/if}
+</IntersectionObserver>
