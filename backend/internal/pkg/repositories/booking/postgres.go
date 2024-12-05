@@ -34,9 +34,9 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 }
 
 type getManyWithDetails struct {
-	dbmodels.Booking
 	dbmodels.Parkingspot
 	dbmodels.Car
+	dbmodels.Booking
 }
 
 func (p *PostgresRepository) Create(ctx context.Context, booking *CreateInput) (EntryWithTimes, error) {

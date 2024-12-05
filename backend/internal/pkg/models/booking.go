@@ -24,14 +24,14 @@ type Booking struct {
 }
 
 type BookingWithDetails struct {
-	Booking
 	ParkingSpotLocation ParkingSpotLocation `json:"parkingspot_location" doc:"the location of parking spot"`
 	CarDetails          CarDetails          `json:"car_details" doc:"the details of car associated with booking"`
+	Booking
 }
 
 type BookingWithDetailsAndTimes struct {
-	BookingWithDetails
 	BookedTimes []TimeUnit `json:"booked_times" nullable:"false" doc:"The booked times of this booking"`
+	BookingWithDetails
 }
 
 type BookingWithTimes struct {

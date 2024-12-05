@@ -16,9 +16,9 @@ type Entry struct {
 }
 
 type EntryWithDetails struct {
-	Entry               Entry
 	ParkingSpotLocation models.ParkingSpotLocation
 	CarDetails          models.CarDetails
+	Entry
 }
 
 type EntryWithTimes struct {
