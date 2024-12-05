@@ -87,9 +87,9 @@ func (s *Service) Create(ctx context.Context, userID int64, spotUUID uuid.UUID, 
 	return result.InternalID, out, nil
 }
 
-func (s *Service) GetManyForOwner(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) (bookings []models.Booking, next models.Cursor, err error) {
+func (s *Service) GetManyForOwner(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) (bookings []models.BookingWithLocation, next models.Cursor, err error) {
 	if count <= 0 {
-		return []models.Booking{}, "", nil
+		return []models.BookingWithLocation{}, "", nil
 	}
 
 	var parkingSpot *parkingspot.Entry
@@ -101,7 +101,7 @@ func (s *Service) GetManyForOwner(ctx context.Context, userID int64, count int, 
 		// If any error occurs then just return empty slice as there will be no bookings
 		// corresponding to a non existent spot
 		if err != nil {
-			return []models.Booking{}, "", nil
+			return []models.BookingWithLocation{}, "", nil
 		}
 
 		// Check if the parking spot is owned by the seller
@@ -137,16 +137,19 @@ func (s *Service) GetManyForOwner(ctx context.Context, userID int64, count int, 
 		}
 	}
 
-	result := make([]models.Booking, 0, len(bookingEntries))
+	result := make([]models.BookingWithLocation, 0, len(bookingEntries))
 	for _, entry := range bookingEntries {
-		result = append(result, entry.Booking)
+		result = append(result, models.BookingWithLocation{
+			Booking:             entry.Booking,
+			ParkingSpotLocation: entry.ParkingSpotLocation,
+		})
 	}
 	return result, next, nil
 }
 
-func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) (bookings []models.Booking, next models.Cursor, err error) {
+func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) (bookings []models.BookingWithLocation, next models.Cursor, err error) {
 	if count <= 0 {
-		return []models.Booking{}, "", nil
+		return []models.BookingWithLocation{}, "", nil
 	}
 
 	var parkingSpot *parkingspot.Entry
@@ -158,7 +161,7 @@ func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, 
 		// If any error occurs then just return empty slice as there will be no bookings
 		// corresponding to a non existent spot
 		if err != nil {
-			return []models.Booking{}, "", nil
+			return []models.BookingWithLocation{}, "", nil
 		}
 
 		parkingSpot = &spotEntry
@@ -189,9 +192,12 @@ func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, 
 		}
 	}
 
-	result := make([]models.Booking, 0, len(bookingEntries))
+	result := make([]models.BookingWithLocation, 0, len(bookingEntries))
 	for _, entry := range bookingEntries {
-		result = append(result, entry.Booking)
+		result = append(result, models.BookingWithLocation{
+			Booking:             entry.Booking,
+			ParkingSpotLocation: entry.ParkingSpotLocation,
+		})
 	}
 	return result, next, nil
 }

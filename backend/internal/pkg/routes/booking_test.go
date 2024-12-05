@@ -33,15 +33,15 @@ func (m *mockBookingService) Create(ctx context.Context, userID int64, spotID uu
 }
 
 // GetManyForOwner implements BookingServicer.
-func (m *mockBookingService) GetManyForOwner(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error) {
+func (m *mockBookingService) GetManyForOwner(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.BookingWithLocation, models.Cursor, error) {
 	args := m.Called(ctx, userID, count, after, filter)
-	return args.Get(0).([]models.Booking), args.Get(1).(models.Cursor), args.Error(2)
+	return args.Get(0).([]models.BookingWithLocation), args.Get(1).(models.Cursor), args.Error(2)
 }
 
 // GetManyForBuyer implements BookingServicer.
-func (m *mockBookingService) GetManyForBuyer(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error) {
+func (m *mockBookingService) GetManyForBuyer(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.BookingWithLocation, models.Cursor, error) {
 	args := m.Called(ctx, userID, count, after, filter)
-	return args.Get(0).([]models.Booking), args.Get(1).(models.Cursor), args.Error(2)
+	return args.Get(0).([]models.BookingWithLocation), args.Get(1).(models.Cursor), args.Error(2)
 }
 
 // GetByUUID implements BookingServicer.
@@ -67,6 +67,26 @@ var sampleBookTimes = []models.TimeUnit{
 		EndTime:   time.Date(2024, time.October, 26, 11, 0, 0, 0, time.UTC),  // 11:00 AM
 		Status:    "available",
 	},
+}
+
+var testLocation = models.ParkingSpotLocation{
+	PostalCode:    "L2E6T2",
+	CountryCode:   "CA",
+	City:          "Niagara Falls",
+	StreetAddress: "6650 Niagara Parkway",
+	State:         "MB",
+	Latitude:      43.07923,
+	Longitude:     -79.07887,
+}
+
+var testLocation_1 = models.ParkingSpotLocation{
+	PostalCode:    "R3C1A6",
+	CountryCode:   "CA",
+	City:          "Winnipeg",
+	StreetAddress: "180 Main St",
+	State:         "MB",
+	Latitude:      49.88990,
+	Longitude:     -97.13599,
 }
 
 var (
@@ -103,6 +123,16 @@ var testBooking_1 = models.Booking{
 	CreatedAt:     bookTime,
 }
 
+var testBookingWithLocation = models.BookingWithLocation{
+	Booking:             testBooking,
+	ParkingSpotLocation: testLocation,
+}
+
+var testBookingWithLocation_1 = models.BookingWithLocation{
+	Booking:             testBooking_1,
+	ParkingSpotLocation: testLocation_1,
+}
+
 var testBookingWithTimes = models.BookingWithTimes{
 	Booking:     testBooking,
 	BookedTimes: sampleBookTimes,
@@ -111,6 +141,11 @@ var testBookingWithTimes = models.BookingWithTimes{
 var testBookings = []models.Booking{
 	testBooking,
 	testBooking_1,
+}
+
+var testBookingsWithLocation = []models.BookingWithLocation{
+	testBookingWithLocation,
+	testBookingWithLocation_1,
 }
 
 // Test cases for Create Booking
@@ -322,7 +357,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 
 		mockService := new(mockBookingService)
 		mockService.On("GetManyForBuyer", mock.Anything, userID, 10, models.Cursor(""), models.BookingFilter{}).
-			Return(testBookings, models.Cursor(""), nil).Once()
+			Return(testBookingsWithLocation, models.Cursor(""), nil).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
@@ -331,11 +366,11 @@ func TestListBookingsForBuyer(t *testing.T) {
 		resp := api.GetCtx(ctx, "/user/bookings?count=10")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
-		var bookings []models.Booking
+		var bookings []models.BookingWithLocation
 		err := json.NewDecoder(resp.Result().Body).Decode(&bookings)
 		require.NoError(t, err)
 		if assert.Len(t, bookings, 2) {
-			assert.Empty(t, cmp.Diff(testBookings, bookings))
+			assert.Empty(t, cmp.Diff(testBookingsWithLocation, bookings))
 		}
 
 		// Check for pagination link
@@ -358,12 +393,12 @@ func TestListBookingsForBuyer(t *testing.T) {
 
 		const testCursor = models.Cursor("cursor")
 		mockService.On("GetManyForBuyer", mock.Anything, userID, 10, testCursor, models.BookingFilter{}).
-			Return([]models.Booking{}, models.Cursor(""), nil).Once()
+			Return([]models.BookingWithLocation{}, models.Cursor(""), nil).Once()
 
 		resp := api.GetCtx(ctx, "/user/bookings?count=10&after="+string(testCursor))
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
-		var booking []models.Booking
+		var booking []models.BookingWithLocation
 		err := json.NewDecoder(resp.Result().Body).Decode(&booking)
 		require.NoError(t, err)
 		assert.Empty(t, booking)
@@ -380,7 +415,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		mockService.On("GetManyForBuyer", mock.Anything, userID, 1, models.Cursor(""), models.BookingFilter{}).
-			Return([]models.Booking{testBooking}, models.Cursor("cursor"), nil).Once()
+			Return([]models.BookingWithLocation{testBookingWithLocation}, models.Cursor("cursor"), nil).Once()
 
 		resp := api.GetCtx(ctx, "/user/bookings?count=1")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
@@ -413,7 +448,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		mockService.On("GetManyForBuyer", mock.Anything, userID, 1, models.Cursor(""), models.BookingFilter{}).
-			Return([]models.Booking{testBooking}, models.Cursor("cursor"), nil).Once()
+			Return([]models.BookingWithLocation{testBookingWithLocation}, models.Cursor("cursor"), nil).Once()
 
 		resp := api.GetCtx(ctx, "/user/bookings?count=1")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
@@ -442,7 +477,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 
 		mockService := new(mockBookingService)
 		mockService.On("GetManyForBuyer", mock.Anything, userID, 10, testCursor, models.BookingFilter{}).
-			Return(testBookings, models.Cursor(""), nil).Once()
+			Return(testBookingsWithLocation, models.Cursor(""), nil).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
@@ -451,10 +486,10 @@ func TestListBookingsForBuyer(t *testing.T) {
 		resp := api.GetCtx(ctx, "/user/bookings?count=10&after="+string(testCursor))
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
-		var bookings []models.Booking
+		var bookings []models.BookingWithLocation
 		err := json.NewDecoder(resp.Result().Body).Decode(&bookings)
 		require.NoError(t, err)
-		assert.Empty(t, cmp.Diff(testBookings, bookings))
+		assert.Empty(t, cmp.Diff(testBookingsWithLocation, bookings))
 
 		// Ensure no next link is provided when there are no more results
 		links := resp.Result().Header["Link"]
@@ -468,7 +503,7 @@ func TestListBookingsForBuyer(t *testing.T) {
 
 		mockService := new(mockBookingService)
 		mockService.On("GetManyForBuyer", mock.Anything, userID, 10, models.Cursor(""), models.BookingFilter{}).
-			Return([]models.Booking{}, models.Cursor(""), errors.New("unexpected error")).Once()
+			Return([]models.BookingWithLocation{}, models.Cursor(""), errors.New("unexpected error")).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
@@ -493,7 +528,7 @@ func TestListLeasingsForSeller(t *testing.T) {
 
 		mockService := new(mockBookingService)
 		mockService.On("GetManyForOwner", mock.Anything, userID, 10, models.Cursor(""), models.BookingFilter{}).
-			Return(testBookings, models.Cursor(""), nil).Once()
+			Return(testBookingsWithLocation, models.Cursor(""), nil).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
@@ -502,11 +537,11 @@ func TestListLeasingsForSeller(t *testing.T) {
 		resp := api.GetCtx(ctx, "/user/leasings?count=10")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
-		var bookings []models.Booking
+		var bookings []models.BookingWithLocation
 		err := json.NewDecoder(resp.Result().Body).Decode(&bookings)
 		require.NoError(t, err)
 		if assert.Len(t, bookings, 2) {
-			assert.Empty(t, cmp.Diff(testBookings, bookings))
+			assert.Empty(t, cmp.Diff(testBookingsWithLocation, bookings))
 		}
 
 		// Check for pagination link
@@ -525,7 +560,7 @@ func TestListLeasingsForSeller(t *testing.T) {
 		mockService := new(mockBookingService)
 		const testCursor = models.Cursor("cursor")
 		mockService.On("GetManyForOwner", mock.Anything, userID, 10, testCursor, models.BookingFilter{}).
-			Return([]models.Booking{}, models.Cursor(""), nil).Once()
+			Return([]models.BookingWithLocation{}, models.Cursor(""), nil).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
@@ -534,7 +569,7 @@ func TestListLeasingsForSeller(t *testing.T) {
 		resp := api.GetCtx(ctx, "/user/leasings?count=10&after="+string(testCursor))
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
 
-		var bookings []models.Booking
+		var bookings []models.BookingWithLocation
 		err := json.NewDecoder(resp.Result().Body).Decode(&bookings)
 		require.NoError(t, err)
 		assert.Empty(t, bookings)
@@ -547,7 +582,7 @@ func TestListLeasingsForSeller(t *testing.T) {
 
 		mockService := new(mockBookingService)
 		mockService.On("GetManyForOwner", mock.Anything, userID, 1, models.Cursor(""), models.BookingFilter{}).
-			Return([]models.Booking{testBooking}, models.Cursor("cursor"), nil).Once()
+			Return([]models.BookingWithLocation{testBookingWithLocation}, models.Cursor("cursor"), nil).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
@@ -584,7 +619,7 @@ func TestListLeasingsForSeller(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		mockService.On("GetManyForOwner", mock.Anything, userID, 1, models.Cursor(""), models.BookingFilter{}).
-			Return([]models.Booking{testBooking}, models.Cursor("cursor"), nil).Once()
+			Return([]models.BookingWithLocation{testBookingWithLocation}, models.Cursor("cursor"), nil).Once()
 
 		resp := api.GetCtx(ctx, "/user/leasings?count=1")
 		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
@@ -615,7 +650,7 @@ func TestListLeasingsForSeller(t *testing.T) {
 			ParkingSpotID: uuid.New(),
 		}
 		mockService.On("GetManyForOwner", mock.Anything, userID, 10, models.Cursor(""), invalidFilter).
-			Return([]models.Booking{}, models.Cursor(""), models.ErrSpotNotOwned).Once()
+			Return([]models.BookingWithLocation{}, models.Cursor(""), models.ErrSpotNotOwned).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)
@@ -643,7 +678,7 @@ func TestListLeasingsForSeller(t *testing.T) {
 
 		mockService := new(mockBookingService)
 		mockService.On("GetManyForOwner", mock.Anything, userID, 10, models.Cursor(""), models.BookingFilter{}).
-			Return([]models.Booking{}, models.Cursor(""), errors.New("unexpected error")).Once()
+			Return([]models.BookingWithLocation{}, models.Cursor(""), errors.New("unexpected error")).Once()
 
 		route := NewBookingRoute(mockService, fakeSessionDataGetter{})
 		_, api := humatest.New(t)

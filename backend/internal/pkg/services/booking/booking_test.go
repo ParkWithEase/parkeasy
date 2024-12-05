@@ -108,15 +108,15 @@ func (m *mockRepo) GetByUUID(ctx context.Context, bookingID uuid.UUID) (booking.
 }
 
 // GetManyForOwner implements booking.Repository.
-func (m *mockRepo) GetManyForOwner(ctx context.Context, limit int, after omit.Val[booking.Cursor], userID int64, filter *booking.Filter) ([]booking.Entry, error) {
+func (m *mockRepo) GetManyForOwner(ctx context.Context, limit int, after omit.Val[booking.Cursor], userID int64, filter *booking.Filter) ([]booking.EntryWithLocation, error) {
 	args := m.Called(ctx, limit, after, userID, filter)
-	return args.Get(0).([]booking.Entry), args.Error(1)
+	return args.Get(0).([]booking.EntryWithLocation), args.Error(1)
 }
 
 // GetManyForBuyer implements booking.Repository.
-func (m *mockRepo) GetManyForBuyer(ctx context.Context, limit int, after omit.Val[booking.Cursor], userID int64, filter *booking.Filter) ([]booking.Entry, error) {
+func (m *mockRepo) GetManyForBuyer(ctx context.Context, limit int, after omit.Val[booking.Cursor], userID int64, filter *booking.Filter) ([]booking.EntryWithLocation, error) {
 	args := m.Called(ctx, limit, after, userID, filter)
-	return args.Get(0).([]booking.Entry), args.Error(1)
+	return args.Get(0).([]booking.EntryWithLocation), args.Error(1)
 }
 
 // Define constants and sample for consistent test values
@@ -149,6 +149,16 @@ var (
 		State:         "AB",
 		City:          "Niagara Falls",
 		StreetAddress: "6650 Niagara Parkway",
+		Latitude:      sampleLatitudeFloat,
+		Longitude:     sampleLongitudeFloat,
+	}
+
+	sampleLocation_1 = models.ParkingSpotLocation{
+		PostalCode:    "L2E6D6",
+		CountryCode:   "CA",
+		State:         "ON",
+		City:          "Niagara Falls",
+		StreetAddress: "6950 Niagara Parkway",
 		Latitude:      sampleLatitudeFloat,
 		Longitude:     sampleLongitudeFloat,
 	}
@@ -212,6 +222,16 @@ var (
 		ParkingSpotID: testSpotUUID_1,
 		CarID:         testCarUUID_1,
 		CreatedAt:     testTime,
+	}
+
+	testBookingWithLocation = models.BookingWithLocation{
+		Booking:             testBooking,
+		ParkingSpotLocation: sampleLocation,
+	}
+
+	testBookingWithLocation_1 = models.BookingWithLocation{
+		Booking:             testBooking_1,
+		ParkingSpotLocation: sampleLocation_1,
 	}
 
 	testBookingEntryWithTimes = booking.EntryWithTimes{
@@ -444,14 +464,20 @@ func TestGetManyForBuyer(t *testing.T) {
 		spotRepo := new(mockParkingspotRepo)
 		service := New(repo, spotRepo, nil)
 
-		mockBookings := []booking.Entry{
+		mockBookings := []booking.EntryWithLocation{
 			{
-				Booking:    testBooking,
-				InternalID: testBookingInternalID,
+				Entry: booking.Entry{
+					Booking:    testBooking,
+					InternalID: testBookingInternalID,
+				},
+				ParkingSpotLocation: sampleLocation,
 			},
 			{
-				Booking:    testBooking_1,
-				InternalID: testBookingInternalID_1,
+				Entry: booking.Entry{
+					Booking:    testBooking_1,
+					InternalID: testBookingInternalID_1,
+				},
+				ParkingSpotLocation: sampleLocation_1,
 			},
 		}
 
@@ -463,7 +489,7 @@ func TestGetManyForBuyer(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, bookings, 2)
 		assert.Empty(t, cursor)
-		assert.Empty(t, cmp.Diff([]models.Booking{testBooking, testBooking_1}, bookings))
+		assert.Empty(t, cmp.Diff([]models.BookingWithLocation{testBookingWithLocation, testBookingWithLocation_1}, bookings))
 		repo.AssertExpectations(t)
 	})
 
@@ -474,10 +500,13 @@ func TestGetManyForBuyer(t *testing.T) {
 		spotRepo := new(mockParkingspotRepo)
 		service := New(repo, spotRepo, nil)
 
-		mockBookings := []booking.Entry{
+		mockBookings := []booking.EntryWithLocation{
 			{
-				Booking:    testBooking,
-				InternalID: testBookingInternalID,
+				Entry: booking.Entry{
+					Booking:    testBooking,
+					InternalID: testBookingInternalID,
+				},
+				ParkingSpotLocation: sampleLocation,
 			},
 		}
 
@@ -494,7 +523,7 @@ func TestGetManyForBuyer(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, bookings, 1)
 		assert.Empty(t, cursor)
-		assert.Equal(t, testBooking, bookings[0])
+		assert.Empty(t, cmp.Diff([]models.BookingWithLocation{testBookingWithLocation}, bookings))
 		spotRepo.AssertExpectations(t)
 		repo.AssertExpectations(t)
 	})
@@ -507,7 +536,7 @@ func TestGetManyForBuyer(t *testing.T) {
 		service := New(repo, spotRepo, nil)
 
 		repo.On("GetManyForBuyer", mock.Anything, 11, mock.Anything, testUserID, &booking.Filter{}).
-			Return([]booking.Entry{}, assert.AnError).
+			Return([]booking.EntryWithLocation{}, assert.AnError).
 			Once()
 
 		bookings, cursor, err := service.GetManyForBuyer(ctx, testUserID, 10, "", models.BookingFilter{})
@@ -526,18 +555,27 @@ func TestGetManyForBuyer(t *testing.T) {
 		spotRepo := new(mockParkingspotRepo)
 		service := New(repo, spotRepo, nil)
 
-		mockBookings := []booking.Entry{
+		mockBookings := []booking.EntryWithLocation{
 			{
-				Booking:    testBooking,
-				InternalID: testBookingInternalID,
+				Entry: booking.Entry{
+					Booking:    testBooking,
+					InternalID: testBookingInternalID,
+				},
+				ParkingSpotLocation: sampleLocation,
 			},
 			{
-				Booking:    testBooking,
-				InternalID: testBookingInternalID + 1,
+				Entry: booking.Entry{
+					Booking:    testBooking_1,
+					InternalID: testBookingInternalID + 1,
+				},
+				ParkingSpotLocation: sampleLocation_1,
 			},
 			{
-				Booking:    testBooking,
-				InternalID: testBookingInternalID + 2,
+				Entry: booking.Entry{
+					Booking:    testBooking_1,
+					InternalID: testBookingInternalID_1,
+				},
+				ParkingSpotLocation: sampleLocation_1,
 			},
 		}
 
@@ -550,7 +588,7 @@ func TestGetManyForBuyer(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, nextCursor)
 		if assert.Len(t, bookings, 2) {
-			assert.Equal(t, []models.Booking{testBooking, testBooking}, bookings)
+			assert.Equal(t, []models.BookingWithLocation{testBookingWithLocation, testBookingWithLocation_1}, bookings)
 		}
 
 		// Second request with next cursor
@@ -565,7 +603,7 @@ func TestGetManyForBuyer(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, nextCursor)
 		if assert.Len(t, bookings, 1) {
-			assert.Equal(t, testBooking, bookings[0])
+			assert.Equal(t, testBookingWithLocation_1, bookings[0])
 		}
 
 		repo.AssertExpectations(t)
@@ -578,18 +616,27 @@ func TestGetManyForBuyer(t *testing.T) {
 		spotRepo := new(mockParkingspotRepo)
 		service := New(repo, spotRepo, nil)
 
-		mockBookings := []booking.Entry{
+		mockBookings := []booking.EntryWithLocation{
 			{
-				Booking:    testBooking,
-				InternalID: testBookingInternalID,
+				Entry: booking.Entry{
+					Booking:    testBooking,
+					InternalID: testBookingInternalID,
+				},
+				ParkingSpotLocation: sampleLocation,
 			},
 			{
-				Booking:    testBooking,
-				InternalID: testBookingInternalID + 1,
+				Entry: booking.Entry{
+					Booking:    testBooking_1,
+					InternalID: testBookingInternalID + 1,
+				},
+				ParkingSpotLocation: sampleLocation_1,
 			},
 			{
-				Booking:    testBooking,
-				InternalID: testBookingInternalID + 2,
+				Entry: booking.Entry{
+					Booking:    testBooking_1,
+					InternalID: testBookingInternalID + 2,
+				},
+				ParkingSpotLocation: sampleLocation,
 			},
 		}
 
@@ -602,7 +649,7 @@ func TestGetManyForBuyer(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, nextCursor)
 		if assert.Len(t, bookings, 2) {
-			assert.Equal(t, []models.Booking{testBooking, testBooking}, bookings)
+			assert.Equal(t, []models.BookingWithLocation{testBookingWithLocation, testBookingWithLocation_1}, bookings)
 		}
 
 		repo.AssertExpectations(t)
@@ -687,10 +734,13 @@ func TestGetManyForOwner(t *testing.T) {
 		spotRepo := new(mockParkingspotRepo)
 		service := New(repo, spotRepo, nil)
 
-		mockBookings := []booking.Entry{
+		mockBookings := []booking.EntryWithLocation{
 			{
-				Booking:    testBooking,
-				InternalID: testBookingInternalID,
+				Entry: booking.Entry{
+					Booking:    testBooking,
+					InternalID: testBookingInternalID,
+				},
+				ParkingSpotLocation: sampleLocation,
 			},
 		}
 
@@ -702,7 +752,7 @@ func TestGetManyForOwner(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, bookings, 1)
 		assert.Empty(t, cursor)
-		assert.Equal(t, testBooking, bookings[0])
+		assert.Equal(t, testBookingWithLocation, bookings[0])
 		repo.AssertExpectations(t)
 	})
 
@@ -720,10 +770,13 @@ func TestGetManyForOwner(t *testing.T) {
 		}
 		filter := models.BookingFilter{ParkingSpotID: testSpotUUID}
 
-		mockBookings := []booking.Entry{
+		mockBookings := []booking.EntryWithLocation{
 			{
-				Booking:    testBooking,
-				InternalID: testBookingInternalID,
+				Entry: booking.Entry{
+					Booking:    testBooking,
+					InternalID: testBookingInternalID,
+				},
+				ParkingSpotLocation: sampleLocation,
 			},
 		}
 
@@ -738,7 +791,7 @@ func TestGetManyForOwner(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, bookings, 1)
 		assert.Empty(t, cursor)
-		assert.Equal(t, testBooking, bookings[0])
+		assert.Equal(t, testBookingWithLocation, bookings[0])
 		spotRepo.AssertExpectations(t)
 		repo.AssertExpectations(t)
 	})
@@ -751,7 +804,7 @@ func TestGetManyForOwner(t *testing.T) {
 		service := New(repo, spotRepo, nil)
 
 		repo.On("GetManyForOwner", mock.Anything, 11, omit.Val[booking.Cursor]{}, testUserID, &booking.Filter{}).
-			Return([]booking.Entry{}, assert.AnError).
+			Return([]booking.EntryWithLocation{}, assert.AnError).
 			Once()
 
 		bookings, cursor, err := service.GetManyForOwner(ctx, testUserID, 10, "", models.BookingFilter{})
