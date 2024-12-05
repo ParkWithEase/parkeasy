@@ -31,16 +31,11 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
     val profile =
         refreshTrigger
             .onStart { emit(Unit) }
-            .map {
-                userRepo.getUser().getOrDefault(Profile())
-            } // <- this flow gets user data on subscribe
+            .map { userRepo.getUser().getOrDefault(Profile()) }
             .stateIn(viewModelScope, SharingStarted.Lazily, Profile("", ""))
 
-    fun onLogoutClick() {
+    fun onLogoutClick() =
         viewModelScope.launch {
-            snackbarState.showSnackbar(
-                if (userRepo.logout()) "Logged out successfully" else "Error logging out"
-            )
+            userRepo.logout().onSuccess { snackbarState.showSnackbar("Logged out successfully") }
         }
-    }
 }

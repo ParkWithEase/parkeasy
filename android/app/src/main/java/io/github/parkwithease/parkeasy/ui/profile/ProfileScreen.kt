@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
@@ -26,6 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.Profile
+import io.github.parkwithease.parkeasy.ui.common.PreviewAll
+import io.github.parkwithease.parkeasy.ui.navbar.NavBar
+import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
 
 @Composable
 fun ProfileScreen(
@@ -36,12 +40,6 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
-    val profileRoutes =
-        listOf(
-            ProfileButtonRoute(R.string.cars, onNavigateToCars),
-            ProfileButtonRoute(R.string.spots, onNavigateToSpots),
-        )
-
     val loggedIn by viewModel.loggedIn.collectAsState(true)
     val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
 
@@ -49,19 +47,20 @@ fun ProfileScreen(
         LaunchedEffect(Unit) { latestOnNavigateToLogin() }
     } else {
         val profile by viewModel.profile.collectAsState()
-
-        Scaffold(
-            modifier = modifier,
-            bottomBar = navBar,
-            snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
-        ) { innerPadding ->
-            ProfileScreen(
-                profile,
-                profileRoutes,
-                viewModel::onLogoutClick,
-                Modifier.padding(innerPadding),
+        val profileRoutes =
+            listOf(
+                ProfileButtonRoute(R.string.cars, onNavigateToCars),
+                ProfileButtonRoute(R.string.spots, onNavigateToSpots),
             )
-        }
+
+        ProfileScreen(
+            profile = profile,
+            profileRoutes = profileRoutes,
+            onLogoutClick = viewModel::onLogoutClick,
+            navBar = navBar,
+            snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
+            modifier = modifier,
+        )
     }
 }
 
@@ -70,17 +69,21 @@ fun ProfileScreen(
     profile: Profile,
     profileRoutes: List<ProfileButtonRoute>,
     onLogoutClick: () -> Unit,
+    navBar: @Composable (() -> Unit),
+    snackbarHost: @Composable (() -> Unit),
     modifier: Modifier = Modifier,
 ) {
-    Surface(modifier) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            ProfileDetails(profile)
-            profileRoutes.forEach { ProfileButton(it.name, it.onNavigateTo) }
-            LogoutButton(onLogoutClick)
+    Scaffold(modifier = modifier, bottomBar = navBar, snackbarHost = snackbarHost) { innerPadding ->
+        Surface(Modifier.padding(innerPadding)) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                ProfileDetails(profile = profile, modifier = Modifier.width(280.dp))
+                profileRoutes.forEach { ProfileButton(it.name, it.onNavigateTo) }
+                LogoutButton(onLogoutClick)
+            }
         }
     }
 }
@@ -91,7 +94,7 @@ fun ProfileDetails(profile: Profile, modifier: Modifier = Modifier) {
         OutlinedTextField(
             value = profile.name,
             onValueChange = {},
-            modifier = Modifier.width(280.dp),
+            modifier = Modifier.fillMaxWidth(),
             readOnly = true,
             label = { Text(stringResource(R.string.name)) },
             singleLine = true,
@@ -99,7 +102,6 @@ fun ProfileDetails(profile: Profile, modifier: Modifier = Modifier) {
         OutlinedTextField(
             value = profile.email,
             onValueChange = {},
-            modifier = Modifier.width(280.dp),
             readOnly = true,
             label = { Text(stringResource(R.string.email)) },
             singleLine = true,
@@ -109,11 +111,7 @@ fun ProfileDetails(profile: Profile, modifier: Modifier = Modifier) {
 
 @Composable
 fun ProfileButton(@StringRes id: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.width(280.dp),
-        content = { Text(stringResource(id)) },
-    )
+    Button(onClick = onClick, modifier = modifier.width(280.dp)) { Text(stringResource(id)) }
 }
 
 @Composable
@@ -128,8 +126,24 @@ fun LogoutButton(onLogoutClick: () -> Unit, modifier: Modifier = Modifier) {
                 disabledContainerColor = MaterialTheme.colorScheme.errorContainer,
                 disabledContentColor = MaterialTheme.colorScheme.onErrorContainer,
             ),
-        content = { Text(stringResource(R.string.logout)) },
-    )
+    ) {
+        Text(stringResource(R.string.logout))
+    }
 }
 
 data class ProfileButtonRoute(@StringRes val name: Int, val onNavigateTo: () -> Unit)
+
+@Suppress("detekt:UnusedPrivateMember")
+@PreviewAll
+@Composable
+private fun ProfileScreenPreview() {
+    ParkEasyTheme {
+        ProfileScreen(
+            profile = Profile(),
+            profileRoutes = listOf(ProfileButtonRoute(R.string.cars, {})),
+            onLogoutClick = {},
+            navBar = { NavBar() },
+            snackbarHost = {},
+        )
+    }
+}

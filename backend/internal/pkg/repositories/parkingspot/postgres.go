@@ -227,6 +227,7 @@ func (p *PostgresRepository) GetAvailByUUID(ctx context.Context, spotID uuid.UUI
 	result, err := dbmodels.Timeunits.Query(
 		ctx, p.db,
 		sm.Columns(dbmodels.TimeunitColumns.Timerange),
+		sm.Columns(dbmodels.TimeunitColumns.Bookingid),
 		psql.WhereAnd(
 			dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
 			sm.Where(dbmodels.TimeunitColumns.Timerange.OP("&&", psql.Arg(dbtype.Tstzrange{
@@ -421,10 +422,17 @@ func entryFromDB(model *dbmodels.Parkingspot) (Entry, error) {
 func timeUnitsFromDB(model []*dbmodels.Timeunit) []models.TimeUnit {
 	result := make([]models.TimeUnit, 0, len(model))
 	for _, unit := range model {
+		var status string
+		if _, ok := unit.Bookingid.Get(); ok {
+			status = "booked"
+		} else {
+			status = "available"
+		}
+
 		result = append(result, models.TimeUnit{
 			StartTime: unit.Timerange.Start,
 			EndTime:   unit.Timerange.End,
-			Status:    "available",
+			Status:    status,
 		})
 	}
 	return result

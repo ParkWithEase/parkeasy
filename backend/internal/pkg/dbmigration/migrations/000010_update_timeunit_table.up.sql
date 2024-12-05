@@ -1,0 +1,2 @@
+ALTER TABLE TimeUnit
+ADD BookingId BIGINT DEFAULT NULL REFERENCES Booking(BookingID);

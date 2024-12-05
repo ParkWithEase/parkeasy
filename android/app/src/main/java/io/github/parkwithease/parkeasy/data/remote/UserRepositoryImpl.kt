@@ -41,8 +41,8 @@ constructor(
                     }
                 }
             }
-            .mapAPIError()
             .updateAuthCookie()
+            .mapAPIError()
             .map {}
 
     override suspend fun register(credentials: RegistrationCredentials): Result<Unit> =
@@ -54,21 +54,22 @@ constructor(
                     }
                 }
             }
-            .mapAPIError()
             .updateAuthCookie()
+            .mapAPIError()
             .map {}
 
-    override suspend fun logout(): Boolean =
+    override suspend fun logout(): Result<Unit> =
         authRepo.sessionFlow
             .firstOrNull()
-            ?.runCatching {
+            .runCatching {
+                if (this == null) throw LoggedOutException()
                 withContext(ioDispatcher) {
                     client.delete("/auth") { cookie(name = name, value = value) }
                 }
             }
-            ?.mapAPIError()
-            ?.updateAuthCookie()
-            .let { it == null || it.onFailure { e -> throw e }.isSuccess }
+            .updateAuthCookie()
+            .mapAPIError()
+            .map {}
 
     override suspend fun requestReset(credentials: ResetCredentials): Result<Unit> =
         runCatching {
@@ -93,11 +94,15 @@ constructor(
             }
             .mapAPIError()
             .let { result ->
-                result.mapCatching { if (result.isSuccess) it.body<Profile>() else Profile() }
+                result.mapCatching {
+                    if (it is HttpResponse && result.isSuccess) it.body<Profile>() else Profile()
+                }
             }
 
-    // Update authentication status based on the response assuming that the request alters
-    // authentication status
+    /**
+     * Update authentication status based on the [HttpResponse], assuming that the request alters
+     * authentication status
+     */
     private suspend fun Result<HttpResponse>.updateAuthCookie(): Result<HttpResponse> =
         onSuccess { response ->
                 response

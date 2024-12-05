@@ -1,25 +1,34 @@
 <script lang="ts">
     import { onDestroy } from 'svelte';
-    import Navbar from '$lib/components/navbar.svelte';
     import { MapLibre, DefaultMarker, Popup, GeolocateControl } from 'svelte-maplibre';
     import SpotsListComponent from '$lib/components/spot-listings/spots-list-component.svelte';
     import { Button } from 'carbon-components-svelte';
-    import { Search } from 'carbon-components-svelte';
+    import { Search, Slider } from 'carbon-components-svelte';
     import BottomPanelOpen from 'carbon-icons-svelte/lib/BottomPanelOpen.svelte';
     import type { components } from '$lib/sdk/schema';
     import { newClient } from '$lib/utils/client';
     import { handleGetError } from '$lib/utils/error-handler';
     import DetailModal from '$lib/components/spot-listings/detail-modal.svelte';
     import type { AddressResult } from '$lib/types/address/address';
+    import {
+        DEFAULT_DISTANCE,
+        INIT_ZOOM,
+        MAX_DISTANCE_RADIUS,
+        MAX_ZOOM,
+        MIN_DISTANCE_RADIUS,
+        SELECTED_ZOOM,
+        DISTANCE_RADIUS_STEP
+    } from '$lib/constants';
 
     type ParkingSpot = components['schemas']['ParkingSpot'];
 
     const apiKey = import.meta.env.VITE_GEOCODING_API_KEY;
-    const maxZoom: number = 12;
-    const defaultDistance = 10000;
+    const maxZoom = MAX_ZOOM;
+    const defaultDistance = DEFAULT_DISTANCE;
+    let distance = defaultDistance;
 
-    let initZoom: number = 0;
-    const selectedZoom: number = 11;
+    let initZoom: number = INIT_ZOOM;
+    const selectedZoom: number = SELECTED_ZOOM;
     const offset: [number, number] = [0, -10];
 
     let mapCenter: [number, number] = [0, 0];
@@ -74,7 +83,7 @@
         if (searchUsed === false) {
             searchUsed = true;
         }
-        fetchSpots(location.geometry.coordinates);
+        fetchSpots(location.geometry.coordinates, distance);
     };
 
     const handleClickOutside = (event: Event) => {
@@ -108,13 +117,13 @@
         selectedListing = newSelectedListing;
     };
 
-    const fetchSpots = async (coordinates: number[]) => {
+    const fetchSpots = async (coordinates: number[], radius: number) => {
         const { data: spots, error: errorSpots } = await client.GET('/spots', {
             params: {
                 query: {
                     latitude: coordinates[1],
                     longitude: coordinates[0],
-                    distance: defaultDistance
+                    distance: radius
                 }
             }
         });
@@ -122,12 +131,17 @@
         spotsData = spots ?? [];
     };
 
+    const handleRadiusChange = (radius: number) => {
+        distance = radius;
+        if (mapCenter[0] !== 0 && mapCenter[1] !== 0) {
+            fetchSpots(mapCenter, distance);
+        }
+    };
+
     onDestroy(() => {
         clearTimeout(debounceTimer);
     });
 </script>
-
-<Navbar />
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions-->
 <div class="container" on:click={handleClickOutside}>
@@ -151,6 +165,19 @@
                 {/each}
             </ul>
         {/if}
+
+        <div class="slider-container">
+            <Slider
+                value={distance}
+                min={MIN_DISTANCE_RADIUS}
+                max={MAX_DISTANCE_RADIUS}
+                step={DISTANCE_RADIUS_STEP}
+                minLabel="100m"
+                maxLabel="5km"
+                labelText="Distance Radius (metres)"
+                on:change={(event) => handleRadiusChange(event.detail)}
+            />
+        </div>
 
         {#if spotsData.length > 0}
             {#each spotsData as listing}
@@ -269,7 +296,7 @@
     }
 
     .highlight {
-        animation: smoothBlink 0.6s linear 4;
+        animation: smoothBlink 0.6s linear 3;
     }
 
     .back-to-top {
@@ -299,5 +326,9 @@
         display: flex;
         justify-content: center;
         margin: 1rem;
+    }
+
+    .slider-container :global(bx--form-item) {
+        flex: 0 0 auto;
     }
 </style>
