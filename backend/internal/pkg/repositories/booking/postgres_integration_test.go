@@ -326,12 +326,12 @@ func TestPostgresIntegration(t *testing.T) {
 			pool.Reset()
 		})
 
-		expectedAllBuyerEntries := make([]Entry, 0, 8)
-		expectedAllSellerEntries := make([]Entry, 0, 8)
+		expectedAllBuyerEntries := make([]EntryWithLocation, 0, 8)
+		expectedAllSellerEntries := make([]EntryWithLocation, 0, 8)
 		// Create another to test for entries corresponding to a particular spot
-		expectedEntries_1 := make([]Entry, 0, 8)
+		expectedEntries_1 := make([]EntryWithLocation, 0, 8)
 		// Create another one to test get many for seller
-		expectedEntries_2 := make([]Entry, 0, 8)
+		expectedEntries_2 := make([]EntryWithLocation, 0, 8)
 
 		// Create multiple bookings and expected get many output
 		for eidx := range sampleTimeUnit {
@@ -342,14 +342,17 @@ func TestPostgresIntegration(t *testing.T) {
 			createEntry, err := repo.Create(ctx, &input)
 			require.NoError(t, err)
 
-			expectedCreateEntry := createExpectedEntry(createEntry.InternalID,
-				createEntry.ID,
-				input.PaidAmount,
-				parkingSpotEntry.ID,
-				carEntry.ID,
-				createEntry.CreatedAt,
-				createEntry.BookerID,
-			)
+			expectedCreateEntry := EntryWithLocation{
+				Entry: createExpectedEntry(createEntry.InternalID,
+					createEntry.ID,
+					input.PaidAmount,
+					parkingSpotEntry.ID,
+					carEntry.ID,
+					createEntry.CreatedAt,
+					createEntry.BookerID,
+				),
+				ParkingSpotLocation: parkingSpotEntry.Location,
+			}
 			expectedAllBuyerEntries = append(expectedAllBuyerEntries, expectedCreateEntry)
 		}
 
@@ -367,14 +370,17 @@ func TestPostgresIntegration(t *testing.T) {
 			createEntry, err := repo.Create(ctx, &input)
 			require.NoError(t, err)
 
-			expectedCreateEntry := createExpectedEntry(createEntry.InternalID,
-				createEntry.ID,
-				input.PaidAmount,
-				parkingSpotEntry_1.ID,
-				carEntry_1.ID,
-				createEntry.CreatedAt,
-				userID,
-			)
+			expectedCreateEntry := EntryWithLocation{
+				Entry: createExpectedEntry(createEntry.InternalID,
+					createEntry.ID,
+					input.PaidAmount,
+					parkingSpotEntry_1.ID,
+					carEntry_1.ID,
+					createEntry.CreatedAt,
+					userID,
+				),
+				ParkingSpotLocation: parkingSpotEntry_1.Location,
+			}
 			expectedEntries_1 = append(expectedEntries_1, expectedCreateEntry)
 		}
 
@@ -390,14 +396,17 @@ func TestPostgresIntegration(t *testing.T) {
 			createEntry, err := repo.Create(ctx, &input)
 			require.NoError(t, err)
 
-			expectedCreateEntry := createExpectedEntry(createEntry.InternalID,
-				createEntry.ID,
-				input.PaidAmount,
-				parkingSpotEntry_2.ID,
-				carEntry_1.ID,
-				createEntry.CreatedAt,
-				userID_1,
-			)
+			expectedCreateEntry := EntryWithLocation{
+				Entry: createExpectedEntry(createEntry.InternalID,
+					createEntry.ID,
+					input.PaidAmount,
+					parkingSpotEntry_2.ID,
+					carEntry_1.ID,
+					createEntry.CreatedAt,
+					userID_1,
+				),
+				ParkingSpotLocation: parkingSpotEntry_2.Location,
+			}
 			expectedEntries_2 = append(expectedEntries_2, expectedCreateEntry)
 		}
 

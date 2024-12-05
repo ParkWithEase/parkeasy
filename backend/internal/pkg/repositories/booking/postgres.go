@@ -39,6 +39,19 @@ type getManyResult struct {
 	Caruuid         uuid.UUID `db:"caruuid" `
 }
 
+type getManyWithLocation struct {
+	dbmodels.Booking
+	Caruuid         uuid.UUID       `db:"caruuid" `
+	Parkingspotuuid uuid.UUID       `db:"parkingspotuuid" `
+	Postalcode      string          `db:"postalcode" `
+	Countrycode     string          `db:"countrycode" `
+	City            string          `db:"city" `
+	State           string          `db:"state" `
+	Streetaddress   string          `db:"streetaddress" `
+	Longitude       decimal.Decimal `db:"longitude" `
+	Latitude        decimal.Decimal `db:"latitude" `
+}
+
 func (p *PostgresRepository) Create(ctx context.Context, booking *CreateInput) (EntryWithTimes, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -201,7 +214,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	return entry, nil
 }
 
-func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error) {
+func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]EntryWithLocation, error) {
 	log := zerolog.Ctx(ctx).
 		With().
 		Str("component", "booking.Postgres").
@@ -210,6 +223,13 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 	smods := []bob.Mod[*dialect.SelectQuery]{
 		sm.Columns(dbmodels.Bookings.Columns()),
 		sm.Columns(dbmodels.ParkingspotColumns.Parkingspotuuid),
+		sm.Columns(dbmodels.ParkingspotColumns.City),
+		sm.Columns(dbmodels.ParkingspotColumns.Countrycode),
+		sm.Columns(dbmodels.ParkingspotColumns.Latitude),
+		sm.Columns(dbmodels.ParkingspotColumns.Longitude),
+		sm.Columns(dbmodels.ParkingspotColumns.Postalcode),
+		sm.Columns(dbmodels.ParkingspotColumns.State),
+		sm.Columns(dbmodels.ParkingspotColumns.Streetaddress),
 		sm.Columns(dbmodels.CarColumns.Caruuid),
 	}
 	var whereMods []mods.Where[*dialect.SelectQuery]
@@ -235,16 +255,16 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 
 	query := psql.Select(smods...)
 
-	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
+	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyWithLocation]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return []Entry{}, nil
+			return []EntryWithLocation{}, nil
 		}
 		return nil, err
 	}
 	defer entryCursor.Close()
 
-	result := make([]Entry, 0, 8)
+	result := make([]EntryWithLocation, 0, 8)
 
 	for entryCursor.Next() {
 		get, err := entryCursor.Get()
@@ -253,13 +273,28 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 			break
 		}
 
-		result = append(result, formEntry(&get.Booking, get.Parkingspotuuid, get.Caruuid))
+		// Convert lat and long from deciaml to float
+		lat, _ := get.Latitude.Float64()
+		long, _ := get.Longitude.Float64()
+
+		result = append(result, EntryWithLocation{
+			Entry: formEntry(&get.Booking, get.Parkingspotuuid, get.Caruuid),
+			ParkingSpotLocation: models.ParkingSpotLocation{
+				PostalCode:    get.Postalcode,
+				CountryCode:   get.Countrycode,
+				StreetAddress: get.Streetaddress,
+				State:         get.State,
+				City:          get.City,
+				Latitude:      lat,
+				Longitude:     long,
+			},
+		})
 	}
 
 	return result, nil
 }
 
-func (p *PostgresRepository) GetManyForOwner(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]Entry, error) {
+func (p *PostgresRepository) GetManyForOwner(ctx context.Context, limit int, after omit.Val[Cursor], userID int64, filter *Filter) ([]EntryWithLocation, error) {
 	log := zerolog.Ctx(ctx).
 		With().
 		Str("component", "booking.Postgres").
@@ -268,6 +303,13 @@ func (p *PostgresRepository) GetManyForOwner(ctx context.Context, limit int, aft
 	smods := []bob.Mod[*dialect.SelectQuery]{
 		sm.Columns(dbmodels.Bookings.Columns()),
 		sm.Columns(dbmodels.ParkingspotColumns.Parkingspotuuid),
+		sm.Columns(dbmodels.ParkingspotColumns.City),
+		sm.Columns(dbmodels.ParkingspotColumns.Countrycode),
+		sm.Columns(dbmodels.ParkingspotColumns.Latitude),
+		sm.Columns(dbmodels.ParkingspotColumns.Longitude),
+		sm.Columns(dbmodels.ParkingspotColumns.Postalcode),
+		sm.Columns(dbmodels.ParkingspotColumns.State),
+		sm.Columns(dbmodels.ParkingspotColumns.Streetaddress),
 		sm.Columns(dbmodels.CarColumns.Caruuid),
 	}
 	var whereMods []mods.Where[*dialect.SelectQuery]
@@ -293,16 +335,16 @@ func (p *PostgresRepository) GetManyForOwner(ctx context.Context, limit int, aft
 
 	query := psql.Select(smods...)
 
-	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyResult]())
+	entryCursor, err := bob.Cursor(ctx, p.db, query, scan.StructMapper[getManyWithLocation]())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return []Entry{}, nil
+			return []EntryWithLocation{}, nil
 		}
 		return nil, err
 	}
 	defer entryCursor.Close()
 
-	result := make([]Entry, 0, 8)
+	result := make([]EntryWithLocation, 0, 8)
 
 	for entryCursor.Next() {
 		get, err := entryCursor.Get()
@@ -310,7 +352,23 @@ func (p *PostgresRepository) GetManyForOwner(ctx context.Context, limit int, aft
 			log.Err(err).Msg("error iterating get many cursor")
 			break
 		}
-		result = append(result, formEntry(&get.Booking, get.Parkingspotuuid, get.Caruuid))
+
+		// Convert lat and long from deciaml to float
+		lat, _ := get.Latitude.Float64()
+		long, _ := get.Longitude.Float64()
+
+		result = append(result, EntryWithLocation{
+			Entry: formEntry(&get.Booking, get.Parkingspotuuid, get.Caruuid),
+			ParkingSpotLocation: models.ParkingSpotLocation{
+				PostalCode:    get.Postalcode,
+				CountryCode:   get.Countrycode,
+				StreetAddress: get.Streetaddress,
+				State:         get.State,
+				City:          get.City,
+				Latitude:      lat,
+				Longitude:     long,
+			},
+		})
 	}
 
 	return result, nil

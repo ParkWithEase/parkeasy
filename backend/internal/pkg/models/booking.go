@@ -23,6 +23,11 @@ type Booking struct {
 	CarID         uuid.UUID `json:"car_id" doc:"the ID of car associated with booking"`
 }
 
+type BookingWithLocation struct {
+	Booking
+	ParkingSpotLocation
+}
+
 type BookingWithTimes struct {
 	BookedTimes []TimeUnit `json:"booked_times" nullable:"false" doc:"The booked times of this booking"`
 	Booking
