@@ -33,12 +33,6 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 	}
 }
 
-type getManyResult struct {
-	dbmodels.Booking
-	Parkingspotuuid uuid.UUID `db:"parkingspotuuid" `
-	Caruuid         uuid.UUID `db:"caruuid" `
-}
-
 type getManyWithDetails struct {
 	dbmodels.Booking
 	dbmodels.Parkingspot
@@ -160,7 +154,6 @@ func timeSlotsToSQLExpr(units []models.TimeUnit) dialect.Expression {
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error) {
-
 	bookingResult, err := dbmodels.Bookings.Query(ctx, p.db,
 		dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingID),
 		dbmodels.PreloadBookingParkingspotidParkingspot(),

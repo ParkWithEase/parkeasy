@@ -138,7 +138,8 @@ func (s *Service) GetManyForOwner(ctx context.Context, userID int64, count int, 
 	}
 
 	result := make([]models.BookingWithDetails, 0, len(bookingEntries))
-	for _, entry := range bookingEntries {
+	for idx := range bookingEntries {
+		entry := &bookingEntries[idx]
 		result = append(result, models.BookingWithDetails{
 			Booking:             entry.Entry.Booking,
 			ParkingSpotLocation: entry.ParkingSpotLocation,
@@ -194,7 +195,8 @@ func (s *Service) GetManyForBuyer(ctx context.Context, userID int64, count int, 
 	}
 
 	result := make([]models.BookingWithDetails, 0, len(bookingEntries))
-	for _, entry := range bookingEntries {
+	for idx := range bookingEntries {
+		entry := &bookingEntries[idx]
 		result = append(result, models.BookingWithDetails{
 			Booking:             entry.Entry.Booking,
 			ParkingSpotLocation: entry.ParkingSpotLocation,

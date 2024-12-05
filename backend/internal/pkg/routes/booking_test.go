@@ -152,11 +152,6 @@ var testGetByUUIDEntry = models.BookingWithDetailsAndTimes{
 	BookedTimes:        sampleBookTimes,
 }
 
-var testBookings = []models.Booking{
-	testBooking,
-	testBooking_1,
-}
-
 var testBookingsWithDetails = []models.BookingWithDetails{
 	testBookingWithDetails,
 	testBookingWithDetails_1,
