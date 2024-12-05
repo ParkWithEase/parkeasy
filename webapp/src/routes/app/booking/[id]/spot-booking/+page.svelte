@@ -91,7 +91,7 @@
     let bookSlotsCount: number = 0;
     let total: number = 0;
 
-    $: total = data.spot?.price_per_hour ? bookSlotsCount * data.spot?.price_per_hour : 0;
+    $: total = data.spot?.price_per_hour ? (bookSlotsCount * data.spot?.price_per_hour) / 2 : 0;
     $: nextMonday = getDateWithDayOffset(currentMonday, DAY_IN_A_WEEK);
     $: availabilityTable = availabilityTableBooking.get(currentMonday.getTime()) || [];
 
@@ -370,17 +370,6 @@
         {/if}
         <Form on:submit={handleSubmitBooking}>
             <div class="price-field">
-                <TextInput
-                    labelText="Price per hour"
-                    name="price-per-hour"
-                    helperText="Price in CAD"
-                    type="number"
-                    required
-                    style="pointer-events: none;"
-                    bind:value={newPricePerHour}
-                />
-            </div>
-            <div class="price-field">
                 <NumberInput
                     label="Price per hour"
                     hideSteppers
@@ -390,6 +379,18 @@
                     helperText="Price in CAD"
                     required
                     bind:value={newPricePerHour}
+                />
+            </div>
+            <div class="price-field">
+                <NumberInput
+                    label="Total price"
+                    hideSteppers
+                    step={0.01}
+                    min={0}
+                    name="total-per-hour"
+                    helperText="Price in CAD"
+                    required
+                    bind:value={total}
                 />
             </div>
             <FormGroup>
