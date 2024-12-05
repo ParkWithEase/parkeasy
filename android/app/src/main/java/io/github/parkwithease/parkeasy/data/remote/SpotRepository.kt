@@ -17,4 +17,15 @@ interface SpotRepository {
      * @return whether the creation was successful or not.
      */
     suspend fun createSpot(spot: Spot): Result<Unit>
+
+    /**
+     * Gets [Spot]s around the location (latitude, longitude).
+     *
+     * @return a [Result] containing [List] of [Spot]s on success, failing [Result] otherwise.
+     */
+    suspend fun getSpotsAround(
+        latitude: Double,
+        longitude: Double,
+        distance: Int,
+    ): Result<List<Spot>>
 }

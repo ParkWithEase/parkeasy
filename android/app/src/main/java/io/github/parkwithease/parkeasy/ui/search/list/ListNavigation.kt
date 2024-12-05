@@ -1,4 +1,4 @@
-package io.github.parkwithease.parkeasy.ui.list
+package io.github.parkwithease.parkeasy.ui.search.list
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavController

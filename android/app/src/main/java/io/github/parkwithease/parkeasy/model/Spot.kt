@@ -13,7 +13,7 @@ import kotlinx.serialization.encoding.Encoder
 
 @Serializable
 data class Spot(
-    val availability: List<TimeSlot> = emptyList(),
+    val availability: List<TimeUnit> = emptyList(),
     val features: SpotFeatures = SpotFeatures(),
     val id: String = "",
     val location: SpotLocation = SpotLocation(),
@@ -39,14 +39,20 @@ data class SpotLocation(
 )
 
 @Serializable
-data class TimeSlot(
+data class TimeUnit(
     @Serializable(with = LocalDateTimeToRFC3339::class)
     @SerialName("start_time")
     val startTime: LocalDateTime,
     @Serializable(with = LocalDateTimeToRFC3339::class)
     @SerialName("end_time")
     val endTime: LocalDateTime,
-)
+    val status: String = "",
+) {
+    companion object {
+        const val BOOKED = "booked"
+        const val AVAILABLE = "available"
+    }
+}
 
 object LocalDateTimeToRFC3339 : KSerializer<LocalDateTime> {
     private val format = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")

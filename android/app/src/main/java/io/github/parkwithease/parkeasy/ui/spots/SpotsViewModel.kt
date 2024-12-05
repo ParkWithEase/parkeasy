@@ -16,7 +16,7 @@ import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.model.SpotFeatures
 import io.github.parkwithease.parkeasy.model.SpotLocation
-import io.github.parkwithease.parkeasy.model.TimeSlot
+import io.github.parkwithease.parkeasy.model.TimeUnit
 import io.github.parkwithease.parkeasy.ui.common.recoverRequestErrors
 import io.github.parkwithease.parkeasy.ui.common.startOfNextAvailableDayInstant
 import io.github.parkwithease.parkeasy.ui.common.toIndex
@@ -69,7 +69,7 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                             formState.selectedIds.value
                                 .sortedBy { it }
                                 .map {
-                                    TimeSlot(
+                                    TimeUnit(
                                         startTime = it.toLocalDateTime(),
                                         endTime = (it + 1).toLocalDateTime(),
                                     )

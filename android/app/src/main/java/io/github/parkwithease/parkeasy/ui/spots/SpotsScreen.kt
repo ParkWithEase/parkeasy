@@ -51,6 +51,7 @@ import io.github.parkwithease.parkeasy.R
 import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.Spot
+import io.github.parkwithease.parkeasy.model.SpotLocation
 import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 import io.github.parkwithease.parkeasy.ui.common.PreviewAll
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
@@ -154,7 +155,7 @@ fun SpotCard(spot: Spot, onClick: (Spot) -> Unit, modifier: Modifier = Modifier)
 
 @Composable
 fun AddSpotButton(onShowAddSpotClick: () -> Unit, modifier: Modifier = Modifier) {
-    FloatingActionButton(onClick = onShowAddSpotClick, modifier) {
+    FloatingActionButton(onClick = onShowAddSpotClick, modifier = modifier) {
         Icon(imageVector = Icons.Filled.Add, contentDescription = stringResource(R.string.add_spot))
     }
 }
@@ -252,7 +253,19 @@ fun AddSpotScreen(
 @PreviewAll
 @Composable
 private fun SpotsScreenPreview() {
-    val spots = listOf(Spot())
+    val spots =
+        listOf(
+            Spot(
+                location =
+                    SpotLocation(
+                        streetAddress = "66 Chancellors Cir",
+                        city = "Winnipeg",
+                        state = "MB",
+                        countryCode = "CA",
+                        postalCode = "R3T2N2",
+                    )
+            )
+        )
     ParkEasyTheme {
         SpotsScreen(
             spots = spots,

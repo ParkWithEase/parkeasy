@@ -3,7 +3,7 @@ package io.github.parkwithease.parkeasy.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-@Serializable data class Car(val details: CarDetails, val id: String)
+@Serializable data class Car(val details: CarDetails = CarDetails(), val id: String = "")
 
 @Serializable
 data class CarDetails(
