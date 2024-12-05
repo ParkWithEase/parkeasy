@@ -256,6 +256,7 @@
 
     function resetBookingEdit() {
         availabilityTableBooking = structuredClone(availabilityTablesInitial);
+        bookSlotsCount = 0;
     }
 
     /*
@@ -270,7 +271,7 @@
                 availabilityTable[event.detail.segment][event.detail.day] =
                     TimeSlotStatus.BOOK_INTENT;
             } else {
-                bookSlotsCount += 1;
+                bookSlotsCount -= 1;
                 availabilityTable[event.detail.segment][event.detail.day] =
                     TimeSlotStatus.AVAILABLE;
             }

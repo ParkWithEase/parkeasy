@@ -380,12 +380,25 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Booking: {
+        BookingCreationInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             */
+            readonly $schema?: string;
+            /** @description The booked times of this booking */
+            booked_times: components["schemas"]["TimeUnit"][];
+            /** @description ID of the car for which parking spot being booked */
+            car_id: string;
+        };
+        BookingWithDetails: {
             /**
              * Format: date-time
              * @description time when the booking was made
              */
             booking_time: string;
+            /** @description the details of car associated with booking */
+            car_details: components["schemas"]["CarDetails"];
             /** @description the ID of car associated with booking */
             car_id: string;
             /** @description ID of this resource */
@@ -397,8 +410,10 @@ export interface components {
             paid_amount: number;
             /** @description the ID of parking spot associated with booking */
             parkingspot_id: string;
+            /** @description the location of parking spot */
+            parkingspot_location: components["schemas"]["ParkingSpotLocation"];
         };
-        BookingCreationInput: {
+        BookingWithDetailsAndTimes: {
             /**
              * Format: uri
              * @description A URL to the JSON Schema for this object.
@@ -406,8 +421,26 @@ export interface components {
             readonly $schema?: string;
             /** @description The booked times of this booking */
             booked_times: components["schemas"]["TimeUnit"][];
-            /** @description ID of the car for which parking spot being booked */
+            /**
+             * Format: date-time
+             * @description time when the booking was made
+             */
+            booking_time: string;
+            /** @description the details of car associated with booking */
+            car_details: components["schemas"]["CarDetails"];
+            /** @description the ID of car associated with booking */
             car_id: string;
+            /** @description ID of this resource */
+            id: string;
+            /**
+             * Format: double
+             * @description the amount paid for the booking
+             */
+            paid_amount: number;
+            /** @description the ID of parking spot associated with booking */
+            parkingspot_id: string;
+            /** @description the location of parking spot */
+            parkingspot_location: components["schemas"]["ParkingSpotLocation"];
         };
         BookingWithTimes: {
             /**
@@ -1024,7 +1057,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BookingWithTimes"];
+                    "application/json": components["schemas"]["BookingWithDetailsAndTimes"];
                 };
             };
             /** @description Unauthorized */
@@ -1737,7 +1770,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Booking"][];
+                    "application/json": components["schemas"]["BookingWithDetails"][];
                 };
             };
             /** @description Unauthorized */
@@ -1845,7 +1878,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Booking"][];
+                    "application/json": components["schemas"]["BookingWithDetails"][];
                 };
             };
             /** @description Unauthorized */
@@ -2141,7 +2174,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Booking"][];
+                    "application/json": components["schemas"]["BookingWithDetails"][];
                 };
             };
             /** @description Unauthorized */
@@ -2194,7 +2227,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Booking"][];
+                    "application/json": components["schemas"]["BookingWithDetails"][];
                 };
             };
             /** @description Unauthorized */

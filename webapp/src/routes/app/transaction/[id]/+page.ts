@@ -18,12 +18,9 @@ export const load: PageLoad = async ({ fetch, params }) => {
 
     handleGetError(spot_error);
 
-    // const {data: car, error: car_error} = await client.GET("/cars/{id}", {params: {path: {id: transaction_info?.car_id ?? ''}}})
-
-    // handleGetError(car_error);
     return {
         transaction_info: transaction_info,
-        car:  null,
         spot: spot_info,
+        car: transaction_info?.car_details,
     };
 };

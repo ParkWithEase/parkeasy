@@ -19,7 +19,7 @@
 
     //Variable for location edit section
     let spot = data.spot;
-
+    let car = data.car;
     //reminder to change these to now()
     let today: Date = new Date(Date.now());
     let currentMonday: Date;
@@ -28,7 +28,6 @@
 
     let bookedTableList = new Map<number, TimeSlotStatus[][]>();
     bookedTableList = createInitialBookedTable(data.transaction_info?.booked_times ?? [], today);
-    console.log(bookedTableList);
     currentMonday = new Date(
         bookedTableList.keys().reduce((min, current) => {
             return current < min ? current : min;
@@ -94,6 +93,10 @@
         <SpotInfo bind:spot />
 
         <p class="spot-info-header">Parking Car Info</p>
+        <p>License Plate: {car?.license_plate}</p>
+        <p>Color: {car?.color}</p>
+        <p>Model: {car?.model}</p>
+        <p>Make: {car?.make}</p>
 
         <p class="spot-info-header">Booked Time slots</p>
         <div class="price-field">
