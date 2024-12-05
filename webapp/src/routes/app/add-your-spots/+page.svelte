@@ -84,7 +84,7 @@
 
     function handleSubmitAvailability(event: Event) {
         event.preventDefault();
-        if (toTimeUnits(availabilityTables).length > 0) {
+        if (toTimeUnits(availabilityTables, [TimeSlotStatus.AVAILABLE]).length > 0) {
             currentIndex += 1;
             isAvailabilityStepCompleted = true;
         } else {
@@ -111,7 +111,7 @@
                         street_address: streetAddress
                     },
                     price_per_hour: newPricePerHour,
-                    availability: toTimeUnits(availabilityTables)
+                    availability: toTimeUnits(availabilityTables, [TimeSlotStatus.AVAILABLE])
                 }
             })
             .then(({ data, error: err }) => {
