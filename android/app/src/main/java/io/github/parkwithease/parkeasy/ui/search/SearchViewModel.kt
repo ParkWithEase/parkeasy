@@ -81,12 +81,27 @@ constructor(
         }
     }
 
+    fun refreshAvailability() {
+        viewModelScope.launch {
+            spotRepo
+                .getSpotAvailability(createState.selectedSpot.value.id)
+                .onSuccess {}
+                .recoverRequestErrors(
+                    "Error retrieving availabilities",
+                    {},
+                    snackbarState,
+                    viewModelScope,
+                )
+        }
+    }
+
     fun onCarChange(value: Car) {
         createState = createState.run { copy(selectedCar = selectedCar.copy(value = value)) }
     }
 
     fun onSpotChange(value: Spot) {
         createState = createState.run { copy(selectedSpot = selectedSpot.copy(value = value)) }
+        refreshAvailability()
     }
 
     fun onLatitudeChange(value: Double) {

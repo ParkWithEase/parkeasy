@@ -5,6 +5,7 @@ import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
 import io.github.parkwithease.parkeasy.model.LoggedOutException
 import io.github.parkwithease.parkeasy.model.Spot
+import io.github.parkwithease.parkeasy.model.TimeUnit
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.cookie
@@ -76,5 +77,19 @@ constructor(
             .mapAPIError()
             .let { result ->
                 result.mapCatching { if (result.isSuccess) it.body<List<Spot>>() else emptyList() }
+            }
+
+    override suspend fun getSpotAvailability(id: String): Result<List<TimeUnit>> =
+        authRepo.sessionFlow
+            .firstOrNull()
+            .runCatching {
+                if (this == null) throw LoggedOutException()
+                withContext(ioDispatcher) {
+                    client.get("/spots/${id}/availability") { cookie(name, value) }
+                }
+            }
+            .mapAPIError()
+            .let { result ->
+                result.mapCatching { if (result.isSuccess) it.body() else emptyList() }
             }
 }

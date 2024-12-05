@@ -1,6 +1,7 @@
 package io.github.parkwithease.parkeasy.data.remote
 
 import io.github.parkwithease.parkeasy.model.Spot
+import io.github.parkwithease.parkeasy.model.TimeUnit
 
 interface SpotRepository {
     /**
@@ -28,4 +29,12 @@ interface SpotRepository {
         longitude: Double,
         distance: Int,
     ): Result<List<Spot>>
+
+    /**
+     * Gets a [List] of [TimeUnit]s for a given [Spot], given its id.
+     *
+     * @param id - the id of the [Spot].
+     * @return a [Result] containing [List] of [TimeUnit]s on success, failing [Result] otherwise.
+     */
+    suspend fun getSpotAvailability(id: String): Result<List<TimeUnit>>
 }

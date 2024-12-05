@@ -1,12 +1,13 @@
 package io.github.parkwithease.parkeasy.model
 
-import java.time.format.DateTimeFormatter
 import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDateTime
+import kotlinx.datetime.format
+import kotlinx.datetime.format.char
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
@@ -41,10 +42,10 @@ data class SpotLocation(
 
 @Serializable
 data class TimeUnit(
-    @Serializable(with = LocalDateTimeToRFC3339::class)
+    @Serializable(with = LocalDateTimeRFC3339Serializer::class)
     @SerialName("start_time")
     val startTime: LocalDateTime,
-    @Serializable(with = LocalDateTimeToRFC3339::class)
+    @Serializable(with = LocalDateTimeRFC3339Serializer::class)
     @SerialName("end_time")
     val endTime: LocalDateTime,
     val status: String = "",
@@ -55,15 +56,30 @@ data class TimeUnit(
     }
 }
 
-object LocalDateTimeToRFC3339 : KSerializer<LocalDateTime> {
-    private val format = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+object LocalDateTimeRFC3339Serializer : KSerializer<LocalDateTime> {
+    private val format =
+        LocalDateTime.Format {
+            year()
+            char('-')
+            monthNumber()
+            char('-')
+            dayOfMonth()
+            char('T')
+            hour()
+            char(':')
+            minute()
+            char(':')
+            second()
+            char('Z')
+        }
 
-    override val descriptor: SerialDescriptor
-        get() = TODO("Not yet implemented") // Seems like overkill to implement
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("kotlinx.datetime.LocalDateTime", PrimitiveKind.STRING)
 
-    override fun serialize(encoder: Encoder, value: LocalDateTime) =
-        encoder.encodeString(value.toJavaLocalDateTime().format(format))
+    override fun serialize(encoder: Encoder, value: LocalDateTime) {
+        encoder.encodeString(value.format(format))
+    }
 
     override fun deserialize(decoder: Decoder): LocalDateTime =
-        java.time.LocalDateTime.parse(decoder.decodeString(), format).toKotlinLocalDateTime()
+        LocalDateTime.parse(decoder.decodeString(), format)
 }
