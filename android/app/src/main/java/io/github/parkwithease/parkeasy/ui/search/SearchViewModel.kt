@@ -1,11 +1,13 @@
 package io.github.parkwithease.parkeasy.ui.search
 
+import android.util.SparseArray
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.core.util.containsKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,15 +17,19 @@ import io.github.parkwithease.parkeasy.data.remote.SpotRepository
 import io.github.parkwithease.parkeasy.model.Car
 import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.Spot
+import io.github.parkwithease.parkeasy.model.TimeUnit
 import io.github.parkwithease.parkeasy.ui.common.recoverRequestErrors
 import io.github.parkwithease.parkeasy.ui.common.startOfNextAvailableDayInstant
+import io.github.parkwithease.parkeasy.ui.common.timezone
 import io.github.parkwithease.parkeasy.ui.common.toIndex
+import io.github.parkwithease.parkeasy.ui.spots.NumSlots
 import javax.inject.Inject
 import kotlin.collections.plus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock.System.now
+import kotlinx.datetime.toInstant
 
 // Somewhere above Winnipeg
 const val DefaultLatitude = 49.895077
@@ -41,6 +47,8 @@ constructor(
 ) : ViewModel() {
     val loggedIn = authRepo.statusFlow
     val snackbarState = SnackbarHostState()
+
+    private var times = SparseArray<TimeUnit>()
 
     private val _spots = MutableStateFlow(emptyList<Spot>())
     val spots = _spots.asStateFlow()
@@ -85,7 +93,16 @@ constructor(
         viewModelScope.launch {
             spotRepo
                 .getSpotAvailability(createState.selectedSpot.value.id)
-                .onSuccess {}
+                .onSuccess {
+                    times = SparseArray<TimeUnit>()
+                    it.forEach { timeUnit ->
+                        val index = timeUnit.startTime.toInstant(timezone()).toIndex()
+                        if (index > 0 && index < NumSlots && timeUnit.status != TimeUnit.BOOKED) {
+                            times.put(index, timeUnit)
+                        }
+                    }
+                    updateDisabled()
+                }
                 .recoverRequestErrors(
                     "Error retrieving availabilities",
                     {},
@@ -93,6 +110,21 @@ constructor(
                     viewModelScope,
                 )
         }
+    }
+
+    fun updateDisabled() {
+        createState =
+            createState.run {
+                copy(
+                    disabledIds =
+                        FieldState(
+                            (if (now() > startOfNextAvailableDayInstant())
+                                    (0..now().toIndex()).toSet()
+                                else emptySet())
+                                .plus((0..NumSlots - 1).filter { !times.containsKey(it) })
+                        )
+                )
+            }
     }
 
     fun onCarChange(value: Car) {
@@ -157,6 +189,7 @@ constructor(
                         ),
                 )
             }
+        updateDisabled()
     }
 
     fun createSearchHandler() =
