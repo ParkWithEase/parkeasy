@@ -308,7 +308,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 	}), func(ctx context.Context, input *struct {
 		After models.Cursor `query:"after" doc:"Token used for requesting the next page of resources"`
 		Count int           `query:"count" minimum:"1" default:"50" doc:"The maximum number of bookings that appear per page."`
-		ID    uuid.UUID     `query:"id" doc:"id of the parking spot"`
+		ID    uuid.UUID     `path:"id" doc:"id of the parking spot"`
 	},
 	) (*bookingListOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
