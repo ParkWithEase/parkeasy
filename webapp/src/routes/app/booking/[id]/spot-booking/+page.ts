@@ -3,7 +3,7 @@ import { newClient } from '$lib/utils/client';
 import { getDateWithDayOffset, getMonday } from '$lib/utils/datetime-util';
 import { handleGetError } from '$lib/utils/error-handler';
 import paginate from '$lib/utils/paginate';
-import type { PageLoad } from '../$types';
+import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch, params }) => {
     const client = newClient({ fetch });
