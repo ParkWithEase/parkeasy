@@ -1,18 +1,18 @@
 package io.github.parkwithease.parkeasy.ui.spots
 
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.fadeIn
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import io.github.parkwithease.parkeasy.ui.common.enterAnimation
+import io.github.parkwithease.parkeasy.ui.common.exitAnimation
 
 private const val SpotsRoute = "spots"
 
 fun NavGraphBuilder.spotsScreen() {
     composable(
         route = SpotsRoute,
-        enterTransition = { fadeIn() },
-        exitTransition = { ExitTransition.None },
+        enterTransition = { enterAnimation() },
+        exitTransition = { exitAnimation() },
     ) {
         SpotsScreen()
     }

@@ -1,11 +1,11 @@
 package io.github.parkwithease.parkeasy.ui.profile
 
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.fadeIn
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import io.github.parkwithease.parkeasy.ui.common.enterAnimation
+import io.github.parkwithease.parkeasy.ui.common.exitAnimation
 
 const val ProfileRoute = "profile"
 
@@ -17,8 +17,8 @@ fun NavGraphBuilder.profileScreen(
 ) {
     composable(
         route = ProfileRoute,
-        enterTransition = { fadeIn() },
-        exitTransition = { ExitTransition.None },
+        enterTransition = { enterAnimation() },
+        exitTransition = { exitAnimation() },
     ) {
         ProfileScreen(
             onNavigateToLogin = onNavigateToLogin,
