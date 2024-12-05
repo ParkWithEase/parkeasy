@@ -36,7 +36,6 @@ export const load: PageLoad = async ({ fetch, params }) => {
     );
 
     handleGetError(errorAvailability);
-    console.log(availability);
     return {
         spot: spot_info,
         time_slots: availability

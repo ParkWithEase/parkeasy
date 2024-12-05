@@ -14,7 +14,7 @@
     primaryButtonText="Book now"
     on:open
     on:close
-    on:submit={() => goto(`/app/booking/${listing.id}`)}
+    on:submit={() => goto(`/app/booking/${listing.id}/spot-booking`)}
 >
     <div class="modal-content">
         <div class="listing-content">

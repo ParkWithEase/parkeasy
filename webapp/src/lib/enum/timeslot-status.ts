@@ -3,7 +3,10 @@ export enum TimeSlotStatus {
     AVAILABLE,
     BOOKED,
     AUCTIONED,
-    PASTDUE
+    PASTDUE,
+    BOOK_INTENT,
+    EXPIRED_BOOK,
+    ACTIVE_BOOK
 }
 
 export const TimeSlotStatusConverter = {
