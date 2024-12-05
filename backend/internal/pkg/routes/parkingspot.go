@@ -27,10 +27,10 @@ type ParkingSpotServicer interface {
 	GetManyForUser(ctx context.Context, userID int64, count int) (spots []models.ParkingSpot, err error)
 	// Get the availability from start time to end time for a parking spot.
 	GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error)
-	// Update the parking spot with `spotID` if `userID` owns the resource.
-	UpdateByUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotUpdateInput) (models.ParkingSpotWithAvailability, error)
-	// Delete the parking spot with `spotID` if `userID` owns the resource.
-	// DeleteByUUID(ctx context.Context, userID int64, spotID uuid.UUID) error
+	// Update the parking spot details with `spotID` if `userID` owns the resource.
+	UpdateSpotByUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotUpdateInput) (models.ParkingSpot, error)
+	// Update the parking spot availability with `spotID` if `userID` owns the resource.
+	UpdateAvailUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotAvailUpdateInput) error
 
 	// Creates a new preference attached to `userID`.
 	//
@@ -245,11 +245,11 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		Body models.ParkingSpotUpdateInput
 		ID   uuid.UUID `path:"id"`
 	},
-	) (*parkingSpotCreationOutput, error) {
+	) (*parkingSpotOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		result, err := r.service.UpdateByUUID(ctx, userID, input.ID, &input.Body)
+		result, err := r.service.UpdateSpotByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
-			detail := describeParkingSpotInputError(err, &models.ParkingSpotLocation{}, input.Body.Availability, input.Body.PricePerHour)
+			detail := describeParkingSpotInputError(err, &models.ParkingSpotLocation{}, []models.TimeUnit{}, input.Body.PricePerHour)
 			if errors.Is(err, models.ErrParkingSpotNotFound) {
 				detail = &huma.ErrorDetail{
 					Location: "path.id",
@@ -258,7 +258,34 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 			}
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
-		return &parkingSpotCreationOutput{Body: result}, nil
+		return &parkingSpotOutput{Body: result}, nil
+	})
+
+	huma.Register(api, *withUserID(&huma.Operation{
+		OperationID: "update-parking-spot-availability",
+		Method:      http.MethodPut,
+		Path:        "/spots/{id}/availability",
+		Summary:     "Updates the specified parking spot's availability",
+		Tags:        []string{ParkingSpotTag.Name},
+		Errors:      []int{http.StatusUnprocessableEntity, http.StatusNotFound},
+	}), func(ctx context.Context, input *struct {
+		Body models.ParkingSpotAvailUpdateInput
+		ID   uuid.UUID `path:"id"`
+	},
+	) (*struct{}, error) {
+		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
+		err := r.service.UpdateAvailUUID(ctx, userID, input.ID, &input.Body)
+		if err != nil {
+			detail := describeParkingSpotInputError(err, &models.ParkingSpotLocation{}, []models.TimeUnit{}, 1)
+			if errors.Is(err, models.ErrParkingSpotNotFound) {
+				detail = &huma.ErrorDetail{
+					Location: "path.id",
+					Value:    input.ID,
+				}
+			}
+			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
+		}
+		return nil, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{

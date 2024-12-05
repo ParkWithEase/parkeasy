@@ -121,48 +121,72 @@ func (s *Service) Create(ctx context.Context, userID int64, input *models.Parkin
 	return result.InternalID, out, nil
 }
 
-func (s *Service) UpdateByUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotUpdateInput) (models.ParkingSpotWithAvailability, error) {
+func (s *Service) UpdateSpotByUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotUpdateInput) (models.ParkingSpot, error) {
 	getResult, err := s.repo.GetByUUID(ctx, spotID)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrNotFound) {
 			err = models.ErrParkingSpotNotFound
 		}
-		return models.ParkingSpotWithAvailability{}, err
+		return models.ParkingSpot{}, err
 	}
 	if getResult.OwnerID != userID {
 		// Yields not found to prevent leaking existence information
-		return models.ParkingSpotWithAvailability{}, models.ErrParkingSpotNotFound
+		return models.ParkingSpot{}, models.ErrParkingSpotNotFound
 	}
 
-	err = validateSpotDetails(input.Availability, input.PricePerHour)
+	err = validatePricePerHour(input.PricePerHour)
 	if err != nil {
-		return models.ParkingSpotWithAvailability{}, err
+		return models.ParkingSpot{}, err
 	}
 
-	result, availability, err := s.repo.UpdateByUUID(ctx, spotID, input)
+	result, err := s.repo.UpdateSpotByUUID(ctx, spotID, input)
 	if err != nil {
-		return models.ParkingSpotWithAvailability{}, err
+		return models.ParkingSpot{}, err
 	}
 
-	out := models.ParkingSpotWithAvailability{
-		ParkingSpot: models.ParkingSpot{
-			Location: models.ParkingSpotLocation{
-				PostalCode:    result.Location.PostalCode,
-				CountryCode:   result.Location.CountryCode,
-				State:         result.Location.State,
-				City:          result.Location.City,
-				StreetAddress: result.Location.StreetAddress,
-				Longitude:     result.Location.Longitude,
-				Latitude:      result.Location.Latitude,
-			},
-			Features:     result.Features,
-			PricePerHour: result.PricePerHour,
-			ID:           result.ID,
+	out := models.ParkingSpot{
+		Location: models.ParkingSpotLocation{
+			PostalCode:    result.Location.PostalCode,
+			CountryCode:   result.Location.CountryCode,
+			State:         result.Location.State,
+			City:          result.Location.City,
+			StreetAddress: result.Location.StreetAddress,
+			Longitude:     result.Location.Longitude,
+			Latitude:      result.Location.Latitude,
 		},
-		Availability: availability,
+		Features:     result.Features,
+		PricePerHour: result.PricePerHour,
+		ID:           result.ID,
 	}
 
 	return out, nil
+}
+
+func (s *Service) UpdateAvailUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotAvailUpdateInput) error {
+	getResult, err := s.repo.GetByUUID(ctx, spotID)
+	if err != nil {
+		if errors.Is(err, parkingspot.ErrNotFound) {
+			err = models.ErrParkingSpotNotFound
+		}
+		return err
+	}
+	if getResult.OwnerID != userID {
+		// Yields not found to prevent leaking existence information
+		return models.ErrParkingSpotNotFound
+	}
+
+	err = validateSpotAvail(input.AddAvailability)
+	if err != nil {
+		return err
+	}
+
+	err = validateSpotAvail(input.RemoveAvailability)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.UpdateAvailByUUID(ctx, spotID, input)
+
 }
 
 func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error) {
@@ -283,10 +307,24 @@ func validateCreationInput(input *models.ParkingSpotCreationInput) error {
 		return err
 	}
 
-	return validateSpotDetails(input.Availability, input.PricePerHour)
+	err = validateSpotAvail(input.Availability)
+	if err != nil {
+		return err
+	}
+
+	return validatePricePerHour(input.PricePerHour)
 }
 
-func validateSpotDetails(availability []models.TimeUnit, pricePerHour float64) error {
+// Validate price per hour static rules
+func validatePricePerHour(pricePerHour float64) error {
+	if pricePerHour < 0 || math.IsNaN(pricePerHour) || math.IsInf(pricePerHour, 0) {
+		return models.ErrInvalidPricePerHour
+	}
+	return nil
+}
+
+// Validate availability static rules
+func validateSpotAvail(availability []models.TimeUnit) error {
 	// There must be at least one slot
 	if len(availability) == 0 {
 		return models.ErrNoAvailability
@@ -297,10 +335,6 @@ func validateSpotDetails(availability []models.TimeUnit, pricePerHour float64) e
 			return models.ErrInvalidTimeUnit
 		}
 	}
-	if pricePerHour < 0 || math.IsNaN(pricePerHour) || math.IsInf(pricePerHour, 0) {
-		return models.ErrInvalidPricePerHour
-	}
-
 	return nil
 }
 

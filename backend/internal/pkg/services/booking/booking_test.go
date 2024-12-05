@@ -95,6 +95,17 @@ func (m *mockParkingspotRepo) GetMany(ctx context.Context, limit int, filter *pa
 	return args.Get(0).([]parkingspot.GetManyEntry), args.Error(1)
 }
 
+// UpdateSpotByUUID implements parkingspot.Repository.
+func (m *mockParkingspotRepo) UpdateSpotByUUID(ctx context.Context, spotID uuid.UUID, updateSpot *models.ParkingSpotUpdateInput) (parkingspot.Entry, error) {
+	args := m.Called(ctx, spotID, updateSpot)
+	return args.Get(0).(parkingspot.Entry), args.Error(1)
+}
+
+func (m *mockParkingspotRepo) UpdateAvailByUUID(ctx context.Context, spotID uuid.UUID, updateTimes *models.ParkingSpotAvailUpdateInput) error {
+	args := m.Called(ctx, spotID, updateTimes)
+	return args.Error(0)
+}
+
 // Create implements booking.Repository.
 func (m *mockRepo) Create(ctx context.Context, input *booking.CreateInput) (booking.EntryWithTimes, error) {
 	args := m.Called(ctx, input)

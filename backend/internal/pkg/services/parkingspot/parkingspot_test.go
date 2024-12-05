@@ -69,10 +69,15 @@ func (m *mockRepo) GetMany(ctx context.Context, limit int, filter *parkingspot.F
 	return args.Get(0).([]parkingspot.GetManyEntry), args.Error(1)
 }
 
-// UpdateByUUID implements parkingspot.Repository.
-func (m *mockRepo) UpdateByUUID(ctx context.Context, spotID uuid.UUID, updateSpot *models.ParkingSpotUpdateInput) (parkingspot.Entry, []models.TimeUnit, error) {
+// UpdateSpotByUUID implements parkingspot.Repository.
+func (m *mockRepo) UpdateSpotByUUID(ctx context.Context, spotID uuid.UUID, updateSpot *models.ParkingSpotUpdateInput) (parkingspot.Entry, error) {
 	args := m.Called(ctx, spotID, updateSpot)
-	return args.Get(0).(parkingspot.Entry), args.Get(1).([]models.TimeUnit), args.Error(2)
+	return args.Get(0).(parkingspot.Entry), args.Error(1)
+}
+
+func (m *mockRepo) UpdateAvailByUUID(ctx context.Context, spotID uuid.UUID, updateTimes *models.ParkingSpotAvailUpdateInput) error {
+	args := m.Called(ctx, spotID, updateTimes)
+	return args.Error(0)
 }
 
 // Create implements preferencespot.Repository.
@@ -473,7 +478,6 @@ func TestUpdateByUUID(t *testing.T) {
 		srv := New(repo, geoRepo, preferenceRepo)
 
 		input := &models.ParkingSpotUpdateInput{
-			Availability: sampleAvailability,
 			PricePerHour: samplePricePerHour,
 		}
 
@@ -485,9 +489,9 @@ func TestUpdateByUUID(t *testing.T) {
 			ParkingSpot:  sampleEntry.ParkingSpot,
 		}
 
-		spotWithAvail, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
+		spot, err := srv.UpdateSpotByUUID(ctx, testUserID, testSpotID, input)
 		require.NoError(t, err)
-		assert.Equal(t, output, spotWithAvail)
+		assert.Equal(t, output, spot)
 		repo.AssertExpectations(t)
 	})
 
@@ -501,14 +505,13 @@ func TestUpdateByUUID(t *testing.T) {
 		srv := New(repo, geoRepo, preferenceRepo)
 
 		input := &models.ParkingSpotUpdateInput{
-			Availability: sampleAvailability,
 			PricePerHour: samplePricePerHour,
 		}
 
 		repo.On("UpdateByUUID", mock.Anything, uuid.Nil, input).
 			Return(parkingspot.Entry{}, []models.TimeUnit{}, models.ErrParkingSpotNotFound).Once()
 
-		_, err := srv.UpdateByUUID(ctx, testUserID, uuid.Nil, input)
+		_, err := srv.UpdateSpotByUUID(ctx, testUserID, uuid.Nil, input)
 
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
@@ -529,11 +532,10 @@ func TestUpdateByUUID(t *testing.T) {
 		invalidAvailability[0].StartTime = time.Date(2024, time.October, 26, 10, 15, 0, 0, time.UTC)
 
 		input := &models.ParkingSpotUpdateInput{
-			Availability: invalidAvailability,
 			PricePerHour: samplePricePerHour,
 		}
 
-		_, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
+		_, err := srv.UpdateSpotByUUID(ctx, testUserID, testSpotID, input)
 
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrInvalidTimeUnit)
@@ -553,7 +555,7 @@ func TestUpdateByUUID(t *testing.T) {
 			PricePerHour: samplePricePerHour,
 		}
 
-		_, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
+		_, err := srv.UpdateSpotByUUID(ctx, testUserID, testSpotID, input)
 
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrNoAvailability)
@@ -570,11 +572,10 @@ func TestUpdateByUUID(t *testing.T) {
 		srv := New(repo, geoRepo, preferenceRepo)
 
 		input := &models.ParkingSpotUpdateInput{
-			Availability: sampleAvailability,
 			PricePerHour: -0.01,
 		}
 
-		_, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
+		_, err := srv.UpdateSpotByUUID(ctx, testUserID, testSpotID, input)
 
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrInvalidPricePerHour)
@@ -591,14 +592,13 @@ func TestUpdateByUUID(t *testing.T) {
 		srv := New(repo, geoRepo, preferenceRepo)
 
 		input := &models.ParkingSpotUpdateInput{
-			Availability: sampleAvailability,
 			PricePerHour: samplePricePerHour,
 		}
 
 		repo.On("UpdateByUUID", mock.Anything, testSpotID, input).
 			Return(parkingspot.Entry{}, []models.TimeUnit{}, models.ErrBookedTimeUnitModified).Once()
 
-		_, err := srv.UpdateByUUID(ctx, testUserID, testSpotID, input)
+		_, err := srv.UpdateSpotByUUID(ctx, testUserID, testSpotID, input)
 
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrBookedTimeUnitModified)
