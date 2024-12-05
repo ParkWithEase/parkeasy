@@ -98,7 +98,6 @@ fun ProfileDetails(profile: Profile, modifier: Modifier = Modifier) {
             visuallyEnabled = true,
             readOnly = true,
             labelId = R.string.name,
-            singleLine = true,
         )
         ParkEasyTextField(
             state = FieldState(profile.email),
@@ -107,7 +106,6 @@ fun ProfileDetails(profile: Profile, modifier: Modifier = Modifier) {
             visuallyEnabled = true,
             readOnly = true,
             labelId = R.string.email,
-            singleLine = true,
         )
     }
 }

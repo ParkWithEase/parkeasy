@@ -1,39 +1,56 @@
 package io.github.parkwithease.parkeasy.ui.search.list
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
+import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.model.SpotLocation
+import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 import io.github.parkwithease.parkeasy.ui.common.PreviewAll
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
+import io.github.parkwithease.parkeasy.ui.common.TimeGrid
 import io.github.parkwithease.parkeasy.ui.navbar.NavBar
+import io.github.parkwithease.parkeasy.ui.search.CreateHandler
+import io.github.parkwithease.parkeasy.ui.search.CreateState
 import io.github.parkwithease.parkeasy.ui.search.SearchViewModel
+import io.github.parkwithease.parkeasy.ui.search.rememberCreateHandler
 import io.github.parkwithease.parkeasy.ui.search.rememberSearchHandler
 import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListScreen(
     onNavigateToLogin: () -> Unit,
@@ -47,19 +64,43 @@ fun ListScreen(
     if (!loggedIn) {
         LaunchedEffect(Unit) { latestOnNavigateToLogin() }
     } else {
-        @Suppress("unused") val handler = rememberSearchHandler(viewModel)
+        @Suppress("unused") val searchHandler = rememberSearchHandler(viewModel)
+        val createHandler = rememberCreateHandler(viewModel)
         val spots by viewModel.spots.collectAsState()
         val isRefreshing by viewModel.isRefreshing.collectAsState()
+
+        var openBottomSheet by rememberSaveable { mutableStateOf(false) }
+        val skipPartiallyExpanded by rememberSaveable { mutableStateOf(false) }
+        val bottomSheetState =
+            rememberModalBottomSheetState(skipPartiallyExpanded = skipPartiallyExpanded)
 
         LaunchedEffect(Unit) { viewModel.onRefresh() }
         ListScreen(
             spots = spots,
+            onSpotClick = {
+                createHandler.reset()
+                createHandler.onSpotChange(it)
+                openBottomSheet = true
+            },
             isRefreshing = isRefreshing,
             onRefresh = viewModel::onRefresh,
             navBar = navBar,
             snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
             modifier = modifier,
         )
+        if (openBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { openBottomSheet = false },
+                sheetState = bottomSheetState,
+            ) {
+                CreateBookingScreen(
+                    state = viewModel.createState,
+                    handler = createHandler,
+                    getSelectedIds = { viewModel.createState.selectedIds.value },
+                    disabledIds = viewModel.createState.disabledIds.value,
+                )
+            }
+        }
     }
 }
 
@@ -67,6 +108,7 @@ fun ListScreen(
 @Composable
 fun ListScreen(
     spots: List<Spot>,
+    onSpotClick: (Spot) -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     navBar: @Composable () -> Unit,
@@ -82,7 +124,7 @@ fun ListScreen(
             ) {
                 PullToRefreshBox(
                     items = spots,
-                    onClick = {},
+                    onClick = onSpotClick,
                     isRefreshing = isRefreshing,
                     onRefresh = onRefresh,
                     modifier = Modifier.padding(4.dp),
@@ -94,22 +136,128 @@ fun ListScreen(
     }
 }
 
+@Suppress("DefaultLocale", "detekt:ImplicitDefaultLocale")
 @Composable
 fun SpotCard(spot: Spot, onClick: (Spot) -> Unit, modifier: Modifier = Modifier) {
     Card(onClick = { onClick(spot) }, modifier = modifier.fillMaxWidth().padding(4.dp, 0.dp)) {
         Row(modifier = Modifier.padding(8.dp)) {
             Column(modifier = Modifier.weight(1f)) {
-                Image(
-                    painter = painterResource(R.drawable.wordmark),
-                    contentDescription = null,
-                    modifier = Modifier.heightIn(max = 64.dp),
+                Text(
+                    '$' + spot.pricePerHour.toString(),
+                    style = MaterialTheme.typography.headlineLarge,
                 )
+                Text(String.format("%.0f meters away", spot.distanceToLocation))
             }
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                 Text(spot.location.streetAddress)
                 Text(spot.location.city + ' ' + spot.location.state)
                 Text(spot.location.countryCode + ' ' + spot.location.postalCode)
             }
+        }
+    }
+}
+
+@Suppress("detekt:LongMethod")
+@Composable
+fun CreateBookingScreen(
+    state: CreateState,
+    handler: CreateHandler,
+    getSelectedIds: () -> Set<Int>,
+    disabledIds: Set<Int>,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .imePadding()
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState(), reverseScrolling = true)
+                .widthIn(max = 360.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        ParkEasyTextField(
+            state = FieldState(state.selectedSpot.value.location.streetAddress),
+            onValueChange = {},
+            modifier = Modifier.fillMaxWidth(),
+            enabled = false,
+            visuallyEnabled = true,
+            readOnly = true,
+            labelId = R.string.street_address,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ParkEasyTextField(
+                state = FieldState(state.selectedSpot.value.location.city),
+                onValueChange = {},
+                modifier = Modifier.weight(1f),
+                enabled = false,
+                visuallyEnabled = true,
+                readOnly = true,
+                labelId = R.string.city,
+            )
+            ParkEasyTextField(
+                state = FieldState(state.selectedSpot.value.location.state),
+                onValueChange = {},
+                modifier = Modifier.weight(1f),
+                enabled = false,
+                visuallyEnabled = true,
+                readOnly = true,
+                labelId = R.string.state,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ParkEasyTextField(
+                state = FieldState(state.selectedSpot.value.location.countryCode),
+                onValueChange = {},
+                modifier = Modifier.weight(1f),
+                enabled = false,
+                visuallyEnabled = true,
+                readOnly = true,
+                labelId = R.string.country,
+            )
+            ParkEasyTextField(
+                state = FieldState(state.selectedSpot.value.location.postalCode),
+                onValueChange = {},
+                modifier = Modifier.weight(1f),
+                enabled = false,
+                visuallyEnabled = true,
+                readOnly = true,
+                labelId = R.string.postal_code,
+            )
+        }
+        ParkEasyTextField(
+            state = FieldState(state.selectedSpot.value.pricePerHour.toString()),
+            onValueChange = {},
+            modifier = Modifier.fillMaxWidth(),
+            enabled = false,
+            visuallyEnabled = true,
+            readOnly = true,
+            labelId = R.string.price_per_hour,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            FilterChip(
+                selected = state.selectedSpot.value.features.chargingStation,
+                onClick = {},
+                label = { Text(stringResource(R.string.charging_station)) },
+            )
+            FilterChip(
+                selected = state.selectedSpot.value.features.plugIn,
+                onClick = {},
+                label = { Text(stringResource(R.string.plug_in)) },
+            )
+            FilterChip(
+                selected = state.selectedSpot.value.features.plugIn,
+                onClick = {},
+                label = { Text(stringResource(R.string.shelter)) },
+            )
+        }
+        TimeGrid(getSelectedIds, disabledIds, handler.onAddTime, handler.onRemoveTime)
+        Button(onClick = handler.onCreateBookingClick, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.create_booking))
         }
     }
 }
@@ -134,6 +282,7 @@ private fun ListScreenPreview() {
     ParkEasyTheme {
         ListScreen(
             spots = spots,
+            onSpotClick = {},
             isRefreshing = false,
             onRefresh = {},
             navBar = { NavBar() },

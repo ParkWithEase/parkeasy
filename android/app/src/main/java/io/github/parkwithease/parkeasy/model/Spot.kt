@@ -18,6 +18,7 @@ data class Spot(
     val id: String = "",
     val location: SpotLocation = SpotLocation(),
     @SerialName("price_per_hour") val pricePerHour: Double = 0.0,
+    @SerialName("distance_to_location") val distanceToLocation: Double = 0.0,
 )
 
 @Serializable

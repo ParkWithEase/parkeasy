@@ -41,4 +41,5 @@
     <string name="plug_in">Plug In</string>
     <string name="shelter">Shelter</string>
     <string name="price_per_hour">Price Per Hour</string>
+    <string name="create_booking">Create Booking</string>
 </resources>

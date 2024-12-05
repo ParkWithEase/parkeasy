@@ -71,11 +71,11 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
         cars = cars,
         onCarClick = { car ->
             handler.resetForm()
+            handler.onColorChange(car.details.color)
+            handler.onLicensePlateChange(car.details.licensePlate)
+            handler.onMakeChange(car.details.make)
+            handler.onModelChange(car.details.model)
             viewModel.currentlyEditingId = car.id
-            viewModel.onColorChange(car.details.color)
-            viewModel.onLicensePlateChange(car.details.licensePlate)
-            viewModel.onMakeChange(car.details.make)
-            viewModel.onModelChange(car.details.model)
             editMode = EditMode.EDIT
             openBottomSheet = true
         },
