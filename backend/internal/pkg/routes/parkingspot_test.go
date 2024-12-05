@@ -503,14 +503,11 @@ func TestUpdateSpotByUUID(t *testing.T) {
 
 		spotUUID := uuid.New()
 		srv.On("UpdateSpotByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
-			Return(models.ParkingSpotWithAvailability{
-				ParkingSpot: models.ParkingSpot{
-					Location:     sampleLocation,
-					Features:     sampleFeatures,
-					PricePerHour: samplePricePerHour,
-					ID:           spotUUID,
-				},
-				Availability: sampleAvailability,
+			Return(models.ParkingSpot{
+				Location:     sampleLocation,
+				Features:     sampleFeatures,
+				PricePerHour: samplePricePerHour,
+				ID:           spotUUID,
 			}, nil).
 			Once()
 
@@ -537,7 +534,7 @@ func TestUpdateSpotByUUID(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		srv.On("UpdateSpotByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
-			Return(models.ParkingSpotWithAvailability{}, models.ErrInvalidPricePerHour).
+			Return(models.ParkingSpot{}, models.ErrInvalidPricePerHour).
 			Once()
 
 		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String(), testInput)
@@ -566,7 +563,7 @@ func TestUpdateSpotByUUID(t *testing.T) {
 		huma.AutoRegister(api, route)
 
 		srv.On("UpdateSpotByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
-			Return(models.ParkingSpotWithAvailability{}, models.ErrParkingSpotNotFound).
+			Return(models.ParkingSpot{}, models.ErrParkingSpotNotFound).
 			Once()
 
 		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String(), testInput)
@@ -642,7 +639,7 @@ func TestUpdateAvailByUUID(t *testing.T) {
 		srv.AssertExpectations(t)
 	})
 
-	t.Run("modify booked time unit check", func(t *testing.T) {
+	t.Run("remove booked time unit check", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
@@ -662,14 +659,14 @@ func TestUpdateAvailByUUID(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Location: "path.id",
+			Location: "body.remove_availability",
 			Value:    jsonAnyify(testInput.RemoveAvailability),
 		})
 
 		srv.AssertExpectations(t)
 	})
 
-	t.Run("time slot errors", func(t *testing.T) {
+	t.Run("add duplicate time slot check", func(t *testing.T) {
 		t.Parallel()
 
 		srv := new(mockParkingSpotService)
@@ -677,11 +674,38 @@ func TestUpdateAvailByUUID(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		srv.On("UpdateSpotByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+		srv.On("UpdateAvailByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
 			Return(models.ErrTimeUnitDuplicate).
 			Once()
 
-		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String(), testInput)
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String()+"/availability", testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+		assert.Equal(t, models.CodeDuplicate.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Location: "body.add_availability",
+			Value:    jsonAnyify(testInput.AddAvailability),
+		})
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("invalid add time slot check", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateAvailByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+			Return(models.ErrInvalidAddTimeUnit).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String()+"/availability", testInput)
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
@@ -689,8 +713,35 @@ func TestUpdateAvailByUUID(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
-			Location: "path.id",
+			Location: "body.add_availability",
 			Value:    jsonAnyify(testInput.AddAvailability),
+		})
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("invalid remove time slot check", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateAvailByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+			Return(models.ErrInvalidRemoveTimeUnit).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String()+"/availability", testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Location: "body.remove_availability",
+			Value:    jsonAnyify(testInput.RemoveAvailability),
 		})
 
 		srv.AssertExpectations(t)
