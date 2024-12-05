@@ -40,8 +40,19 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing = _isRefreshing.asStateFlow()
 
+    private val _showForm = MutableStateFlow(false)
+    val showForm = _showForm.asStateFlow()
+
     var formState by mutableStateOf(AddSpotFormState())
         private set
+
+    fun onShowForm() {
+        viewModelScope.launch { _showForm.value = true }
+    }
+
+    fun onHideForm() {
+        viewModelScope.launch { _showForm.value = false }
+    }
 
     fun onRefresh() {
         viewModelScope.launch {
@@ -92,7 +103,10 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                     )
                 )
                 .also { clearFieldErrors() }
-                .onSuccess { onRefresh() }
+                .onSuccess {
+                    onRefresh()
+                    onHideForm()
+                }
                 .recoverRequestErrors(
                     "Error adding parking spot",
                     { errorToForm(it) },

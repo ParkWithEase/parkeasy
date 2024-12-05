@@ -2,6 +2,7 @@
 
 package io.github.parkwithease.parkeasy.ui.spots
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -23,14 +23,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -69,38 +65,33 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
     val handler = rememberAddSpotFormHandler(viewModel)
     val spots by viewModel.spots.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val showForm by viewModel.showForm.collectAsState()
     var editMode by rememberSaveable { mutableStateOf(EditMode.ADD) }
 
-    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
-    val skipPartiallyExpanded by rememberSaveable { mutableStateOf(true) }
-    val bottomSheetState =
-        rememberModalBottomSheetState(skipPartiallyExpanded = skipPartiallyExpanded)
+    BackHandler(enabled = showForm) { viewModel.onHideForm() }
 
     LaunchedEffect(Unit) { viewModel.onRefresh() }
-    SpotsScreen(
-        spots = spots,
-        onShowAddSpotClick = {
-            handler.resetForm()
-            editMode = EditMode.ADD
-            openBottomSheet = true
-        },
-        isRefreshing = isRefreshing,
-        onRefresh = viewModel::onRefresh,
-        snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
-        modifier = modifier,
-    )
-    if (openBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { openBottomSheet = false },
-            sheetState = bottomSheetState,
-        ) {
-            AddSpotScreen(
-                state = viewModel.formState,
-                handler = handler,
-                getSelectedIds = { viewModel.formState.selectedIds.value },
-                disabledIds = viewModel.formState.disabledIds.value,
-            )
-        }
+
+    if (showForm) {
+        AddSpotScreen(
+            state = viewModel.formState,
+            handler = handler,
+            getSelectedIds = { viewModel.formState.selectedIds.value },
+            disabledIds = viewModel.formState.disabledIds.value,
+        )
+    } else {
+        SpotsScreen(
+            spots = spots,
+            onShowAddSpotClick = {
+                handler.resetForm()
+                editMode = EditMode.ADD
+                viewModel.onShowForm()
+            },
+            isRefreshing = isRefreshing,
+            onRefresh = viewModel::onRefresh,
+            snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
+            modifier = modifier,
+        )
     }
 }
 
@@ -169,81 +160,80 @@ fun AddSpotScreen(
     disabledIds: Set<Int>,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .imePadding()
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState(), reverseScrolling = true)
-                .widthIn(max = 360.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        ParkEasyTextField(
-            state = state.streetAddress,
-            onValueChange = handler.onStreetAddressChange,
-            modifier = Modifier.fillMaxWidth(),
-            labelId = R.string.street_address,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ParkEasyTextField(
-                state = state.city,
-                onValueChange = handler.onCityChange,
-                modifier = Modifier.weight(1f),
-                labelId = R.string.city,
-            )
-            ParkEasyTextField(
-                state = state.state,
-                onValueChange = handler.onStateChange,
-                modifier = Modifier.weight(1f),
-                labelId = R.string.state,
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ParkEasyTextField(
-                state = state.countryCode,
-                onValueChange = handler.onCountryCodeChange,
-                modifier = Modifier.weight(1f),
-                labelId = R.string.country,
-            )
-            ParkEasyTextField(
-                state = state.postalCode,
-                onValueChange = handler.onPostalCodeChange,
-                modifier = Modifier.weight(1f),
-                labelId = R.string.postal_code,
-            )
-        }
-        ParkEasyTextField(
-            state = state.pricePerHour,
-            onValueChange = handler.onPricePerHourChange,
-            modifier = Modifier.fillMaxWidth(),
-            labelId = R.string.price_per_hour,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+    Surface(modifier.fillMaxSize()) {
+        Column(
+            modifier =
+                Modifier.imePadding()
+                    .padding(horizontal = 32.dp)
+                    .verticalScroll(rememberScrollState(), reverseScrolling = true),
+            verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            FilterChip(
-                selected = state.chargingStation.value,
-                onClick = { handler.onChargingStationChange(!state.chargingStation.value) },
-                label = { Text(stringResource(R.string.charging_station)) },
+            ParkEasyTextField(
+                state = state.streetAddress,
+                onValueChange = handler.onStreetAddressChange,
+                modifier = Modifier.fillMaxWidth(),
+                labelId = R.string.street_address,
             )
-            FilterChip(
-                selected = state.plugIn.value,
-                onClick = { handler.onPlugInChange(!state.plugIn.value) },
-                label = { Text(stringResource(R.string.plug_in)) },
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ParkEasyTextField(
+                    state = state.city,
+                    onValueChange = handler.onCityChange,
+                    modifier = Modifier.weight(1f),
+                    labelId = R.string.city,
+                )
+                ParkEasyTextField(
+                    state = state.state,
+                    onValueChange = handler.onStateChange,
+                    modifier = Modifier.weight(1f),
+                    labelId = R.string.state,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ParkEasyTextField(
+                    state = state.countryCode,
+                    onValueChange = handler.onCountryCodeChange,
+                    modifier = Modifier.weight(1f),
+                    labelId = R.string.country,
+                )
+                ParkEasyTextField(
+                    state = state.postalCode,
+                    onValueChange = handler.onPostalCodeChange,
+                    modifier = Modifier.weight(1f),
+                    labelId = R.string.postal_code,
+                )
+            }
+            ParkEasyTextField(
+                state = state.pricePerHour,
+                onValueChange = handler.onPricePerHourChange,
+                modifier = Modifier.fillMaxWidth(),
+                labelId = R.string.price_per_hour,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             )
-            FilterChip(
-                selected = state.shelter.value,
-                onClick = { handler.onShelterChange(!state.shelter.value) },
-                label = { Text(stringResource(R.string.shelter)) },
-            )
-        }
-        TimeGrid(getSelectedIds, disabledIds, handler.onAddTime, handler.onRemoveTime)
-        Button(onClick = handler.onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.add_spot))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                FilterChip(
+                    selected = state.chargingStation.value,
+                    onClick = { handler.onChargingStationChange(!state.chargingStation.value) },
+                    label = { Text(stringResource(R.string.charging_station)) },
+                )
+                FilterChip(
+                    selected = state.plugIn.value,
+                    onClick = { handler.onPlugInChange(!state.plugIn.value) },
+                    label = { Text(stringResource(R.string.plug_in)) },
+                )
+                FilterChip(
+                    selected = state.shelter.value,
+                    onClick = { handler.onShelterChange(!state.shelter.value) },
+                    label = { Text(stringResource(R.string.shelter)) },
+                )
+            }
+            TimeGrid(getSelectedIds, disabledIds, handler.onAddTime, handler.onRemoveTime)
+            Button(onClick = handler.onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.add_spot))
+            }
         }
     }
 }
@@ -314,38 +304,12 @@ private fun AddCarScreenPreview(
     @PreviewParameter(AddSpotFormStateProvider::class) state: AddSpotFormState
 ) {
     ParkEasyTheme {
-        ModalBottomSheet(
-            onDismissRequest = {},
-            sheetState = rememberStandardBottomSheetState(initialValue = SheetValue.Expanded),
-        ) {
-            AddSpotScreen(
-                state = state,
-                handler = AddSpotFormHandler(),
-                getSelectedIds = { emptySet() },
-                disabledIds = emptySet(),
-            )
-        }
-    }
-}
-
-@Suppress("detekt:UnusedPrivateMember")
-@OptIn(ExperimentalMaterial3Api::class)
-@PreviewAll
-@Composable
-private fun ExpandedAddCarScreenPreview(
-    @PreviewParameter(AddSpotFormStateProvider::class) state: AddSpotFormState
-) {
-    ParkEasyTheme {
-        Surface(
-            Modifier.fillMaxSize()
-        ) { // Can't actually preview fully expanded BottomSheets apparently
-            AddSpotScreen(
-                state = state,
-                handler = AddSpotFormHandler(),
-                getSelectedIds = { emptySet() },
-                disabledIds = emptySet(),
-            )
-        }
+        AddSpotScreen(
+            state = state,
+            handler = AddSpotFormHandler(),
+            getSelectedIds = { emptySet() },
+            disabledIds = emptySet(),
+        )
     }
 }
 

@@ -74,7 +74,9 @@ fun ListScreen(
         var showForm by rememberSaveable { mutableStateOf(false) }
 
         BackHandler(enabled = showForm) { showForm = false }
+
         LaunchedEffect(Unit) { viewModel.onRefresh() }
+
         if (showForm)
             CreateBookingScreen(
                 state = viewModel.createState,

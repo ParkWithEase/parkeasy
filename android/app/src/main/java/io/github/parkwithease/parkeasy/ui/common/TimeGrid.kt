@@ -179,7 +179,7 @@ private fun Modifier.timeGridDragHandler(
                                 onRemoveTime(initialKey!!..key)
                                 onRemoveTime(key..initialKey!!)
                             }
-                            onRemoveTime(disabledIds.min()..disabledIds.max())
+                            disabledIds.forEach { onRemoveTime(it..it) }
                             currentKey = key
                         }
                     }
