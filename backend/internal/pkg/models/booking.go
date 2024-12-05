@@ -24,7 +24,7 @@ type Booking struct {
 }
 
 type BookingWithDetails struct {
-	Booking             Booking             `json:"booking" doc:"booking details"`
+	Booking
 	ParkingSpotLocation ParkingSpotLocation `json:"parkingspot_location" doc:"the location of parking spot"`
 	CarDetails          CarDetails          `json:"car_details" doc:"the details of car associated with booking"`
 }
