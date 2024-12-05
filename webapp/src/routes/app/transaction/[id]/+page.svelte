@@ -2,20 +2,16 @@
     import type { PageData } from './$types';
     import Background from '$lib/images/background.png';
     import { Content, NumberInput } from 'carbon-components-svelte';
-    import { TimeSlotStatus, TimeSlotStatusConverter } from '$lib/enum/timeslot-status';
-    import { DAY_IN_A_WEEK, ERROR_MESSAGE_TIME_OUT, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
+    import { TimeSlotStatus } from '$lib/enum/timeslot-status';
+    import { DAY_IN_A_WEEK } from '$lib/constants';
     import { getMonday, getDateWithDayOffset } from '$lib/utils/datetime-util';
-    import { createEmptyTable, toTimeUnits } from '$lib/utils/time-table-util';
-    import { newClient } from '$lib/utils/client';
+    import { createEmptyTable } from '$lib/utils/time-table-util';
     import type { components } from '$lib/sdk/schema';
-    import { getErrorMessage } from '$lib/utils/error-handler';
     import AvailabilitySection from '$lib/components/spot-component/availability-section.svelte';
     import SpotInfo from '$lib/components/spot-component/spot-info.svelte';
-    import AvailabilityTable from '$lib/components/spot-component/availability-table.svelte';
 
     export let data: PageData;
     type TimeUnit = components['schemas']['TimeUnit'];
-    type Car = components['schemas']['Car'];
 
     //Variable for location edit section
     let spot = data.spot;
@@ -85,7 +81,6 @@
 </script>
 
 <Content>
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
     <div>
         <img src={Background} class="spot-info-image" alt="spot" />
         <p class="spot-info-header">Location</p>

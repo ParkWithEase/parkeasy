@@ -1,4 +1,3 @@
-
 import { newClient } from '$lib/utils/client';
 import { handleGetError } from '$lib/utils/error-handler';
 import paginate from '$lib/utils/paginate';

@@ -4,7 +4,6 @@
     import {
         Content,
         Button,
-        TextInput,
         Form,
         ToastNotification,
         NumberInput
@@ -164,6 +163,7 @@
 
     function handleSubmitAvailability(event: Event) {
         event.preventDefault();
+        checkAvailabilityChange();
         //TODO: change parking spot price + availability using the edit records.
         // Clear the edit records on success
         // Might need to check if anything actually change and
