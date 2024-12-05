@@ -43,10 +43,14 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
     private val _showForm = MutableStateFlow(false)
     val showForm = _showForm.asStateFlow()
 
+    private val _formEnabled = MutableStateFlow(true)
+    val formEnabled = _formEnabled.asStateFlow()
+
     var formState by mutableStateOf(AddSpotFormState())
         private set
 
     fun onShowForm() {
+        _formEnabled.value = true
         viewModelScope.launch { _showForm.value = true }
     }
 
@@ -73,6 +77,7 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
     @Suppress("detekt:LongMethod")
     fun onAddSpotClick() {
         viewModelScope.launch {
+            _formEnabled.value = false
             spotRepo
                 .createSpot(
                     Spot(
@@ -113,6 +118,7 @@ class SpotsViewModel @Inject constructor(private val spotRepo: SpotRepository) :
                     snackbarState,
                     viewModelScope,
                 )
+            _formEnabled.value = true
         }
     }
 

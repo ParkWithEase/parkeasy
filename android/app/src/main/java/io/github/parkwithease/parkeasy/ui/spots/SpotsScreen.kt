@@ -64,6 +64,7 @@ const val NumSlots = NumColumns * NumRows
 fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltViewModel()) {
     val handler = rememberAddSpotFormHandler(viewModel)
     val spots by viewModel.spots.collectAsState()
+    val formEnabled by viewModel.formEnabled.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val showForm by viewModel.showForm.collectAsState()
     var editMode by rememberSaveable { mutableStateOf(EditMode.ADD) }
@@ -76,6 +77,7 @@ fun SpotsScreen(modifier: Modifier = Modifier, viewModel: SpotsViewModel = hiltV
         AddSpotScreen(
             state = viewModel.formState,
             handler = handler,
+            formEnabled = formEnabled,
             getSelectedIds = { viewModel.formState.selectedIds.value },
             disabledIds = viewModel.formState.disabledIds.value,
         )
@@ -156,6 +158,7 @@ fun AddSpotButton(onShowAddSpotClick: () -> Unit, modifier: Modifier = Modifier)
 fun AddSpotScreen(
     state: AddSpotFormState,
     handler: AddSpotFormHandler,
+    formEnabled: Boolean,
     getSelectedIds: () -> Set<Int>,
     disabledIds: Set<Int>,
     modifier: Modifier = Modifier,
@@ -173,6 +176,7 @@ fun AddSpotScreen(
                 state = state.streetAddress,
                 onValueChange = handler.onStreetAddressChange,
                 modifier = Modifier.fillMaxWidth(),
+                enabled = formEnabled,
                 labelId = R.string.street_address,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -180,12 +184,14 @@ fun AddSpotScreen(
                     state = state.city,
                     onValueChange = handler.onCityChange,
                     modifier = Modifier.weight(1f),
+                    enabled = formEnabled,
                     labelId = R.string.city,
                 )
                 ParkEasyTextField(
                     state = state.state,
                     onValueChange = handler.onStateChange,
                     modifier = Modifier.weight(1f),
+                    enabled = formEnabled,
                     labelId = R.string.state,
                 )
             }
@@ -194,12 +200,14 @@ fun AddSpotScreen(
                     state = state.countryCode,
                     onValueChange = handler.onCountryCodeChange,
                     modifier = Modifier.weight(1f),
+                    enabled = formEnabled,
                     labelId = R.string.country,
                 )
                 ParkEasyTextField(
                     state = state.postalCode,
                     onValueChange = handler.onPostalCodeChange,
                     modifier = Modifier.weight(1f),
+                    enabled = formEnabled,
                     labelId = R.string.postal_code,
                 )
             }
@@ -207,6 +215,7 @@ fun AddSpotScreen(
                 state = state.pricePerHour,
                 onValueChange = handler.onPricePerHourChange,
                 modifier = Modifier.fillMaxWidth(),
+                enabled = formEnabled,
                 labelId = R.string.price_per_hour,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             )
@@ -218,20 +227,27 @@ fun AddSpotScreen(
                     selected = state.chargingStation.value,
                     onClick = { handler.onChargingStationChange(!state.chargingStation.value) },
                     label = { Text(stringResource(R.string.charging_station)) },
+                    enabled = formEnabled,
                 )
                 FilterChip(
                     selected = state.plugIn.value,
                     onClick = { handler.onPlugInChange(!state.plugIn.value) },
                     label = { Text(stringResource(R.string.plug_in)) },
+                    enabled = formEnabled,
                 )
                 FilterChip(
                     selected = state.shelter.value,
                     onClick = { handler.onShelterChange(!state.shelter.value) },
                     label = { Text(stringResource(R.string.shelter)) },
+                    enabled = formEnabled,
                 )
             }
             TimeGrid(getSelectedIds, disabledIds, handler.onAddTime, handler.onRemoveTime)
-            Button(onClick = handler.onAddSpotClick, modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = handler.onAddSpotClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = formEnabled,
+            ) {
                 Text(stringResource(R.string.add_spot))
             }
         }
@@ -307,6 +323,7 @@ private fun AddCarScreenPreview(
         AddSpotScreen(
             state = state,
             handler = AddSpotFormHandler(),
+            formEnabled = true,
             getSelectedIds = { emptySet() },
             disabledIds = emptySet(),
         )
@@ -336,6 +353,7 @@ private fun AddCarScreenTimeGridPreview(
             AddSpotScreen(
                 state = AddSpotFormState(),
                 handler = AddSpotFormHandler(),
+                formEnabled = true,
                 getSelectedIds = { selectedIds },
                 disabledIds = emptySet(),
             )

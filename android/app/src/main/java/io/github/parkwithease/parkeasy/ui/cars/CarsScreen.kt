@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.cars
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -58,15 +59,19 @@ import io.github.parkwithease.parkeasy.ui.theme.Typography
 fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltViewModel()) {
     val handler = rememberAddCarFormHandler(viewModel)
     val cars by viewModel.cars.collectAsState()
+    val formEnabled by viewModel.formEnabled.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val showForm by viewModel.showForm.collectAsState()
     var editMode by rememberSaveable { mutableStateOf(EditMode.ADD) }
 
-    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
     val skipPartiallyExpanded by rememberSaveable { mutableStateOf(false) }
     val bottomSheetState =
         rememberModalBottomSheetState(skipPartiallyExpanded = skipPartiallyExpanded)
 
+    BackHandler(enabled = showForm) { viewModel.onHideForm() }
+
     LaunchedEffect(Unit) { viewModel.onRefresh() }
+
     CarsScreen(
         cars = cars,
         onCarClick = { car ->
@@ -77,25 +82,30 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
             handler.onModelChange(car.details.model)
             viewModel.currentlyEditingId = car.id
             editMode = EditMode.EDIT
-            openBottomSheet = true
+            viewModel.onShowForm()
         },
         onShowAddCarClick = {
             handler.resetForm()
             viewModel.currentlyEditingId = ""
             editMode = EditMode.ADD
-            openBottomSheet = true
+            viewModel.onShowForm()
         },
         isRefreshing = isRefreshing,
         onRefresh = viewModel::onRefresh,
         snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
         modifier = modifier,
     )
-    if (openBottomSheet) {
+    if (showForm) {
         ModalBottomSheet(
-            onDismissRequest = { openBottomSheet = false },
+            onDismissRequest = { viewModel.onHideForm() },
             sheetState = bottomSheetState,
         ) {
-            AddCarScreen(state = viewModel.formState, handler = handler, editMode = editMode)
+            AddCarScreen(
+                state = viewModel.formState,
+                handler = handler,
+                formEnabled = formEnabled,
+                editMode = editMode,
+            )
         }
     }
 }
@@ -160,6 +170,7 @@ fun AddCarButton(onShowAddCarClick: () -> Unit, modifier: Modifier = Modifier) {
 fun AddCarScreen(
     state: AddCarFormState,
     handler: AddCarFormHandler,
+    formEnabled: Boolean,
     editMode: EditMode,
     modifier: Modifier = Modifier,
 ) {
@@ -178,30 +189,35 @@ fun AddCarScreen(
             state = state.licensePlate,
             onValueChange = handler.onLicensePlateChange,
             modifier = Modifier.fillMaxWidth(),
+            enabled = formEnabled,
             labelId = R.string.license_plate,
         )
         ParkEasyTextField(
             state = state.color,
             onValueChange = handler.onColorChange,
             modifier = Modifier.fillMaxWidth(),
+            enabled = formEnabled,
             labelId = R.string.color,
         )
         ParkEasyTextField(
             state = state.make,
             onValueChange = handler.onMakeChange,
             modifier = Modifier.fillMaxWidth(),
+            enabled = formEnabled,
             labelId = R.string.make,
         )
         ParkEasyTextField(
             state = state.model,
             onValueChange = handler.onModelChange,
             modifier = Modifier.fillMaxWidth(),
+            enabled = formEnabled,
             labelId = R.string.model,
         )
         Button(
             onClick =
                 if (editMode == EditMode.ADD) handler.onAddCarClick else handler.onEditCarClick,
             modifier = Modifier.fillMaxWidth(),
+            enabled = formEnabled,
         ) {
             Text(
                 stringResource(
@@ -271,7 +287,12 @@ private fun AddCarScreenPreview(
             onDismissRequest = {},
             sheetState = rememberStandardBottomSheetState(initialValue = SheetValue.Expanded),
         ) {
-            AddCarScreen(state = state, handler = AddCarFormHandler(), editMode = EditMode.ADD)
+            AddCarScreen(
+                state = state,
+                handler = AddCarFormHandler(),
+                formEnabled = true,
+                editMode = EditMode.ADD,
+            )
         }
     }
 }
