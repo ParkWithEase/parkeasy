@@ -162,7 +162,7 @@ func (s *Service) UpdateSpotByUUID(ctx context.Context, userID int64, spotID uui
 	return out, nil
 }
 
-func (s *Service) UpdateAvailUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotAvailUpdateInput) error {
+func (s *Service) UpdateAvailByUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotAvailUpdateInput) error {
 	getResult, err := s.repo.GetByUUID(ctx, spotID)
 	if err != nil {
 		if errors.Is(err, parkingspot.ErrNotFound) {
@@ -177,16 +177,23 @@ func (s *Service) UpdateAvailUUID(ctx context.Context, userID int64, spotID uuid
 
 	err = validateSpotAvail(input.AddAvailability)
 	if err != nil {
-		return err
+		return models.ErrInvalidAddTimeUnit
 	}
 
 	err = validateSpotAvail(input.RemoveAvailability)
 	if err != nil {
-		return err
+		return models.ErrInvalidRemoveTimeUnit
 	}
 
-	return s.repo.UpdateAvailByUUID(ctx, spotID, input)
+	err = s.repo.UpdateAvailByUUID(ctx, spotID, input)
+	switch err {
+	case parkingspot.ErrDeleteBookedTimeUnit:
+		return models.ErrBookedTimeUnitModified
+	case parkingspot.ErrDuplicatedTimeUnit:
+		return models.ErrTimeUnitDuplicate
+	}
 
+	return nil
 }
 
 func (s *Service) GetByUUID(ctx context.Context, userID int64, spotID uuid.UUID) (models.ParkingSpot, error) {
@@ -312,6 +319,11 @@ func validateCreationInput(input *models.ParkingSpotCreationInput) error {
 		return err
 	}
 
+	// There must be at least one slot
+	if len(input.Availability) == 0 {
+		return models.ErrNoAvailability
+	}
+
 	return validatePricePerHour(input.PricePerHour)
 }
 
@@ -325,10 +337,6 @@ func validatePricePerHour(pricePerHour float64) error {
 
 // Validate availability static rules
 func validateSpotAvail(availability []models.TimeUnit) error {
-	// There must be at least one slot
-	if len(availability) == 0 {
-		return models.ErrNoAvailability
-	}
 	// All availability units must be 30 minutes
 	for _, unit := range availability {
 		if unit.EndTime != unit.StartTime.Add(30*time.Minute) {

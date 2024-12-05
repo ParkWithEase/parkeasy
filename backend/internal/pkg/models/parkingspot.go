@@ -18,6 +18,8 @@ var (
 	ErrTimeUnitDuplicate      = CodeDuplicate.WithMsg("time slot already exists")
 	ErrInvalidAddress         = CodeSpotInvalid.WithMsg("the specified address is invalid")
 	ErrInvalidTimeUnit        = CodeSpotInvalid.WithMsg("passed time unit is not valid, start and end time must be exactly 30 min apart")
+	ErrInvalidAddTimeUnit     = CodeSpotInvalid.WithMsg("passed time unit to be added is not valid, start and end time must be exactly 30 min apart")
+	ErrInvalidRemoveTimeUnit  = CodeSpotInvalid.WithMsg("passed time unit to be removed is not valid, start and end time must be exactly 30 min apart")
 	ErrNoAvailability         = CodeSpotInvalid.WithMsg("at least one time slot must be passed")
 	ErrInvalidPricePerHour    = CodeSpotInvalid.WithMsg("the specified price per hour is not valid")
 	ErrBookedTimeUnitModified = CodeSpotInvalid.WithMsg("booked time unit cannot be modified")

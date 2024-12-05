@@ -30,7 +30,7 @@ type ParkingSpotServicer interface {
 	// Update the parking spot details with `spotID` if `userID` owns the resource.
 	UpdateSpotByUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotUpdateInput) (models.ParkingSpot, error)
 	// Update the parking spot availability with `spotID` if `userID` owns the resource.
-	UpdateAvailUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotAvailUpdateInput) error
+	UpdateAvailByUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotAvailUpdateInput) error
 
 	// Creates a new preference attached to `userID`.
 	//
@@ -274,7 +274,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 	},
 	) (*struct{}, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
-		err := r.service.UpdateAvailUUID(ctx, userID, input.ID, &input.Body)
+		err := r.service.UpdateAvailByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
 			detail := describeParkingSpotInputError(err, &models.ParkingSpotLocation{}, []models.TimeUnit{}, 1)
 			if errors.Is(err, models.ErrParkingSpotNotFound) {
@@ -426,6 +426,26 @@ func describeParkingSpotInputError(err error, location *models.ParkingSpotLocati
 		return &huma.ErrorDetail{
 			Location: "body.availability",
 			Value:    availability,
+		}
+	default:
+		return nil
+	}
+}
+
+// Returns a huma.ErrorDetail describing the error in input for availability update
+//
+// Returns nil if there are no description for the error
+func describeParkingSpotAvailUpdateInputError(err error, availability *models.ParkingSpotAvailUpdateInput) error {
+	switch {
+	case errors.Is(err, models.ErrInvalidAddTimeUnit):
+		return &huma.ErrorDetail{
+			Location: "body.add_availability",
+			Value:    availability.AddAvailability,
+		}
+	case errors.Is(err, models.ErrInvalidRemoveTimeUnit):
+		return &huma.ErrorDetail{
+			Location: "body.remove_availability",
+			Value:    availability.RemoveAvailability,
 		}
 	default:
 		return nil
