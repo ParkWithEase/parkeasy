@@ -43,4 +43,5 @@
     <string name="price_per_hour">Price Per Hour</string>
     <string name="create_booking">Create Booking</string>
     <string name="total_price">Total Price</string>
+    <string name="select_car">Select Car</string>
 </resources>

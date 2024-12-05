@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.data.remote
 
+import io.github.parkwithease.parkeasy.model.Booking
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.model.TimeUnit
 
@@ -37,4 +38,11 @@ interface SpotRepository {
      * @return a [Result] containing [List] of [TimeUnit]s on success, failing [Result] otherwise.
      */
     suspend fun getSpotAvailability(id: String): Result<List<TimeUnit>>
+
+    /**
+     * Creates a booking for a parking spot.
+     *
+     * @return whether the creation was successful or not.
+     */
+    suspend fun bookSpot(spotId: String, booking: Booking): Result<Unit>
 }

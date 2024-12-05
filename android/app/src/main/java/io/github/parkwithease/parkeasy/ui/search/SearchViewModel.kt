@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.search
 
+import android.util.Log
 import android.util.SparseArray
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -8,12 +9,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.util.containsKey
+import androidx.core.util.forEach
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.data.remote.CarRepository
 import io.github.parkwithease.parkeasy.data.remote.SpotRepository
+import io.github.parkwithease.parkeasy.model.Booking
 import io.github.parkwithease.parkeasy.model.Car
 import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.Spot
@@ -127,6 +130,29 @@ constructor(
             }
     }
 
+    fun onCreateBookingClick() {
+        viewModelScope.launch {
+            var bookedTimes = emptyList<TimeUnit>()
+            times.forEach { k, v ->
+                if (k in createState.selectedIds.value) bookedTimes = bookedTimes.plus(v)
+            }
+            Log.e("", bookedTimes.toString())
+            spotRepo
+                .bookSpot(
+                    spotId = createState.selectedSpot.value.id,
+                    booking =
+                        Booking(carId = createState.selectedCar.value.id, bookedTimes = bookedTimes),
+                )
+                .onSuccess { onRefresh() }
+                .recoverRequestErrors(
+                    "Error booking parking spot",
+                    {},
+                    snackbarState,
+                    viewModelScope,
+                )
+        }
+    }
+
     fun onCarChange(value: Car) {
         createState = createState.run { copy(selectedCar = selectedCar.copy(value = value)) }
     }
@@ -205,7 +231,7 @@ constructor(
             onSpotChange = this::onSpotChange,
             onAddTime = this::onAddTime,
             onRemoveTime = this::onRemoveTime,
-            onCreateBookingClick = {},
+            onCreateBookingClick = this::onCreateBookingClick,
             reset = this::resetCreate,
         )
 }

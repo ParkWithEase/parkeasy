@@ -2,6 +2,7 @@ package io.github.parkwithease.parkeasy.ui.search.list
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,9 +16,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
@@ -27,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -37,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
+import io.github.parkwithease.parkeasy.model.Car
 import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.model.SpotLocation
@@ -68,6 +75,7 @@ fun ListScreen(
     } else {
         @Suppress("unused") val searchHandler = rememberSearchHandler(viewModel)
         val createHandler = rememberCreateHandler(viewModel)
+        val cars by viewModel.cars.collectAsState()
         val spots by viewModel.spots.collectAsState()
         val isRefreshing by viewModel.isRefreshing.collectAsState()
 
@@ -79,6 +87,7 @@ fun ListScreen(
 
         if (showForm)
             CreateBookingScreen(
+                cars = cars,
                 state = viewModel.createState,
                 handler = createHandler,
                 getSelectedIds = { viewModel.createState.selectedIds.value },
@@ -177,15 +186,19 @@ fun SpotCard(spot: Spot, onClick: (Spot) -> Unit, modifier: Modifier = Modifier)
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Suppress("detekt:LongMethod", "DefaultLocale", "detekt:ImplicitDefaultLocale")
 @Composable
 fun CreateBookingScreen(
+    cars: List<Car>,
     state: CreateState,
     handler: CreateHandler,
     getSelectedIds: () -> Set<Int>,
     disabledIds: Set<Int>,
     modifier: Modifier = Modifier,
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Surface(modifier.fillMaxSize()) {
         Column(
             modifier =
@@ -195,6 +208,32 @@ fun CreateBookingScreen(
             verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+                ParkEasyTextField(
+                    state = FieldState(state.selectedCar.value.details.licensePlate),
+                    onValueChange = {},
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                            .clickable { expanded = true },
+                    enabled = false,
+                    visuallyEnabled = true,
+                    readOnly = true,
+                    labelId = R.string.select_car,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                )
+                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    cars.forEach {
+                        DropdownMenuItem(
+                            text = { Text(it.details.licensePlate) },
+                            onClick = {
+                                handler.onCarChange(it)
+                                expanded = false
+                            },
+                        )
+                    }
+                }
+            }
             ParkEasyTextField(
                 state = FieldState(state.selectedSpot.value.location.streetAddress),
                 onValueChange = {},
