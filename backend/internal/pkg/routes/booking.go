@@ -23,14 +23,14 @@ type BookingServicer interface {
 	//
 	// If there are more entries following the result, a non-empty cursor will be returned
 	// which can be passed to the next invocation to get the next entries.
-	GetManyForOwner(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error)
+	GetManyForOwner(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.BookingWithDetails, models.Cursor, error)
 	// Get at most `count` bookings associated with the given `userID` that satisfies the given filter conditions.
 	//
 	// If there are more entries following the result, a non-empty cursor will be returned
 	// which can be passed to the next invocation to get the next entries.
-	GetManyForBuyer(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.Booking, models.Cursor, error)
+	GetManyForBuyer(ctx context.Context, userID int64, count int, after models.Cursor, filter models.BookingFilter) ([]models.BookingWithDetails, models.Cursor, error)
 	// Get the booking with `bookingID` if `userID` has enough permission to view the resource.
-	GetByUUID(ctx context.Context, userID int64, bookingID uuid.UUID) (models.BookingWithTimes, error)
+	GetByUUID(ctx context.Context, userID int64, bookingID uuid.UUID) (models.BookingWithDetailsAndTimes, error)
 	// Get booked times with `bookingID if `userID` has enough permission to view the resource.
 	GetBookedTimesByUUID(ctx context.Context, userID int64, bookingID uuid.UUID) ([]models.TimeUnit, error)
 }
@@ -42,11 +42,15 @@ type BookingRoute struct {
 }
 
 type bookingListOutput struct {
-	Link []string         `header:"Link" doc:"Contains details on getting the next page of resources" example:"<https://example.com/bookings?after=gQL>; rel=\"next\""`
-	Body []models.Booking `nullable:"false"`
+	Link []string                    `header:"Link" doc:"Contains details on getting the next page of resources" example:"<https://example.com/bookings?after=gQL>; rel=\"next\""`
+	Body []models.BookingWithDetails `nullable:"false"`
 }
 
 type bookingWithTimesOutput struct {
+	Body models.BookingWithDetailsAndTimes
+}
+
+type bookingCreateOutput struct {
 	Body models.BookingWithTimes
 }
 
@@ -90,7 +94,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 		Body models.BookingCreationInput
 		ID   uuid.UUID `path:"id"`
 	},
-	) (*bookingWithTimesOutput, error) {
+	) (*bookingCreateOutput, error) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		_, result, err := r.service.Create(ctx, userID, input.ID, &input.Body)
 		if err != nil {
@@ -119,7 +123,7 @@ func (r *BookingRoute) RegisterBookingRoutes(api huma.API) {
 			}
 			return nil, NewHumaError(ctx, http.StatusUnprocessableEntity, err, detail)
 		}
-		return &bookingWithTimesOutput{Body: result}, nil
+		return &bookingCreateOutput{Body: result}, nil
 	})
 
 	huma.Register(api, *withUserID(&huma.Operation{
