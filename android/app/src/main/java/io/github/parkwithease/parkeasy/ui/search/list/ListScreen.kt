@@ -1,12 +1,15 @@
 package io.github.parkwithease.parkeasy.ui.search.list
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -31,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -143,10 +147,33 @@ fun SpotCard(spot: Spot, onClick: (Spot) -> Unit, modifier: Modifier = Modifier)
         Row(modifier = Modifier.padding(8.dp)) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    '$' + spot.pricePerHour.toString(),
-                    style = MaterialTheme.typography.headlineLarge,
+                    text = String.format("$ %.2f", spot.pricePerHour),
+                    style = MaterialTheme.typography.titleLarge,
                 )
-                Text(String.format("%.0f meters away", spot.distanceToLocation))
+                Row(Modifier.height(24.dp)) {
+                    if (spot.features.chargingStation)
+                        Image(
+                            painter = painterResource(R.drawable.charging_station),
+                            contentDescription = null,
+                            modifier = Modifier.width(24.dp),
+                        )
+                    if (spot.features.plugIn)
+                        Image(
+                            painter = painterResource(R.drawable.plug_in),
+                            contentDescription = null,
+                            modifier = Modifier.width(24.dp),
+                        )
+                    if (spot.features.shelter)
+                        Image(
+                            painter = painterResource(R.drawable.shelter),
+                            contentDescription = null,
+                            modifier = Modifier.width(24.dp),
+                        )
+                }
+                Text(
+                    text = String.format("%.0f meters away", spot.distanceToLocation),
+                    style = MaterialTheme.typography.titleSmall,
+                )
             }
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                 Text(spot.location.streetAddress)
@@ -157,7 +184,7 @@ fun SpotCard(spot: Spot, onClick: (Spot) -> Unit, modifier: Modifier = Modifier)
     }
 }
 
-@Suppress("detekt:LongMethod")
+@Suppress("detekt:LongMethod", "DefaultLocale", "detekt:ImplicitDefaultLocale")
 @Composable
 fun CreateBookingScreen(
     state: CreateState,
@@ -227,7 +254,7 @@ fun CreateBookingScreen(
             )
         }
         ParkEasyTextField(
-            state = FieldState(state.selectedSpot.value.pricePerHour.toString()),
+            state = FieldState(String.format("$ %.2f", state.selectedSpot.value.pricePerHour)),
             onValueChange = {},
             modifier = Modifier.fillMaxWidth(),
             enabled = false,
@@ -256,6 +283,21 @@ fun CreateBookingScreen(
             )
         }
         TimeGrid(getSelectedIds, disabledIds, handler.onAddTime, handler.onRemoveTime)
+        ParkEasyTextField(
+            state =
+                FieldState(
+                    String.format(
+                        "$ %.2f",
+                        state.selectedSpot.value.pricePerHour * getSelectedIds().size / 2,
+                    )
+                ),
+            onValueChange = {},
+            modifier = Modifier.fillMaxWidth(),
+            enabled = false,
+            visuallyEnabled = true,
+            readOnly = true,
+            labelId = R.string.total_price,
+        )
         Button(onClick = handler.onCreateBookingClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.create_booking))
         }
