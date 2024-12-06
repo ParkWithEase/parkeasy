@@ -213,7 +213,7 @@
                     }
                 })
                 .catch((err) => {
-                    errorMessage = 'An error occurred while updating.';
+                    errorMessage = getErrorMessage(err);
                     errorTimeOut = ERROR_MESSAGE_TIME_OUT;
                 });
         }
@@ -279,7 +279,7 @@
                 }
             })
             .catch((err) => {
-                errorMessage = 'An error occurred while updating availability.';
+                errorMessage = getErrorMessage(err);
                 errorTimeOut = ERROR_MESSAGE_TIME_OUT;
             });
     }
