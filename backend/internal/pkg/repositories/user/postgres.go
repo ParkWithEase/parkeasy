@@ -34,11 +34,11 @@ func (p *PostgresRepository) Create(ctx context.Context, id uuid.UUID, profile m
 		return 0, fmt.Errorf("could not start a transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
-	inserted, err := dbmodels.Users.Insert(ctx, tx, &dbmodels.UserSetter{
+	inserted, err := dbmodels.Users.Insert(&dbmodels.UserSetter{
 		Fullname: omit.From(profile.FullName),
 		Email:    omit.From(profile.Email),
 		Authuuid: omit.From(id),
-	})
+	}).One(ctx, tx)
 	if err != nil {
 		// Handle duplicate error
 		var pgErr *pgconn.PgError
@@ -60,7 +60,7 @@ func (p *PostgresRepository) Create(ctx context.Context, id uuid.UUID, profile m
 func (p *PostgresRepository) GetProfileByID(ctx context.Context, id int64) (Profile, error) {
 	query := psql.Select(
 		sm.Columns(dbmodels.UserColumns.Email, dbmodels.UserColumns.Fullname, dbmodels.UserColumns.Authuuid, dbmodels.UserColumns.Userid),
-		sm.From(dbmodels.Users.Name(ctx)),
+		sm.From(dbmodels.Users.Name()),
 		dbmodels.SelectWhere.Users.Userid.EQ(id),
 	)
 	result, err := bob.One(ctx, p.db, query, scan.StructMapper[dbmodels.User]())
@@ -89,7 +89,7 @@ func (p *PostgresRepository) GetProfileByAuth(ctx context.Context, id uuid.UUID)
 			dbmodels.UserColumns.Authuuid,
 			dbmodels.UserColumns.Userid,
 		),
-		sm.From(dbmodels.Users.Name(ctx)),
+		sm.From(dbmodels.Users.Name()),
 		dbmodels.SelectWhere.Users.Authuuid.EQ(id),
 	)
 	result, err := bob.One(ctx, p.db, query, scan.StructMapper[dbmodels.User]())

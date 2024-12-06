@@ -62,38 +62,29 @@ func (p *PostgresRepository) Create(ctx context.Context, booking *CreateInput) (
 		return EntryWithTimes{}, ErrInvalidPaidAmount
 	}
 
-	inserted, err := dbmodels.Bookings.Insert(ctx, tx, &dbmodels.BookingSetter{
+	inserted, err := dbmodels.Bookings.Insert(&dbmodels.BookingSetter{
 		Userid:        omit.From(booking.UserID),
 		Parkingspotid: omit.From(booking.SpotID),
 		Carid:         omit.From(booking.CarID),
 		Paidamount:    omit.From(paidAmount),
-	})
+	}).One(ctx, tx)
 	if err != nil {
 		return EntryWithTimes{}, fmt.Errorf("could not execute insert: %w", err)
 	}
 
 	//--------Update the corresponding time slots--------
-	// Check if all the time slots are available
-	umods := []bob.Mod[*dialect.UpdateQuery]{&dbmodels.TimeunitSetter{
-		Bookingid: omitnull.From(inserted.Bookingid),
-	}}
-
-	// Variable for OR clauses in where, used for timeslots timeranges
-	timeslots := timeSlotsToSQLExpr(booking.BookedTimes)
-
-	// Variable for AND clauses in where
-	var whereMods []mods.Where[*dialect.UpdateQuery]
-	whereMods = append(
-		whereMods,
-		dbmodels.UpdateWhere.Timeunits.Bookingid.IsNull(),
-		dbmodels.UpdateWhere.Timeunits.Parkingspotid.EQ(booking.SpotID),
-		um.Where(timeslots),
+	query := dbmodels.Timeunits.Update(
+		dbmodels.TimeunitSetter{
+			Bookingid: omitnull.From(inserted.Bookingid),
+		}.UpdateMod(),
+		psql.WhereAnd(
+			dbmodels.UpdateWhere.Timeunits.Bookingid.IsNull(),
+			dbmodels.UpdateWhere.Timeunits.Parkingspotid.EQ(booking.SpotID),
+			um.Where(timeSlotsToSQLExpr(booking.BookedTimes)),
+		),
 	)
 
-	umods = append(umods, psql.WhereAnd(whereMods...), um.Returning(dbmodels.Timeunits.Columns()))
-	query := dbmodels.Timeunits.UpdateQ(ctx, tx, umods...)
-
-	updatedCursor, err := query.Cursor()
+	updatedCursor, err := query.Cursor(ctx, tx)
 	if err != nil {
 		return EntryWithTimes{}, fmt.Errorf("could not update time units: %w", err)
 	}
@@ -114,20 +105,14 @@ func (p *PostgresRepository) Create(ctx context.Context, booking *CreateInput) (
 	}
 	//------------------------------------------------
 
-	type bookingUUIDs struct {
-		Parkingspotuuid uuid.UUID
-		Caruuid         uuid.UUID
-	}
-	uuidQuery := psql.Select(
-		sm.Columns(dbmodels.ParkingspotColumns.Parkingspotuuid, dbmodels.CarColumns.Caruuid),
-		sm.From(dbmodels.Bookings.Name(ctx)),
-		dbmodels.SelectJoins.Bookings.InnerJoin.ParkingspotidParkingspot(ctx),
-		dbmodels.SelectJoins.Bookings.InnerJoin.CaridCar(ctx),
+	related, err := dbmodels.Bookings.Query(
+		sm.Columns(dbmodels.BookingColumns.Bookingid),
+		dbmodels.PreloadBookingCaridCar(),
+		dbmodels.PreloadBookingParkingspotidParkingspot(),
 		dbmodels.SelectWhere.Bookings.Bookingid.EQ(inserted.Bookingid),
-	)
-	ids, err := bob.One(ctx, tx, uuidQuery, scan.StructMapper[bookingUUIDs]())
+	).One(ctx, tx)
 	if err != nil {
-		return EntryWithTimes{}, fmt.Errorf("could not get car and spot uuids: %w", err)
+		return EntryWithTimes{}, fmt.Errorf("could not get car and spot data: %w", err)
 	}
 
 	err = tx.Commit()
@@ -135,9 +120,31 @@ func (p *PostgresRepository) Create(ctx context.Context, booking *CreateInput) (
 		return EntryWithTimes{}, fmt.Errorf("could not commit transaction: %w", err)
 	}
 
+	lat, _ := related.R.ParkingspotidParkingspot.Latitude.Float64()
+	long, _ := related.R.ParkingspotidParkingspot.Longitude.Float64()
+
 	entry := EntryWithTimes{
 		EntryWithDetails: EntryWithDetails{
-			Entry: formEntry(inserted, ids.Parkingspotuuid, ids.Caruuid),
+			Entry: formEntry(
+				inserted,
+				related.R.ParkingspotidParkingspot.Parkingspotuuid,
+				related.R.CaridCar.Caruuid,
+			),
+			ParkingSpotLocation: models.ParkingSpotLocation{
+				PostalCode:    related.R.ParkingspotidParkingspot.Postalcode,
+				CountryCode:   related.R.ParkingspotidParkingspot.Countrycode,
+				StreetAddress: related.R.ParkingspotidParkingspot.Streetaddress,
+				State:         related.R.ParkingspotidParkingspot.State,
+				City:          related.R.ParkingspotidParkingspot.City,
+				Latitude:      lat,
+				Longitude:     long,
+			},
+			CarDetails: models.CarDetails{
+				Make:         related.R.CaridCar.Make,
+				Model:        related.R.CaridCar.Model,
+				LicensePlate: related.R.CaridCar.Licenseplate,
+				Color:        related.R.CaridCar.Color,
+			},
 		},
 		BookedTimes: bookedSlots,
 	}
@@ -165,11 +172,11 @@ func timeSlotsToSQLExpr(units []models.TimeUnit) dialect.Expression {
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID) (EntryWithTimes, error) {
-	bookingResult, err := dbmodels.Bookings.Query(ctx, p.db,
+	bookingResult, err := dbmodels.Bookings.Query(
 		dbmodels.SelectWhere.Bookings.Bookinguuid.EQ(bookingID),
 		dbmodels.PreloadBookingParkingspotidParkingspot(),
 		dbmodels.PreloadBookingCaridCar(),
-	).One()
+	).One(ctx, p.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
@@ -178,14 +185,13 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, bookingID uuid.UUID)
 	}
 
 	timeResult, err := dbmodels.Timeunits.Query(
-		ctx, p.db,
 		sm.Columns(dbmodels.TimeunitColumns.Timerange),
 		sm.Columns(dbmodels.TimeunitColumns.Bookingid),
 		psql.WhereAnd(
 			dbmodels.SelectWhere.Timeunits.Bookingid.EQ(bookingResult.Bookingid),
 		),
 		sm.OrderBy(psql.F("lower", dbmodels.TimeunitColumns.Timerange)),
-	).All()
+	).All(ctx, p.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
@@ -260,7 +266,7 @@ func (p *PostgresRepository) GetManyForBuyer(ctx context.Context, limit int, aft
 
 	smods = append(
 		smods,
-		sm.From(dbmodels.Bookings.Name(ctx)),
+		sm.From(dbmodels.Bookings.Name()),
 		dbmodels.SelectJoins.Bookings.InnerJoin.ParkingspotidParkingspot(ctx),
 		dbmodels.SelectJoins.Bookings.InnerJoin.CaridCar(ctx),
 		sm.Limit(limit),
@@ -350,7 +356,7 @@ func (p *PostgresRepository) GetManyForOwner(ctx context.Context, limit int, aft
 
 	smods = append(
 		smods,
-		sm.From(dbmodels.Bookings.Name(ctx)),
+		sm.From(dbmodels.Bookings.Name()),
 		dbmodels.SelectJoins.Bookings.InnerJoin.ParkingspotidParkingspot(ctx),
 		dbmodels.SelectJoins.Bookings.InnerJoin.CaridCar(ctx),
 		sm.Limit(limit),

@@ -35,10 +35,10 @@ type getManyResult struct {
 }
 
 func (p *PostgresRepository) Create(ctx context.Context, userID, spotID int64) error {
-	_, err := dbmodels.Preferencespots.Insert(ctx, p.db, &dbmodels.PreferencespotSetter{
+	_, err := dbmodels.Preferencespots.Insert(&dbmodels.PreferencespotSetter{
 		Userid:        omit.From(userID),
 		Parkingspotid: omit.From(spotID),
-	})
+	}).Exec(ctx, p.db)
 	if err != nil {
 		// Handle duplicate error
 		var pgErr *pgconn.PgError
@@ -55,12 +55,11 @@ func (p *PostgresRepository) Create(ctx context.Context, userID, spotID int64) e
 
 func (p *PostgresRepository) GetBySpotID(ctx context.Context, userID, spotID int64) (bool, error) {
 	exists, err := dbmodels.Preferencespots.Query(
-		ctx, p.db,
 		sm.Columns(1),
 		psql.WhereAnd(dbmodels.SelectWhere.Preferencespots.Parkingspotid.EQ(spotID),
 			dbmodels.SelectWhere.Preferencespots.Userid.EQ(userID),
 		),
-	).Exists()
+	).Exists(ctx, p.db)
 	if err != nil {
 		return false, fmt.Errorf("could not execute query: %w", err)
 	}
@@ -77,7 +76,7 @@ func (p *PostgresRepository) GetMany(ctx context.Context, userID int64, limit in
 	smods := []bob.Mod[*dialect.SelectQuery]{
 		sm.Columns(dbmodels.Parkingspots.Columns()),
 		sm.Columns(dbmodels.PreferencespotColumns.Preferencespotid),
-		sm.From(dbmodels.Preferencespots.Name(ctx)),
+		sm.From(dbmodels.Preferencespots.Name()),
 		dbmodels.SelectJoins.Preferencespots.InnerJoin.ParkingspotidParkingspot(ctx),
 		sm.Limit(limit),
 		where,
@@ -116,13 +115,12 @@ func (p *PostgresRepository) GetMany(ctx context.Context, userID int64, limit in
 }
 
 func (p *PostgresRepository) Delete(ctx context.Context, userID, spotID int64) error {
-	_, err := dbmodels.Preferencespots.DeleteQ(
-		ctx, p.db,
+	_, err := dbmodels.Preferencespots.Delete(
 		psql.WhereAnd(
 			dbmodels.DeleteWhere.Preferencespots.Userid.EQ(userID),
 			dbmodels.DeleteWhere.Preferencespots.Parkingspotid.EQ(spotID),
 		),
-	).Exec()
+	).Exec(ctx, p.db)
 	if err != nil {
 		return fmt.Errorf("could not execute delete: %w", err)
 	}

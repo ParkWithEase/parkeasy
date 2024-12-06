@@ -8,13 +8,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
-	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/expr"
@@ -42,126 +43,10 @@ var Auths = psql.NewTablex[*Auth, AuthSlice, *AuthSetter]("", "auth")
 // AuthsQuery is a query on the auth table
 type AuthsQuery = *psql.ViewQuery[*Auth, AuthSlice]
 
-// AuthsStmt is a prepared statment on auth
-type AuthsStmt = bob.QueryStmt[*Auth, AuthSlice]
-
 // authR is where relationships are stored.
 type authR struct {
 	AuthuuidResettoken *Resettoken // resettoken.resettoken_authuuid_fkey
 	AuthuuidUser       *User       // users.users_authuuid_fkey
-}
-
-// AuthSetter is used for insert/upsert/update operations
-// All values are optional, and do not have to be set
-// Generated columns are not included
-type AuthSetter struct {
-	Authid       omit.Val[int32]     `db:"authid,pk" `
-	Authuuid     omit.Val[uuid.UUID] `db:"authuuid" `
-	Email        omit.Val[string]    `db:"email" `
-	Passwordhash omit.Val[string]    `db:"passwordhash" `
-}
-
-func (s AuthSetter) SetColumns() []string {
-	vals := make([]string, 0, 4)
-	if !s.Authid.IsUnset() {
-		vals = append(vals, "authid")
-	}
-
-	if !s.Authuuid.IsUnset() {
-		vals = append(vals, "authuuid")
-	}
-
-	if !s.Email.IsUnset() {
-		vals = append(vals, "email")
-	}
-
-	if !s.Passwordhash.IsUnset() {
-		vals = append(vals, "passwordhash")
-	}
-
-	return vals
-}
-
-func (s AuthSetter) Overwrite(t *Auth) {
-	if !s.Authid.IsUnset() {
-		t.Authid, _ = s.Authid.Get()
-	}
-	if !s.Authuuid.IsUnset() {
-		t.Authuuid, _ = s.Authuuid.Get()
-	}
-	if !s.Email.IsUnset() {
-		t.Email, _ = s.Email.Get()
-	}
-	if !s.Passwordhash.IsUnset() {
-		t.Passwordhash, _ = s.Passwordhash.Get()
-	}
-}
-
-func (s AuthSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 4)
-	if s.Authid.IsUnset() {
-		vals[0] = psql.Raw("DEFAULT")
-	} else {
-		vals[0] = psql.Arg(s.Authid)
-	}
-
-	if s.Authuuid.IsUnset() {
-		vals[1] = psql.Raw("DEFAULT")
-	} else {
-		vals[1] = psql.Arg(s.Authuuid)
-	}
-
-	if s.Email.IsUnset() {
-		vals[2] = psql.Raw("DEFAULT")
-	} else {
-		vals[2] = psql.Arg(s.Email)
-	}
-
-	if s.Passwordhash.IsUnset() {
-		vals[3] = psql.Raw("DEFAULT")
-	} else {
-		vals[3] = psql.Arg(s.Passwordhash)
-	}
-
-	return im.Values(vals...)
-}
-
-func (s AuthSetter) Apply(q *dialect.UpdateQuery) {
-	um.Set(s.Expressions()...).Apply(q)
-}
-
-func (s AuthSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 4)
-
-	if !s.Authid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "authid")...),
-			psql.Arg(s.Authid),
-		}})
-	}
-
-	if !s.Authuuid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "authuuid")...),
-			psql.Arg(s.Authuuid),
-		}})
-	}
-
-	if !s.Email.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "email")...),
-			psql.Arg(s.Email),
-		}})
-	}
-
-	if !s.Passwordhash.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "passwordhash")...),
-			psql.Arg(s.Passwordhash),
-		}})
-	}
-
-	return exprs
 }
 
 type authColumnNames struct {
@@ -219,6 +104,344 @@ func buildAuthWhere[Q psql.Filterable](cols authColumns) authWhere[Q] {
 	}
 }
 
+var AuthErrors = &authErrors{
+	ErrUniqueAuthuuid: &errUniqueConstraint{s: "auth_authuuid_key"},
+
+	ErrUniqueEmail: &errUniqueConstraint{s: "auth_email_key"},
+}
+
+type authErrors struct {
+	ErrUniqueAuthuuid error
+
+	ErrUniqueEmail error
+}
+
+// AuthSetter is used for insert/upsert/update operations
+// All values are optional, and do not have to be set
+// Generated columns are not included
+type AuthSetter struct {
+	Authid       omit.Val[int32]     `db:"authid,pk" `
+	Authuuid     omit.Val[uuid.UUID] `db:"authuuid" `
+	Email        omit.Val[string]    `db:"email" `
+	Passwordhash omit.Val[string]    `db:"passwordhash" `
+}
+
+func (s AuthSetter) SetColumns() []string {
+	vals := make([]string, 0, 4)
+	if !s.Authid.IsUnset() {
+		vals = append(vals, "authid")
+	}
+
+	if !s.Authuuid.IsUnset() {
+		vals = append(vals, "authuuid")
+	}
+
+	if !s.Email.IsUnset() {
+		vals = append(vals, "email")
+	}
+
+	if !s.Passwordhash.IsUnset() {
+		vals = append(vals, "passwordhash")
+	}
+
+	return vals
+}
+
+func (s AuthSetter) Overwrite(t *Auth) {
+	if !s.Authid.IsUnset() {
+		t.Authid, _ = s.Authid.Get()
+	}
+	if !s.Authuuid.IsUnset() {
+		t.Authuuid, _ = s.Authuuid.Get()
+	}
+	if !s.Email.IsUnset() {
+		t.Email, _ = s.Email.Get()
+	}
+	if !s.Passwordhash.IsUnset() {
+		t.Passwordhash, _ = s.Passwordhash.Get()
+	}
+}
+
+func (s *AuthSetter) Apply(q *dialect.InsertQuery) {
+	q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+		return Auths.BeforeInsertHooks.RunHooks(ctx, exec, s)
+	})
+
+	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		vals := make([]bob.Expression, 4)
+		if s.Authid.IsUnset() {
+			vals[0] = psql.Raw("DEFAULT")
+		} else {
+			vals[0] = psql.Arg(s.Authid)
+		}
+
+		if s.Authuuid.IsUnset() {
+			vals[1] = psql.Raw("DEFAULT")
+		} else {
+			vals[1] = psql.Arg(s.Authuuid)
+		}
+
+		if s.Email.IsUnset() {
+			vals[2] = psql.Raw("DEFAULT")
+		} else {
+			vals[2] = psql.Arg(s.Email)
+		}
+
+		if s.Passwordhash.IsUnset() {
+			vals[3] = psql.Raw("DEFAULT")
+		} else {
+			vals[3] = psql.Arg(s.Passwordhash)
+		}
+
+		return bob.ExpressSlice(ctx, w, d, start, vals, "", ", ", "")
+	}))
+}
+
+func (s AuthSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return um.Set(s.Expressions()...)
+}
+
+func (s AuthSetter) Expressions(prefix ...string) []bob.Expression {
+	exprs := make([]bob.Expression, 0, 4)
+
+	if !s.Authid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "authid")...),
+			psql.Arg(s.Authid),
+		}})
+	}
+
+	if !s.Authuuid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "authuuid")...),
+			psql.Arg(s.Authuuid),
+		}})
+	}
+
+	if !s.Email.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "email")...),
+			psql.Arg(s.Email),
+		}})
+	}
+
+	if !s.Passwordhash.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "passwordhash")...),
+			psql.Arg(s.Passwordhash),
+		}})
+	}
+
+	return exprs
+}
+
+// FindAuth retrieves a single record by primary key
+// If cols is empty Find will return all columns.
+func FindAuth(ctx context.Context, exec bob.Executor, AuthidPK int32, cols ...string) (*Auth, error) {
+	if len(cols) == 0 {
+		return Auths.Query(
+			SelectWhere.Auths.Authid.EQ(AuthidPK),
+		).One(ctx, exec)
+	}
+
+	return Auths.Query(
+		SelectWhere.Auths.Authid.EQ(AuthidPK),
+		sm.Columns(Auths.Columns().Only(cols...)),
+	).One(ctx, exec)
+}
+
+// AuthExists checks the presence of a single record by primary key
+func AuthExists(ctx context.Context, exec bob.Executor, AuthidPK int32) (bool, error) {
+	return Auths.Query(
+		SelectWhere.Auths.Authid.EQ(AuthidPK),
+	).Exists(ctx, exec)
+}
+
+// AfterQueryHook is called after Auth is retrieved from the database
+func (o *Auth) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Auths.AfterSelectHooks.RunHooks(ctx, exec, AuthSlice{o})
+	case bob.QueryTypeInsert:
+		ctx, err = Auths.AfterInsertHooks.RunHooks(ctx, exec, AuthSlice{o})
+	case bob.QueryTypeUpdate:
+		ctx, err = Auths.AfterUpdateHooks.RunHooks(ctx, exec, AuthSlice{o})
+	case bob.QueryTypeDelete:
+		ctx, err = Auths.AfterDeleteHooks.RunHooks(ctx, exec, AuthSlice{o})
+	}
+
+	return err
+}
+
+// PrimaryKeyVals returns the primary key values of the Auth
+func (o *Auth) PrimaryKeyVals() bob.Expression {
+	return psql.Arg(o.Authid)
+}
+
+func (o *Auth) pkEQ() dialect.Expression {
+	return psql.Quote("auth", "authid").EQ(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		return o.PrimaryKeyVals().WriteSQL(ctx, w, d, start)
+	}))
+}
+
+// Update uses an executor to update the Auth
+func (o *Auth) Update(ctx context.Context, exec bob.Executor, s *AuthSetter) error {
+	v, err := Auths.Update(s.UpdateMod(), um.Where(o.pkEQ())).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.R = v.R
+	*o = *v
+
+	return nil
+}
+
+// Delete deletes a single Auth record with an executor
+func (o *Auth) Delete(ctx context.Context, exec bob.Executor) error {
+	_, err := Auths.Delete(dm.Where(o.pkEQ())).Exec(ctx, exec)
+	return err
+}
+
+// Reload refreshes the Auth using the executor
+func (o *Auth) Reload(ctx context.Context, exec bob.Executor) error {
+	o2, err := Auths.Query(
+		SelectWhere.Auths.Authid.EQ(o.Authid),
+	).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+	o2.R = o.R
+	*o = *o2
+
+	return nil
+}
+
+// AfterQueryHook is called after AuthSlice is retrieved from the database
+func (o AuthSlice) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Auths.AfterSelectHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeInsert:
+		ctx, err = Auths.AfterInsertHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeUpdate:
+		ctx, err = Auths.AfterUpdateHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeDelete:
+		ctx, err = Auths.AfterDeleteHooks.RunHooks(ctx, exec, o)
+	}
+
+	return err
+}
+
+func (o AuthSlice) pkIN() dialect.Expression {
+	return psql.Quote("auth", "authid").In(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		pkPairs := make([]bob.Expression, len(o))
+		for i, row := range o {
+			pkPairs[i] = row.PrimaryKeyVals()
+		}
+		return bob.ExpressSlice(ctx, w, d, start, pkPairs, "", ", ", "")
+	}))
+}
+
+// copyMatchingRows finds models in the given slice that have the same primary key
+// then it first copies the existing relationships from the old model to the new model
+// and then replaces the old model in the slice with the new model
+func (o AuthSlice) copyMatchingRows(from ...*Auth) {
+	for i, old := range o {
+		for _, new := range from {
+			if new.Authid != old.Authid {
+				continue
+			}
+			new.R = old.R
+			o[i] = new
+			break
+		}
+	}
+}
+
+// UpdateMod modifies an update query with "WHERE primary_key IN (o...)"
+func (o AuthSlice) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Auths.BeforeUpdateHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Auth:
+				o.copyMatchingRows(retrieved)
+			case []*Auth:
+				o.copyMatchingRows(retrieved...)
+			case AuthSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Auth or a slice of Auth
+				// then run the AfterUpdateHooks on the slice
+				_, err = Auths.AfterUpdateHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+// DeleteMod modifies an delete query with "WHERE primary_key IN (o...)"
+func (o AuthSlice) DeleteMod() bob.Mod[*dialect.DeleteQuery] {
+	return bob.ModFunc[*dialect.DeleteQuery](func(q *dialect.DeleteQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Auths.BeforeDeleteHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Auth:
+				o.copyMatchingRows(retrieved)
+			case []*Auth:
+				o.copyMatchingRows(retrieved...)
+			case AuthSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Auth or a slice of Auth
+				// then run the AfterDeleteHooks on the slice
+				_, err = Auths.AfterDeleteHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+func (o AuthSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals AuthSetter) error {
+	_, err := Auths.Update(vals.UpdateMod(), o.UpdateMod()).All(ctx, exec)
+	return err
+}
+
+func (o AuthSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
+	_, err := Auths.Delete(o.DeleteMod()).Exec(ctx, exec)
+	return err
+}
+
+func (o AuthSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
+	o2, err := Auths.Query(sm.Where(o.pkIN())).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.copyMatchingRows(o2...)
+
+	return nil
+}
+
 type authJoins[Q dialect.Joinable] struct {
 	typ                string
 	AuthuuidResettoken func(context.Context) modAs[Q, resettokenColumns]
@@ -237,101 +460,6 @@ func buildAuthJoins[Q dialect.Joinable](cols authColumns, typ string) authJoins[
 	}
 }
 
-// FindAuth retrieves a single record by primary key
-// If cols is empty Find will return all columns.
-func FindAuth(ctx context.Context, exec bob.Executor, AuthidPK int32, cols ...string) (*Auth, error) {
-	if len(cols) == 0 {
-		return Auths.Query(
-			ctx, exec,
-			SelectWhere.Auths.Authid.EQ(AuthidPK),
-		).One()
-	}
-
-	return Auths.Query(
-		ctx, exec,
-		SelectWhere.Auths.Authid.EQ(AuthidPK),
-		sm.Columns(Auths.Columns().Only(cols...)),
-	).One()
-}
-
-// AuthExists checks the presence of a single record by primary key
-func AuthExists(ctx context.Context, exec bob.Executor, AuthidPK int32) (bool, error) {
-	return Auths.Query(
-		ctx, exec,
-		SelectWhere.Auths.Authid.EQ(AuthidPK),
-	).Exists()
-}
-
-// PrimaryKeyVals returns the primary key values of the Auth
-func (o *Auth) PrimaryKeyVals() bob.Expression {
-	return psql.Arg(o.Authid)
-}
-
-// Update uses an executor to update the Auth
-func (o *Auth) Update(ctx context.Context, exec bob.Executor, s *AuthSetter) error {
-	return Auths.Update(ctx, exec, s, o)
-}
-
-// Delete deletes a single Auth record with an executor
-func (o *Auth) Delete(ctx context.Context, exec bob.Executor) error {
-	return Auths.Delete(ctx, exec, o)
-}
-
-// Reload refreshes the Auth using the executor
-func (o *Auth) Reload(ctx context.Context, exec bob.Executor) error {
-	o2, err := Auths.Query(
-		ctx, exec,
-		SelectWhere.Auths.Authid.EQ(o.Authid),
-	).One()
-	if err != nil {
-		return err
-	}
-	o2.R = o.R
-	*o = *o2
-
-	return nil
-}
-
-func (o AuthSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals AuthSetter) error {
-	return Auths.Update(ctx, exec, &vals, o...)
-}
-
-func (o AuthSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
-	return Auths.Delete(ctx, exec, o...)
-}
-
-func (o AuthSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
-	var mods []bob.Mod[*dialect.SelectQuery]
-
-	AuthidPK := make([]int32, len(o))
-
-	for i, o := range o {
-		AuthidPK[i] = o.Authid
-	}
-
-	mods = append(mods,
-		SelectWhere.Auths.Authid.In(AuthidPK...),
-	)
-
-	o2, err := Auths.Query(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, old := range o {
-		for _, new := range o2 {
-			if new.Authid != old.Authid {
-				continue
-			}
-			new.R = old.R
-			*old = *new
-			break
-		}
-	}
-
-	return nil
-}
-
 func authsJoinAuthuuidResettoken[Q dialect.Joinable](from authColumns, typ string) func(context.Context) modAs[Q, resettokenColumns] {
 	return func(ctx context.Context) modAs[Q, resettokenColumns] {
 		return modAs[Q, resettokenColumns]{
@@ -340,7 +468,7 @@ func authsJoinAuthuuidResettoken[Q dialect.Joinable](from authColumns, typ strin
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Resettokens.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Resettokens.Name().As(to.Alias())).On(
 						to.Authuuid.EQ(from.Authuuid),
 					))
 				}
@@ -359,7 +487,7 @@ func authsJoinAuthuuidUser[Q dialect.Joinable](from authColumns, typ string) fun
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Users.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
 						to.Authuuid.EQ(from.Authuuid),
 					))
 				}
@@ -371,37 +499,37 @@ func authsJoinAuthuuidUser[Q dialect.Joinable](from authColumns, typ string) fun
 }
 
 // AuthuuidResettoken starts a query for related objects on resettoken
-func (o *Auth) AuthuuidResettoken(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ResettokensQuery {
-	return Resettokens.Query(ctx, exec, append(mods,
+func (o *Auth) AuthuuidResettoken(mods ...bob.Mod[*dialect.SelectQuery]) ResettokensQuery {
+	return Resettokens.Query(append(mods,
 		sm.Where(ResettokenColumns.Authuuid.EQ(psql.Arg(o.Authuuid))),
 	)...)
 }
 
-func (os AuthSlice) AuthuuidResettoken(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ResettokensQuery {
+func (os AuthSlice) AuthuuidResettoken(mods ...bob.Mod[*dialect.SelectQuery]) ResettokensQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Authuuid)
 	}
 
-	return Resettokens.Query(ctx, exec, append(mods,
+	return Resettokens.Query(append(mods,
 		sm.Where(psql.Group(ResettokenColumns.Authuuid).In(PKArgs...)),
 	)...)
 }
 
 // AuthuuidUser starts a query for related objects on users
-func (o *Auth) AuthuuidUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
-	return Users.Query(ctx, exec, append(mods,
+func (o *Auth) AuthuuidUser(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
+	return Users.Query(append(mods,
 		sm.Where(UserColumns.Authuuid.EQ(psql.Arg(o.Authuuid))),
 	)...)
 }
 
-func (os AuthSlice) AuthuuidUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
+func (os AuthSlice) AuthuuidUser(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Authuuid)
 	}
 
-	return Users.Query(ctx, exec, append(mods,
+	return Users.Query(append(mods,
 		sm.Where(psql.Group(UserColumns.Authuuid).In(PKArgs...)),
 	)...)
 }
@@ -446,11 +574,8 @@ func PreloadAuthAuthuuidResettoken(opts ...psql.PreloadOption) psql.Preloader {
 		Name: "AuthuuidResettoken",
 		Sides: []orm.RelSide{
 			{
-				From: "auth",
+				From: TableNames.Auths,
 				To:   TableNames.Resettokens,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Resettokens.Name(ctx)
-				},
 				FromColumns: []string{
 					ColumnNames.Auths.Authuuid,
 				},
@@ -491,7 +616,7 @@ func (o *Auth) LoadAuthAuthuuidResettoken(ctx context.Context, exec bob.Executor
 	// Reset the relationship
 	o.R.AuthuuidResettoken = nil
 
-	related, err := o.AuthuuidResettoken(ctx, exec, mods...).One()
+	related, err := o.AuthuuidResettoken(mods...).One(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -508,7 +633,7 @@ func (os AuthSlice) LoadAuthAuthuuidResettoken(ctx context.Context, exec bob.Exe
 		return nil
 	}
 
-	resettokens, err := os.AuthuuidResettoken(ctx, exec, mods...).All()
+	resettokens, err := os.AuthuuidResettoken(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -534,11 +659,8 @@ func PreloadAuthAuthuuidUser(opts ...psql.PreloadOption) psql.Preloader {
 		Name: "AuthuuidUser",
 		Sides: []orm.RelSide{
 			{
-				From: "auth",
+				From: TableNames.Auths,
 				To:   TableNames.Users,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Users.Name(ctx)
-				},
 				FromColumns: []string{
 					ColumnNames.Auths.Authuuid,
 				},
@@ -579,7 +701,7 @@ func (o *Auth) LoadAuthAuthuuidUser(ctx context.Context, exec bob.Executor, mods
 	// Reset the relationship
 	o.R.AuthuuidUser = nil
 
-	related, err := o.AuthuuidUser(ctx, exec, mods...).One()
+	related, err := o.AuthuuidUser(mods...).One(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -596,7 +718,7 @@ func (os AuthSlice) LoadAuthAuthuuidUser(ctx context.Context, exec bob.Executor,
 		return nil
 	}
 
-	users, err := os.AuthuuidUser(ctx, exec, mods...).All()
+	users, err := os.AuthuuidUser(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -620,7 +742,7 @@ func (os AuthSlice) LoadAuthAuthuuidUser(ctx context.Context, exec bob.Executor,
 func insertAuthAuthuuidResettoken0(ctx context.Context, exec bob.Executor, resettoken1 *ResettokenSetter, auth0 *Auth) (*Resettoken, error) {
 	resettoken1.Authuuid = omit.From(auth0.Authuuid)
 
-	ret, err := Resettokens.Insert(ctx, exec, resettoken1)
+	ret, err := Resettokens.Insert(resettoken1).One(ctx, exec)
 	if err != nil {
 		return ret, fmt.Errorf("insertAuthAuthuuidResettoken0: %w", err)
 	}
@@ -633,7 +755,7 @@ func attachAuthAuthuuidResettoken0(ctx context.Context, exec bob.Executor, count
 		Authuuid: omit.From(auth0.Authuuid),
 	}
 
-	err := Resettokens.Update(ctx, exec, setter, resettoken1)
+	err := resettoken1.Update(ctx, exec, setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachAuthAuthuuidResettoken0: %w", err)
 	}
@@ -672,7 +794,7 @@ func (auth0 *Auth) AttachAuthuuidResettoken(ctx context.Context, exec bob.Execut
 func insertAuthAuthuuidUser0(ctx context.Context, exec bob.Executor, user1 *UserSetter, auth0 *Auth) (*User, error) {
 	user1.Authuuid = omit.From(auth0.Authuuid)
 
-	ret, err := Users.Insert(ctx, exec, user1)
+	ret, err := Users.Insert(user1).One(ctx, exec)
 	if err != nil {
 		return ret, fmt.Errorf("insertAuthAuthuuidUser0: %w", err)
 	}
@@ -685,7 +807,7 @@ func attachAuthAuthuuidUser0(ctx context.Context, exec bob.Executor, count int, 
 		Authuuid: omit.From(auth0.Authuuid),
 	}
 
-	err := Users.Update(ctx, exec, setter, user1)
+	err := user1.Update(ctx, exec, setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachAuthAuthuuidUser0: %w", err)
 	}

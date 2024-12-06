@@ -42,7 +42,7 @@ type getManyResult struct {
 	DistanceToOrigin float64 `db:"distance_to_origin"`
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error) { //nolint:all // cognitive complexity woes
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error) {
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return Entry{}, nil, fmt.Errorf("could not start a transaction: %w", err)
@@ -53,25 +53,20 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 	if err != nil {
 		return Entry{}, nil, err
 	}
-	inserted, err := dbmodels.Parkingspots.Insert(ctx, tx, &spotSetter)
+	inserted, err := dbmodels.Parkingspots.Insert(&spotSetter).One(ctx, tx)
 	if err != nil {
 		// Handle duplicate error
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == pgerrcode.ExclusionViolation && pgErr.ConstraintName == "latlon_overlap_exclude" {
-				err = ErrDuplicatedAddress
-			}
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ExclusionViolation {
+			err = ErrDuplicatedAddress
 		}
 		return Entry{}, nil, err
 	}
 
 	err = inserted.InsertParkingspotidTimeunits(ctx, tx, unitSetters...)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == pgerrcode.UniqueViolation {
-				return Entry{}, nil, ErrDuplicatedTimeUnit
-			}
+		if dbmodels.ErrUniqueConstraint.Is(err) {
+			err = ErrDuplicatedTimeUnit
 		}
 		return Entry{}, nil, err
 	}
@@ -97,12 +92,11 @@ func (p *PostgresRepository) UpdateSpotByUUID(ctx context.Context, spotID uuid.U
 	}
 
 	// Update the spot details
-	updated, err := dbmodels.Parkingspots.UpdateQ(
-		ctx, p.db,
+	updated, err := dbmodels.Parkingspots.Update(
 		dbmodels.UpdateWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
-		spotSetter,
+		spotSetter.UpdateMod(),
 		um.Returning(dbmodels.Parkingspots.Columns()),
-	).One()
+	).One(ctx, p.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Entry{}, ErrNotFound
@@ -138,7 +132,7 @@ func (p *PostgresRepository) UpdateAvailByUUID(ctx context.Context, spotID uuid.
 	if len(updateTimes.AddAvailability) > 0 {
 		// Insert new availability times
 		newTimesSetter := timeSetterFromInput(updateTimes.AddAvailability, entry.InternalID)
-		_, err = dbmodels.Timeunits.InsertMany(ctx, tx, newTimesSetter...)
+		_, err = dbmodels.Timeunits.Insert(bob.ToMods(newTimesSetter...)).Exec(ctx, tx)
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) {
@@ -175,10 +169,9 @@ func removeAvailability(ctx context.Context, tx bob.Tx, spotID int64, remove []m
 	)
 
 	// Delete unbooked times
-	deleted, err := dbmodels.Timeunits.DeleteQ(
-		ctx, tx,
+	deleted, err := dbmodels.Timeunits.Delete(
 		psql.WhereAnd(whereMods...),
-	).Exec()
+	).Exec(ctx, tx)
 	if err != nil {
 		return err
 	}
@@ -210,9 +203,8 @@ func timeSlotsToSQLExpr(units []models.TimeUnit) dialect.Expression {
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error) {
 	spotResult, err := dbmodels.Parkingspots.Query(
-		ctx, p.db,
 		dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
-	).One()
+	).One(ctx, p.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
@@ -229,7 +221,6 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (E
 
 func (p *PostgresRepository) GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate, endDate time.Time) ([]models.TimeUnit, error) {
 	result, err := dbmodels.Timeunits.Query(
-		ctx, p.db,
 		sm.Columns(dbmodels.TimeunitColumns.Timerange),
 		sm.Columns(dbmodels.TimeunitColumns.Bookingid),
 		psql.WhereAnd(
@@ -241,7 +232,7 @@ func (p *PostgresRepository) GetAvailByUUID(ctx context.Context, spotID uuid.UUI
 		),
 		dbmodels.SelectJoins.Timeunits.InnerJoin.ParkingspotidParkingspot(ctx),
 		sm.OrderBy(psql.F("lower", dbmodels.TimeunitColumns.Timerange)),
-	).All()
+	).All(ctx, p.db)
 	if err != nil {
 		return nil, err
 	}
@@ -250,10 +241,9 @@ func (p *PostgresRepository) GetAvailByUUID(ctx context.Context, spotID uuid.UUI
 	if len(result) == 0 {
 		// Ignore errors here, just treat it as not existing
 		exists, _ := dbmodels.Parkingspots.Query(
-			ctx, p.db,
 			sm.Columns(1),
 			dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
-		).Exists()
+		).Exists(ctx, p.db)
 
 		if !exists {
 			return nil, ErrNotFound
@@ -268,12 +258,11 @@ func (p *PostgresRepository) GetAvailByUUID(ctx context.Context, spotID uuid.UUI
 
 func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error) {
 	result, err := dbmodels.Parkingspots.Query(
-		ctx, p.db,
 		sm.Columns(
 			dbmodels.ParkingspotColumns.Userid,
 		),
 		dbmodels.SelectWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
-	).One()
+	).One(ctx, p.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
@@ -339,7 +328,7 @@ func (p *PostgresRepository) GetMany(ctx context.Context, limit int, filter *Fil
 
 	smods = append(
 		smods,
-		sm.From(dbmodels.Parkingspots.Name(ctx)),
+		sm.From(dbmodels.Parkingspots.Name()),
 		sm.Limit(limit),
 		sm.Distinct(),
 		psql.WhereAnd(whereMods...),
