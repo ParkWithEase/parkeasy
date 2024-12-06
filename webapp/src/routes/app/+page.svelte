@@ -31,7 +31,7 @@
     const selectedZoom: number = SELECTED_ZOOM;
     const offset: [number, number] = [0, -10];
 
-    let mapCenter: [number, number] = [-96.81, 49.77];
+    let mapCenter: [number, number] = [-106.57, 61.81];
 
     let searchQuery = '';
     let results: AddressResult[];
@@ -215,7 +215,12 @@
             style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
         >
             <GeolocateControl position="bottom-left" fitBoundsOptions={{ maxZoom: maxZoom }} />
-            <Marker lngLat={mapCenter} />
+            <Marker
+                lngLat={mapCenter}
+                zIndex={999}
+            >
+                <span class="destination-marker"> 📍 </span>
+            </Marker>
             {#each spotsData as { id, location }}
                 <DefaultMarker
                     lngLat={[location.longitude ?? mapCenter[0], location.latitude ?? mapCenter[1]]}
@@ -283,6 +288,10 @@
     }
     .dropdown li:hover {
         background-color: #f0f0f0;
+    }
+
+    .destination-marker{
+        font-size: 1.5rem;
     }
 
     @keyframes smoothBlink {
