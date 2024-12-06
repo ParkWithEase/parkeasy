@@ -199,7 +199,7 @@ func (m *mockRepo) AddGetFoundCall() {
 
 func (m *mockRepo) AddGetNotFoundCall() {
 	m.On("GetByUUID", mock.Anything, mock.Anything).
-		Return(parkingspot.Entry{}, nil)
+		Return(parkingspot.Entry{}, models.ErrParkingSpotNotFound)
 }
 
 func TestCreate(t *testing.T) {
@@ -945,7 +945,7 @@ func TestCreatePreference(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetFoundCall()
+		repo.AddGetNotFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -1155,7 +1155,7 @@ func TestDelete(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetFoundCall()
+		repo.AddGetNotFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
