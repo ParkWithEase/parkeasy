@@ -10,7 +10,35 @@ import (
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/dbtype"
 	"github.com/google/uuid"
 	"github.com/govalues/decimal"
+	"github.com/stephenafamo/bob"
 )
+
+// Make sure the type Auth runs hooks after queries
+var _ bob.HookableType = &Auth{}
+
+// Make sure the type Booking runs hooks after queries
+var _ bob.HookableType = &Booking{}
+
+// Make sure the type Car runs hooks after queries
+var _ bob.HookableType = &Car{}
+
+// Make sure the type Parkingspot runs hooks after queries
+var _ bob.HookableType = &Parkingspot{}
+
+// Make sure the type Preferencespot runs hooks after queries
+var _ bob.HookableType = &Preferencespot{}
+
+// Make sure the type Resettoken runs hooks after queries
+var _ bob.HookableType = &Resettoken{}
+
+// Make sure the type Session runs hooks after queries
+var _ bob.HookableType = &Session{}
+
+// Make sure the type Timeunit runs hooks after queries
+var _ bob.HookableType = &Timeunit{}
+
+// Make sure the type User runs hooks after queries
+var _ bob.HookableType = &User{}
 
 // Make sure the type uuid.UUID satisfies database/sql.Scanner
 var _ sql.Scanner = (*uuid.UUID)(nil)

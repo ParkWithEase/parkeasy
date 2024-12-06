@@ -44,12 +44,13 @@ type Cursor struct {
 }
 
 var (
-	ErrDuplicatedAddress  = errors.New("address already exist in the database")
-	ErrNotFound           = errors.New("no parking spot found")
-	ErrDuplicatedTimeUnit = errors.New("time unit already exist in the database")
-	ErrNoConstraint       = errors.New("no constraint provided for get many")
-	ErrInvalidCoordinate  = errors.New("invalid coordinates")
-	ErrInvalidPrice       = errors.New("price not valid")
+	ErrDuplicatedAddress    = errors.New("address already exist in the database")
+	ErrNotFound             = errors.New("no parking spot found")
+	ErrDuplicatedTimeUnit   = errors.New("time unit already exist in the database")
+	ErrNoConstraint         = errors.New("no constraint provided for get many")
+	ErrInvalidCoordinate    = errors.New("invalid coordinates")
+	ErrInvalidPrice         = errors.New("price not valid")
+	ErrDeleteBookedTimeUnit = errors.New("booked time unit cannot be deleted")
 )
 
 type Repository interface {
@@ -58,4 +59,6 @@ type Repository interface {
 	GetOwnerByUUID(ctx context.Context, spotID uuid.UUID) (int64, error)
 	GetMany(ctx context.Context, limit int, filter *Filter) ([]GetManyEntry, error)
 	GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error)
+	UpdateSpotByUUID(ctx context.Context, spotID uuid.UUID, updateSpot *models.ParkingSpotUpdateInput) (Entry, error)
+	UpdateAvailByUUID(ctx context.Context, spotID uuid.UUID, updateTimes *models.ParkingSpotAvailUpdateInput) error
 }

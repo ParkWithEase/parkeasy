@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/aarondl/opt/omit"
@@ -15,7 +16,7 @@ import (
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
-	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/expr"
@@ -42,104 +43,9 @@ var Resettokens = psql.NewTablex[*Resettoken, ResettokenSlice, *ResettokenSetter
 // ResettokensQuery is a query on the resettoken table
 type ResettokensQuery = *psql.ViewQuery[*Resettoken, ResettokenSlice]
 
-// ResettokensStmt is a prepared statment on resettoken
-type ResettokensStmt = bob.QueryStmt[*Resettoken, ResettokenSlice]
-
 // resettokenR is where relationships are stored.
 type resettokenR struct {
 	AuthuuidAuth *Auth // resettoken.resettoken_authuuid_fkey
-}
-
-// ResettokenSetter is used for insert/upsert/update operations
-// All values are optional, and do not have to be set
-// Generated columns are not included
-type ResettokenSetter struct {
-	Token    omit.Val[string]    `db:"token,pk" `
-	Authuuid omit.Val[uuid.UUID] `db:"authuuid" `
-	Expiry   omit.Val[time.Time] `db:"expiry" `
-}
-
-func (s ResettokenSetter) SetColumns() []string {
-	vals := make([]string, 0, 3)
-	if !s.Token.IsUnset() {
-		vals = append(vals, "token")
-	}
-
-	if !s.Authuuid.IsUnset() {
-		vals = append(vals, "authuuid")
-	}
-
-	if !s.Expiry.IsUnset() {
-		vals = append(vals, "expiry")
-	}
-
-	return vals
-}
-
-func (s ResettokenSetter) Overwrite(t *Resettoken) {
-	if !s.Token.IsUnset() {
-		t.Token, _ = s.Token.Get()
-	}
-	if !s.Authuuid.IsUnset() {
-		t.Authuuid, _ = s.Authuuid.Get()
-	}
-	if !s.Expiry.IsUnset() {
-		t.Expiry, _ = s.Expiry.Get()
-	}
-}
-
-func (s ResettokenSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 3)
-	if s.Token.IsUnset() {
-		vals[0] = psql.Raw("DEFAULT")
-	} else {
-		vals[0] = psql.Arg(s.Token)
-	}
-
-	if s.Authuuid.IsUnset() {
-		vals[1] = psql.Raw("DEFAULT")
-	} else {
-		vals[1] = psql.Arg(s.Authuuid)
-	}
-
-	if s.Expiry.IsUnset() {
-		vals[2] = psql.Raw("DEFAULT")
-	} else {
-		vals[2] = psql.Arg(s.Expiry)
-	}
-
-	return im.Values(vals...)
-}
-
-func (s ResettokenSetter) Apply(q *dialect.UpdateQuery) {
-	um.Set(s.Expressions()...).Apply(q)
-}
-
-func (s ResettokenSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 3)
-
-	if !s.Token.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "token")...),
-			psql.Arg(s.Token),
-		}})
-	}
-
-	if !s.Authuuid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "authuuid")...),
-			psql.Arg(s.Authuuid),
-		}})
-	}
-
-	if !s.Expiry.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "expiry")...),
-			psql.Arg(s.Expiry),
-		}})
-	}
-
-	return exprs
 }
 
 type resettokenColumnNames struct {
@@ -192,6 +98,319 @@ func buildResettokenWhere[Q psql.Filterable](cols resettokenColumns) resettokenW
 	}
 }
 
+var ResettokenErrors = &resettokenErrors{
+	ErrUniqueAuthuuid: &errUniqueConstraint{s: "resettoken_authuuid_key"},
+}
+
+type resettokenErrors struct {
+	ErrUniqueAuthuuid error
+}
+
+// ResettokenSetter is used for insert/upsert/update operations
+// All values are optional, and do not have to be set
+// Generated columns are not included
+type ResettokenSetter struct {
+	Token    omit.Val[string]    `db:"token,pk" `
+	Authuuid omit.Val[uuid.UUID] `db:"authuuid" `
+	Expiry   omit.Val[time.Time] `db:"expiry" `
+}
+
+func (s ResettokenSetter) SetColumns() []string {
+	vals := make([]string, 0, 3)
+	if !s.Token.IsUnset() {
+		vals = append(vals, "token")
+	}
+
+	if !s.Authuuid.IsUnset() {
+		vals = append(vals, "authuuid")
+	}
+
+	if !s.Expiry.IsUnset() {
+		vals = append(vals, "expiry")
+	}
+
+	return vals
+}
+
+func (s ResettokenSetter) Overwrite(t *Resettoken) {
+	if !s.Token.IsUnset() {
+		t.Token, _ = s.Token.Get()
+	}
+	if !s.Authuuid.IsUnset() {
+		t.Authuuid, _ = s.Authuuid.Get()
+	}
+	if !s.Expiry.IsUnset() {
+		t.Expiry, _ = s.Expiry.Get()
+	}
+}
+
+func (s *ResettokenSetter) Apply(q *dialect.InsertQuery) {
+	q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+		return Resettokens.BeforeInsertHooks.RunHooks(ctx, exec, s)
+	})
+
+	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		vals := make([]bob.Expression, 3)
+		if s.Token.IsUnset() {
+			vals[0] = psql.Raw("DEFAULT")
+		} else {
+			vals[0] = psql.Arg(s.Token)
+		}
+
+		if s.Authuuid.IsUnset() {
+			vals[1] = psql.Raw("DEFAULT")
+		} else {
+			vals[1] = psql.Arg(s.Authuuid)
+		}
+
+		if s.Expiry.IsUnset() {
+			vals[2] = psql.Raw("DEFAULT")
+		} else {
+			vals[2] = psql.Arg(s.Expiry)
+		}
+
+		return bob.ExpressSlice(ctx, w, d, start, vals, "", ", ", "")
+	}))
+}
+
+func (s ResettokenSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return um.Set(s.Expressions()...)
+}
+
+func (s ResettokenSetter) Expressions(prefix ...string) []bob.Expression {
+	exprs := make([]bob.Expression, 0, 3)
+
+	if !s.Token.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "token")...),
+			psql.Arg(s.Token),
+		}})
+	}
+
+	if !s.Authuuid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "authuuid")...),
+			psql.Arg(s.Authuuid),
+		}})
+	}
+
+	if !s.Expiry.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "expiry")...),
+			psql.Arg(s.Expiry),
+		}})
+	}
+
+	return exprs
+}
+
+// FindResettoken retrieves a single record by primary key
+// If cols is empty Find will return all columns.
+func FindResettoken(ctx context.Context, exec bob.Executor, TokenPK string, cols ...string) (*Resettoken, error) {
+	if len(cols) == 0 {
+		return Resettokens.Query(
+			SelectWhere.Resettokens.Token.EQ(TokenPK),
+		).One(ctx, exec)
+	}
+
+	return Resettokens.Query(
+		SelectWhere.Resettokens.Token.EQ(TokenPK),
+		sm.Columns(Resettokens.Columns().Only(cols...)),
+	).One(ctx, exec)
+}
+
+// ResettokenExists checks the presence of a single record by primary key
+func ResettokenExists(ctx context.Context, exec bob.Executor, TokenPK string) (bool, error) {
+	return Resettokens.Query(
+		SelectWhere.Resettokens.Token.EQ(TokenPK),
+	).Exists(ctx, exec)
+}
+
+// AfterQueryHook is called after Resettoken is retrieved from the database
+func (o *Resettoken) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Resettokens.AfterSelectHooks.RunHooks(ctx, exec, ResettokenSlice{o})
+	case bob.QueryTypeInsert:
+		ctx, err = Resettokens.AfterInsertHooks.RunHooks(ctx, exec, ResettokenSlice{o})
+	case bob.QueryTypeUpdate:
+		ctx, err = Resettokens.AfterUpdateHooks.RunHooks(ctx, exec, ResettokenSlice{o})
+	case bob.QueryTypeDelete:
+		ctx, err = Resettokens.AfterDeleteHooks.RunHooks(ctx, exec, ResettokenSlice{o})
+	}
+
+	return err
+}
+
+// PrimaryKeyVals returns the primary key values of the Resettoken
+func (o *Resettoken) PrimaryKeyVals() bob.Expression {
+	return psql.Arg(o.Token)
+}
+
+func (o *Resettoken) pkEQ() dialect.Expression {
+	return psql.Quote("resettoken", "token").EQ(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		return o.PrimaryKeyVals().WriteSQL(ctx, w, d, start)
+	}))
+}
+
+// Update uses an executor to update the Resettoken
+func (o *Resettoken) Update(ctx context.Context, exec bob.Executor, s *ResettokenSetter) error {
+	v, err := Resettokens.Update(s.UpdateMod(), um.Where(o.pkEQ())).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.R = v.R
+	*o = *v
+
+	return nil
+}
+
+// Delete deletes a single Resettoken record with an executor
+func (o *Resettoken) Delete(ctx context.Context, exec bob.Executor) error {
+	_, err := Resettokens.Delete(dm.Where(o.pkEQ())).Exec(ctx, exec)
+	return err
+}
+
+// Reload refreshes the Resettoken using the executor
+func (o *Resettoken) Reload(ctx context.Context, exec bob.Executor) error {
+	o2, err := Resettokens.Query(
+		SelectWhere.Resettokens.Token.EQ(o.Token),
+	).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+	o2.R = o.R
+	*o = *o2
+
+	return nil
+}
+
+// AfterQueryHook is called after ResettokenSlice is retrieved from the database
+func (o ResettokenSlice) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Resettokens.AfterSelectHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeInsert:
+		ctx, err = Resettokens.AfterInsertHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeUpdate:
+		ctx, err = Resettokens.AfterUpdateHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeDelete:
+		ctx, err = Resettokens.AfterDeleteHooks.RunHooks(ctx, exec, o)
+	}
+
+	return err
+}
+
+func (o ResettokenSlice) pkIN() dialect.Expression {
+	return psql.Quote("resettoken", "token").In(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		pkPairs := make([]bob.Expression, len(o))
+		for i, row := range o {
+			pkPairs[i] = row.PrimaryKeyVals()
+		}
+		return bob.ExpressSlice(ctx, w, d, start, pkPairs, "", ", ", "")
+	}))
+}
+
+// copyMatchingRows finds models in the given slice that have the same primary key
+// then it first copies the existing relationships from the old model to the new model
+// and then replaces the old model in the slice with the new model
+func (o ResettokenSlice) copyMatchingRows(from ...*Resettoken) {
+	for i, old := range o {
+		for _, new := range from {
+			if new.Token != old.Token {
+				continue
+			}
+			new.R = old.R
+			o[i] = new
+			break
+		}
+	}
+}
+
+// UpdateMod modifies an update query with "WHERE primary_key IN (o...)"
+func (o ResettokenSlice) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Resettokens.BeforeUpdateHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Resettoken:
+				o.copyMatchingRows(retrieved)
+			case []*Resettoken:
+				o.copyMatchingRows(retrieved...)
+			case ResettokenSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Resettoken or a slice of Resettoken
+				// then run the AfterUpdateHooks on the slice
+				_, err = Resettokens.AfterUpdateHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+// DeleteMod modifies an delete query with "WHERE primary_key IN (o...)"
+func (o ResettokenSlice) DeleteMod() bob.Mod[*dialect.DeleteQuery] {
+	return bob.ModFunc[*dialect.DeleteQuery](func(q *dialect.DeleteQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Resettokens.BeforeDeleteHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Resettoken:
+				o.copyMatchingRows(retrieved)
+			case []*Resettoken:
+				o.copyMatchingRows(retrieved...)
+			case ResettokenSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Resettoken or a slice of Resettoken
+				// then run the AfterDeleteHooks on the slice
+				_, err = Resettokens.AfterDeleteHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+func (o ResettokenSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals ResettokenSetter) error {
+	_, err := Resettokens.Update(vals.UpdateMod(), o.UpdateMod()).All(ctx, exec)
+	return err
+}
+
+func (o ResettokenSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
+	_, err := Resettokens.Delete(o.DeleteMod()).Exec(ctx, exec)
+	return err
+}
+
+func (o ResettokenSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
+	o2, err := Resettokens.Query(sm.Where(o.pkIN())).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.copyMatchingRows(o2...)
+
+	return nil
+}
+
 type resettokenJoins[Q dialect.Joinable] struct {
 	typ          string
 	AuthuuidAuth func(context.Context) modAs[Q, authColumns]
@@ -208,101 +427,6 @@ func buildResettokenJoins[Q dialect.Joinable](cols resettokenColumns, typ string
 	}
 }
 
-// FindResettoken retrieves a single record by primary key
-// If cols is empty Find will return all columns.
-func FindResettoken(ctx context.Context, exec bob.Executor, TokenPK string, cols ...string) (*Resettoken, error) {
-	if len(cols) == 0 {
-		return Resettokens.Query(
-			ctx, exec,
-			SelectWhere.Resettokens.Token.EQ(TokenPK),
-		).One()
-	}
-
-	return Resettokens.Query(
-		ctx, exec,
-		SelectWhere.Resettokens.Token.EQ(TokenPK),
-		sm.Columns(Resettokens.Columns().Only(cols...)),
-	).One()
-}
-
-// ResettokenExists checks the presence of a single record by primary key
-func ResettokenExists(ctx context.Context, exec bob.Executor, TokenPK string) (bool, error) {
-	return Resettokens.Query(
-		ctx, exec,
-		SelectWhere.Resettokens.Token.EQ(TokenPK),
-	).Exists()
-}
-
-// PrimaryKeyVals returns the primary key values of the Resettoken
-func (o *Resettoken) PrimaryKeyVals() bob.Expression {
-	return psql.Arg(o.Token)
-}
-
-// Update uses an executor to update the Resettoken
-func (o *Resettoken) Update(ctx context.Context, exec bob.Executor, s *ResettokenSetter) error {
-	return Resettokens.Update(ctx, exec, s, o)
-}
-
-// Delete deletes a single Resettoken record with an executor
-func (o *Resettoken) Delete(ctx context.Context, exec bob.Executor) error {
-	return Resettokens.Delete(ctx, exec, o)
-}
-
-// Reload refreshes the Resettoken using the executor
-func (o *Resettoken) Reload(ctx context.Context, exec bob.Executor) error {
-	o2, err := Resettokens.Query(
-		ctx, exec,
-		SelectWhere.Resettokens.Token.EQ(o.Token),
-	).One()
-	if err != nil {
-		return err
-	}
-	o2.R = o.R
-	*o = *o2
-
-	return nil
-}
-
-func (o ResettokenSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals ResettokenSetter) error {
-	return Resettokens.Update(ctx, exec, &vals, o...)
-}
-
-func (o ResettokenSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
-	return Resettokens.Delete(ctx, exec, o...)
-}
-
-func (o ResettokenSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
-	var mods []bob.Mod[*dialect.SelectQuery]
-
-	TokenPK := make([]string, len(o))
-
-	for i, o := range o {
-		TokenPK[i] = o.Token
-	}
-
-	mods = append(mods,
-		SelectWhere.Resettokens.Token.In(TokenPK...),
-	)
-
-	o2, err := Resettokens.Query(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, old := range o {
-		for _, new := range o2 {
-			if new.Token != old.Token {
-				continue
-			}
-			new.R = old.R
-			*old = *new
-			break
-		}
-	}
-
-	return nil
-}
-
 func resettokensJoinAuthuuidAuth[Q dialect.Joinable](from resettokenColumns, typ string) func(context.Context) modAs[Q, authColumns] {
 	return func(ctx context.Context) modAs[Q, authColumns] {
 		return modAs[Q, authColumns]{
@@ -311,7 +435,7 @@ func resettokensJoinAuthuuidAuth[Q dialect.Joinable](from resettokenColumns, typ
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Auths.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Auths.Name().As(to.Alias())).On(
 						to.Authuuid.EQ(from.Authuuid),
 					))
 				}
@@ -323,19 +447,19 @@ func resettokensJoinAuthuuidAuth[Q dialect.Joinable](from resettokenColumns, typ
 }
 
 // AuthuuidAuth starts a query for related objects on auth
-func (o *Resettoken) AuthuuidAuth(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) AuthsQuery {
-	return Auths.Query(ctx, exec, append(mods,
+func (o *Resettoken) AuthuuidAuth(mods ...bob.Mod[*dialect.SelectQuery]) AuthsQuery {
+	return Auths.Query(append(mods,
 		sm.Where(AuthColumns.Authuuid.EQ(psql.Arg(o.Authuuid))),
 	)...)
 }
 
-func (os ResettokenSlice) AuthuuidAuth(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) AuthsQuery {
+func (os ResettokenSlice) AuthuuidAuth(mods ...bob.Mod[*dialect.SelectQuery]) AuthsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Authuuid)
 	}
 
-	return Auths.Query(ctx, exec, append(mods,
+	return Auths.Query(append(mods,
 		sm.Where(psql.Group(AuthColumns.Authuuid).In(PKArgs...)),
 	)...)
 }
@@ -368,11 +492,8 @@ func PreloadResettokenAuthuuidAuth(opts ...psql.PreloadOption) psql.Preloader {
 		Name: "AuthuuidAuth",
 		Sides: []orm.RelSide{
 			{
-				From: "resettoken",
+				From: TableNames.Resettokens,
 				To:   TableNames.Auths,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Auths.Name(ctx)
-				},
 				FromColumns: []string{
 					ColumnNames.Resettokens.Authuuid,
 				},
@@ -413,7 +534,7 @@ func (o *Resettoken) LoadResettokenAuthuuidAuth(ctx context.Context, exec bob.Ex
 	// Reset the relationship
 	o.R.AuthuuidAuth = nil
 
-	related, err := o.AuthuuidAuth(ctx, exec, mods...).One()
+	related, err := o.AuthuuidAuth(mods...).One(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -430,7 +551,7 @@ func (os ResettokenSlice) LoadResettokenAuthuuidAuth(ctx context.Context, exec b
 		return nil
 	}
 
-	auths, err := os.AuthuuidAuth(ctx, exec, mods...).All()
+	auths, err := os.AuthuuidAuth(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -456,7 +577,7 @@ func attachResettokenAuthuuidAuth0(ctx context.Context, exec bob.Executor, count
 		Authuuid: omit.From(auth1.Authuuid),
 	}
 
-	err := Resettokens.Update(ctx, exec, setter, resettoken0)
+	err := resettoken0.Update(ctx, exec, setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachResettokenAuthuuidAuth0: %w", err)
 	}
@@ -465,7 +586,7 @@ func attachResettokenAuthuuidAuth0(ctx context.Context, exec bob.Executor, count
 }
 
 func (resettoken0 *Resettoken) InsertAuthuuidAuth(ctx context.Context, exec bob.Executor, related *AuthSetter) error {
-	auth1, err := Auths.Insert(ctx, exec, related)
+	auth1, err := Auths.Insert(related).One(ctx, exec)
 	if err != nil {
 		return fmt.Errorf("inserting related objects: %w", err)
 	}

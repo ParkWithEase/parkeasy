@@ -14,7 +14,7 @@ require (
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/peterhellberg/link v1.2.0
 	github.com/sourcegraph/conc v0.3.0
-	github.com/stephenafamo/bob v0.28.1
+	github.com/stephenafamo/bob v0.29.0
 	github.com/stephenafamo/scan v0.6.1
 	github.com/testcontainers/testcontainers-go v0.34.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.34.0

@@ -33,10 +33,10 @@ func (p *PostgresRepository) Create(ctx context.Context, email string, passwordH
 		return uuid.UUID{}, fmt.Errorf("could not start a transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
-	inserted, err := dbmodels.Auths.Insert(ctx, tx, &dbmodels.AuthSetter{
+	inserted, err := dbmodels.Auths.Insert(&dbmodels.AuthSetter{
 		Email:        omit.From(email),
 		Passwordhash: omit.From(string(passwordHash)),
-	})
+	}).One(ctx, tx)
 	if err != nil {
 		// Handle duplicate error
 		var pgErr *pgconn.PgError
@@ -57,10 +57,9 @@ func (p *PostgresRepository) Create(ctx context.Context, email string, passwordH
 // Get implements Repository.
 func (p *PostgresRepository) Get(ctx context.Context, id uuid.UUID) (Identity, error) {
 	result, err := dbmodels.Auths.Query(
-		ctx, p.db,
 		sm.Columns(dbmodels.AuthColumns.Email, dbmodels.AuthColumns.Passwordhash, dbmodels.AuthColumns.Authuuid),
 		dbmodels.SelectWhere.Auths.Authuuid.EQ(id),
-	).One()
+	).One(ctx, p.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrIdentityNotFound
@@ -77,10 +76,9 @@ func (p *PostgresRepository) Get(ctx context.Context, id uuid.UUID) (Identity, e
 // GetByEmail implements Repository.
 func (p *PostgresRepository) GetByEmail(ctx context.Context, email string) (Identity, error) {
 	result, err := dbmodels.Auths.Query(
-		ctx, p.db,
 		sm.Columns(dbmodels.AuthColumns.Email, dbmodels.AuthColumns.Passwordhash, dbmodels.AuthColumns.Authuuid),
 		dbmodels.SelectWhere.Auths.Email.EQ(email),
-	).One()
+	).One(ctx, p.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrIdentityNotFound
@@ -97,13 +95,12 @@ func (p *PostgresRepository) GetByEmail(ctx context.Context, email string) (Iden
 // UpdatePassword implements Repository.
 func (p *PostgresRepository) UpdatePassword(ctx context.Context, authID uuid.UUID, newPassword models.HashedPassword) error {
 	// Execute the query
-	rowsAffected, err := dbmodels.Auths.UpdateQ(
-		ctx, p.db,
+	rowsAffected, err := dbmodels.Auths.Update(
 		dbmodels.UpdateWhere.Auths.Authuuid.EQ(authID),
-		&dbmodels.AuthSetter{
+		dbmodels.AuthSetter{
 			Passwordhash: omit.From(string(newPassword)),
-		},
-	).Exec()
+		}.UpdateMod(),
+	).Exec(ctx, p.db)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ package dbmodels
 import (
 	"hash/maphash"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/clause"
 	"github.com/stephenafamo/bob/dialect/psql"
@@ -231,4 +232,24 @@ func randInt() int64 {
 	}
 
 	return out % 10000
+}
+
+// ErrUniqueConstraint captures all unique constraint errors by explicitly leaving `s` empty.
+var ErrUniqueConstraint = &errUniqueConstraint{s: ""}
+
+type errUniqueConstraint struct {
+	// s is a string uniquely identifying the constraint in the raw error message returned from the database.
+	s string
+}
+
+func (e *errUniqueConstraint) Error() string {
+	return e.s
+}
+
+func (e *errUniqueConstraint) Is(target error) bool {
+	err, ok := target.(*pgconn.PgError)
+	if !ok {
+		return false
+	}
+	return err.Code == "23505" && (e.s == "" || err.ConstraintName == e.s)
 }
