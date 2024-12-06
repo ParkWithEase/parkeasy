@@ -94,9 +94,7 @@ constructor(
             }
             .mapAPIError()
             .let { result ->
-                result.mapCatching {
-                    if (it is HttpResponse && result.isSuccess) it.body<Profile>() else Profile()
-                }
+                result.mapCatching { if (result.isSuccess) it.body<Profile>() else Profile() }
             }
 
     /**

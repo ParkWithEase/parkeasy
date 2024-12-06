@@ -13,7 +13,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import javax.inject.Inject
@@ -38,10 +37,7 @@ constructor(
             }
             .mapAPIError()
             .let { result ->
-                result.mapCatching {
-                    if (it is HttpResponse && result.isSuccess) it.body<List<Car>>()
-                    else emptyList()
-                }
+                result.mapCatching { if (result.isSuccess) it.body<List<Car>>() else emptyList() }
             }
 
     override suspend fun deleteCar(id: String): Result<Unit> {

@@ -32,10 +32,25 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing = _isRefreshing.asStateFlow()
 
+    private val _showForm = MutableStateFlow(false)
+    val showForm = _showForm.asStateFlow()
+
+    private val _formEnabled = MutableStateFlow(true)
+    val formEnabled = _formEnabled.asStateFlow()
+
     var currentlyEditingId = ""
 
     var formState by mutableStateOf(AddCarFormState())
         private set
+
+    fun onShowForm() {
+        _formEnabled.value = true
+        viewModelScope.launch { _showForm.value = true }
+    }
+
+    fun onHideForm() {
+        viewModelScope.launch { _showForm.value = false }
+    }
 
     fun onRefresh() {
         viewModelScope.launch {
@@ -55,6 +70,7 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
 
     fun onAddCarClick() {
         viewModelScope.launch {
+            _formEnabled.value = false
             carRepo
                 .createCar(
                     CarDetails(
@@ -65,18 +81,23 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
                     )
                 )
                 .also { clearFieldErrors() }
-                .onSuccess { onRefresh() }
+                .onSuccess {
+                    onRefresh()
+                    onHideForm()
+                }
                 .recoverRequestErrors(
                     "Error adding car",
                     { errorToForm(it) },
                     snackbarState,
                     viewModelScope,
                 )
+            _formEnabled.value = true
         }
     }
 
     fun onEditCarClick() {
         viewModelScope.launch {
+            _formEnabled.value = false
             carRepo
                 .updateCar(
                     Car(
@@ -91,13 +112,17 @@ class CarsViewModel @Inject constructor(private val carRepo: CarRepository) : Vi
                     )
                 )
                 .also { clearFieldErrors() }
-                .onSuccess { onRefresh() }
+                .onSuccess {
+                    onRefresh()
+                    onHideForm()
+                }
                 .recoverRequestErrors(
                     "Error adding car",
                     { errorToForm(it) },
                     snackbarState,
                     viewModelScope,
                 )
+            _formEnabled.value = true
         }
     }
 
