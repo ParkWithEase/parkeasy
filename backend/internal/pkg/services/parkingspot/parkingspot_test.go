@@ -192,11 +192,14 @@ func (m *mockGeocodingRepo) AddGeocodeCall() *mock.Call {
 		Return(sampleGeocoderResult, nil).Once()
 }
 
-func (m *mockRepo) AddGetCalls() *mock.Call {
-	return m.On("GetByUUID", mock.Anything, testSpotID).
-		Return(sampleEntry, nil).
-		On("GetByUUID", mock.Anything, mock.Anything).
-		Return(parkingspot.Entry{}, models.ErrParkingSpotNotFound)
+func (m *mockRepo) AddGetFoundCall() {
+	m.On("GetByUUID", mock.Anything, testSpotID).
+		Return(sampleEntry, nil)
+}
+
+func (m *mockRepo) AddGetNotFoundCall() {
+	m.On("GetByUUID", mock.Anything, mock.Anything).
+		Return(parkingspot.Entry{}, nil)
 }
 
 func TestCreate(t *testing.T) {
@@ -484,7 +487,7 @@ func TestUpdateSpotByUUID(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -506,7 +509,7 @@ func TestUpdateSpotByUUID(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetNotFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -515,23 +518,20 @@ func TestUpdateSpotByUUID(t *testing.T) {
 			PricePerHour: samplePricePerHour,
 		}
 
-		repo.On("UpdateSpotByUUID", mock.Anything, uuid.Nil, input).
-			Return(parkingspot.Entry{}, parkingspot.ErrNotFound).Once()
-
 		_, err := srv.UpdateSpotByUUID(ctx, testUserID, uuid.Nil, input)
 
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
 		}
 
-		// repo.AssertExpectations(t)
+		repo.AssertExpectations(t)
 	})
 
 	t.Run("valid price per hour check", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -558,7 +558,7 @@ func TestUpdateAvailByUUID(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -580,7 +580,7 @@ func TestUpdateAvailByUUID(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetNotFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -589,48 +589,20 @@ func TestUpdateAvailByUUID(t *testing.T) {
 			AddAvailability:    sampleAvailability,
 			RemoveAvailability: sampleAvailability,
 		}
-
-		repo.On("UpdateAvailByUUID", mock.Anything, uuid.Nil, input).
-			Return(models.ErrParkingSpotNotFound).Once()
 
 		err := srv.UpdateAvailByUUID(ctx, testUserID, uuid.Nil, input)
 
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrParkingSpotNotFound)
 		}
-		// repo.AssertExpectations(t)
+		repo.AssertExpectations(t)
 	})
 
 	t.Run("modify booked time unit check", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
-		geoRepo := new(mockGeocodingRepo)
-		preferenceRepo := new(mockPreferenceSpotRepo)
-		srv := New(repo, geoRepo, preferenceRepo)
-
-		input := &models.ParkingSpotAvailUpdateInput{
-			AddAvailability:    sampleAvailability,
-			RemoveAvailability: sampleAvailability,
-		}
-
-		repo.On("UpdateAvailByUUID", mock.Anything, testSpotID, input).
-			Return(models.ErrBookedTimeUnitModified).Once()
-
-		err := srv.UpdateAvailByUUID(ctx, testUserID, testSpotID, input)
-
-		if assert.Error(t, err) {
-			assert.ErrorIs(t, err, models.ErrBookedTimeUnitModified)
-		}
-		// repo.AssertExpectations(t)
-	})
-
-	t.Run("modify booked time unit check", func(t *testing.T) {
-		t.Parallel()
-
-		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -648,14 +620,14 @@ func TestUpdateAvailByUUID(t *testing.T) {
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrBookedTimeUnitModified)
 		}
-		// repo.AssertExpectations(t)
+		repo.AssertExpectations(t)
 	})
 
-	t.Run("modify booked time unit check", func(t *testing.T) {
+	t.Run("duplicate time unit check", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -673,14 +645,14 @@ func TestUpdateAvailByUUID(t *testing.T) {
 		if assert.Error(t, err) {
 			assert.ErrorIs(t, err, models.ErrTimeUnitDuplicate)
 		}
-		// repo.AssertExpectations(t)
+		repo.AssertExpectations(t)
 	})
 
 	t.Run("valid add availability check", func(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -704,7 +676,7 @@ func TestUpdateAvailByUUID(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -955,7 +927,7 @@ func TestCreatePreference(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -974,7 +946,7 @@ func TestCreatePreference(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -997,7 +969,7 @@ func TestGetBySpotID(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -1168,7 +1140,7 @@ func TestDelete(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)
@@ -1184,7 +1156,7 @@ func TestDelete(t *testing.T) {
 		t.Parallel()
 
 		repo := new(mockRepo)
-		repo.AddGetCalls()
+		repo.AddGetFoundCall()
 		geoRepo := new(mockGeocodingRepo)
 		preferenceRepo := new(mockPreferenceSpotRepo)
 		srv := New(repo, geoRepo, preferenceRepo)

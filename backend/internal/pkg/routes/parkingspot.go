@@ -276,7 +276,7 @@ func (r *ParkingSpotRoute) RegisterParkingSpotRoutes(api huma.API) {
 		userID := r.sessionGetter.Get(ctx, SessionKeyUserID).(int64)
 		err := r.service.UpdateAvailByUUID(ctx, userID, input.ID, &input.Body)
 		if err != nil {
-			detail := describeParkingSpotInputError(err, &models.ParkingSpotLocation{}, []models.TimeUnit{}, 1)
+			detail := describeParkingSpotAvailUpdateInputError(err, &input.Body)
 			if errors.Is(err, models.ErrParkingSpotNotFound) {
 				detail = &huma.ErrorDetail{
 					Location: "path.id",
@@ -422,11 +422,6 @@ func describeParkingSpotInputError(err error, location *models.ParkingSpotLocati
 			Location: "body.price_per_hour",
 			Value:    pricePerHour,
 		}
-	case errors.Is(err, models.ErrBookedTimeUnitModified):
-		return &huma.ErrorDetail{
-			Location: "body.availability",
-			Value:    availability,
-		}
 	default:
 		return nil
 	}
@@ -437,12 +432,12 @@ func describeParkingSpotInputError(err error, location *models.ParkingSpotLocati
 // Returns nil if there are no description for the error
 func describeParkingSpotAvailUpdateInputError(err error, availability *models.ParkingSpotAvailUpdateInput) error {
 	switch {
-	case errors.Is(err, models.ErrInvalidAddTimeUnit):
+	case errors.Is(err, models.ErrInvalidAddTimeUnit), errors.Is(err, models.ErrTimeUnitDuplicate):
 		return &huma.ErrorDetail{
 			Location: "body.add_availability",
 			Value:    availability.AddAvailability,
 		}
-	case errors.Is(err, models.ErrInvalidRemoveTimeUnit):
+	case errors.Is(err, models.ErrInvalidRemoveTimeUnit), errors.Is(err, models.ErrBookedTimeUnitModified):
 		return &huma.ErrorDetail{
 			Location: "body.remove_availability",
 			Value:    availability.RemoveAvailability,
