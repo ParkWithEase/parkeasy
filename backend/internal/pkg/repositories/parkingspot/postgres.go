@@ -42,7 +42,7 @@ type getManyResult struct {
 	DistanceToOrigin float64 `db:"distance_to_origin"`
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error) { // nolint(revive): cognitive complexity woes
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error) { //nolint:all cognitive complexity woes
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return Entry{}, nil, fmt.Errorf("could not start a transaction: %w", err)
