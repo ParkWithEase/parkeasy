@@ -1,0 +1,24 @@
+{
+  "name": "k6-tests",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "rsbuild build",
+    "openapi": "openapi-typescript http://localhost:8080/openapi.json -o src/backend/api/parkeasy.ts --root-types --root-types-no-schema-prefix",
+    "check": "biome check",
+    "format": "biome format --write"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.3",
+    "@grafana/openapi-to-k6": "^0.3.0",
+    "@rsbuild/core": "^1.1.4",
+    "@rsbuild/plugin-type-check": "^1.1.0",
+    "@types/k6": "^0.54.2",
+    "@types/node": "^22.10.1",
+    "glob": "^11.0.0",
+    "openapi-typescript": "^7.4.4",
+    "openapi-typescript-helpers": "^0.0.15",
+    "typescript": "^5.7.2"
+  }
+}
