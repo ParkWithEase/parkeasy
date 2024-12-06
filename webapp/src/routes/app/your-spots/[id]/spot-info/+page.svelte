@@ -17,7 +17,7 @@
     import { getErrorMessage } from '$lib/utils/error-handler';
     import { fade } from 'svelte/transition';
     import AvailabilitySection from '$lib/components/spot-component/availability-section.svelte';
-    import SpotInfo from '$lib/components/spot-component/spot-info.svelte';
+    import SpotInfoEditable from '$lib/components/spot-component/spot-info-editable.svelte';
 
     export let data: PageData;
     type TimeUnit = components['schemas']['TimeUnit'];
@@ -36,14 +36,23 @@
     let client = newClient();
 
     //For ToastMessage
-    let toastTimeOut: number = 0;
+    let errorTimeOut: number = 0;
+    let successTimeOut: number = 0;
     let errorMessage: string = '';
-    $: showToast = toastTimeOut !== 0;
+    $: showToast = errorTimeOut !== 0;
+
+    let successMessage: string = '';
+    $: showSuccess = successTimeOut !== 0;
 
     //reminder to change these to now()
     let today = new Date(Date.now());
     let currentMonday = getMonday(today);
     let nextMonday: Date;
+
+    //updates
+    let availabilityUpdated: boolean;
+    let priceUpdated: boolean = false;
+    let utilitiesUpdated: boolean;
 
     let availabilityTablesInitial = new Map<number, TimeSlotStatus[][]>();
     availabilityTablesInitial.set(
@@ -131,7 +140,7 @@
                     }
                     if (error) {
                         errorMessage = getErrorMessage(error);
-                        toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+                        errorTimeOut = ERROR_MESSAGE_TIME_OUT;
                     }
                 })
                 .catch((err) => {
@@ -161,12 +170,47 @@
         return false;
     }
 
-    async function handleSubmitAvailability(event: Event) {
+    async function updatePrice(event:Event) {
+        event.preventDefault();
+        priceUpdated = true;
+        console.log("new price " + newPricePerHour);
+    }
+
+    async function handleUpdateAvailability(event: Event) {
         event.preventDefault();
 
-        if (!checkAvailabilityChange()) {
-            errorMessage = "No changes detected in availability.";
-            toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+        if(priceUpdated){
+            
+            client
+                .PUT('/spots/{id}', {
+                    params: {
+                        path: {
+                            id: spot?.id ?? '0'
+                        }
+                    },
+                    headers: { 'Content-Type': 'application/json' },
+                    body: {
+                        features: {"charging_station": true,
+                                    "plug_in": true,
+                                    "shelter": true},
+                        price_per_hour: newPricePerHour
+                    },
+                })
+                .then(({ data, error }) => {
+                    if (error) {
+                        errorMessage = getErrorMessage(error);
+                        errorTimeOut = ERROR_MESSAGE_TIME_OUT;
+                    }
+                })
+                .catch((err) => {
+                    errorMessage = "An error occurred while updating the price.";
+                    errorTimeOut = ERROR_MESSAGE_TIME_OUT;
+                });
+        }
+
+        if (!checkAvailabilityChange() && !priceUpdated) {
+            errorMessage = "No changes detected.";
+            errorTimeOut = ERROR_MESSAGE_TIME_OUT;
             return;
         }
 
@@ -207,9 +251,6 @@
             }
         }
 
-        console.log(addAvailability);
-        console.log(removeAvailability);
-
         client
             .PUT('/spots/{id}/availability', {
                 params: {
@@ -224,19 +265,23 @@
                 },
             })
             .then(({ data, error }) => {
-                if (data) {
+                if (data && priceUpdated) {
                     availabilityTablesInitial = structuredClone(availabilityTableEdit);
-                    errorMessage = "Availability successfully updated!";
-                    toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+                    successMessage = "Price and Availability successfully updated!";
+                    successTimeOut = ERROR_MESSAGE_TIME_OUT;
+                }else if (data) {
+                    availabilityTablesInitial = structuredClone(availabilityTableEdit);
+                    successMessage = "Availability successfully updated!";
+                    successTimeOut = ERROR_MESSAGE_TIME_OUT;
                 }
                 if (error) {
                     errorMessage = getErrorMessage(error);
-                    toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+                    errorTimeOut = ERROR_MESSAGE_TIME_OUT;
                 }
             })
             .catch((err) => {
                 errorMessage = "An error occurred while updating availability.";
-                toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+                errorTimeOut = ERROR_MESSAGE_TIME_OUT;
             });
     }
 
@@ -269,24 +314,10 @@
 </script>
 
 <Content>
-    {#if showToast}
-        <div transition:fade class="error-message">
-            <ToastNotification
-                bind:timeout={toastTimeOut}
-                kind="error"
-                fullWidth
-                title="Error"
-                subtitle={errorMessage}
-                on:close={() => {
-                    toastTimeOut = 0;
-                }}
-            />
-        </div>
-    {/if}
 
     <img src={Background} class="spot-info-image" alt="spot" />
     <p class="spot-info-header">Location</p>
-    <SpotInfo bind:spot />
+    <SpotInfoEditable bind:spot />
 
     <p class="spot-info-header">Availability</p>
 
@@ -299,7 +330,7 @@
         {handleEdit}
     />
 
-    <Form on:submit={handleSubmitAvailability}>
+    <Form on:submit={handleUpdateAvailability}>
         <div class="price-field">
             <NumberInput
                 label="Price per hour"
@@ -310,9 +341,38 @@
                 helperText="Price in CAD"
                 required
                 bind:value={newPricePerHour}
+                on:change={updatePrice}
             />
         </div>
         <Button kind="secondary" on:click={resetAvailabilityEdit}>Reset</Button>
-        <Button type="submit">Submit</Button>
+        <Button type="submit">Update</Button>
+        {#if showToast}
+            <div transition:fade class="error-message">
+                <ToastNotification
+                    bind:timeout={errorTimeOut}
+                    kind="error"
+                    fullWidth
+                    title="Error"
+                    subtitle={errorMessage}
+                    on:close={() => {
+                        errorTimeOut = 0;
+                    }}
+                />
+            </div>
+        {/if}
+        {#if showSuccess}
+            <div transition:fade class="success-message">
+                <ToastNotification
+                    bind:timeout={successTimeOut}
+                    kind="success"
+                    fullWidth
+                    title="Update Successful"
+                    subtitle={successMessage}
+                    on:close={() => {
+                        successTimeOut = 0;
+                    }}
+                />
+            </div>
+        {/if}
     </Form>
 </Content>
