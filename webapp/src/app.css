@@ -1,5 +1,5 @@
 @import '@fontsource/fira-mono';
-@import 'carbon-components-svelte/css/white.css';
+@import 'carbon-components-svelte/css/all.css';
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
 
 :root {
