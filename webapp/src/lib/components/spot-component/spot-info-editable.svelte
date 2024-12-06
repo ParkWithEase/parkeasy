@@ -1,5 +1,4 @@
 <script lang="ts">
-
     import type { components } from '$lib/sdk/schema';
     type ParkingSpot = components['schemas']['ParkingSpot'];
     export let spot: ParkingSpot | undefined;

@@ -170,7 +170,7 @@
         return false;
     }
 
-    async function updatePriceUtilities(event:Event) {
+    async function updatePriceUtilities(event: Event) {
         event.preventDefault();
         priceUtilitiesUpdated = true;
     }
@@ -179,12 +179,12 @@
         event.preventDefault();
 
         if (!checkAvailabilityChange() && !priceUtilitiesUpdated) {
-            errorMessage = "No changes detected.";
+            errorMessage = 'No changes detected.';
             errorTimeOut = ERROR_MESSAGE_TIME_OUT;
             return;
         }
 
-        if(priceUtilitiesUpdated){
+        if (priceUtilitiesUpdated) {
             client
                 .PUT('/spots/{id}', {
                     params: {
@@ -194,11 +194,13 @@
                     },
                     headers: { 'Content-Type': 'application/json' },
                     body: {
-                        features: {"charging_station": spotChargingStation,
-                                    "plug_in": spotPlugIn,
-                                    "shelter": spotShelter},
+                        features: {
+                            charging_station: spotChargingStation,
+                            plug_in: spotPlugIn,
+                            shelter: spotShelter
+                        },
                         price_per_hour: newPricePerHour
-                    },
+                    }
                 })
                 .then(({ data, error }) => {
                     if (data) {
@@ -211,13 +213,13 @@
                     }
                 })
                 .catch((err) => {
-                    errorMessage = "An error occurred while updating.";
+                    errorMessage = 'An error occurred while updating.';
                     errorTimeOut = ERROR_MESSAGE_TIME_OUT;
                 });
         }
 
-        let addAvailability: Array<{ end_time: string, start_time: string }> = [];
-        let removeAvailability: Array<{ end_time: string, start_time: string }> = [];
+        let addAvailability: Array<{ end_time: string; start_time: string }> = [];
+        let removeAvailability: Array<{ end_time: string; start_time: string }> = [];
 
         // Compare the initial and edited tables
         for (let [key, initialTable] of availabilityTablesInitial) {
@@ -240,12 +242,12 @@
                         if (editedStatus === TimeSlotStatus.AVAILABLE) {
                             addAvailability.push({
                                 start_time: startDateTime.toISOString(),
-                                end_time: endDateTime.toISOString(),
+                                end_time: endDateTime.toISOString()
                             });
                         } else if (initialStatus === TimeSlotStatus.AVAILABLE) {
                             removeAvailability.push({
                                 start_time: startDateTime.toISOString(),
-                                end_time: endDateTime.toISOString(),
+                                end_time: endDateTime.toISOString()
                             });
                         }
                     }
@@ -264,7 +266,7 @@
                 body: {
                     add_availability: addAvailability,
                     remove_availability: removeAvailability
-                },
+                }
             })
             .then(({ data, error }) => {
                 if (data) {
@@ -277,7 +279,7 @@
                 }
             })
             .catch((err) => {
-                errorMessage = "An error occurred while updating availability.";
+                errorMessage = 'An error occurred while updating availability.';
                 errorTimeOut = ERROR_MESSAGE_TIME_OUT;
             });
     }
@@ -311,7 +313,6 @@
 </script>
 
 <Content>
-
     <img src={Background} class="spot-info-image" alt="spot" />
     <p class="spot-info-header">Location</p>
     <SpotInfoEditable bind:spot />

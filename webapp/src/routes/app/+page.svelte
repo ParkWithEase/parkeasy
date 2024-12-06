@@ -84,7 +84,6 @@
             searchUsed = true;
         }
         fetchSpots(location.geometry.coordinates, distance);
-
     };
 
     const handleClickOutside = (event: Event) => {
@@ -215,10 +214,7 @@
             style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
         >
             <GeolocateControl position="bottom-left" fitBoundsOptions={{ maxZoom: maxZoom }} />
-            <Marker
-                lngLat={mapCenter}
-                zIndex={999}
-            >
+            <Marker lngLat={mapCenter} zIndex={999}>
                 <span class="destination-marker"> 📍 </span>
             </Marker>
             {#each spotsData as { id, location }}
@@ -290,7 +286,7 @@
         background-color: #f0f0f0;
     }
 
-    .destination-marker{
+    .destination-marker {
         font-size: 1.5rem;
     }
 
