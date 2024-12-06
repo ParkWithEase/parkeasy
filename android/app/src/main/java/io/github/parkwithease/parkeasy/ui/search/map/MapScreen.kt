@@ -14,9 +14,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.mapbox.mapboxsdk.geometry.LatLng
 import com.maplibre.compose.LocalMapLibreStyleProvider
 import com.maplibre.compose.MapView
@@ -25,17 +30,14 @@ import com.maplibre.compose.camera.MapViewCamera
 import com.maplibre.compose.rememberSaveableMapViewCamera
 import com.maplibre.compose.symbols.Symbol
 import io.github.parkwithease.parkeasy.R
-import io.github.parkwithease.parkeasy.model.Spot
-import io.github.parkwithease.parkeasy.ui.common.PreviewAll
-import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 import io.github.parkwithease.parkeasy.ui.search.CreateBookingScreen
 import io.github.parkwithease.parkeasy.ui.search.DefaultLatitude
 import io.github.parkwithease.parkeasy.ui.search.DefaultLongitude
 import io.github.parkwithease.parkeasy.ui.search.SearchViewModel
 import io.github.parkwithease.parkeasy.ui.search.rememberCreateHandler
-import io.github.parkwithease.parkeasy.ui.search.rememberSearchHandler
-import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
 
+@OptIn(ExperimentalPermissionsApi::class)
+@Suppress("detekt:LongMethod")
 @Composable
 fun MapScreen(
     onNavigateToLogin: () -> Unit,
@@ -43,13 +45,13 @@ fun MapScreen(
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel<SearchViewModel>(),
 ) {
-    val loggedIn by viewModel.loggedIn.collectAsState(true)
+    val loggedIn by viewModel.loggedIn.collectAsState(false)
     val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
+    var showRationale by remember { mutableStateOf(false) }
 
     if (!loggedIn) {
         LaunchedEffect(Unit) { latestOnNavigateToLogin() }
     } else {
-        @Suppress("unused") val searchHandler = rememberSearchHandler(viewModel)
         val createHandler = rememberCreateHandler(viewModel)
         val cars by viewModel.cars.collectAsState()
         val spots by viewModel.spots.collectAsState()
@@ -57,9 +59,37 @@ fun MapScreen(
         val isRefreshing by viewModel.isRefreshing.collectAsState()
         val showForm by viewModel.showForm.collectAsState()
 
+        val cameraState =
+            CameraState.Centered(latitude = DefaultLatitude, longitude = DefaultLongitude)
+        val mapViewCamera = rememberSaveableMapViewCamera(MapViewCamera(state = cameraState))
+        val engine = remember { viewModel.engine }
+
+        var launchedPermissions = false
+
+        val locationPermissions =
+            rememberMultiplePermissionsState(
+                listOf(
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                )
+            ) {
+                if (it.all { entry -> entry.value }) {
+                    showRationale = false
+                    viewModel.startLocationFlow()
+                    mapViewCamera.value = MapViewCamera.TrackingUserLocation()
+                }
+            }
+
         BackHandler(enabled = showForm) { viewModel.onHideForm() }
 
-        LaunchedEffect(Unit) { viewModel.onRefresh() }
+        LaunchedEffect(Unit) {
+            if (locationPermissions.allPermissionsGranted) {
+                viewModel.startLocationFlow()
+                mapViewCamera.value = MapViewCamera.TrackingUserLocation()
+            }
+            viewModel.snackbarState.currentSnackbarData?.dismiss()
+            viewModel.onRefresh()
+        }
 
         if (showForm)
             CreateBookingScreen(
@@ -71,63 +101,51 @@ fun MapScreen(
                 disabledIds = viewModel.createState.disabledIds.value,
             )
         else
-            MapScreen(
-                map = { mapSpots, onSpotClick, mapModifier ->
-                    MapLibreMap(mapSpots, onSpotClick, mapModifier)
-                },
-                spots = spots,
-                onSpotClick = {
-                    createHandler.reset()
-                    createHandler.onSpotChange(it)
-                    viewModel.onShowForm()
-                },
-                isRefreshing = isRefreshing,
-                onRefresh = viewModel::onRefresh,
-                navBar = navBar,
-                snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
+            Scaffold(
                 modifier = modifier,
-            )
-    }
-}
-
-@Composable
-fun MapScreen(
-    map: @Composable ((spots: List<Spot>, onSpotClick: (Spot) -> Unit, modifier: Modifier) -> Unit),
-    spots: List<Spot>,
-    onSpotClick: (Spot) -> Unit,
-    isRefreshing: Boolean,
-    onRefresh: () -> Unit,
-    navBar: @Composable (() -> Unit),
-    snackbarHost: @Composable (() -> Unit),
-    modifier: Modifier = Modifier,
-) {
-    Scaffold(
-        modifier = modifier,
-        bottomBar = navBar,
-        snackbarHost = snackbarHost,
-        floatingActionButton = { RefreshButton(isRefreshing = isRefreshing, onRefresh = onRefresh) },
-    ) { innerPadding ->
-        Surface(modifier = Modifier.padding(innerPadding)) { map(spots, onSpotClick, modifier) }
-    }
-}
-
-@Composable
-fun MapLibreMap(spots: List<Spot>, onSpotClick: (Spot) -> Unit, modifier: Modifier = Modifier) {
-    val cameraState = CameraState.Centered(latitude = DefaultLatitude, longitude = DefaultLongitude)
-    val mapViewCamera = rememberSaveableMapViewCamera(MapViewCamera(state = cameraState))
-
-    MapView(
-        modifier = modifier,
-        styleUrl = LocalMapLibreStyleProvider.current.getStyleUrl(),
-        camera = mapViewCamera,
-    ) {
-        spots.forEach {
-            Symbol(
-                center = LatLng(it.location.latitude, it.location.longitude),
-                imageId = R.drawable.location,
-                onTap = { onSpotClick(it) },
-            )
-        }
+                bottomBar = navBar,
+                snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
+                floatingActionButton = {
+                    RefreshButton(
+                        isRefreshing = isRefreshing,
+                        onRefresh = {
+                            if (!launchedPermissions) {
+                                launchedPermissions = true
+                                if (locationPermissions.allPermissionsGranted) {
+                                    viewModel.startLocationFlow()
+                                    mapViewCamera.value = MapViewCamera.TrackingUserLocation()
+                                } else if (locationPermissions.shouldShowRationale) {
+                                    showRationale = true
+                                } else {
+                                    locationPermissions.launchMultiplePermissionRequest()
+                                }
+                            }
+                            viewModel.onRefresh()
+                        },
+                    )
+                },
+            ) { innerPadding ->
+                Surface(modifier = Modifier.padding(innerPadding)) {
+                    MapView(
+                        modifier = Modifier,
+                        styleUrl = LocalMapLibreStyleProvider.current.getStyleUrl(),
+                        camera = mapViewCamera,
+                        locationEngine = engine,
+                    ) {
+                        spots.forEach {
+                            Symbol(
+                                center = LatLng(it.location.latitude, it.location.longitude),
+                                imageId = R.drawable.location,
+                                onTap = {
+                                    createHandler.reset()
+                                    createHandler.onSpotChange(it)
+                                    viewModel.onShowForm()
+                                },
+                            )
+                        }
+                    }
+                }
+            }
     }
 }
 
@@ -141,22 +159,5 @@ fun RefreshButton(isRefreshing: Boolean, onRefresh: () -> Unit, modifier: Modifi
             else MaterialTheme.colorScheme.primaryContainer,
     ) {
         Icon(imageVector = Icons.Filled.Refresh, contentDescription = null)
-    }
-}
-
-@Suppress("detekt:UnusedPrivateMember")
-@PreviewAll
-@Composable
-private fun MapScreenPreview() {
-    ParkEasyTheme {
-        MapScreen(
-            map = { _, _, _ -> },
-            spots = emptyList<Spot>(),
-            onSpotClick = {},
-            isRefreshing = false,
-            onRefresh = {},
-            navBar = { NavBar() },
-            snackbarHost = {},
-        )
     }
 }
