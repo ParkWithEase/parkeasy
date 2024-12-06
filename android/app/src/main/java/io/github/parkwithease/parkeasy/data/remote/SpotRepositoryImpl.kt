@@ -4,6 +4,7 @@ import io.github.parkwithease.parkeasy.data.common.mapAPIError
 import io.github.parkwithease.parkeasy.data.local.AuthRepository
 import io.github.parkwithease.parkeasy.di.IoDispatcher
 import io.github.parkwithease.parkeasy.model.Booking
+import io.github.parkwithease.parkeasy.model.BookingHistory
 import io.github.parkwithease.parkeasy.model.LoggedOutException
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.model.TimeUnit
@@ -109,4 +110,32 @@ constructor(
             }
             .mapAPIError()
             .map {}
+
+    override suspend fun getBookings(): Result<List<BookingHistory>> =
+        authRepo.sessionFlow
+            .firstOrNull()
+            .runCatching {
+                if (this == null) throw LoggedOutException()
+                withContext(ioDispatcher) { client.get("/user/bookings") { cookie(name, value) } }
+            }
+            .mapAPIError()
+            .let { result ->
+                result.mapCatching {
+                    if (result.isSuccess) it.body<List<BookingHistory>>() else emptyList()
+                }
+            }
+
+    override suspend fun getLeasings(): Result<List<BookingHistory>> =
+        authRepo.sessionFlow
+            .firstOrNull()
+            .runCatching {
+                if (this == null) throw LoggedOutException()
+                withContext(ioDispatcher) { client.get("/user/leasings") { cookie(name, value) } }
+            }
+            .mapAPIError()
+            .let { result ->
+                result.mapCatching {
+                    if (result.isSuccess) it.body<List<BookingHistory>>() else emptyList()
+                }
+            }
 }

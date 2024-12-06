@@ -36,6 +36,7 @@ fun ProfileScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToCars: () -> Unit,
     onNavigateToSpots: () -> Unit,
+    onNavigateToBookings: () -> Unit,
     navBar: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
@@ -51,6 +52,7 @@ fun ProfileScreen(
             listOf(
                 ProfileButtonRoute(R.string.cars, onNavigateToCars),
                 ProfileButtonRoute(R.string.spots, onNavigateToSpots),
+                ProfileButtonRoute(R.string.buying_history, onNavigateToBookings),
             )
 
         ProfileScreen(
@@ -142,7 +144,11 @@ private fun ProfileScreenPreview() {
         ProfileScreen(
             profile = Profile(),
             profileRoutes =
-                listOf(ProfileButtonRoute(R.string.cars) {}, ProfileButtonRoute(R.string.spots) {}),
+                listOf(
+                    ProfileButtonRoute(R.string.cars) {},
+                    ProfileButtonRoute(R.string.spots) {},
+                    ProfileButtonRoute(R.string.buying_history) {},
+                ),
             onLogoutClick = {},
             navBar = { NavBar() },
             snackbarHost = {},

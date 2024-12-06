@@ -19,6 +19,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
@@ -51,7 +52,6 @@ import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 import io.github.parkwithease.parkeasy.ui.common.PreviewAll
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
 import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
-import io.github.parkwithease.parkeasy.ui.theme.Typography
 
 @Suppress("detekt:LongMethod")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -152,8 +152,11 @@ fun CarCard(car: Car, onClick: (Car) -> Unit, modifier: Modifier = Modifier) {
                 )
             }
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text(text = car.details.licensePlate, style = Typography.headlineLarge)
-                Text(car.details.color + ' ' + car.details.make + " " + car.details.model)
+                Text(
+                    text = car.details.licensePlate,
+                    style = MaterialTheme.typography.headlineLarge,
+                )
+                Text(car.details.color + ' ' + car.details.make + ' ' + car.details.model)
             }
         }
     }
