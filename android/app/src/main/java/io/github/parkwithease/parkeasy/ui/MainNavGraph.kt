@@ -7,13 +7,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import io.github.parkwithease.parkeasy.ui.cars.carsScreen
 import io.github.parkwithease.parkeasy.ui.cars.navigateToCars
-import io.github.parkwithease.parkeasy.ui.list.ListRoute
-import io.github.parkwithease.parkeasy.ui.list.listScreen
+import io.github.parkwithease.parkeasy.ui.history.bookings.bookingsScreen
+import io.github.parkwithease.parkeasy.ui.history.bookings.navigateToBookings
+import io.github.parkwithease.parkeasy.ui.history.leasings.leasingsScreen
+import io.github.parkwithease.parkeasy.ui.history.leasings.navigateToLeasings
 import io.github.parkwithease.parkeasy.ui.login.loginScreen
 import io.github.parkwithease.parkeasy.ui.login.navigateToLogin
-import io.github.parkwithease.parkeasy.ui.map.mapScreen
 import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 import io.github.parkwithease.parkeasy.ui.profile.profileScreen
+import io.github.parkwithease.parkeasy.ui.search.list.ListRoute
+import io.github.parkwithease.parkeasy.ui.search.list.listScreen
+import io.github.parkwithease.parkeasy.ui.search.map.mapScreen
 import io.github.parkwithease.parkeasy.ui.spots.navigateToSpots
 import io.github.parkwithease.parkeasy.ui.spots.spotsScreen
 
@@ -32,9 +36,13 @@ fun MainNavGraph(
             onNavigateToLogin = navController::navigateToLogin,
             onNavigateToCars = navController::navigateToCars,
             onNavigateToSpots = navController::navigateToSpots,
+            onNavigateToBookings = navController::navigateToBookings,
+            onNavigateToLeasings = navController::navigateToLeasings,
             navBar = navBar,
         )
         carsScreen()
         spotsScreen()
+        bookingsScreen()
+        leasingsScreen()
     }
 }

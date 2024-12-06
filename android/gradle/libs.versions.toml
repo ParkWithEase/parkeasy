@@ -23,6 +23,8 @@ kover = "0.8.3"
 app-versioning = "1.3.2"
 android-desugar = "2.1.3"
 navigationCompose = "2.8.4"
+accompanist = "0.36.0"
+gms-location = "21.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -50,6 +52,7 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
+accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
 
 # MapLibre
 maplibre-compose = { module = "io.github.rallista:maplibre-compose", version.ref = "maplibreCompose" }
@@ -74,6 +77,9 @@ detekt-compose = { group = "io.nlopez.compose.rules", name = "detekt", version.r
 
 # Desugar
 android-desugar = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "android-desugar" }
+
+# Google Play Services
+gms-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "gms-location" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

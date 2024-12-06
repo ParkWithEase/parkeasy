@@ -8,13 +8,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
-	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/expr"
@@ -45,189 +46,10 @@ var Cars = psql.NewTablex[*Car, CarSlice, *CarSetter]("", "car")
 // CarsQuery is a query on the car table
 type CarsQuery = *psql.ViewQuery[*Car, CarSlice]
 
-// CarsStmt is a prepared statment on car
-type CarsStmt = bob.QueryStmt[*Car, CarSlice]
-
 // carR is where relationships are stored.
 type carR struct {
 	CaridBookings BookingSlice // booking.booking_carid_fkey
 	UseridUser    *User        // car.car_userid_fkey
-}
-
-// CarSetter is used for insert/upsert/update operations
-// All values are optional, and do not have to be set
-// Generated columns are not included
-type CarSetter struct {
-	Carid        omit.Val[int64]     `db:"carid,pk" `
-	Userid       omit.Val[int64]     `db:"userid" `
-	Caruuid      omit.Val[uuid.UUID] `db:"caruuid" `
-	Licenseplate omit.Val[string]    `db:"licenseplate" `
-	Make         omit.Val[string]    `db:"make" `
-	Model        omit.Val[string]    `db:"model" `
-	Color        omit.Val[string]    `db:"color" `
-}
-
-func (s CarSetter) SetColumns() []string {
-	vals := make([]string, 0, 7)
-	if !s.Carid.IsUnset() {
-		vals = append(vals, "carid")
-	}
-
-	if !s.Userid.IsUnset() {
-		vals = append(vals, "userid")
-	}
-
-	if !s.Caruuid.IsUnset() {
-		vals = append(vals, "caruuid")
-	}
-
-	if !s.Licenseplate.IsUnset() {
-		vals = append(vals, "licenseplate")
-	}
-
-	if !s.Make.IsUnset() {
-		vals = append(vals, "make")
-	}
-
-	if !s.Model.IsUnset() {
-		vals = append(vals, "model")
-	}
-
-	if !s.Color.IsUnset() {
-		vals = append(vals, "color")
-	}
-
-	return vals
-}
-
-func (s CarSetter) Overwrite(t *Car) {
-	if !s.Carid.IsUnset() {
-		t.Carid, _ = s.Carid.Get()
-	}
-	if !s.Userid.IsUnset() {
-		t.Userid, _ = s.Userid.Get()
-	}
-	if !s.Caruuid.IsUnset() {
-		t.Caruuid, _ = s.Caruuid.Get()
-	}
-	if !s.Licenseplate.IsUnset() {
-		t.Licenseplate, _ = s.Licenseplate.Get()
-	}
-	if !s.Make.IsUnset() {
-		t.Make, _ = s.Make.Get()
-	}
-	if !s.Model.IsUnset() {
-		t.Model, _ = s.Model.Get()
-	}
-	if !s.Color.IsUnset() {
-		t.Color, _ = s.Color.Get()
-	}
-}
-
-func (s CarSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 7)
-	if s.Carid.IsUnset() {
-		vals[0] = psql.Raw("DEFAULT")
-	} else {
-		vals[0] = psql.Arg(s.Carid)
-	}
-
-	if s.Userid.IsUnset() {
-		vals[1] = psql.Raw("DEFAULT")
-	} else {
-		vals[1] = psql.Arg(s.Userid)
-	}
-
-	if s.Caruuid.IsUnset() {
-		vals[2] = psql.Raw("DEFAULT")
-	} else {
-		vals[2] = psql.Arg(s.Caruuid)
-	}
-
-	if s.Licenseplate.IsUnset() {
-		vals[3] = psql.Raw("DEFAULT")
-	} else {
-		vals[3] = psql.Arg(s.Licenseplate)
-	}
-
-	if s.Make.IsUnset() {
-		vals[4] = psql.Raw("DEFAULT")
-	} else {
-		vals[4] = psql.Arg(s.Make)
-	}
-
-	if s.Model.IsUnset() {
-		vals[5] = psql.Raw("DEFAULT")
-	} else {
-		vals[5] = psql.Arg(s.Model)
-	}
-
-	if s.Color.IsUnset() {
-		vals[6] = psql.Raw("DEFAULT")
-	} else {
-		vals[6] = psql.Arg(s.Color)
-	}
-
-	return im.Values(vals...)
-}
-
-func (s CarSetter) Apply(q *dialect.UpdateQuery) {
-	um.Set(s.Expressions()...).Apply(q)
-}
-
-func (s CarSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 7)
-
-	if !s.Carid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "carid")...),
-			psql.Arg(s.Carid),
-		}})
-	}
-
-	if !s.Userid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "userid")...),
-			psql.Arg(s.Userid),
-		}})
-	}
-
-	if !s.Caruuid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "caruuid")...),
-			psql.Arg(s.Caruuid),
-		}})
-	}
-
-	if !s.Licenseplate.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "licenseplate")...),
-			psql.Arg(s.Licenseplate),
-		}})
-	}
-
-	if !s.Make.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "make")...),
-			psql.Arg(s.Make),
-		}})
-	}
-
-	if !s.Model.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "model")...),
-			psql.Arg(s.Model),
-		}})
-	}
-
-	if !s.Color.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "color")...),
-			psql.Arg(s.Color),
-		}})
-	}
-
-	return exprs
 }
 
 type carColumnNames struct {
@@ -300,6 +122,403 @@ func buildCarWhere[Q psql.Filterable](cols carColumns) carWhere[Q] {
 	}
 }
 
+var CarErrors = &carErrors{
+	ErrUniqueCaruuid: &errUniqueConstraint{s: "car_caruuid_key"},
+}
+
+type carErrors struct {
+	ErrUniqueCaruuid error
+}
+
+// CarSetter is used for insert/upsert/update operations
+// All values are optional, and do not have to be set
+// Generated columns are not included
+type CarSetter struct {
+	Carid        omit.Val[int64]     `db:"carid,pk" `
+	Userid       omit.Val[int64]     `db:"userid" `
+	Caruuid      omit.Val[uuid.UUID] `db:"caruuid" `
+	Licenseplate omit.Val[string]    `db:"licenseplate" `
+	Make         omit.Val[string]    `db:"make" `
+	Model        omit.Val[string]    `db:"model" `
+	Color        omit.Val[string]    `db:"color" `
+}
+
+func (s CarSetter) SetColumns() []string {
+	vals := make([]string, 0, 7)
+	if !s.Carid.IsUnset() {
+		vals = append(vals, "carid")
+	}
+
+	if !s.Userid.IsUnset() {
+		vals = append(vals, "userid")
+	}
+
+	if !s.Caruuid.IsUnset() {
+		vals = append(vals, "caruuid")
+	}
+
+	if !s.Licenseplate.IsUnset() {
+		vals = append(vals, "licenseplate")
+	}
+
+	if !s.Make.IsUnset() {
+		vals = append(vals, "make")
+	}
+
+	if !s.Model.IsUnset() {
+		vals = append(vals, "model")
+	}
+
+	if !s.Color.IsUnset() {
+		vals = append(vals, "color")
+	}
+
+	return vals
+}
+
+func (s CarSetter) Overwrite(t *Car) {
+	if !s.Carid.IsUnset() {
+		t.Carid, _ = s.Carid.Get()
+	}
+	if !s.Userid.IsUnset() {
+		t.Userid, _ = s.Userid.Get()
+	}
+	if !s.Caruuid.IsUnset() {
+		t.Caruuid, _ = s.Caruuid.Get()
+	}
+	if !s.Licenseplate.IsUnset() {
+		t.Licenseplate, _ = s.Licenseplate.Get()
+	}
+	if !s.Make.IsUnset() {
+		t.Make, _ = s.Make.Get()
+	}
+	if !s.Model.IsUnset() {
+		t.Model, _ = s.Model.Get()
+	}
+	if !s.Color.IsUnset() {
+		t.Color, _ = s.Color.Get()
+	}
+}
+
+func (s *CarSetter) Apply(q *dialect.InsertQuery) {
+	q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+		return Cars.BeforeInsertHooks.RunHooks(ctx, exec, s)
+	})
+
+	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		vals := make([]bob.Expression, 7)
+		if s.Carid.IsUnset() {
+			vals[0] = psql.Raw("DEFAULT")
+		} else {
+			vals[0] = psql.Arg(s.Carid)
+		}
+
+		if s.Userid.IsUnset() {
+			vals[1] = psql.Raw("DEFAULT")
+		} else {
+			vals[1] = psql.Arg(s.Userid)
+		}
+
+		if s.Caruuid.IsUnset() {
+			vals[2] = psql.Raw("DEFAULT")
+		} else {
+			vals[2] = psql.Arg(s.Caruuid)
+		}
+
+		if s.Licenseplate.IsUnset() {
+			vals[3] = psql.Raw("DEFAULT")
+		} else {
+			vals[3] = psql.Arg(s.Licenseplate)
+		}
+
+		if s.Make.IsUnset() {
+			vals[4] = psql.Raw("DEFAULT")
+		} else {
+			vals[4] = psql.Arg(s.Make)
+		}
+
+		if s.Model.IsUnset() {
+			vals[5] = psql.Raw("DEFAULT")
+		} else {
+			vals[5] = psql.Arg(s.Model)
+		}
+
+		if s.Color.IsUnset() {
+			vals[6] = psql.Raw("DEFAULT")
+		} else {
+			vals[6] = psql.Arg(s.Color)
+		}
+
+		return bob.ExpressSlice(ctx, w, d, start, vals, "", ", ", "")
+	}))
+}
+
+func (s CarSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return um.Set(s.Expressions()...)
+}
+
+func (s CarSetter) Expressions(prefix ...string) []bob.Expression {
+	exprs := make([]bob.Expression, 0, 7)
+
+	if !s.Carid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "carid")...),
+			psql.Arg(s.Carid),
+		}})
+	}
+
+	if !s.Userid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "userid")...),
+			psql.Arg(s.Userid),
+		}})
+	}
+
+	if !s.Caruuid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "caruuid")...),
+			psql.Arg(s.Caruuid),
+		}})
+	}
+
+	if !s.Licenseplate.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "licenseplate")...),
+			psql.Arg(s.Licenseplate),
+		}})
+	}
+
+	if !s.Make.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "make")...),
+			psql.Arg(s.Make),
+		}})
+	}
+
+	if !s.Model.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "model")...),
+			psql.Arg(s.Model),
+		}})
+	}
+
+	if !s.Color.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "color")...),
+			psql.Arg(s.Color),
+		}})
+	}
+
+	return exprs
+}
+
+// FindCar retrieves a single record by primary key
+// If cols is empty Find will return all columns.
+func FindCar(ctx context.Context, exec bob.Executor, CaridPK int64, cols ...string) (*Car, error) {
+	if len(cols) == 0 {
+		return Cars.Query(
+			SelectWhere.Cars.Carid.EQ(CaridPK),
+		).One(ctx, exec)
+	}
+
+	return Cars.Query(
+		SelectWhere.Cars.Carid.EQ(CaridPK),
+		sm.Columns(Cars.Columns().Only(cols...)),
+	).One(ctx, exec)
+}
+
+// CarExists checks the presence of a single record by primary key
+func CarExists(ctx context.Context, exec bob.Executor, CaridPK int64) (bool, error) {
+	return Cars.Query(
+		SelectWhere.Cars.Carid.EQ(CaridPK),
+	).Exists(ctx, exec)
+}
+
+// AfterQueryHook is called after Car is retrieved from the database
+func (o *Car) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Cars.AfterSelectHooks.RunHooks(ctx, exec, CarSlice{o})
+	case bob.QueryTypeInsert:
+		ctx, err = Cars.AfterInsertHooks.RunHooks(ctx, exec, CarSlice{o})
+	case bob.QueryTypeUpdate:
+		ctx, err = Cars.AfterUpdateHooks.RunHooks(ctx, exec, CarSlice{o})
+	case bob.QueryTypeDelete:
+		ctx, err = Cars.AfterDeleteHooks.RunHooks(ctx, exec, CarSlice{o})
+	}
+
+	return err
+}
+
+// PrimaryKeyVals returns the primary key values of the Car
+func (o *Car) PrimaryKeyVals() bob.Expression {
+	return psql.Arg(o.Carid)
+}
+
+func (o *Car) pkEQ() dialect.Expression {
+	return psql.Quote("car", "carid").EQ(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		return o.PrimaryKeyVals().WriteSQL(ctx, w, d, start)
+	}))
+}
+
+// Update uses an executor to update the Car
+func (o *Car) Update(ctx context.Context, exec bob.Executor, s *CarSetter) error {
+	v, err := Cars.Update(s.UpdateMod(), um.Where(o.pkEQ())).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.R = v.R
+	*o = *v
+
+	return nil
+}
+
+// Delete deletes a single Car record with an executor
+func (o *Car) Delete(ctx context.Context, exec bob.Executor) error {
+	_, err := Cars.Delete(dm.Where(o.pkEQ())).Exec(ctx, exec)
+	return err
+}
+
+// Reload refreshes the Car using the executor
+func (o *Car) Reload(ctx context.Context, exec bob.Executor) error {
+	o2, err := Cars.Query(
+		SelectWhere.Cars.Carid.EQ(o.Carid),
+	).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+	o2.R = o.R
+	*o = *o2
+
+	return nil
+}
+
+// AfterQueryHook is called after CarSlice is retrieved from the database
+func (o CarSlice) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Cars.AfterSelectHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeInsert:
+		ctx, err = Cars.AfterInsertHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeUpdate:
+		ctx, err = Cars.AfterUpdateHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeDelete:
+		ctx, err = Cars.AfterDeleteHooks.RunHooks(ctx, exec, o)
+	}
+
+	return err
+}
+
+func (o CarSlice) pkIN() dialect.Expression {
+	return psql.Quote("car", "carid").In(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		pkPairs := make([]bob.Expression, len(o))
+		for i, row := range o {
+			pkPairs[i] = row.PrimaryKeyVals()
+		}
+		return bob.ExpressSlice(ctx, w, d, start, pkPairs, "", ", ", "")
+	}))
+}
+
+// copyMatchingRows finds models in the given slice that have the same primary key
+// then it first copies the existing relationships from the old model to the new model
+// and then replaces the old model in the slice with the new model
+func (o CarSlice) copyMatchingRows(from ...*Car) {
+	for i, old := range o {
+		for _, new := range from {
+			if new.Carid != old.Carid {
+				continue
+			}
+			new.R = old.R
+			o[i] = new
+			break
+		}
+	}
+}
+
+// UpdateMod modifies an update query with "WHERE primary_key IN (o...)"
+func (o CarSlice) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Cars.BeforeUpdateHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Car:
+				o.copyMatchingRows(retrieved)
+			case []*Car:
+				o.copyMatchingRows(retrieved...)
+			case CarSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Car or a slice of Car
+				// then run the AfterUpdateHooks on the slice
+				_, err = Cars.AfterUpdateHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+// DeleteMod modifies an delete query with "WHERE primary_key IN (o...)"
+func (o CarSlice) DeleteMod() bob.Mod[*dialect.DeleteQuery] {
+	return bob.ModFunc[*dialect.DeleteQuery](func(q *dialect.DeleteQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Cars.BeforeDeleteHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Car:
+				o.copyMatchingRows(retrieved)
+			case []*Car:
+				o.copyMatchingRows(retrieved...)
+			case CarSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Car or a slice of Car
+				// then run the AfterDeleteHooks on the slice
+				_, err = Cars.AfterDeleteHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+func (o CarSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals CarSetter) error {
+	_, err := Cars.Update(vals.UpdateMod(), o.UpdateMod()).All(ctx, exec)
+	return err
+}
+
+func (o CarSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
+	_, err := Cars.Delete(o.DeleteMod()).Exec(ctx, exec)
+	return err
+}
+
+func (o CarSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
+	o2, err := Cars.Query(sm.Where(o.pkIN())).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.copyMatchingRows(o2...)
+
+	return nil
+}
+
 type carJoins[Q dialect.Joinable] struct {
 	typ           string
 	CaridBookings func(context.Context) modAs[Q, bookingColumns]
@@ -318,101 +537,6 @@ func buildCarJoins[Q dialect.Joinable](cols carColumns, typ string) carJoins[Q] 
 	}
 }
 
-// FindCar retrieves a single record by primary key
-// If cols is empty Find will return all columns.
-func FindCar(ctx context.Context, exec bob.Executor, CaridPK int64, cols ...string) (*Car, error) {
-	if len(cols) == 0 {
-		return Cars.Query(
-			ctx, exec,
-			SelectWhere.Cars.Carid.EQ(CaridPK),
-		).One()
-	}
-
-	return Cars.Query(
-		ctx, exec,
-		SelectWhere.Cars.Carid.EQ(CaridPK),
-		sm.Columns(Cars.Columns().Only(cols...)),
-	).One()
-}
-
-// CarExists checks the presence of a single record by primary key
-func CarExists(ctx context.Context, exec bob.Executor, CaridPK int64) (bool, error) {
-	return Cars.Query(
-		ctx, exec,
-		SelectWhere.Cars.Carid.EQ(CaridPK),
-	).Exists()
-}
-
-// PrimaryKeyVals returns the primary key values of the Car
-func (o *Car) PrimaryKeyVals() bob.Expression {
-	return psql.Arg(o.Carid)
-}
-
-// Update uses an executor to update the Car
-func (o *Car) Update(ctx context.Context, exec bob.Executor, s *CarSetter) error {
-	return Cars.Update(ctx, exec, s, o)
-}
-
-// Delete deletes a single Car record with an executor
-func (o *Car) Delete(ctx context.Context, exec bob.Executor) error {
-	return Cars.Delete(ctx, exec, o)
-}
-
-// Reload refreshes the Car using the executor
-func (o *Car) Reload(ctx context.Context, exec bob.Executor) error {
-	o2, err := Cars.Query(
-		ctx, exec,
-		SelectWhere.Cars.Carid.EQ(o.Carid),
-	).One()
-	if err != nil {
-		return err
-	}
-	o2.R = o.R
-	*o = *o2
-
-	return nil
-}
-
-func (o CarSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals CarSetter) error {
-	return Cars.Update(ctx, exec, &vals, o...)
-}
-
-func (o CarSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
-	return Cars.Delete(ctx, exec, o...)
-}
-
-func (o CarSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
-	var mods []bob.Mod[*dialect.SelectQuery]
-
-	CaridPK := make([]int64, len(o))
-
-	for i, o := range o {
-		CaridPK[i] = o.Carid
-	}
-
-	mods = append(mods,
-		SelectWhere.Cars.Carid.In(CaridPK...),
-	)
-
-	o2, err := Cars.Query(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, old := range o {
-		for _, new := range o2 {
-			if new.Carid != old.Carid {
-				continue
-			}
-			new.R = old.R
-			*old = *new
-			break
-		}
-	}
-
-	return nil
-}
-
 func carsJoinCaridBookings[Q dialect.Joinable](from carColumns, typ string) func(context.Context) modAs[Q, bookingColumns] {
 	return func(ctx context.Context) modAs[Q, bookingColumns] {
 		return modAs[Q, bookingColumns]{
@@ -421,7 +545,7 @@ func carsJoinCaridBookings[Q dialect.Joinable](from carColumns, typ string) func
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Bookings.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Bookings.Name().As(to.Alias())).On(
 						to.Carid.EQ(from.Carid),
 					))
 				}
@@ -440,7 +564,7 @@ func carsJoinUseridUser[Q dialect.Joinable](from carColumns, typ string) func(co
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Users.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
 						to.Userid.EQ(from.Userid),
 					))
 				}
@@ -452,37 +576,37 @@ func carsJoinUseridUser[Q dialect.Joinable](from carColumns, typ string) func(co
 }
 
 // CaridBookings starts a query for related objects on booking
-func (o *Car) CaridBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
-	return Bookings.Query(ctx, exec, append(mods,
+func (o *Car) CaridBookings(mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
+	return Bookings.Query(append(mods,
 		sm.Where(BookingColumns.Carid.EQ(psql.Arg(o.Carid))),
 	)...)
 }
 
-func (os CarSlice) CaridBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
+func (os CarSlice) CaridBookings(mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Carid)
 	}
 
-	return Bookings.Query(ctx, exec, append(mods,
+	return Bookings.Query(append(mods,
 		sm.Where(psql.Group(BookingColumns.Carid).In(PKArgs...)),
 	)...)
 }
 
 // UseridUser starts a query for related objects on users
-func (o *Car) UseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
-	return Users.Query(ctx, exec, append(mods,
+func (o *Car) UseridUser(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
+	return Users.Query(append(mods,
 		sm.Where(UserColumns.Userid.EQ(psql.Arg(o.Userid))),
 	)...)
 }
 
-func (os CarSlice) UseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
+func (os CarSlice) UseridUser(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Userid)
 	}
 
-	return Users.Query(ctx, exec, append(mods,
+	return Users.Query(append(mods,
 		sm.Where(psql.Group(UserColumns.Userid).In(PKArgs...)),
 	)...)
 }
@@ -553,7 +677,7 @@ func (o *Car) LoadCarCaridBookings(ctx context.Context, exec bob.Executor, mods 
 	// Reset the relationship
 	o.R.CaridBookings = nil
 
-	related, err := o.CaridBookings(ctx, exec, mods...).All()
+	related, err := o.CaridBookings(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -572,7 +696,7 @@ func (os CarSlice) LoadCarCaridBookings(ctx context.Context, exec bob.Executor, 
 		return nil
 	}
 
-	bookings, err := os.CaridBookings(ctx, exec, mods...).All()
+	bookings, err := os.CaridBookings(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -601,11 +725,8 @@ func PreloadCarUseridUser(opts ...psql.PreloadOption) psql.Preloader {
 		Name: "UseridUser",
 		Sides: []orm.RelSide{
 			{
-				From: "car",
+				From: TableNames.Cars,
 				To:   TableNames.Users,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Users.Name(ctx)
-				},
 				FromColumns: []string{
 					ColumnNames.Cars.Userid,
 				},
@@ -646,7 +767,7 @@ func (o *Car) LoadCarUseridUser(ctx context.Context, exec bob.Executor, mods ...
 	// Reset the relationship
 	o.R.UseridUser = nil
 
-	related, err := o.UseridUser(ctx, exec, mods...).One()
+	related, err := o.UseridUser(mods...).One(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -663,7 +784,7 @@ func (os CarSlice) LoadCarUseridUser(ctx context.Context, exec bob.Executor, mod
 		return nil
 	}
 
-	users, err := os.UseridUser(ctx, exec, mods...).All()
+	users, err := os.UseridUser(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -689,7 +810,7 @@ func insertCarCaridBookings0(ctx context.Context, exec bob.Executor, bookings1 [
 		bookings1[i].Carid = omit.From(car0.Carid)
 	}
 
-	ret, err := Bookings.InsertMany(ctx, exec, bookings1...)
+	ret, err := Bookings.Insert(bob.ToMods(bookings1...)).All(ctx, exec)
 	if err != nil {
 		return ret, fmt.Errorf("insertCarCaridBookings0: %w", err)
 	}
@@ -702,7 +823,7 @@ func attachCarCaridBookings0(ctx context.Context, exec bob.Executor, count int, 
 		Carid: omit.From(car0.Carid),
 	}
 
-	err := Bookings.Update(ctx, exec, setter, bookings1...)
+	err := bookings1.UpdateAll(ctx, exec, *setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachCarCaridBookings0: %w", err)
 	}
@@ -714,6 +835,8 @@ func (car0 *Car) InsertCaridBookings(ctx context.Context, exec bob.Executor, rel
 	if len(related) == 0 {
 		return nil
 	}
+
+	var err error
 
 	bookings1, err := insertCarCaridBookings0(ctx, exec, related, car0)
 	if err != nil {
@@ -755,7 +878,7 @@ func attachCarUseridUser0(ctx context.Context, exec bob.Executor, count int, car
 		Userid: omit.From(user1.Userid),
 	}
 
-	err := Cars.Update(ctx, exec, setter, car0)
+	err := car0.Update(ctx, exec, setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachCarUseridUser0: %w", err)
 	}
@@ -764,7 +887,7 @@ func attachCarUseridUser0(ctx context.Context, exec bob.Executor, count int, car
 }
 
 func (car0 *Car) InsertUseridUser(ctx context.Context, exec bob.Executor, related *UserSetter) error {
-	user1, err := Users.Insert(ctx, exec, related)
+	user1, err := Users.Insert(related).One(ctx, exec)
 	if err != nil {
 		return fmt.Errorf("inserting related objects: %w", err)
 	}

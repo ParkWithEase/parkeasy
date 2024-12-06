@@ -149,6 +149,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.material3)
+    implementation(libs.accompanist.permissions)
 
     // MapLibre
     implementation(libs.maplibre.compose)
@@ -167,6 +168,9 @@ dependencies {
 
     // DateTime
     implementation(libs.kotlinx.datetime)
+
+    // Play Services
+    implementation(libs.gms.location)
 
     // Testing
     testImplementation(libs.junit)

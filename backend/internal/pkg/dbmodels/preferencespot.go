@@ -8,12 +8,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/aarondl/opt/omit"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
-	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/expr"
@@ -40,105 +41,10 @@ var Preferencespots = psql.NewTablex[*Preferencespot, PreferencespotSlice, *Pref
 // PreferencespotsQuery is a query on the preferencespot table
 type PreferencespotsQuery = *psql.ViewQuery[*Preferencespot, PreferencespotSlice]
 
-// PreferencespotsStmt is a prepared statment on preferencespot
-type PreferencespotsStmt = bob.QueryStmt[*Preferencespot, PreferencespotSlice]
-
 // preferencespotR is where relationships are stored.
 type preferencespotR struct {
 	ParkingspotidParkingspot *Parkingspot // preferencespot.preferencespot_parkingspotid_fkey
 	UseridUser               *User        // preferencespot.preferencespot_userid_fkey
-}
-
-// PreferencespotSetter is used for insert/upsert/update operations
-// All values are optional, and do not have to be set
-// Generated columns are not included
-type PreferencespotSetter struct {
-	Preferencespotid omit.Val[int64] `db:"preferencespotid,pk" `
-	Userid           omit.Val[int64] `db:"userid" `
-	Parkingspotid    omit.Val[int64] `db:"parkingspotid" `
-}
-
-func (s PreferencespotSetter) SetColumns() []string {
-	vals := make([]string, 0, 3)
-	if !s.Preferencespotid.IsUnset() {
-		vals = append(vals, "preferencespotid")
-	}
-
-	if !s.Userid.IsUnset() {
-		vals = append(vals, "userid")
-	}
-
-	if !s.Parkingspotid.IsUnset() {
-		vals = append(vals, "parkingspotid")
-	}
-
-	return vals
-}
-
-func (s PreferencespotSetter) Overwrite(t *Preferencespot) {
-	if !s.Preferencespotid.IsUnset() {
-		t.Preferencespotid, _ = s.Preferencespotid.Get()
-	}
-	if !s.Userid.IsUnset() {
-		t.Userid, _ = s.Userid.Get()
-	}
-	if !s.Parkingspotid.IsUnset() {
-		t.Parkingspotid, _ = s.Parkingspotid.Get()
-	}
-}
-
-func (s PreferencespotSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 3)
-	if s.Preferencespotid.IsUnset() {
-		vals[0] = psql.Raw("DEFAULT")
-	} else {
-		vals[0] = psql.Arg(s.Preferencespotid)
-	}
-
-	if s.Userid.IsUnset() {
-		vals[1] = psql.Raw("DEFAULT")
-	} else {
-		vals[1] = psql.Arg(s.Userid)
-	}
-
-	if s.Parkingspotid.IsUnset() {
-		vals[2] = psql.Raw("DEFAULT")
-	} else {
-		vals[2] = psql.Arg(s.Parkingspotid)
-	}
-
-	return im.Values(vals...)
-}
-
-func (s PreferencespotSetter) Apply(q *dialect.UpdateQuery) {
-	um.Set(s.Expressions()...).Apply(q)
-}
-
-func (s PreferencespotSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 3)
-
-	if !s.Preferencespotid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "preferencespotid")...),
-			psql.Arg(s.Preferencespotid),
-		}})
-	}
-
-	if !s.Userid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "userid")...),
-			psql.Arg(s.Userid),
-		}})
-	}
-
-	if !s.Parkingspotid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "parkingspotid")...),
-			psql.Arg(s.Parkingspotid),
-		}})
-	}
-
-	return exprs
 }
 
 type preferencespotColumnNames struct {
@@ -191,6 +97,311 @@ func buildPreferencespotWhere[Q psql.Filterable](cols preferencespotColumns) pre
 	}
 }
 
+// PreferencespotSetter is used for insert/upsert/update operations
+// All values are optional, and do not have to be set
+// Generated columns are not included
+type PreferencespotSetter struct {
+	Preferencespotid omit.Val[int64] `db:"preferencespotid,pk" `
+	Userid           omit.Val[int64] `db:"userid" `
+	Parkingspotid    omit.Val[int64] `db:"parkingspotid" `
+}
+
+func (s PreferencespotSetter) SetColumns() []string {
+	vals := make([]string, 0, 3)
+	if !s.Preferencespotid.IsUnset() {
+		vals = append(vals, "preferencespotid")
+	}
+
+	if !s.Userid.IsUnset() {
+		vals = append(vals, "userid")
+	}
+
+	if !s.Parkingspotid.IsUnset() {
+		vals = append(vals, "parkingspotid")
+	}
+
+	return vals
+}
+
+func (s PreferencespotSetter) Overwrite(t *Preferencespot) {
+	if !s.Preferencespotid.IsUnset() {
+		t.Preferencespotid, _ = s.Preferencespotid.Get()
+	}
+	if !s.Userid.IsUnset() {
+		t.Userid, _ = s.Userid.Get()
+	}
+	if !s.Parkingspotid.IsUnset() {
+		t.Parkingspotid, _ = s.Parkingspotid.Get()
+	}
+}
+
+func (s *PreferencespotSetter) Apply(q *dialect.InsertQuery) {
+	q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+		return Preferencespots.BeforeInsertHooks.RunHooks(ctx, exec, s)
+	})
+
+	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		vals := make([]bob.Expression, 3)
+		if s.Preferencespotid.IsUnset() {
+			vals[0] = psql.Raw("DEFAULT")
+		} else {
+			vals[0] = psql.Arg(s.Preferencespotid)
+		}
+
+		if s.Userid.IsUnset() {
+			vals[1] = psql.Raw("DEFAULT")
+		} else {
+			vals[1] = psql.Arg(s.Userid)
+		}
+
+		if s.Parkingspotid.IsUnset() {
+			vals[2] = psql.Raw("DEFAULT")
+		} else {
+			vals[2] = psql.Arg(s.Parkingspotid)
+		}
+
+		return bob.ExpressSlice(ctx, w, d, start, vals, "", ", ", "")
+	}))
+}
+
+func (s PreferencespotSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return um.Set(s.Expressions()...)
+}
+
+func (s PreferencespotSetter) Expressions(prefix ...string) []bob.Expression {
+	exprs := make([]bob.Expression, 0, 3)
+
+	if !s.Preferencespotid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "preferencespotid")...),
+			psql.Arg(s.Preferencespotid),
+		}})
+	}
+
+	if !s.Userid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "userid")...),
+			psql.Arg(s.Userid),
+		}})
+	}
+
+	if !s.Parkingspotid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "parkingspotid")...),
+			psql.Arg(s.Parkingspotid),
+		}})
+	}
+
+	return exprs
+}
+
+// FindPreferencespot retrieves a single record by primary key
+// If cols is empty Find will return all columns.
+func FindPreferencespot(ctx context.Context, exec bob.Executor, PreferencespotidPK int64, cols ...string) (*Preferencespot, error) {
+	if len(cols) == 0 {
+		return Preferencespots.Query(
+			SelectWhere.Preferencespots.Preferencespotid.EQ(PreferencespotidPK),
+		).One(ctx, exec)
+	}
+
+	return Preferencespots.Query(
+		SelectWhere.Preferencespots.Preferencespotid.EQ(PreferencespotidPK),
+		sm.Columns(Preferencespots.Columns().Only(cols...)),
+	).One(ctx, exec)
+}
+
+// PreferencespotExists checks the presence of a single record by primary key
+func PreferencespotExists(ctx context.Context, exec bob.Executor, PreferencespotidPK int64) (bool, error) {
+	return Preferencespots.Query(
+		SelectWhere.Preferencespots.Preferencespotid.EQ(PreferencespotidPK),
+	).Exists(ctx, exec)
+}
+
+// AfterQueryHook is called after Preferencespot is retrieved from the database
+func (o *Preferencespot) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Preferencespots.AfterSelectHooks.RunHooks(ctx, exec, PreferencespotSlice{o})
+	case bob.QueryTypeInsert:
+		ctx, err = Preferencespots.AfterInsertHooks.RunHooks(ctx, exec, PreferencespotSlice{o})
+	case bob.QueryTypeUpdate:
+		ctx, err = Preferencespots.AfterUpdateHooks.RunHooks(ctx, exec, PreferencespotSlice{o})
+	case bob.QueryTypeDelete:
+		ctx, err = Preferencespots.AfterDeleteHooks.RunHooks(ctx, exec, PreferencespotSlice{o})
+	}
+
+	return err
+}
+
+// PrimaryKeyVals returns the primary key values of the Preferencespot
+func (o *Preferencespot) PrimaryKeyVals() bob.Expression {
+	return psql.Arg(o.Preferencespotid)
+}
+
+func (o *Preferencespot) pkEQ() dialect.Expression {
+	return psql.Quote("preferencespot", "preferencespotid").EQ(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		return o.PrimaryKeyVals().WriteSQL(ctx, w, d, start)
+	}))
+}
+
+// Update uses an executor to update the Preferencespot
+func (o *Preferencespot) Update(ctx context.Context, exec bob.Executor, s *PreferencespotSetter) error {
+	v, err := Preferencespots.Update(s.UpdateMod(), um.Where(o.pkEQ())).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.R = v.R
+	*o = *v
+
+	return nil
+}
+
+// Delete deletes a single Preferencespot record with an executor
+func (o *Preferencespot) Delete(ctx context.Context, exec bob.Executor) error {
+	_, err := Preferencespots.Delete(dm.Where(o.pkEQ())).Exec(ctx, exec)
+	return err
+}
+
+// Reload refreshes the Preferencespot using the executor
+func (o *Preferencespot) Reload(ctx context.Context, exec bob.Executor) error {
+	o2, err := Preferencespots.Query(
+		SelectWhere.Preferencespots.Preferencespotid.EQ(o.Preferencespotid),
+	).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+	o2.R = o.R
+	*o = *o2
+
+	return nil
+}
+
+// AfterQueryHook is called after PreferencespotSlice is retrieved from the database
+func (o PreferencespotSlice) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Preferencespots.AfterSelectHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeInsert:
+		ctx, err = Preferencespots.AfterInsertHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeUpdate:
+		ctx, err = Preferencespots.AfterUpdateHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeDelete:
+		ctx, err = Preferencespots.AfterDeleteHooks.RunHooks(ctx, exec, o)
+	}
+
+	return err
+}
+
+func (o PreferencespotSlice) pkIN() dialect.Expression {
+	return psql.Quote("preferencespot", "preferencespotid").In(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		pkPairs := make([]bob.Expression, len(o))
+		for i, row := range o {
+			pkPairs[i] = row.PrimaryKeyVals()
+		}
+		return bob.ExpressSlice(ctx, w, d, start, pkPairs, "", ", ", "")
+	}))
+}
+
+// copyMatchingRows finds models in the given slice that have the same primary key
+// then it first copies the existing relationships from the old model to the new model
+// and then replaces the old model in the slice with the new model
+func (o PreferencespotSlice) copyMatchingRows(from ...*Preferencespot) {
+	for i, old := range o {
+		for _, new := range from {
+			if new.Preferencespotid != old.Preferencespotid {
+				continue
+			}
+			new.R = old.R
+			o[i] = new
+			break
+		}
+	}
+}
+
+// UpdateMod modifies an update query with "WHERE primary_key IN (o...)"
+func (o PreferencespotSlice) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Preferencespots.BeforeUpdateHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Preferencespot:
+				o.copyMatchingRows(retrieved)
+			case []*Preferencespot:
+				o.copyMatchingRows(retrieved...)
+			case PreferencespotSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Preferencespot or a slice of Preferencespot
+				// then run the AfterUpdateHooks on the slice
+				_, err = Preferencespots.AfterUpdateHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+// DeleteMod modifies an delete query with "WHERE primary_key IN (o...)"
+func (o PreferencespotSlice) DeleteMod() bob.Mod[*dialect.DeleteQuery] {
+	return bob.ModFunc[*dialect.DeleteQuery](func(q *dialect.DeleteQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Preferencespots.BeforeDeleteHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Preferencespot:
+				o.copyMatchingRows(retrieved)
+			case []*Preferencespot:
+				o.copyMatchingRows(retrieved...)
+			case PreferencespotSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Preferencespot or a slice of Preferencespot
+				// then run the AfterDeleteHooks on the slice
+				_, err = Preferencespots.AfterDeleteHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+func (o PreferencespotSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals PreferencespotSetter) error {
+	_, err := Preferencespots.Update(vals.UpdateMod(), o.UpdateMod()).All(ctx, exec)
+	return err
+}
+
+func (o PreferencespotSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
+	_, err := Preferencespots.Delete(o.DeleteMod()).Exec(ctx, exec)
+	return err
+}
+
+func (o PreferencespotSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
+	o2, err := Preferencespots.Query(sm.Where(o.pkIN())).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.copyMatchingRows(o2...)
+
+	return nil
+}
+
 type preferencespotJoins[Q dialect.Joinable] struct {
 	typ                      string
 	ParkingspotidParkingspot func(context.Context) modAs[Q, parkingspotColumns]
@@ -209,101 +420,6 @@ func buildPreferencespotJoins[Q dialect.Joinable](cols preferencespotColumns, ty
 	}
 }
 
-// FindPreferencespot retrieves a single record by primary key
-// If cols is empty Find will return all columns.
-func FindPreferencespot(ctx context.Context, exec bob.Executor, PreferencespotidPK int64, cols ...string) (*Preferencespot, error) {
-	if len(cols) == 0 {
-		return Preferencespots.Query(
-			ctx, exec,
-			SelectWhere.Preferencespots.Preferencespotid.EQ(PreferencespotidPK),
-		).One()
-	}
-
-	return Preferencespots.Query(
-		ctx, exec,
-		SelectWhere.Preferencespots.Preferencespotid.EQ(PreferencespotidPK),
-		sm.Columns(Preferencespots.Columns().Only(cols...)),
-	).One()
-}
-
-// PreferencespotExists checks the presence of a single record by primary key
-func PreferencespotExists(ctx context.Context, exec bob.Executor, PreferencespotidPK int64) (bool, error) {
-	return Preferencespots.Query(
-		ctx, exec,
-		SelectWhere.Preferencespots.Preferencespotid.EQ(PreferencespotidPK),
-	).Exists()
-}
-
-// PrimaryKeyVals returns the primary key values of the Preferencespot
-func (o *Preferencespot) PrimaryKeyVals() bob.Expression {
-	return psql.Arg(o.Preferencespotid)
-}
-
-// Update uses an executor to update the Preferencespot
-func (o *Preferencespot) Update(ctx context.Context, exec bob.Executor, s *PreferencespotSetter) error {
-	return Preferencespots.Update(ctx, exec, s, o)
-}
-
-// Delete deletes a single Preferencespot record with an executor
-func (o *Preferencespot) Delete(ctx context.Context, exec bob.Executor) error {
-	return Preferencespots.Delete(ctx, exec, o)
-}
-
-// Reload refreshes the Preferencespot using the executor
-func (o *Preferencespot) Reload(ctx context.Context, exec bob.Executor) error {
-	o2, err := Preferencespots.Query(
-		ctx, exec,
-		SelectWhere.Preferencespots.Preferencespotid.EQ(o.Preferencespotid),
-	).One()
-	if err != nil {
-		return err
-	}
-	o2.R = o.R
-	*o = *o2
-
-	return nil
-}
-
-func (o PreferencespotSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals PreferencespotSetter) error {
-	return Preferencespots.Update(ctx, exec, &vals, o...)
-}
-
-func (o PreferencespotSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
-	return Preferencespots.Delete(ctx, exec, o...)
-}
-
-func (o PreferencespotSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
-	var mods []bob.Mod[*dialect.SelectQuery]
-
-	PreferencespotidPK := make([]int64, len(o))
-
-	for i, o := range o {
-		PreferencespotidPK[i] = o.Preferencespotid
-	}
-
-	mods = append(mods,
-		SelectWhere.Preferencespots.Preferencespotid.In(PreferencespotidPK...),
-	)
-
-	o2, err := Preferencespots.Query(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, old := range o {
-		for _, new := range o2 {
-			if new.Preferencespotid != old.Preferencespotid {
-				continue
-			}
-			new.R = old.R
-			*old = *new
-			break
-		}
-	}
-
-	return nil
-}
-
 func preferencespotsJoinParkingspotidParkingspot[Q dialect.Joinable](from preferencespotColumns, typ string) func(context.Context) modAs[Q, parkingspotColumns] {
 	return func(ctx context.Context) modAs[Q, parkingspotColumns] {
 		return modAs[Q, parkingspotColumns]{
@@ -312,7 +428,7 @@ func preferencespotsJoinParkingspotidParkingspot[Q dialect.Joinable](from prefer
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Parkingspots.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Parkingspots.Name().As(to.Alias())).On(
 						to.Parkingspotid.EQ(from.Parkingspotid),
 					))
 				}
@@ -331,7 +447,7 @@ func preferencespotsJoinUseridUser[Q dialect.Joinable](from preferencespotColumn
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Users.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
 						to.Userid.EQ(from.Userid),
 					))
 				}
@@ -343,37 +459,37 @@ func preferencespotsJoinUseridUser[Q dialect.Joinable](from preferencespotColumn
 }
 
 // ParkingspotidParkingspot starts a query for related objects on parkingspot
-func (o *Preferencespot) ParkingspotidParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
-	return Parkingspots.Query(ctx, exec, append(mods,
+func (o *Preferencespot) ParkingspotidParkingspot(mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
+	return Parkingspots.Query(append(mods,
 		sm.Where(ParkingspotColumns.Parkingspotid.EQ(psql.Arg(o.Parkingspotid))),
 	)...)
 }
 
-func (os PreferencespotSlice) ParkingspotidParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
+func (os PreferencespotSlice) ParkingspotidParkingspot(mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Parkingspotid)
 	}
 
-	return Parkingspots.Query(ctx, exec, append(mods,
+	return Parkingspots.Query(append(mods,
 		sm.Where(psql.Group(ParkingspotColumns.Parkingspotid).In(PKArgs...)),
 	)...)
 }
 
 // UseridUser starts a query for related objects on users
-func (o *Preferencespot) UseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
-	return Users.Query(ctx, exec, append(mods,
+func (o *Preferencespot) UseridUser(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
+	return Users.Query(append(mods,
 		sm.Where(UserColumns.Userid.EQ(psql.Arg(o.Userid))),
 	)...)
 }
 
-func (os PreferencespotSlice) UseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
+func (os PreferencespotSlice) UseridUser(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Userid)
 	}
 
-	return Users.Query(ctx, exec, append(mods,
+	return Users.Query(append(mods,
 		sm.Where(psql.Group(UserColumns.Userid).In(PKArgs...)),
 	)...)
 }
@@ -418,11 +534,8 @@ func PreloadPreferencespotParkingspotidParkingspot(opts ...psql.PreloadOption) p
 		Name: "ParkingspotidParkingspot",
 		Sides: []orm.RelSide{
 			{
-				From: "preferencespot",
+				From: TableNames.Preferencespots,
 				To:   TableNames.Parkingspots,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Parkingspots.Name(ctx)
-				},
 				FromColumns: []string{
 					ColumnNames.Preferencespots.Parkingspotid,
 				},
@@ -463,7 +576,7 @@ func (o *Preferencespot) LoadPreferencespotParkingspotidParkingspot(ctx context.
 	// Reset the relationship
 	o.R.ParkingspotidParkingspot = nil
 
-	related, err := o.ParkingspotidParkingspot(ctx, exec, mods...).One()
+	related, err := o.ParkingspotidParkingspot(mods...).One(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -480,7 +593,7 @@ func (os PreferencespotSlice) LoadPreferencespotParkingspotidParkingspot(ctx con
 		return nil
 	}
 
-	parkingspots, err := os.ParkingspotidParkingspot(ctx, exec, mods...).All()
+	parkingspots, err := os.ParkingspotidParkingspot(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -506,11 +619,8 @@ func PreloadPreferencespotUseridUser(opts ...psql.PreloadOption) psql.Preloader 
 		Name: "UseridUser",
 		Sides: []orm.RelSide{
 			{
-				From: "preferencespot",
+				From: TableNames.Preferencespots,
 				To:   TableNames.Users,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Users.Name(ctx)
-				},
 				FromColumns: []string{
 					ColumnNames.Preferencespots.Userid,
 				},
@@ -551,7 +661,7 @@ func (o *Preferencespot) LoadPreferencespotUseridUser(ctx context.Context, exec 
 	// Reset the relationship
 	o.R.UseridUser = nil
 
-	related, err := o.UseridUser(ctx, exec, mods...).One()
+	related, err := o.UseridUser(mods...).One(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -568,7 +678,7 @@ func (os PreferencespotSlice) LoadPreferencespotUseridUser(ctx context.Context, 
 		return nil
 	}
 
-	users, err := os.UseridUser(ctx, exec, mods...).All()
+	users, err := os.UseridUser(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -594,7 +704,7 @@ func attachPreferencespotParkingspotidParkingspot0(ctx context.Context, exec bob
 		Parkingspotid: omit.From(parkingspot1.Parkingspotid),
 	}
 
-	err := Preferencespots.Update(ctx, exec, setter, preferencespot0)
+	err := preferencespot0.Update(ctx, exec, setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachPreferencespotParkingspotidParkingspot0: %w", err)
 	}
@@ -603,7 +713,7 @@ func attachPreferencespotParkingspotidParkingspot0(ctx context.Context, exec bob
 }
 
 func (preferencespot0 *Preferencespot) InsertParkingspotidParkingspot(ctx context.Context, exec bob.Executor, related *ParkingspotSetter) error {
-	parkingspot1, err := Parkingspots.Insert(ctx, exec, related)
+	parkingspot1, err := Parkingspots.Insert(related).One(ctx, exec)
 	if err != nil {
 		return fmt.Errorf("inserting related objects: %w", err)
 	}
@@ -640,7 +750,7 @@ func attachPreferencespotUseridUser0(ctx context.Context, exec bob.Executor, cou
 		Userid: omit.From(user1.Userid),
 	}
 
-	err := Preferencespots.Update(ctx, exec, setter, preferencespot0)
+	err := preferencespot0.Update(ctx, exec, setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachPreferencespotUseridUser0: %w", err)
 	}
@@ -649,7 +759,7 @@ func attachPreferencespotUseridUser0(ctx context.Context, exec bob.Executor, cou
 }
 
 func (preferencespot0 *Preferencespot) InsertUseridUser(ctx context.Context, exec bob.Executor, related *UserSetter) error {
-	user1, err := Users.Insert(ctx, exec, related)
+	user1, err := Users.Insert(related).One(ctx, exec)
 	if err != nil {
 		return fmt.Errorf("inserting related objects: %w", err)
 	}

@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
@@ -26,7 +26,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.parkwithease.parkeasy.R
+import io.github.parkwithease.parkeasy.model.FieldState
 import io.github.parkwithease.parkeasy.model.Profile
+import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 import io.github.parkwithease.parkeasy.ui.common.PreviewAll
 import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
@@ -36,6 +38,8 @@ fun ProfileScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToCars: () -> Unit,
     onNavigateToSpots: () -> Unit,
+    onNavigateToBookings: () -> Unit,
+    onNavigateToLeasings: () -> Unit,
     navBar: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
@@ -51,7 +55,14 @@ fun ProfileScreen(
             listOf(
                 ProfileButtonRoute(R.string.cars, onNavigateToCars),
                 ProfileButtonRoute(R.string.spots, onNavigateToSpots),
+                ProfileButtonRoute(R.string.buying_history, onNavigateToBookings),
+                ProfileButtonRoute(R.string.leasing_history, onNavigateToLeasings),
             )
+
+        LaunchedEffect(Unit) {
+            viewModel.snackbarState.currentSnackbarData?.dismiss()
+            viewModel.refresh()
+        }
 
         ProfileScreen(
             profile = profile,
@@ -80,8 +91,10 @@ fun ProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                ProfileDetails(profile = profile, modifier = Modifier.width(280.dp))
+                ProfileDetails(profile = profile, modifier = Modifier.width(320.dp))
+                HorizontalDivider(Modifier.width(300.dp).padding(top = 4.dp))
                 profileRoutes.forEach { ProfileButton(it.name, it.onNavigateTo) }
+                HorizontalDivider(Modifier.width(300.dp))
                 LogoutButton(onLogoutClick)
             }
         }
@@ -91,34 +104,37 @@ fun ProfileScreen(
 @Composable
 fun ProfileDetails(profile: Profile, modifier: Modifier = Modifier) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedTextField(
-            value = profile.name,
+        ParkEasyTextField(
+            state = FieldState(profile.name),
             onValueChange = {},
             modifier = Modifier.fillMaxWidth(),
+            enabled = false,
+            visuallyEnabled = true,
             readOnly = true,
-            label = { Text(stringResource(R.string.name)) },
-            singleLine = true,
+            labelId = R.string.name,
         )
-        OutlinedTextField(
-            value = profile.email,
+        ParkEasyTextField(
+            state = FieldState(profile.email),
             onValueChange = {},
+            modifier = Modifier.fillMaxWidth(),
+            enabled = false,
+            visuallyEnabled = true,
             readOnly = true,
-            label = { Text(stringResource(R.string.email)) },
-            singleLine = true,
+            labelId = R.string.email,
         )
     }
 }
 
 @Composable
 fun ProfileButton(@StringRes id: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Button(onClick = onClick, modifier = modifier.width(280.dp)) { Text(stringResource(id)) }
+    Button(onClick = onClick, modifier = modifier.width(320.dp)) { Text(stringResource(id)) }
 }
 
 @Composable
 fun LogoutButton(onLogoutClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onLogoutClick,
-        modifier = modifier.width(280.dp),
+        modifier = modifier.width(320.dp),
         colors =
             ButtonColors(
                 containerColor = MaterialTheme.colorScheme.error,
@@ -140,7 +156,13 @@ private fun ProfileScreenPreview() {
     ParkEasyTheme {
         ProfileScreen(
             profile = Profile(),
-            profileRoutes = listOf(ProfileButtonRoute(R.string.cars, {})),
+            profileRoutes =
+                listOf(
+                    ProfileButtonRoute(R.string.cars) {},
+                    ProfileButtonRoute(R.string.spots) {},
+                    ProfileButtonRoute(R.string.buying_history) {},
+                    ProfileButtonRoute(R.string.leasing_history) {},
+                ),
             onLogoutClick = {},
             navBar = { NavBar() },
             snackbarHost = {},

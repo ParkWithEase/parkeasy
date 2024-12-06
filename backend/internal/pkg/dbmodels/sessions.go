@@ -5,13 +5,14 @@ package dbmodels
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/aarondl/opt/omit"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
-	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/expr"
@@ -33,101 +34,6 @@ var Sessions = psql.NewTablex[*Session, SessionSlice, *SessionSetter]("", "sessi
 
 // SessionsQuery is a query on the sessions table
 type SessionsQuery = *psql.ViewQuery[*Session, SessionSlice]
-
-// SessionsStmt is a prepared statment on sessions
-type SessionsStmt = bob.QueryStmt[*Session, SessionSlice]
-
-// SessionSetter is used for insert/upsert/update operations
-// All values are optional, and do not have to be set
-// Generated columns are not included
-type SessionSetter struct {
-	Token  omit.Val[string]    `db:"token,pk" `
-	Data   omit.Val[[]byte]    `db:"data" `
-	Expiry omit.Val[time.Time] `db:"expiry" `
-}
-
-func (s SessionSetter) SetColumns() []string {
-	vals := make([]string, 0, 3)
-	if !s.Token.IsUnset() {
-		vals = append(vals, "token")
-	}
-
-	if !s.Data.IsUnset() {
-		vals = append(vals, "data")
-	}
-
-	if !s.Expiry.IsUnset() {
-		vals = append(vals, "expiry")
-	}
-
-	return vals
-}
-
-func (s SessionSetter) Overwrite(t *Session) {
-	if !s.Token.IsUnset() {
-		t.Token, _ = s.Token.Get()
-	}
-	if !s.Data.IsUnset() {
-		t.Data, _ = s.Data.Get()
-	}
-	if !s.Expiry.IsUnset() {
-		t.Expiry, _ = s.Expiry.Get()
-	}
-}
-
-func (s SessionSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 3)
-	if s.Token.IsUnset() {
-		vals[0] = psql.Raw("DEFAULT")
-	} else {
-		vals[0] = psql.Arg(s.Token)
-	}
-
-	if s.Data.IsUnset() {
-		vals[1] = psql.Raw("DEFAULT")
-	} else {
-		vals[1] = psql.Arg(s.Data)
-	}
-
-	if s.Expiry.IsUnset() {
-		vals[2] = psql.Raw("DEFAULT")
-	} else {
-		vals[2] = psql.Arg(s.Expiry)
-	}
-
-	return im.Values(vals...)
-}
-
-func (s SessionSetter) Apply(q *dialect.UpdateQuery) {
-	um.Set(s.Expressions()...).Apply(q)
-}
-
-func (s SessionSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 3)
-
-	if !s.Token.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "token")...),
-			psql.Arg(s.Token),
-		}})
-	}
-
-	if !s.Data.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "data")...),
-			psql.Arg(s.Data),
-		}})
-	}
-
-	if !s.Expiry.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "expiry")...),
-			psql.Arg(s.Expiry),
-		}})
-	}
-
-	return exprs
-}
 
 type sessionColumnNames struct {
 	Token  string
@@ -179,29 +85,142 @@ func buildSessionWhere[Q psql.Filterable](cols sessionColumns) sessionWhere[Q] {
 	}
 }
 
+// SessionSetter is used for insert/upsert/update operations
+// All values are optional, and do not have to be set
+// Generated columns are not included
+type SessionSetter struct {
+	Token  omit.Val[string]    `db:"token,pk" `
+	Data   omit.Val[[]byte]    `db:"data" `
+	Expiry omit.Val[time.Time] `db:"expiry" `
+}
+
+func (s SessionSetter) SetColumns() []string {
+	vals := make([]string, 0, 3)
+	if !s.Token.IsUnset() {
+		vals = append(vals, "token")
+	}
+
+	if !s.Data.IsUnset() {
+		vals = append(vals, "data")
+	}
+
+	if !s.Expiry.IsUnset() {
+		vals = append(vals, "expiry")
+	}
+
+	return vals
+}
+
+func (s SessionSetter) Overwrite(t *Session) {
+	if !s.Token.IsUnset() {
+		t.Token, _ = s.Token.Get()
+	}
+	if !s.Data.IsUnset() {
+		t.Data, _ = s.Data.Get()
+	}
+	if !s.Expiry.IsUnset() {
+		t.Expiry, _ = s.Expiry.Get()
+	}
+}
+
+func (s *SessionSetter) Apply(q *dialect.InsertQuery) {
+	q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+		return Sessions.BeforeInsertHooks.RunHooks(ctx, exec, s)
+	})
+
+	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		vals := make([]bob.Expression, 3)
+		if s.Token.IsUnset() {
+			vals[0] = psql.Raw("DEFAULT")
+		} else {
+			vals[0] = psql.Arg(s.Token)
+		}
+
+		if s.Data.IsUnset() {
+			vals[1] = psql.Raw("DEFAULT")
+		} else {
+			vals[1] = psql.Arg(s.Data)
+		}
+
+		if s.Expiry.IsUnset() {
+			vals[2] = psql.Raw("DEFAULT")
+		} else {
+			vals[2] = psql.Arg(s.Expiry)
+		}
+
+		return bob.ExpressSlice(ctx, w, d, start, vals, "", ", ", "")
+	}))
+}
+
+func (s SessionSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return um.Set(s.Expressions()...)
+}
+
+func (s SessionSetter) Expressions(prefix ...string) []bob.Expression {
+	exprs := make([]bob.Expression, 0, 3)
+
+	if !s.Token.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "token")...),
+			psql.Arg(s.Token),
+		}})
+	}
+
+	if !s.Data.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "data")...),
+			psql.Arg(s.Data),
+		}})
+	}
+
+	if !s.Expiry.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "expiry")...),
+			psql.Arg(s.Expiry),
+		}})
+	}
+
+	return exprs
+}
+
 // FindSession retrieves a single record by primary key
 // If cols is empty Find will return all columns.
 func FindSession(ctx context.Context, exec bob.Executor, TokenPK string, cols ...string) (*Session, error) {
 	if len(cols) == 0 {
 		return Sessions.Query(
-			ctx, exec,
 			SelectWhere.Sessions.Token.EQ(TokenPK),
-		).One()
+		).One(ctx, exec)
 	}
 
 	return Sessions.Query(
-		ctx, exec,
 		SelectWhere.Sessions.Token.EQ(TokenPK),
 		sm.Columns(Sessions.Columns().Only(cols...)),
-	).One()
+	).One(ctx, exec)
 }
 
 // SessionExists checks the presence of a single record by primary key
 func SessionExists(ctx context.Context, exec bob.Executor, TokenPK string) (bool, error) {
 	return Sessions.Query(
-		ctx, exec,
 		SelectWhere.Sessions.Token.EQ(TokenPK),
-	).Exists()
+	).Exists(ctx, exec)
+}
+
+// AfterQueryHook is called after Session is retrieved from the database
+func (o *Session) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Sessions.AfterSelectHooks.RunHooks(ctx, exec, SessionSlice{o})
+	case bob.QueryTypeInsert:
+		ctx, err = Sessions.AfterInsertHooks.RunHooks(ctx, exec, SessionSlice{o})
+	case bob.QueryTypeUpdate:
+		ctx, err = Sessions.AfterUpdateHooks.RunHooks(ctx, exec, SessionSlice{o})
+	case bob.QueryTypeDelete:
+		ctx, err = Sessions.AfterDeleteHooks.RunHooks(ctx, exec, SessionSlice{o})
+	}
+
+	return err
 }
 
 // PrimaryKeyVals returns the primary key values of the Session
@@ -209,22 +228,35 @@ func (o *Session) PrimaryKeyVals() bob.Expression {
 	return psql.Arg(o.Token)
 }
 
+func (o *Session) pkEQ() dialect.Expression {
+	return psql.Quote("sessions", "token").EQ(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		return o.PrimaryKeyVals().WriteSQL(ctx, w, d, start)
+	}))
+}
+
 // Update uses an executor to update the Session
 func (o *Session) Update(ctx context.Context, exec bob.Executor, s *SessionSetter) error {
-	return Sessions.Update(ctx, exec, s, o)
+	v, err := Sessions.Update(s.UpdateMod(), um.Where(o.pkEQ())).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	*o = *v
+
+	return nil
 }
 
 // Delete deletes a single Session record with an executor
 func (o *Session) Delete(ctx context.Context, exec bob.Executor) error {
-	return Sessions.Delete(ctx, exec, o)
+	_, err := Sessions.Delete(dm.Where(o.pkEQ())).Exec(ctx, exec)
+	return err
 }
 
 // Reload refreshes the Session using the executor
 func (o *Session) Reload(ctx context.Context, exec bob.Executor) error {
 	o2, err := Sessions.Query(
-		ctx, exec,
 		SelectWhere.Sessions.Token.EQ(o.Token),
-	).One()
+	).One(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -234,42 +266,125 @@ func (o *Session) Reload(ctx context.Context, exec bob.Executor) error {
 	return nil
 }
 
-func (o SessionSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals SessionSetter) error {
-	return Sessions.Update(ctx, exec, &vals, o...)
-}
+// AfterQueryHook is called after SessionSlice is retrieved from the database
+func (o SessionSlice) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
 
-func (o SessionSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
-	return Sessions.Delete(ctx, exec, o...)
-}
-
-func (o SessionSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
-	var mods []bob.Mod[*dialect.SelectQuery]
-
-	TokenPK := make([]string, len(o))
-
-	for i, o := range o {
-		TokenPK[i] = o.Token
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Sessions.AfterSelectHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeInsert:
+		ctx, err = Sessions.AfterInsertHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeUpdate:
+		ctx, err = Sessions.AfterUpdateHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeDelete:
+		ctx, err = Sessions.AfterDeleteHooks.RunHooks(ctx, exec, o)
 	}
 
-	mods = append(mods,
-		SelectWhere.Sessions.Token.In(TokenPK...),
-	)
+	return err
+}
 
-	o2, err := Sessions.Query(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
+func (o SessionSlice) pkIN() dialect.Expression {
+	return psql.Quote("sessions", "token").In(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		pkPairs := make([]bob.Expression, len(o))
+		for i, row := range o {
+			pkPairs[i] = row.PrimaryKeyVals()
+		}
+		return bob.ExpressSlice(ctx, w, d, start, pkPairs, "", ", ", "")
+	}))
+}
 
-	for _, old := range o {
-		for _, new := range o2 {
+// copyMatchingRows finds models in the given slice that have the same primary key
+// then it first copies the existing relationships from the old model to the new model
+// and then replaces the old model in the slice with the new model
+func (o SessionSlice) copyMatchingRows(from ...*Session) {
+	for i, old := range o {
+		for _, new := range from {
 			if new.Token != old.Token {
 				continue
 			}
 
-			*old = *new
+			o[i] = new
 			break
 		}
 	}
+}
+
+// UpdateMod modifies an update query with "WHERE primary_key IN (o...)"
+func (o SessionSlice) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Sessions.BeforeUpdateHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Session:
+				o.copyMatchingRows(retrieved)
+			case []*Session:
+				o.copyMatchingRows(retrieved...)
+			case SessionSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Session or a slice of Session
+				// then run the AfterUpdateHooks on the slice
+				_, err = Sessions.AfterUpdateHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+// DeleteMod modifies an delete query with "WHERE primary_key IN (o...)"
+func (o SessionSlice) DeleteMod() bob.Mod[*dialect.DeleteQuery] {
+	return bob.ModFunc[*dialect.DeleteQuery](func(q *dialect.DeleteQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Sessions.BeforeDeleteHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Session:
+				o.copyMatchingRows(retrieved)
+			case []*Session:
+				o.copyMatchingRows(retrieved...)
+			case SessionSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Session or a slice of Session
+				// then run the AfterDeleteHooks on the slice
+				_, err = Sessions.AfterDeleteHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+func (o SessionSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals SessionSetter) error {
+	_, err := Sessions.Update(vals.UpdateMod(), o.UpdateMod()).All(ctx, exec)
+	return err
+}
+
+func (o SessionSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
+	_, err := Sessions.Delete(o.DeleteMod()).Exec(ctx, exec)
+	return err
+}
+
+func (o SessionSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
+	o2, err := Sessions.Query(sm.Where(o.pkIN())).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.copyMatchingRows(o2...)
 
 	return nil
 }

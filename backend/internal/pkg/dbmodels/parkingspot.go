@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/aarondl/opt/omit"
 	"github.com/google/uuid"
@@ -15,7 +16,7 @@ import (
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
-	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/expr"
@@ -53,15 +54,125 @@ var Parkingspots = psql.NewTablex[*Parkingspot, ParkingspotSlice, *ParkingspotSe
 // ParkingspotsQuery is a query on the parkingspot table
 type ParkingspotsQuery = *psql.ViewQuery[*Parkingspot, ParkingspotSlice]
 
-// ParkingspotsStmt is a prepared statment on parkingspot
-type ParkingspotsStmt = bob.QueryStmt[*Parkingspot, ParkingspotSlice]
-
 // parkingspotR is where relationships are stored.
 type parkingspotR struct {
 	ParkingspotidBookings        BookingSlice        // booking.booking_parkingspotid_fkey
 	UseridUser                   *User               // parkingspot.parkingspot_userid_fkey
 	ParkingspotidPreferencespots PreferencespotSlice // preferencespot.preferencespot_parkingspotid_fkey
 	ParkingspotidTimeunits       TimeunitSlice       // timeunit.timeunit_parkingspotid_fkey
+}
+
+type parkingspotColumnNames struct {
+	Parkingspotid      string
+	Userid             string
+	Parkingspotuuid    string
+	Postalcode         string
+	Countrycode        string
+	City               string
+	State              string
+	Streetaddress      string
+	Longitude          string
+	Latitude           string
+	Hasshelter         string
+	Hasplugin          string
+	Haschargingstation string
+	Priceperhour       string
+}
+
+var ParkingspotColumns = buildParkingspotColumns("parkingspot")
+
+type parkingspotColumns struct {
+	tableAlias         string
+	Parkingspotid      psql.Expression
+	Userid             psql.Expression
+	Parkingspotuuid    psql.Expression
+	Postalcode         psql.Expression
+	Countrycode        psql.Expression
+	City               psql.Expression
+	State              psql.Expression
+	Streetaddress      psql.Expression
+	Longitude          psql.Expression
+	Latitude           psql.Expression
+	Hasshelter         psql.Expression
+	Hasplugin          psql.Expression
+	Haschargingstation psql.Expression
+	Priceperhour       psql.Expression
+}
+
+func (c parkingspotColumns) Alias() string {
+	return c.tableAlias
+}
+
+func (parkingspotColumns) AliasedAs(alias string) parkingspotColumns {
+	return buildParkingspotColumns(alias)
+}
+
+func buildParkingspotColumns(alias string) parkingspotColumns {
+	return parkingspotColumns{
+		tableAlias:         alias,
+		Parkingspotid:      psql.Quote(alias, "parkingspotid"),
+		Userid:             psql.Quote(alias, "userid"),
+		Parkingspotuuid:    psql.Quote(alias, "parkingspotuuid"),
+		Postalcode:         psql.Quote(alias, "postalcode"),
+		Countrycode:        psql.Quote(alias, "countrycode"),
+		City:               psql.Quote(alias, "city"),
+		State:              psql.Quote(alias, "state"),
+		Streetaddress:      psql.Quote(alias, "streetaddress"),
+		Longitude:          psql.Quote(alias, "longitude"),
+		Latitude:           psql.Quote(alias, "latitude"),
+		Hasshelter:         psql.Quote(alias, "hasshelter"),
+		Hasplugin:          psql.Quote(alias, "hasplugin"),
+		Haschargingstation: psql.Quote(alias, "haschargingstation"),
+		Priceperhour:       psql.Quote(alias, "priceperhour"),
+	}
+}
+
+type parkingspotWhere[Q psql.Filterable] struct {
+	Parkingspotid      psql.WhereMod[Q, int64]
+	Userid             psql.WhereMod[Q, int64]
+	Parkingspotuuid    psql.WhereMod[Q, uuid.UUID]
+	Postalcode         psql.WhereMod[Q, string]
+	Countrycode        psql.WhereMod[Q, string]
+	City               psql.WhereMod[Q, string]
+	State              psql.WhereMod[Q, string]
+	Streetaddress      psql.WhereMod[Q, string]
+	Longitude          psql.WhereMod[Q, decimal.Decimal]
+	Latitude           psql.WhereMod[Q, decimal.Decimal]
+	Hasshelter         psql.WhereMod[Q, bool]
+	Hasplugin          psql.WhereMod[Q, bool]
+	Haschargingstation psql.WhereMod[Q, bool]
+	Priceperhour       psql.WhereMod[Q, decimal.Decimal]
+}
+
+func (parkingspotWhere[Q]) AliasedAs(alias string) parkingspotWhere[Q] {
+	return buildParkingspotWhere[Q](buildParkingspotColumns(alias))
+}
+
+func buildParkingspotWhere[Q psql.Filterable](cols parkingspotColumns) parkingspotWhere[Q] {
+	return parkingspotWhere[Q]{
+		Parkingspotid:      psql.Where[Q, int64](cols.Parkingspotid),
+		Userid:             psql.Where[Q, int64](cols.Userid),
+		Parkingspotuuid:    psql.Where[Q, uuid.UUID](cols.Parkingspotuuid),
+		Postalcode:         psql.Where[Q, string](cols.Postalcode),
+		Countrycode:        psql.Where[Q, string](cols.Countrycode),
+		City:               psql.Where[Q, string](cols.City),
+		State:              psql.Where[Q, string](cols.State),
+		Streetaddress:      psql.Where[Q, string](cols.Streetaddress),
+		Longitude:          psql.Where[Q, decimal.Decimal](cols.Longitude),
+		Latitude:           psql.Where[Q, decimal.Decimal](cols.Latitude),
+		Hasshelter:         psql.Where[Q, bool](cols.Hasshelter),
+		Hasplugin:          psql.Where[Q, bool](cols.Hasplugin),
+		Haschargingstation: psql.Where[Q, bool](cols.Haschargingstation),
+		Priceperhour:       psql.Where[Q, decimal.Decimal](cols.Priceperhour),
+	}
+}
+
+var ParkingspotErrors = &parkingspotErrors{
+	ErrUniqueParkingspotuuid: &errUniqueConstraint{s: "parkingspot_parkingspotuuid_key"},
+}
+
+type parkingspotErrors struct {
+	ErrUniqueParkingspotuuid error
 }
 
 // ParkingspotSetter is used for insert/upsert/update operations
@@ -190,97 +301,103 @@ func (s ParkingspotSetter) Overwrite(t *Parkingspot) {
 	}
 }
 
-func (s ParkingspotSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 14)
-	if s.Parkingspotid.IsUnset() {
-		vals[0] = psql.Raw("DEFAULT")
-	} else {
-		vals[0] = psql.Arg(s.Parkingspotid)
-	}
+func (s *ParkingspotSetter) Apply(q *dialect.InsertQuery) {
+	q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+		return Parkingspots.BeforeInsertHooks.RunHooks(ctx, exec, s)
+	})
 
-	if s.Userid.IsUnset() {
-		vals[1] = psql.Raw("DEFAULT")
-	} else {
-		vals[1] = psql.Arg(s.Userid)
-	}
+	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		vals := make([]bob.Expression, 14)
+		if s.Parkingspotid.IsUnset() {
+			vals[0] = psql.Raw("DEFAULT")
+		} else {
+			vals[0] = psql.Arg(s.Parkingspotid)
+		}
 
-	if s.Parkingspotuuid.IsUnset() {
-		vals[2] = psql.Raw("DEFAULT")
-	} else {
-		vals[2] = psql.Arg(s.Parkingspotuuid)
-	}
+		if s.Userid.IsUnset() {
+			vals[1] = psql.Raw("DEFAULT")
+		} else {
+			vals[1] = psql.Arg(s.Userid)
+		}
 
-	if s.Postalcode.IsUnset() {
-		vals[3] = psql.Raw("DEFAULT")
-	} else {
-		vals[3] = psql.Arg(s.Postalcode)
-	}
+		if s.Parkingspotuuid.IsUnset() {
+			vals[2] = psql.Raw("DEFAULT")
+		} else {
+			vals[2] = psql.Arg(s.Parkingspotuuid)
+		}
 
-	if s.Countrycode.IsUnset() {
-		vals[4] = psql.Raw("DEFAULT")
-	} else {
-		vals[4] = psql.Arg(s.Countrycode)
-	}
+		if s.Postalcode.IsUnset() {
+			vals[3] = psql.Raw("DEFAULT")
+		} else {
+			vals[3] = psql.Arg(s.Postalcode)
+		}
 
-	if s.City.IsUnset() {
-		vals[5] = psql.Raw("DEFAULT")
-	} else {
-		vals[5] = psql.Arg(s.City)
-	}
+		if s.Countrycode.IsUnset() {
+			vals[4] = psql.Raw("DEFAULT")
+		} else {
+			vals[4] = psql.Arg(s.Countrycode)
+		}
 
-	if s.State.IsUnset() {
-		vals[6] = psql.Raw("DEFAULT")
-	} else {
-		vals[6] = psql.Arg(s.State)
-	}
+		if s.City.IsUnset() {
+			vals[5] = psql.Raw("DEFAULT")
+		} else {
+			vals[5] = psql.Arg(s.City)
+		}
 
-	if s.Streetaddress.IsUnset() {
-		vals[7] = psql.Raw("DEFAULT")
-	} else {
-		vals[7] = psql.Arg(s.Streetaddress)
-	}
+		if s.State.IsUnset() {
+			vals[6] = psql.Raw("DEFAULT")
+		} else {
+			vals[6] = psql.Arg(s.State)
+		}
 
-	if s.Longitude.IsUnset() {
-		vals[8] = psql.Raw("DEFAULT")
-	} else {
-		vals[8] = psql.Arg(s.Longitude)
-	}
+		if s.Streetaddress.IsUnset() {
+			vals[7] = psql.Raw("DEFAULT")
+		} else {
+			vals[7] = psql.Arg(s.Streetaddress)
+		}
 
-	if s.Latitude.IsUnset() {
-		vals[9] = psql.Raw("DEFAULT")
-	} else {
-		vals[9] = psql.Arg(s.Latitude)
-	}
+		if s.Longitude.IsUnset() {
+			vals[8] = psql.Raw("DEFAULT")
+		} else {
+			vals[8] = psql.Arg(s.Longitude)
+		}
 
-	if s.Hasshelter.IsUnset() {
-		vals[10] = psql.Raw("DEFAULT")
-	} else {
-		vals[10] = psql.Arg(s.Hasshelter)
-	}
+		if s.Latitude.IsUnset() {
+			vals[9] = psql.Raw("DEFAULT")
+		} else {
+			vals[9] = psql.Arg(s.Latitude)
+		}
 
-	if s.Hasplugin.IsUnset() {
-		vals[11] = psql.Raw("DEFAULT")
-	} else {
-		vals[11] = psql.Arg(s.Hasplugin)
-	}
+		if s.Hasshelter.IsUnset() {
+			vals[10] = psql.Raw("DEFAULT")
+		} else {
+			vals[10] = psql.Arg(s.Hasshelter)
+		}
 
-	if s.Haschargingstation.IsUnset() {
-		vals[12] = psql.Raw("DEFAULT")
-	} else {
-		vals[12] = psql.Arg(s.Haschargingstation)
-	}
+		if s.Hasplugin.IsUnset() {
+			vals[11] = psql.Raw("DEFAULT")
+		} else {
+			vals[11] = psql.Arg(s.Hasplugin)
+		}
 
-	if s.Priceperhour.IsUnset() {
-		vals[13] = psql.Raw("DEFAULT")
-	} else {
-		vals[13] = psql.Arg(s.Priceperhour)
-	}
+		if s.Haschargingstation.IsUnset() {
+			vals[12] = psql.Raw("DEFAULT")
+		} else {
+			vals[12] = psql.Arg(s.Haschargingstation)
+		}
 
-	return im.Values(vals...)
+		if s.Priceperhour.IsUnset() {
+			vals[13] = psql.Raw("DEFAULT")
+		} else {
+			vals[13] = psql.Arg(s.Priceperhour)
+		}
+
+		return bob.ExpressSlice(ctx, w, d, start, vals, "", ", ", "")
+	}))
 }
 
-func (s ParkingspotSetter) Apply(q *dialect.UpdateQuery) {
-	um.Set(s.Expressions()...).Apply(q)
+func (s ParkingspotSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return um.Set(s.Expressions()...)
 }
 
 func (s ParkingspotSetter) Expressions(prefix ...string) []bob.Expression {
@@ -387,109 +504,211 @@ func (s ParkingspotSetter) Expressions(prefix ...string) []bob.Expression {
 	return exprs
 }
 
-type parkingspotColumnNames struct {
-	Parkingspotid      string
-	Userid             string
-	Parkingspotuuid    string
-	Postalcode         string
-	Countrycode        string
-	City               string
-	State              string
-	Streetaddress      string
-	Longitude          string
-	Latitude           string
-	Hasshelter         string
-	Hasplugin          string
-	Haschargingstation string
-	Priceperhour       string
+// FindParkingspot retrieves a single record by primary key
+// If cols is empty Find will return all columns.
+func FindParkingspot(ctx context.Context, exec bob.Executor, ParkingspotidPK int64, cols ...string) (*Parkingspot, error) {
+	if len(cols) == 0 {
+		return Parkingspots.Query(
+			SelectWhere.Parkingspots.Parkingspotid.EQ(ParkingspotidPK),
+		).One(ctx, exec)
+	}
+
+	return Parkingspots.Query(
+		SelectWhere.Parkingspots.Parkingspotid.EQ(ParkingspotidPK),
+		sm.Columns(Parkingspots.Columns().Only(cols...)),
+	).One(ctx, exec)
 }
 
-var ParkingspotColumns = buildParkingspotColumns("parkingspot")
-
-type parkingspotColumns struct {
-	tableAlias         string
-	Parkingspotid      psql.Expression
-	Userid             psql.Expression
-	Parkingspotuuid    psql.Expression
-	Postalcode         psql.Expression
-	Countrycode        psql.Expression
-	City               psql.Expression
-	State              psql.Expression
-	Streetaddress      psql.Expression
-	Longitude          psql.Expression
-	Latitude           psql.Expression
-	Hasshelter         psql.Expression
-	Hasplugin          psql.Expression
-	Haschargingstation psql.Expression
-	Priceperhour       psql.Expression
+// ParkingspotExists checks the presence of a single record by primary key
+func ParkingspotExists(ctx context.Context, exec bob.Executor, ParkingspotidPK int64) (bool, error) {
+	return Parkingspots.Query(
+		SelectWhere.Parkingspots.Parkingspotid.EQ(ParkingspotidPK),
+	).Exists(ctx, exec)
 }
 
-func (c parkingspotColumns) Alias() string {
-	return c.tableAlias
+// AfterQueryHook is called after Parkingspot is retrieved from the database
+func (o *Parkingspot) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Parkingspots.AfterSelectHooks.RunHooks(ctx, exec, ParkingspotSlice{o})
+	case bob.QueryTypeInsert:
+		ctx, err = Parkingspots.AfterInsertHooks.RunHooks(ctx, exec, ParkingspotSlice{o})
+	case bob.QueryTypeUpdate:
+		ctx, err = Parkingspots.AfterUpdateHooks.RunHooks(ctx, exec, ParkingspotSlice{o})
+	case bob.QueryTypeDelete:
+		ctx, err = Parkingspots.AfterDeleteHooks.RunHooks(ctx, exec, ParkingspotSlice{o})
+	}
+
+	return err
 }
 
-func (parkingspotColumns) AliasedAs(alias string) parkingspotColumns {
-	return buildParkingspotColumns(alias)
+// PrimaryKeyVals returns the primary key values of the Parkingspot
+func (o *Parkingspot) PrimaryKeyVals() bob.Expression {
+	return psql.Arg(o.Parkingspotid)
 }
 
-func buildParkingspotColumns(alias string) parkingspotColumns {
-	return parkingspotColumns{
-		tableAlias:         alias,
-		Parkingspotid:      psql.Quote(alias, "parkingspotid"),
-		Userid:             psql.Quote(alias, "userid"),
-		Parkingspotuuid:    psql.Quote(alias, "parkingspotuuid"),
-		Postalcode:         psql.Quote(alias, "postalcode"),
-		Countrycode:        psql.Quote(alias, "countrycode"),
-		City:               psql.Quote(alias, "city"),
-		State:              psql.Quote(alias, "state"),
-		Streetaddress:      psql.Quote(alias, "streetaddress"),
-		Longitude:          psql.Quote(alias, "longitude"),
-		Latitude:           psql.Quote(alias, "latitude"),
-		Hasshelter:         psql.Quote(alias, "hasshelter"),
-		Hasplugin:          psql.Quote(alias, "hasplugin"),
-		Haschargingstation: psql.Quote(alias, "haschargingstation"),
-		Priceperhour:       psql.Quote(alias, "priceperhour"),
+func (o *Parkingspot) pkEQ() dialect.Expression {
+	return psql.Quote("parkingspot", "parkingspotid").EQ(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		return o.PrimaryKeyVals().WriteSQL(ctx, w, d, start)
+	}))
+}
+
+// Update uses an executor to update the Parkingspot
+func (o *Parkingspot) Update(ctx context.Context, exec bob.Executor, s *ParkingspotSetter) error {
+	v, err := Parkingspots.Update(s.UpdateMod(), um.Where(o.pkEQ())).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.R = v.R
+	*o = *v
+
+	return nil
+}
+
+// Delete deletes a single Parkingspot record with an executor
+func (o *Parkingspot) Delete(ctx context.Context, exec bob.Executor) error {
+	_, err := Parkingspots.Delete(dm.Where(o.pkEQ())).Exec(ctx, exec)
+	return err
+}
+
+// Reload refreshes the Parkingspot using the executor
+func (o *Parkingspot) Reload(ctx context.Context, exec bob.Executor) error {
+	o2, err := Parkingspots.Query(
+		SelectWhere.Parkingspots.Parkingspotid.EQ(o.Parkingspotid),
+	).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+	o2.R = o.R
+	*o = *o2
+
+	return nil
+}
+
+// AfterQueryHook is called after ParkingspotSlice is retrieved from the database
+func (o ParkingspotSlice) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Parkingspots.AfterSelectHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeInsert:
+		ctx, err = Parkingspots.AfterInsertHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeUpdate:
+		ctx, err = Parkingspots.AfterUpdateHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeDelete:
+		ctx, err = Parkingspots.AfterDeleteHooks.RunHooks(ctx, exec, o)
+	}
+
+	return err
+}
+
+func (o ParkingspotSlice) pkIN() dialect.Expression {
+	return psql.Quote("parkingspot", "parkingspotid").In(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		pkPairs := make([]bob.Expression, len(o))
+		for i, row := range o {
+			pkPairs[i] = row.PrimaryKeyVals()
+		}
+		return bob.ExpressSlice(ctx, w, d, start, pkPairs, "", ", ", "")
+	}))
+}
+
+// copyMatchingRows finds models in the given slice that have the same primary key
+// then it first copies the existing relationships from the old model to the new model
+// and then replaces the old model in the slice with the new model
+func (o ParkingspotSlice) copyMatchingRows(from ...*Parkingspot) {
+	for i, old := range o {
+		for _, new := range from {
+			if new.Parkingspotid != old.Parkingspotid {
+				continue
+			}
+			new.R = old.R
+			o[i] = new
+			break
+		}
 	}
 }
 
-type parkingspotWhere[Q psql.Filterable] struct {
-	Parkingspotid      psql.WhereMod[Q, int64]
-	Userid             psql.WhereMod[Q, int64]
-	Parkingspotuuid    psql.WhereMod[Q, uuid.UUID]
-	Postalcode         psql.WhereMod[Q, string]
-	Countrycode        psql.WhereMod[Q, string]
-	City               psql.WhereMod[Q, string]
-	State              psql.WhereMod[Q, string]
-	Streetaddress      psql.WhereMod[Q, string]
-	Longitude          psql.WhereMod[Q, decimal.Decimal]
-	Latitude           psql.WhereMod[Q, decimal.Decimal]
-	Hasshelter         psql.WhereMod[Q, bool]
-	Hasplugin          psql.WhereMod[Q, bool]
-	Haschargingstation psql.WhereMod[Q, bool]
-	Priceperhour       psql.WhereMod[Q, decimal.Decimal]
+// UpdateMod modifies an update query with "WHERE primary_key IN (o...)"
+func (o ParkingspotSlice) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Parkingspots.BeforeUpdateHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Parkingspot:
+				o.copyMatchingRows(retrieved)
+			case []*Parkingspot:
+				o.copyMatchingRows(retrieved...)
+			case ParkingspotSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Parkingspot or a slice of Parkingspot
+				// then run the AfterUpdateHooks on the slice
+				_, err = Parkingspots.AfterUpdateHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
 }
 
-func (parkingspotWhere[Q]) AliasedAs(alias string) parkingspotWhere[Q] {
-	return buildParkingspotWhere[Q](buildParkingspotColumns(alias))
+// DeleteMod modifies an delete query with "WHERE primary_key IN (o...)"
+func (o ParkingspotSlice) DeleteMod() bob.Mod[*dialect.DeleteQuery] {
+	return bob.ModFunc[*dialect.DeleteQuery](func(q *dialect.DeleteQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Parkingspots.BeforeDeleteHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Parkingspot:
+				o.copyMatchingRows(retrieved)
+			case []*Parkingspot:
+				o.copyMatchingRows(retrieved...)
+			case ParkingspotSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Parkingspot or a slice of Parkingspot
+				// then run the AfterDeleteHooks on the slice
+				_, err = Parkingspots.AfterDeleteHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
 }
 
-func buildParkingspotWhere[Q psql.Filterable](cols parkingspotColumns) parkingspotWhere[Q] {
-	return parkingspotWhere[Q]{
-		Parkingspotid:      psql.Where[Q, int64](cols.Parkingspotid),
-		Userid:             psql.Where[Q, int64](cols.Userid),
-		Parkingspotuuid:    psql.Where[Q, uuid.UUID](cols.Parkingspotuuid),
-		Postalcode:         psql.Where[Q, string](cols.Postalcode),
-		Countrycode:        psql.Where[Q, string](cols.Countrycode),
-		City:               psql.Where[Q, string](cols.City),
-		State:              psql.Where[Q, string](cols.State),
-		Streetaddress:      psql.Where[Q, string](cols.Streetaddress),
-		Longitude:          psql.Where[Q, decimal.Decimal](cols.Longitude),
-		Latitude:           psql.Where[Q, decimal.Decimal](cols.Latitude),
-		Hasshelter:         psql.Where[Q, bool](cols.Hasshelter),
-		Hasplugin:          psql.Where[Q, bool](cols.Hasplugin),
-		Haschargingstation: psql.Where[Q, bool](cols.Haschargingstation),
-		Priceperhour:       psql.Where[Q, decimal.Decimal](cols.Priceperhour),
+func (o ParkingspotSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals ParkingspotSetter) error {
+	_, err := Parkingspots.Update(vals.UpdateMod(), o.UpdateMod()).All(ctx, exec)
+	return err
+}
+
+func (o ParkingspotSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
+	_, err := Parkingspots.Delete(o.DeleteMod()).Exec(ctx, exec)
+	return err
+}
+
+func (o ParkingspotSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
+	o2, err := Parkingspots.Query(sm.Where(o.pkIN())).All(ctx, exec)
+	if err != nil {
+		return err
 	}
+
+	o.copyMatchingRows(o2...)
+
+	return nil
 }
 
 type parkingspotJoins[Q dialect.Joinable] struct {
@@ -514,101 +733,6 @@ func buildParkingspotJoins[Q dialect.Joinable](cols parkingspotColumns, typ stri
 	}
 }
 
-// FindParkingspot retrieves a single record by primary key
-// If cols is empty Find will return all columns.
-func FindParkingspot(ctx context.Context, exec bob.Executor, ParkingspotidPK int64, cols ...string) (*Parkingspot, error) {
-	if len(cols) == 0 {
-		return Parkingspots.Query(
-			ctx, exec,
-			SelectWhere.Parkingspots.Parkingspotid.EQ(ParkingspotidPK),
-		).One()
-	}
-
-	return Parkingspots.Query(
-		ctx, exec,
-		SelectWhere.Parkingspots.Parkingspotid.EQ(ParkingspotidPK),
-		sm.Columns(Parkingspots.Columns().Only(cols...)),
-	).One()
-}
-
-// ParkingspotExists checks the presence of a single record by primary key
-func ParkingspotExists(ctx context.Context, exec bob.Executor, ParkingspotidPK int64) (bool, error) {
-	return Parkingspots.Query(
-		ctx, exec,
-		SelectWhere.Parkingspots.Parkingspotid.EQ(ParkingspotidPK),
-	).Exists()
-}
-
-// PrimaryKeyVals returns the primary key values of the Parkingspot
-func (o *Parkingspot) PrimaryKeyVals() bob.Expression {
-	return psql.Arg(o.Parkingspotid)
-}
-
-// Update uses an executor to update the Parkingspot
-func (o *Parkingspot) Update(ctx context.Context, exec bob.Executor, s *ParkingspotSetter) error {
-	return Parkingspots.Update(ctx, exec, s, o)
-}
-
-// Delete deletes a single Parkingspot record with an executor
-func (o *Parkingspot) Delete(ctx context.Context, exec bob.Executor) error {
-	return Parkingspots.Delete(ctx, exec, o)
-}
-
-// Reload refreshes the Parkingspot using the executor
-func (o *Parkingspot) Reload(ctx context.Context, exec bob.Executor) error {
-	o2, err := Parkingspots.Query(
-		ctx, exec,
-		SelectWhere.Parkingspots.Parkingspotid.EQ(o.Parkingspotid),
-	).One()
-	if err != nil {
-		return err
-	}
-	o2.R = o.R
-	*o = *o2
-
-	return nil
-}
-
-func (o ParkingspotSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals ParkingspotSetter) error {
-	return Parkingspots.Update(ctx, exec, &vals, o...)
-}
-
-func (o ParkingspotSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
-	return Parkingspots.Delete(ctx, exec, o...)
-}
-
-func (o ParkingspotSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
-	var mods []bob.Mod[*dialect.SelectQuery]
-
-	ParkingspotidPK := make([]int64, len(o))
-
-	for i, o := range o {
-		ParkingspotidPK[i] = o.Parkingspotid
-	}
-
-	mods = append(mods,
-		SelectWhere.Parkingspots.Parkingspotid.In(ParkingspotidPK...),
-	)
-
-	o2, err := Parkingspots.Query(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, old := range o {
-		for _, new := range o2 {
-			if new.Parkingspotid != old.Parkingspotid {
-				continue
-			}
-			new.R = old.R
-			*old = *new
-			break
-		}
-	}
-
-	return nil
-}
-
 func parkingspotsJoinParkingspotidBookings[Q dialect.Joinable](from parkingspotColumns, typ string) func(context.Context) modAs[Q, bookingColumns] {
 	return func(ctx context.Context) modAs[Q, bookingColumns] {
 		return modAs[Q, bookingColumns]{
@@ -617,7 +741,7 @@ func parkingspotsJoinParkingspotidBookings[Q dialect.Joinable](from parkingspotC
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Bookings.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Bookings.Name().As(to.Alias())).On(
 						to.Parkingspotid.EQ(from.Parkingspotid),
 					))
 				}
@@ -636,7 +760,7 @@ func parkingspotsJoinUseridUser[Q dialect.Joinable](from parkingspotColumns, typ
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Users.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
 						to.Userid.EQ(from.Userid),
 					))
 				}
@@ -655,7 +779,7 @@ func parkingspotsJoinParkingspotidPreferencespots[Q dialect.Joinable](from parki
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Preferencespots.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Preferencespots.Name().As(to.Alias())).On(
 						to.Parkingspotid.EQ(from.Parkingspotid),
 					))
 				}
@@ -674,7 +798,7 @@ func parkingspotsJoinParkingspotidTimeunits[Q dialect.Joinable](from parkingspot
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Timeunits.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Timeunits.Name().As(to.Alias())).On(
 						to.Parkingspotid.EQ(from.Parkingspotid),
 					))
 				}
@@ -686,73 +810,73 @@ func parkingspotsJoinParkingspotidTimeunits[Q dialect.Joinable](from parkingspot
 }
 
 // ParkingspotidBookings starts a query for related objects on booking
-func (o *Parkingspot) ParkingspotidBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
-	return Bookings.Query(ctx, exec, append(mods,
+func (o *Parkingspot) ParkingspotidBookings(mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
+	return Bookings.Query(append(mods,
 		sm.Where(BookingColumns.Parkingspotid.EQ(psql.Arg(o.Parkingspotid))),
 	)...)
 }
 
-func (os ParkingspotSlice) ParkingspotidBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
+func (os ParkingspotSlice) ParkingspotidBookings(mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Parkingspotid)
 	}
 
-	return Bookings.Query(ctx, exec, append(mods,
+	return Bookings.Query(append(mods,
 		sm.Where(psql.Group(BookingColumns.Parkingspotid).In(PKArgs...)),
 	)...)
 }
 
 // UseridUser starts a query for related objects on users
-func (o *Parkingspot) UseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
-	return Users.Query(ctx, exec, append(mods,
+func (o *Parkingspot) UseridUser(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
+	return Users.Query(append(mods,
 		sm.Where(UserColumns.Userid.EQ(psql.Arg(o.Userid))),
 	)...)
 }
 
-func (os ParkingspotSlice) UseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
+func (os ParkingspotSlice) UseridUser(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Userid)
 	}
 
-	return Users.Query(ctx, exec, append(mods,
+	return Users.Query(append(mods,
 		sm.Where(psql.Group(UserColumns.Userid).In(PKArgs...)),
 	)...)
 }
 
 // ParkingspotidPreferencespots starts a query for related objects on preferencespot
-func (o *Parkingspot) ParkingspotidPreferencespots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) PreferencespotsQuery {
-	return Preferencespots.Query(ctx, exec, append(mods,
+func (o *Parkingspot) ParkingspotidPreferencespots(mods ...bob.Mod[*dialect.SelectQuery]) PreferencespotsQuery {
+	return Preferencespots.Query(append(mods,
 		sm.Where(PreferencespotColumns.Parkingspotid.EQ(psql.Arg(o.Parkingspotid))),
 	)...)
 }
 
-func (os ParkingspotSlice) ParkingspotidPreferencespots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) PreferencespotsQuery {
+func (os ParkingspotSlice) ParkingspotidPreferencespots(mods ...bob.Mod[*dialect.SelectQuery]) PreferencespotsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Parkingspotid)
 	}
 
-	return Preferencespots.Query(ctx, exec, append(mods,
+	return Preferencespots.Query(append(mods,
 		sm.Where(psql.Group(PreferencespotColumns.Parkingspotid).In(PKArgs...)),
 	)...)
 }
 
 // ParkingspotidTimeunits starts a query for related objects on timeunit
-func (o *Parkingspot) ParkingspotidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
-	return Timeunits.Query(ctx, exec, append(mods,
+func (o *Parkingspot) ParkingspotidTimeunits(mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
+	return Timeunits.Query(append(mods,
 		sm.Where(TimeunitColumns.Parkingspotid.EQ(psql.Arg(o.Parkingspotid))),
 	)...)
 }
 
-func (os ParkingspotSlice) ParkingspotidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
+func (os ParkingspotSlice) ParkingspotidTimeunits(mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Parkingspotid)
 	}
 
-	return Timeunits.Query(ctx, exec, append(mods,
+	return Timeunits.Query(append(mods,
 		sm.Where(psql.Group(TimeunitColumns.Parkingspotid).In(PKArgs...)),
 	)...)
 }
@@ -851,7 +975,7 @@ func (o *Parkingspot) LoadParkingspotParkingspotidBookings(ctx context.Context, 
 	// Reset the relationship
 	o.R.ParkingspotidBookings = nil
 
-	related, err := o.ParkingspotidBookings(ctx, exec, mods...).All()
+	related, err := o.ParkingspotidBookings(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -870,7 +994,7 @@ func (os ParkingspotSlice) LoadParkingspotParkingspotidBookings(ctx context.Cont
 		return nil
 	}
 
-	bookings, err := os.ParkingspotidBookings(ctx, exec, mods...).All()
+	bookings, err := os.ParkingspotidBookings(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -899,11 +1023,8 @@ func PreloadParkingspotUseridUser(opts ...psql.PreloadOption) psql.Preloader {
 		Name: "UseridUser",
 		Sides: []orm.RelSide{
 			{
-				From: "parkingspot",
+				From: TableNames.Parkingspots,
 				To:   TableNames.Users,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Users.Name(ctx)
-				},
 				FromColumns: []string{
 					ColumnNames.Parkingspots.Userid,
 				},
@@ -944,7 +1065,7 @@ func (o *Parkingspot) LoadParkingspotUseridUser(ctx context.Context, exec bob.Ex
 	// Reset the relationship
 	o.R.UseridUser = nil
 
-	related, err := o.UseridUser(ctx, exec, mods...).One()
+	related, err := o.UseridUser(mods...).One(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -961,7 +1082,7 @@ func (os ParkingspotSlice) LoadParkingspotUseridUser(ctx context.Context, exec b
 		return nil
 	}
 
-	users, err := os.UseridUser(ctx, exec, mods...).All()
+	users, err := os.UseridUser(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -1011,7 +1132,7 @@ func (o *Parkingspot) LoadParkingspotParkingspotidPreferencespots(ctx context.Co
 	// Reset the relationship
 	o.R.ParkingspotidPreferencespots = nil
 
-	related, err := o.ParkingspotidPreferencespots(ctx, exec, mods...).All()
+	related, err := o.ParkingspotidPreferencespots(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -1030,7 +1151,7 @@ func (os ParkingspotSlice) LoadParkingspotParkingspotidPreferencespots(ctx conte
 		return nil
 	}
 
-	preferencespots, err := os.ParkingspotidPreferencespots(ctx, exec, mods...).All()
+	preferencespots, err := os.ParkingspotidPreferencespots(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -1083,7 +1204,7 @@ func (o *Parkingspot) LoadParkingspotParkingspotidTimeunits(ctx context.Context,
 	// Reset the relationship
 	o.R.ParkingspotidTimeunits = nil
 
-	related, err := o.ParkingspotidTimeunits(ctx, exec, mods...).All()
+	related, err := o.ParkingspotidTimeunits(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -1102,7 +1223,7 @@ func (os ParkingspotSlice) LoadParkingspotParkingspotidTimeunits(ctx context.Con
 		return nil
 	}
 
-	timeunits, err := os.ParkingspotidTimeunits(ctx, exec, mods...).All()
+	timeunits, err := os.ParkingspotidTimeunits(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -1131,7 +1252,7 @@ func insertParkingspotParkingspotidBookings0(ctx context.Context, exec bob.Execu
 		bookings1[i].Parkingspotid = omit.From(parkingspot0.Parkingspotid)
 	}
 
-	ret, err := Bookings.InsertMany(ctx, exec, bookings1...)
+	ret, err := Bookings.Insert(bob.ToMods(bookings1...)).All(ctx, exec)
 	if err != nil {
 		return ret, fmt.Errorf("insertParkingspotParkingspotidBookings0: %w", err)
 	}
@@ -1144,7 +1265,7 @@ func attachParkingspotParkingspotidBookings0(ctx context.Context, exec bob.Execu
 		Parkingspotid: omit.From(parkingspot0.Parkingspotid),
 	}
 
-	err := Bookings.Update(ctx, exec, setter, bookings1...)
+	err := bookings1.UpdateAll(ctx, exec, *setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachParkingspotParkingspotidBookings0: %w", err)
 	}
@@ -1156,6 +1277,8 @@ func (parkingspot0 *Parkingspot) InsertParkingspotidBookings(ctx context.Context
 	if len(related) == 0 {
 		return nil
 	}
+
+	var err error
 
 	bookings1, err := insertParkingspotParkingspotidBookings0(ctx, exec, related, parkingspot0)
 	if err != nil {
@@ -1197,7 +1320,7 @@ func attachParkingspotUseridUser0(ctx context.Context, exec bob.Executor, count 
 		Userid: omit.From(user1.Userid),
 	}
 
-	err := Parkingspots.Update(ctx, exec, setter, parkingspot0)
+	err := parkingspot0.Update(ctx, exec, setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachParkingspotUseridUser0: %w", err)
 	}
@@ -1206,7 +1329,7 @@ func attachParkingspotUseridUser0(ctx context.Context, exec bob.Executor, count 
 }
 
 func (parkingspot0 *Parkingspot) InsertUseridUser(ctx context.Context, exec bob.Executor, related *UserSetter) error {
-	user1, err := Users.Insert(ctx, exec, related)
+	user1, err := Users.Insert(related).One(ctx, exec)
 	if err != nil {
 		return fmt.Errorf("inserting related objects: %w", err)
 	}
@@ -1243,7 +1366,7 @@ func insertParkingspotParkingspotidPreferencespots0(ctx context.Context, exec bo
 		preferencespots1[i].Parkingspotid = omit.From(parkingspot0.Parkingspotid)
 	}
 
-	ret, err := Preferencespots.InsertMany(ctx, exec, preferencespots1...)
+	ret, err := Preferencespots.Insert(bob.ToMods(preferencespots1...)).All(ctx, exec)
 	if err != nil {
 		return ret, fmt.Errorf("insertParkingspotParkingspotidPreferencespots0: %w", err)
 	}
@@ -1256,7 +1379,7 @@ func attachParkingspotParkingspotidPreferencespots0(ctx context.Context, exec bo
 		Parkingspotid: omit.From(parkingspot0.Parkingspotid),
 	}
 
-	err := Preferencespots.Update(ctx, exec, setter, preferencespots1...)
+	err := preferencespots1.UpdateAll(ctx, exec, *setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachParkingspotParkingspotidPreferencespots0: %w", err)
 	}
@@ -1268,6 +1391,8 @@ func (parkingspot0 *Parkingspot) InsertParkingspotidPreferencespots(ctx context.
 	if len(related) == 0 {
 		return nil
 	}
+
+	var err error
 
 	preferencespots1, err := insertParkingspotParkingspotidPreferencespots0(ctx, exec, related, parkingspot0)
 	if err != nil {
@@ -1309,7 +1434,7 @@ func insertParkingspotParkingspotidTimeunits0(ctx context.Context, exec bob.Exec
 		timeunits1[i].Parkingspotid = omit.From(parkingspot0.Parkingspotid)
 	}
 
-	ret, err := Timeunits.InsertMany(ctx, exec, timeunits1...)
+	ret, err := Timeunits.Insert(bob.ToMods(timeunits1...)).All(ctx, exec)
 	if err != nil {
 		return ret, fmt.Errorf("insertParkingspotParkingspotidTimeunits0: %w", err)
 	}
@@ -1322,7 +1447,7 @@ func attachParkingspotParkingspotidTimeunits0(ctx context.Context, exec bob.Exec
 		Parkingspotid: omit.From(parkingspot0.Parkingspotid),
 	}
 
-	err := Timeunits.Update(ctx, exec, setter, timeunits1...)
+	err := timeunits1.UpdateAll(ctx, exec, *setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachParkingspotParkingspotidTimeunits0: %w", err)
 	}
@@ -1334,6 +1459,8 @@ func (parkingspot0 *Parkingspot) InsertParkingspotidTimeunits(ctx context.Contex
 	if len(related) == 0 {
 		return nil
 	}
+
+	var err error
 
 	timeunits1, err := insertParkingspotParkingspotidTimeunits0(ctx, exec, related, parkingspot0)
 	if err != nil {
