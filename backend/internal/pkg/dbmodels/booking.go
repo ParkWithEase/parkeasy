@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/aarondl/opt/omit"
@@ -17,7 +18,7 @@ import (
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
-	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/expr"
@@ -48,191 +49,12 @@ var Bookings = psql.NewTablex[*Booking, BookingSlice, *BookingSetter]("", "booki
 // BookingsQuery is a query on the booking table
 type BookingsQuery = *psql.ViewQuery[*Booking, BookingSlice]
 
-// BookingsStmt is a prepared statment on booking
-type BookingsStmt = bob.QueryStmt[*Booking, BookingSlice]
-
 // bookingR is where relationships are stored.
 type bookingR struct {
 	CaridCar                 *Car          // booking.booking_carid_fkey
 	ParkingspotidParkingspot *Parkingspot  // booking.booking_parkingspotid_fkey
 	UseridUser               *User         // booking.booking_userid_fkey
 	BookingidTimeunits       TimeunitSlice // timeunit.timeunit_bookingid_fkey
-}
-
-// BookingSetter is used for insert/upsert/update operations
-// All values are optional, and do not have to be set
-// Generated columns are not included
-type BookingSetter struct {
-	Bookingid     omit.Val[int64]           `db:"bookingid,pk" `
-	Bookinguuid   omit.Val[uuid.UUID]       `db:"bookinguuid" `
-	Userid        omit.Val[int64]           `db:"userid" `
-	Parkingspotid omit.Val[int64]           `db:"parkingspotid" `
-	Carid         omit.Val[int64]           `db:"carid" `
-	Paidamount    omit.Val[decimal.Decimal] `db:"paidamount" `
-	Createdat     omit.Val[time.Time]       `db:"createdat" `
-}
-
-func (s BookingSetter) SetColumns() []string {
-	vals := make([]string, 0, 7)
-	if !s.Bookingid.IsUnset() {
-		vals = append(vals, "bookingid")
-	}
-
-	if !s.Bookinguuid.IsUnset() {
-		vals = append(vals, "bookinguuid")
-	}
-
-	if !s.Userid.IsUnset() {
-		vals = append(vals, "userid")
-	}
-
-	if !s.Parkingspotid.IsUnset() {
-		vals = append(vals, "parkingspotid")
-	}
-
-	if !s.Carid.IsUnset() {
-		vals = append(vals, "carid")
-	}
-
-	if !s.Paidamount.IsUnset() {
-		vals = append(vals, "paidamount")
-	}
-
-	if !s.Createdat.IsUnset() {
-		vals = append(vals, "createdat")
-	}
-
-	return vals
-}
-
-func (s BookingSetter) Overwrite(t *Booking) {
-	if !s.Bookingid.IsUnset() {
-		t.Bookingid, _ = s.Bookingid.Get()
-	}
-	if !s.Bookinguuid.IsUnset() {
-		t.Bookinguuid, _ = s.Bookinguuid.Get()
-	}
-	if !s.Userid.IsUnset() {
-		t.Userid, _ = s.Userid.Get()
-	}
-	if !s.Parkingspotid.IsUnset() {
-		t.Parkingspotid, _ = s.Parkingspotid.Get()
-	}
-	if !s.Carid.IsUnset() {
-		t.Carid, _ = s.Carid.Get()
-	}
-	if !s.Paidamount.IsUnset() {
-		t.Paidamount, _ = s.Paidamount.Get()
-	}
-	if !s.Createdat.IsUnset() {
-		t.Createdat, _ = s.Createdat.Get()
-	}
-}
-
-func (s BookingSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 7)
-	if s.Bookingid.IsUnset() {
-		vals[0] = psql.Raw("DEFAULT")
-	} else {
-		vals[0] = psql.Arg(s.Bookingid)
-	}
-
-	if s.Bookinguuid.IsUnset() {
-		vals[1] = psql.Raw("DEFAULT")
-	} else {
-		vals[1] = psql.Arg(s.Bookinguuid)
-	}
-
-	if s.Userid.IsUnset() {
-		vals[2] = psql.Raw("DEFAULT")
-	} else {
-		vals[2] = psql.Arg(s.Userid)
-	}
-
-	if s.Parkingspotid.IsUnset() {
-		vals[3] = psql.Raw("DEFAULT")
-	} else {
-		vals[3] = psql.Arg(s.Parkingspotid)
-	}
-
-	if s.Carid.IsUnset() {
-		vals[4] = psql.Raw("DEFAULT")
-	} else {
-		vals[4] = psql.Arg(s.Carid)
-	}
-
-	if s.Paidamount.IsUnset() {
-		vals[5] = psql.Raw("DEFAULT")
-	} else {
-		vals[5] = psql.Arg(s.Paidamount)
-	}
-
-	if s.Createdat.IsUnset() {
-		vals[6] = psql.Raw("DEFAULT")
-	} else {
-		vals[6] = psql.Arg(s.Createdat)
-	}
-
-	return im.Values(vals...)
-}
-
-func (s BookingSetter) Apply(q *dialect.UpdateQuery) {
-	um.Set(s.Expressions()...).Apply(q)
-}
-
-func (s BookingSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 7)
-
-	if !s.Bookingid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "bookingid")...),
-			psql.Arg(s.Bookingid),
-		}})
-	}
-
-	if !s.Bookinguuid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "bookinguuid")...),
-			psql.Arg(s.Bookinguuid),
-		}})
-	}
-
-	if !s.Userid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "userid")...),
-			psql.Arg(s.Userid),
-		}})
-	}
-
-	if !s.Parkingspotid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "parkingspotid")...),
-			psql.Arg(s.Parkingspotid),
-		}})
-	}
-
-	if !s.Carid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "carid")...),
-			psql.Arg(s.Carid),
-		}})
-	}
-
-	if !s.Paidamount.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "paidamount")...),
-			psql.Arg(s.Paidamount),
-		}})
-	}
-
-	if !s.Createdat.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "createdat")...),
-			psql.Arg(s.Createdat),
-		}})
-	}
-
-	return exprs
 }
 
 type bookingColumnNames struct {
@@ -305,6 +127,403 @@ func buildBookingWhere[Q psql.Filterable](cols bookingColumns) bookingWhere[Q] {
 	}
 }
 
+var BookingErrors = &bookingErrors{
+	ErrUniqueBookinguuid: &errUniqueConstraint{s: "booking_bookinguuid_key"},
+}
+
+type bookingErrors struct {
+	ErrUniqueBookinguuid error
+}
+
+// BookingSetter is used for insert/upsert/update operations
+// All values are optional, and do not have to be set
+// Generated columns are not included
+type BookingSetter struct {
+	Bookingid     omit.Val[int64]           `db:"bookingid,pk" `
+	Bookinguuid   omit.Val[uuid.UUID]       `db:"bookinguuid" `
+	Userid        omit.Val[int64]           `db:"userid" `
+	Parkingspotid omit.Val[int64]           `db:"parkingspotid" `
+	Carid         omit.Val[int64]           `db:"carid" `
+	Paidamount    omit.Val[decimal.Decimal] `db:"paidamount" `
+	Createdat     omit.Val[time.Time]       `db:"createdat" `
+}
+
+func (s BookingSetter) SetColumns() []string {
+	vals := make([]string, 0, 7)
+	if !s.Bookingid.IsUnset() {
+		vals = append(vals, "bookingid")
+	}
+
+	if !s.Bookinguuid.IsUnset() {
+		vals = append(vals, "bookinguuid")
+	}
+
+	if !s.Userid.IsUnset() {
+		vals = append(vals, "userid")
+	}
+
+	if !s.Parkingspotid.IsUnset() {
+		vals = append(vals, "parkingspotid")
+	}
+
+	if !s.Carid.IsUnset() {
+		vals = append(vals, "carid")
+	}
+
+	if !s.Paidamount.IsUnset() {
+		vals = append(vals, "paidamount")
+	}
+
+	if !s.Createdat.IsUnset() {
+		vals = append(vals, "createdat")
+	}
+
+	return vals
+}
+
+func (s BookingSetter) Overwrite(t *Booking) {
+	if !s.Bookingid.IsUnset() {
+		t.Bookingid, _ = s.Bookingid.Get()
+	}
+	if !s.Bookinguuid.IsUnset() {
+		t.Bookinguuid, _ = s.Bookinguuid.Get()
+	}
+	if !s.Userid.IsUnset() {
+		t.Userid, _ = s.Userid.Get()
+	}
+	if !s.Parkingspotid.IsUnset() {
+		t.Parkingspotid, _ = s.Parkingspotid.Get()
+	}
+	if !s.Carid.IsUnset() {
+		t.Carid, _ = s.Carid.Get()
+	}
+	if !s.Paidamount.IsUnset() {
+		t.Paidamount, _ = s.Paidamount.Get()
+	}
+	if !s.Createdat.IsUnset() {
+		t.Createdat, _ = s.Createdat.Get()
+	}
+}
+
+func (s *BookingSetter) Apply(q *dialect.InsertQuery) {
+	q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+		return Bookings.BeforeInsertHooks.RunHooks(ctx, exec, s)
+	})
+
+	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		vals := make([]bob.Expression, 7)
+		if s.Bookingid.IsUnset() {
+			vals[0] = psql.Raw("DEFAULT")
+		} else {
+			vals[0] = psql.Arg(s.Bookingid)
+		}
+
+		if s.Bookinguuid.IsUnset() {
+			vals[1] = psql.Raw("DEFAULT")
+		} else {
+			vals[1] = psql.Arg(s.Bookinguuid)
+		}
+
+		if s.Userid.IsUnset() {
+			vals[2] = psql.Raw("DEFAULT")
+		} else {
+			vals[2] = psql.Arg(s.Userid)
+		}
+
+		if s.Parkingspotid.IsUnset() {
+			vals[3] = psql.Raw("DEFAULT")
+		} else {
+			vals[3] = psql.Arg(s.Parkingspotid)
+		}
+
+		if s.Carid.IsUnset() {
+			vals[4] = psql.Raw("DEFAULT")
+		} else {
+			vals[4] = psql.Arg(s.Carid)
+		}
+
+		if s.Paidamount.IsUnset() {
+			vals[5] = psql.Raw("DEFAULT")
+		} else {
+			vals[5] = psql.Arg(s.Paidamount)
+		}
+
+		if s.Createdat.IsUnset() {
+			vals[6] = psql.Raw("DEFAULT")
+		} else {
+			vals[6] = psql.Arg(s.Createdat)
+		}
+
+		return bob.ExpressSlice(ctx, w, d, start, vals, "", ", ", "")
+	}))
+}
+
+func (s BookingSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return um.Set(s.Expressions()...)
+}
+
+func (s BookingSetter) Expressions(prefix ...string) []bob.Expression {
+	exprs := make([]bob.Expression, 0, 7)
+
+	if !s.Bookingid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "bookingid")...),
+			psql.Arg(s.Bookingid),
+		}})
+	}
+
+	if !s.Bookinguuid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "bookinguuid")...),
+			psql.Arg(s.Bookinguuid),
+		}})
+	}
+
+	if !s.Userid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "userid")...),
+			psql.Arg(s.Userid),
+		}})
+	}
+
+	if !s.Parkingspotid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "parkingspotid")...),
+			psql.Arg(s.Parkingspotid),
+		}})
+	}
+
+	if !s.Carid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "carid")...),
+			psql.Arg(s.Carid),
+		}})
+	}
+
+	if !s.Paidamount.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "paidamount")...),
+			psql.Arg(s.Paidamount),
+		}})
+	}
+
+	if !s.Createdat.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "createdat")...),
+			psql.Arg(s.Createdat),
+		}})
+	}
+
+	return exprs
+}
+
+// FindBooking retrieves a single record by primary key
+// If cols is empty Find will return all columns.
+func FindBooking(ctx context.Context, exec bob.Executor, BookingidPK int64, cols ...string) (*Booking, error) {
+	if len(cols) == 0 {
+		return Bookings.Query(
+			SelectWhere.Bookings.Bookingid.EQ(BookingidPK),
+		).One(ctx, exec)
+	}
+
+	return Bookings.Query(
+		SelectWhere.Bookings.Bookingid.EQ(BookingidPK),
+		sm.Columns(Bookings.Columns().Only(cols...)),
+	).One(ctx, exec)
+}
+
+// BookingExists checks the presence of a single record by primary key
+func BookingExists(ctx context.Context, exec bob.Executor, BookingidPK int64) (bool, error) {
+	return Bookings.Query(
+		SelectWhere.Bookings.Bookingid.EQ(BookingidPK),
+	).Exists(ctx, exec)
+}
+
+// AfterQueryHook is called after Booking is retrieved from the database
+func (o *Booking) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Bookings.AfterSelectHooks.RunHooks(ctx, exec, BookingSlice{o})
+	case bob.QueryTypeInsert:
+		ctx, err = Bookings.AfterInsertHooks.RunHooks(ctx, exec, BookingSlice{o})
+	case bob.QueryTypeUpdate:
+		ctx, err = Bookings.AfterUpdateHooks.RunHooks(ctx, exec, BookingSlice{o})
+	case bob.QueryTypeDelete:
+		ctx, err = Bookings.AfterDeleteHooks.RunHooks(ctx, exec, BookingSlice{o})
+	}
+
+	return err
+}
+
+// PrimaryKeyVals returns the primary key values of the Booking
+func (o *Booking) PrimaryKeyVals() bob.Expression {
+	return psql.Arg(o.Bookingid)
+}
+
+func (o *Booking) pkEQ() dialect.Expression {
+	return psql.Quote("booking", "bookingid").EQ(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		return o.PrimaryKeyVals().WriteSQL(ctx, w, d, start)
+	}))
+}
+
+// Update uses an executor to update the Booking
+func (o *Booking) Update(ctx context.Context, exec bob.Executor, s *BookingSetter) error {
+	v, err := Bookings.Update(s.UpdateMod(), um.Where(o.pkEQ())).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.R = v.R
+	*o = *v
+
+	return nil
+}
+
+// Delete deletes a single Booking record with an executor
+func (o *Booking) Delete(ctx context.Context, exec bob.Executor) error {
+	_, err := Bookings.Delete(dm.Where(o.pkEQ())).Exec(ctx, exec)
+	return err
+}
+
+// Reload refreshes the Booking using the executor
+func (o *Booking) Reload(ctx context.Context, exec bob.Executor) error {
+	o2, err := Bookings.Query(
+		SelectWhere.Bookings.Bookingid.EQ(o.Bookingid),
+	).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+	o2.R = o.R
+	*o = *o2
+
+	return nil
+}
+
+// AfterQueryHook is called after BookingSlice is retrieved from the database
+func (o BookingSlice) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Bookings.AfterSelectHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeInsert:
+		ctx, err = Bookings.AfterInsertHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeUpdate:
+		ctx, err = Bookings.AfterUpdateHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeDelete:
+		ctx, err = Bookings.AfterDeleteHooks.RunHooks(ctx, exec, o)
+	}
+
+	return err
+}
+
+func (o BookingSlice) pkIN() dialect.Expression {
+	return psql.Quote("booking", "bookingid").In(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		pkPairs := make([]bob.Expression, len(o))
+		for i, row := range o {
+			pkPairs[i] = row.PrimaryKeyVals()
+		}
+		return bob.ExpressSlice(ctx, w, d, start, pkPairs, "", ", ", "")
+	}))
+}
+
+// copyMatchingRows finds models in the given slice that have the same primary key
+// then it first copies the existing relationships from the old model to the new model
+// and then replaces the old model in the slice with the new model
+func (o BookingSlice) copyMatchingRows(from ...*Booking) {
+	for i, old := range o {
+		for _, new := range from {
+			if new.Bookingid != old.Bookingid {
+				continue
+			}
+			new.R = old.R
+			o[i] = new
+			break
+		}
+	}
+}
+
+// UpdateMod modifies an update query with "WHERE primary_key IN (o...)"
+func (o BookingSlice) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Bookings.BeforeUpdateHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Booking:
+				o.copyMatchingRows(retrieved)
+			case []*Booking:
+				o.copyMatchingRows(retrieved...)
+			case BookingSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Booking or a slice of Booking
+				// then run the AfterUpdateHooks on the slice
+				_, err = Bookings.AfterUpdateHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+// DeleteMod modifies an delete query with "WHERE primary_key IN (o...)"
+func (o BookingSlice) DeleteMod() bob.Mod[*dialect.DeleteQuery] {
+	return bob.ModFunc[*dialect.DeleteQuery](func(q *dialect.DeleteQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Bookings.BeforeDeleteHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *Booking:
+				o.copyMatchingRows(retrieved)
+			case []*Booking:
+				o.copyMatchingRows(retrieved...)
+			case BookingSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a Booking or a slice of Booking
+				// then run the AfterDeleteHooks on the slice
+				_, err = Bookings.AfterDeleteHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+func (o BookingSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals BookingSetter) error {
+	_, err := Bookings.Update(vals.UpdateMod(), o.UpdateMod()).All(ctx, exec)
+	return err
+}
+
+func (o BookingSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
+	_, err := Bookings.Delete(o.DeleteMod()).Exec(ctx, exec)
+	return err
+}
+
+func (o BookingSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
+	o2, err := Bookings.Query(sm.Where(o.pkIN())).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.copyMatchingRows(o2...)
+
+	return nil
+}
+
 type bookingJoins[Q dialect.Joinable] struct {
 	typ                      string
 	CaridCar                 func(context.Context) modAs[Q, carColumns]
@@ -327,101 +546,6 @@ func buildBookingJoins[Q dialect.Joinable](cols bookingColumns, typ string) book
 	}
 }
 
-// FindBooking retrieves a single record by primary key
-// If cols is empty Find will return all columns.
-func FindBooking(ctx context.Context, exec bob.Executor, BookingidPK int64, cols ...string) (*Booking, error) {
-	if len(cols) == 0 {
-		return Bookings.Query(
-			ctx, exec,
-			SelectWhere.Bookings.Bookingid.EQ(BookingidPK),
-		).One()
-	}
-
-	return Bookings.Query(
-		ctx, exec,
-		SelectWhere.Bookings.Bookingid.EQ(BookingidPK),
-		sm.Columns(Bookings.Columns().Only(cols...)),
-	).One()
-}
-
-// BookingExists checks the presence of a single record by primary key
-func BookingExists(ctx context.Context, exec bob.Executor, BookingidPK int64) (bool, error) {
-	return Bookings.Query(
-		ctx, exec,
-		SelectWhere.Bookings.Bookingid.EQ(BookingidPK),
-	).Exists()
-}
-
-// PrimaryKeyVals returns the primary key values of the Booking
-func (o *Booking) PrimaryKeyVals() bob.Expression {
-	return psql.Arg(o.Bookingid)
-}
-
-// Update uses an executor to update the Booking
-func (o *Booking) Update(ctx context.Context, exec bob.Executor, s *BookingSetter) error {
-	return Bookings.Update(ctx, exec, s, o)
-}
-
-// Delete deletes a single Booking record with an executor
-func (o *Booking) Delete(ctx context.Context, exec bob.Executor) error {
-	return Bookings.Delete(ctx, exec, o)
-}
-
-// Reload refreshes the Booking using the executor
-func (o *Booking) Reload(ctx context.Context, exec bob.Executor) error {
-	o2, err := Bookings.Query(
-		ctx, exec,
-		SelectWhere.Bookings.Bookingid.EQ(o.Bookingid),
-	).One()
-	if err != nil {
-		return err
-	}
-	o2.R = o.R
-	*o = *o2
-
-	return nil
-}
-
-func (o BookingSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals BookingSetter) error {
-	return Bookings.Update(ctx, exec, &vals, o...)
-}
-
-func (o BookingSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
-	return Bookings.Delete(ctx, exec, o...)
-}
-
-func (o BookingSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
-	var mods []bob.Mod[*dialect.SelectQuery]
-
-	BookingidPK := make([]int64, len(o))
-
-	for i, o := range o {
-		BookingidPK[i] = o.Bookingid
-	}
-
-	mods = append(mods,
-		SelectWhere.Bookings.Bookingid.In(BookingidPK...),
-	)
-
-	o2, err := Bookings.Query(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, old := range o {
-		for _, new := range o2 {
-			if new.Bookingid != old.Bookingid {
-				continue
-			}
-			new.R = old.R
-			*old = *new
-			break
-		}
-	}
-
-	return nil
-}
-
 func bookingsJoinCaridCar[Q dialect.Joinable](from bookingColumns, typ string) func(context.Context) modAs[Q, carColumns] {
 	return func(ctx context.Context) modAs[Q, carColumns] {
 		return modAs[Q, carColumns]{
@@ -430,7 +554,7 @@ func bookingsJoinCaridCar[Q dialect.Joinable](from bookingColumns, typ string) f
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Cars.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Cars.Name().As(to.Alias())).On(
 						to.Carid.EQ(from.Carid),
 					))
 				}
@@ -449,7 +573,7 @@ func bookingsJoinParkingspotidParkingspot[Q dialect.Joinable](from bookingColumn
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Parkingspots.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Parkingspots.Name().As(to.Alias())).On(
 						to.Parkingspotid.EQ(from.Parkingspotid),
 					))
 				}
@@ -468,7 +592,7 @@ func bookingsJoinUseridUser[Q dialect.Joinable](from bookingColumns, typ string)
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Users.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
 						to.Userid.EQ(from.Userid),
 					))
 				}
@@ -487,7 +611,7 @@ func bookingsJoinBookingidTimeunits[Q dialect.Joinable](from bookingColumns, typ
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Timeunits.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Timeunits.Name().As(to.Alias())).On(
 						to.Bookingid.EQ(from.Bookingid),
 					))
 				}
@@ -499,73 +623,73 @@ func bookingsJoinBookingidTimeunits[Q dialect.Joinable](from bookingColumns, typ
 }
 
 // CaridCar starts a query for related objects on car
-func (o *Booking) CaridCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
-	return Cars.Query(ctx, exec, append(mods,
+func (o *Booking) CaridCar(mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
+	return Cars.Query(append(mods,
 		sm.Where(CarColumns.Carid.EQ(psql.Arg(o.Carid))),
 	)...)
 }
 
-func (os BookingSlice) CaridCar(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
+func (os BookingSlice) CaridCar(mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Carid)
 	}
 
-	return Cars.Query(ctx, exec, append(mods,
+	return Cars.Query(append(mods,
 		sm.Where(psql.Group(CarColumns.Carid).In(PKArgs...)),
 	)...)
 }
 
 // ParkingspotidParkingspot starts a query for related objects on parkingspot
-func (o *Booking) ParkingspotidParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
-	return Parkingspots.Query(ctx, exec, append(mods,
+func (o *Booking) ParkingspotidParkingspot(mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
+	return Parkingspots.Query(append(mods,
 		sm.Where(ParkingspotColumns.Parkingspotid.EQ(psql.Arg(o.Parkingspotid))),
 	)...)
 }
 
-func (os BookingSlice) ParkingspotidParkingspot(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
+func (os BookingSlice) ParkingspotidParkingspot(mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Parkingspotid)
 	}
 
-	return Parkingspots.Query(ctx, exec, append(mods,
+	return Parkingspots.Query(append(mods,
 		sm.Where(psql.Group(ParkingspotColumns.Parkingspotid).In(PKArgs...)),
 	)...)
 }
 
 // UseridUser starts a query for related objects on users
-func (o *Booking) UseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
-	return Users.Query(ctx, exec, append(mods,
+func (o *Booking) UseridUser(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
+	return Users.Query(append(mods,
 		sm.Where(UserColumns.Userid.EQ(psql.Arg(o.Userid))),
 	)...)
 }
 
-func (os BookingSlice) UseridUser(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
+func (os BookingSlice) UseridUser(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Userid)
 	}
 
-	return Users.Query(ctx, exec, append(mods,
+	return Users.Query(append(mods,
 		sm.Where(psql.Group(UserColumns.Userid).In(PKArgs...)),
 	)...)
 }
 
 // BookingidTimeunits starts a query for related objects on timeunit
-func (o *Booking) BookingidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
-	return Timeunits.Query(ctx, exec, append(mods,
+func (o *Booking) BookingidTimeunits(mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
+	return Timeunits.Query(append(mods,
 		sm.Where(TimeunitColumns.Bookingid.EQ(psql.Arg(o.Bookingid))),
 	)...)
 }
 
-func (os BookingSlice) BookingidTimeunits(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
+func (os BookingSlice) BookingidTimeunits(mods ...bob.Mod[*dialect.SelectQuery]) TimeunitsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Bookingid)
 	}
 
-	return Timeunits.Query(ctx, exec, append(mods,
+	return Timeunits.Query(append(mods,
 		sm.Where(psql.Group(TimeunitColumns.Bookingid).In(PKArgs...)),
 	)...)
 }
@@ -636,11 +760,8 @@ func PreloadBookingCaridCar(opts ...psql.PreloadOption) psql.Preloader {
 		Name: "CaridCar",
 		Sides: []orm.RelSide{
 			{
-				From: "booking",
+				From: TableNames.Bookings,
 				To:   TableNames.Cars,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Cars.Name(ctx)
-				},
 				FromColumns: []string{
 					ColumnNames.Bookings.Carid,
 				},
@@ -681,7 +802,7 @@ func (o *Booking) LoadBookingCaridCar(ctx context.Context, exec bob.Executor, mo
 	// Reset the relationship
 	o.R.CaridCar = nil
 
-	related, err := o.CaridCar(ctx, exec, mods...).One()
+	related, err := o.CaridCar(mods...).One(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -698,7 +819,7 @@ func (os BookingSlice) LoadBookingCaridCar(ctx context.Context, exec bob.Executo
 		return nil
 	}
 
-	cars, err := os.CaridCar(ctx, exec, mods...).All()
+	cars, err := os.CaridCar(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -724,11 +845,8 @@ func PreloadBookingParkingspotidParkingspot(opts ...psql.PreloadOption) psql.Pre
 		Name: "ParkingspotidParkingspot",
 		Sides: []orm.RelSide{
 			{
-				From: "booking",
+				From: TableNames.Bookings,
 				To:   TableNames.Parkingspots,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Parkingspots.Name(ctx)
-				},
 				FromColumns: []string{
 					ColumnNames.Bookings.Parkingspotid,
 				},
@@ -769,7 +887,7 @@ func (o *Booking) LoadBookingParkingspotidParkingspot(ctx context.Context, exec 
 	// Reset the relationship
 	o.R.ParkingspotidParkingspot = nil
 
-	related, err := o.ParkingspotidParkingspot(ctx, exec, mods...).One()
+	related, err := o.ParkingspotidParkingspot(mods...).One(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -786,7 +904,7 @@ func (os BookingSlice) LoadBookingParkingspotidParkingspot(ctx context.Context, 
 		return nil
 	}
 
-	parkingspots, err := os.ParkingspotidParkingspot(ctx, exec, mods...).All()
+	parkingspots, err := os.ParkingspotidParkingspot(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -812,11 +930,8 @@ func PreloadBookingUseridUser(opts ...psql.PreloadOption) psql.Preloader {
 		Name: "UseridUser",
 		Sides: []orm.RelSide{
 			{
-				From: "booking",
+				From: TableNames.Bookings,
 				To:   TableNames.Users,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Users.Name(ctx)
-				},
 				FromColumns: []string{
 					ColumnNames.Bookings.Userid,
 				},
@@ -857,7 +972,7 @@ func (o *Booking) LoadBookingUseridUser(ctx context.Context, exec bob.Executor, 
 	// Reset the relationship
 	o.R.UseridUser = nil
 
-	related, err := o.UseridUser(ctx, exec, mods...).One()
+	related, err := o.UseridUser(mods...).One(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -874,7 +989,7 @@ func (os BookingSlice) LoadBookingUseridUser(ctx context.Context, exec bob.Execu
 		return nil
 	}
 
-	users, err := os.UseridUser(ctx, exec, mods...).All()
+	users, err := os.UseridUser(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -924,7 +1039,7 @@ func (o *Booking) LoadBookingBookingidTimeunits(ctx context.Context, exec bob.Ex
 	// Reset the relationship
 	o.R.BookingidTimeunits = nil
 
-	related, err := o.BookingidTimeunits(ctx, exec, mods...).All()
+	related, err := o.BookingidTimeunits(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -943,7 +1058,7 @@ func (os BookingSlice) LoadBookingBookingidTimeunits(ctx context.Context, exec b
 		return nil
 	}
 
-	timeunits, err := os.BookingidTimeunits(ctx, exec, mods...).All()
+	timeunits, err := os.BookingidTimeunits(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -972,7 +1087,7 @@ func attachBookingCaridCar0(ctx context.Context, exec bob.Executor, count int, b
 		Carid: omit.From(car1.Carid),
 	}
 
-	err := Bookings.Update(ctx, exec, setter, booking0)
+	err := booking0.Update(ctx, exec, setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachBookingCaridCar0: %w", err)
 	}
@@ -981,7 +1096,7 @@ func attachBookingCaridCar0(ctx context.Context, exec bob.Executor, count int, b
 }
 
 func (booking0 *Booking) InsertCaridCar(ctx context.Context, exec bob.Executor, related *CarSetter) error {
-	car1, err := Cars.Insert(ctx, exec, related)
+	car1, err := Cars.Insert(related).One(ctx, exec)
 	if err != nil {
 		return fmt.Errorf("inserting related objects: %w", err)
 	}
@@ -1018,7 +1133,7 @@ func attachBookingParkingspotidParkingspot0(ctx context.Context, exec bob.Execut
 		Parkingspotid: omit.From(parkingspot1.Parkingspotid),
 	}
 
-	err := Bookings.Update(ctx, exec, setter, booking0)
+	err := booking0.Update(ctx, exec, setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachBookingParkingspotidParkingspot0: %w", err)
 	}
@@ -1027,7 +1142,7 @@ func attachBookingParkingspotidParkingspot0(ctx context.Context, exec bob.Execut
 }
 
 func (booking0 *Booking) InsertParkingspotidParkingspot(ctx context.Context, exec bob.Executor, related *ParkingspotSetter) error {
-	parkingspot1, err := Parkingspots.Insert(ctx, exec, related)
+	parkingspot1, err := Parkingspots.Insert(related).One(ctx, exec)
 	if err != nil {
 		return fmt.Errorf("inserting related objects: %w", err)
 	}
@@ -1064,7 +1179,7 @@ func attachBookingUseridUser0(ctx context.Context, exec bob.Executor, count int,
 		Userid: omit.From(user1.Userid),
 	}
 
-	err := Bookings.Update(ctx, exec, setter, booking0)
+	err := booking0.Update(ctx, exec, setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachBookingUseridUser0: %w", err)
 	}
@@ -1073,7 +1188,7 @@ func attachBookingUseridUser0(ctx context.Context, exec bob.Executor, count int,
 }
 
 func (booking0 *Booking) InsertUseridUser(ctx context.Context, exec bob.Executor, related *UserSetter) error {
-	user1, err := Users.Insert(ctx, exec, related)
+	user1, err := Users.Insert(related).One(ctx, exec)
 	if err != nil {
 		return fmt.Errorf("inserting related objects: %w", err)
 	}
@@ -1110,7 +1225,7 @@ func insertBookingBookingidTimeunits0(ctx context.Context, exec bob.Executor, ti
 		timeunits1[i].Bookingid = omitnull.From(booking0.Bookingid)
 	}
 
-	ret, err := Timeunits.InsertMany(ctx, exec, timeunits1...)
+	ret, err := Timeunits.Insert(bob.ToMods(timeunits1...)).All(ctx, exec)
 	if err != nil {
 		return ret, fmt.Errorf("insertBookingBookingidTimeunits0: %w", err)
 	}
@@ -1123,7 +1238,7 @@ func attachBookingBookingidTimeunits0(ctx context.Context, exec bob.Executor, co
 		Bookingid: omitnull.From(booking0.Bookingid),
 	}
 
-	err := Timeunits.Update(ctx, exec, setter, timeunits1...)
+	err := timeunits1.UpdateAll(ctx, exec, *setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachBookingBookingidTimeunits0: %w", err)
 	}
@@ -1135,6 +1250,8 @@ func (booking0 *Booking) InsertBookingidTimeunits(ctx context.Context, exec bob.
 	if len(related) == 0 {
 		return nil
 	}
+
+	var err error
 
 	timeunits1, err := insertBookingBookingidTimeunits0(ctx, exec, related, booking0)
 	if err != nil {

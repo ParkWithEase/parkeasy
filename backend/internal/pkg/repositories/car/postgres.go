@@ -27,13 +27,13 @@ func NewPostgres(db bob.DB) *PostgresRepository {
 }
 
 func (p *PostgresRepository) Create(ctx context.Context, userID int64, car *models.CarCreationInput) (int64, Entry, error) {
-	inserted, err := dbmodels.Cars.Insert(ctx, p.db, &dbmodels.CarSetter{
+	inserted, err := dbmodels.Cars.Insert(&dbmodels.CarSetter{
 		Userid:       omit.From(userID),
 		Licenseplate: omit.From(car.LicensePlate),
 		Make:         omit.From(car.Make),
 		Model:        omit.From(car.Model),
 		Color:        omit.From(car.Color),
-	})
+	}).One(ctx, p.db)
 	if err != nil {
 		return -1, Entry{}, fmt.Errorf("could not commit transaction: %w", err)
 	}
@@ -60,10 +60,9 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, car *mode
 }
 
 func (p *PostgresRepository) DeleteByUUID(ctx context.Context, carID uuid.UUID) error {
-	rowsAffected, err := dbmodels.Cars.DeleteQ(
-		ctx, p.db,
+	rowsAffected, err := dbmodels.Cars.Delete(
 		dbmodels.DeleteWhere.Cars.Caruuid.EQ(carID),
-	).Exec()
+	).Exec(ctx, p.db)
 	if err != nil {
 		return fmt.Errorf("could not execute delete: %w", err)
 	}
@@ -76,17 +75,16 @@ func (p *PostgresRepository) DeleteByUUID(ctx context.Context, carID uuid.UUID) 
 }
 
 func (p *PostgresRepository) UpdateByUUID(ctx context.Context, carID uuid.UUID, car *models.CarCreationInput) (Entry, error) {
-	result, err := dbmodels.Cars.UpdateQ(
-		ctx, p.db,
+	result, err := dbmodels.Cars.Update(
 		dbmodels.UpdateWhere.Cars.Caruuid.EQ(carID),
-		&dbmodels.CarSetter{
+		dbmodels.CarSetter{
 			Licenseplate: omit.From(car.LicensePlate),
 			Make:         omit.From(car.Make),
 			Model:        omit.From(car.Model),
 			Color:        omit.From(car.Color),
-		},
+		}.UpdateMod(),
 		um.Returning(dbmodels.Cars.Columns()),
-	).One()
+	).One(ctx, p.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Entry{}, ErrNotFound
@@ -113,7 +111,6 @@ func (p *PostgresRepository) UpdateByUUID(ctx context.Context, carID uuid.UUID, 
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (Entry, error) {
 	result, err := dbmodels.Cars.Query(
-		ctx, p.db,
 		sm.Columns(
 			dbmodels.CarColumns.Licenseplate,
 			dbmodels.CarColumns.Make,
@@ -123,7 +120,7 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (En
 			dbmodels.CarColumns.Userid,
 		),
 		dbmodels.SelectWhere.Cars.Caruuid.EQ(carID),
-	).One()
+	).One(ctx, p.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
@@ -152,12 +149,11 @@ func (p *PostgresRepository) GetByUUID(ctx context.Context, carID uuid.UUID) (En
 
 func (p *PostgresRepository) GetOwnerByUUID(ctx context.Context, carID uuid.UUID) (int64, error) {
 	result, err := dbmodels.Cars.Query(
-		ctx, p.db,
 		sm.Columns(
 			dbmodels.CarColumns.Userid,
 		),
 		dbmodels.SelectWhere.Cars.Caruuid.EQ(carID),
-	).One()
+	).One(ctx, p.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = ErrNotFound
@@ -175,12 +171,11 @@ func (p *PostgresRepository) GetMany(ctx context.Context, userID int64, limit in
 	}
 
 	entryCursor, err := dbmodels.Cars.Query(
-		ctx, p.db,
 		sm.Columns(dbmodels.Cars.Columns()),
 		sm.OrderBy(dbmodels.CarColumns.Carid),
 		where,
 		sm.Limit(limit),
-	).Cursor()
+	).Cursor(ctx, p.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return []Entry{}, nil

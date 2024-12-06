@@ -69,10 +69,11 @@ func (cli *CLI) Run(ctx context.Context) (err error) {
 		Except: map[string][]string{
 			"schema_migrations": {},
 		},
-		UUIDPkg: "google",
+		UUIDPkg:    "google",
+		DriverName: "github.com/jackc/pgx/v5",
 	})
-	state := gen.State{
-		Config: gen.Config{
+	state := gen.State[any]{
+		Config: gen.Config[any]{
 			Wipe:            true,
 			NoFactory:       true,
 			StructTagCasing: "snake",
@@ -101,7 +102,7 @@ func (cli *CLI) Run(ctx context.Context) (err error) {
 				Key:       "models",
 				PkgName:   "dbmodels",
 				OutFolder: cli.OutDir,
-				Templates: []fs.FS{gen.ModelTemplates},
+				Templates: []fs.FS{gen.PSQLModelTemplates, gen.ModelTemplates},
 			},
 		},
 	}

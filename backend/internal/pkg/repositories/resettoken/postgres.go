@@ -36,7 +36,7 @@ func (p *PostgresRepository) Create(ctx context.Context, authID uuid.UUID, token
 
 	// Delete any existing tokens
 	delQuery := psql.Delete(
-		dm.From(dbmodels.Resettokens.Name(ctx)),
+		dm.From(dbmodels.Resettokens.Name()),
 		dbmodels.DeleteWhere.Resettokens.Authuuid.EQ(authID),
 	)
 	_, err = bob.Exec(ctx, tx, delQuery)
@@ -45,11 +45,11 @@ func (p *PostgresRepository) Create(ctx context.Context, authID uuid.UUID, token
 	}
 
 	// Create a new token
-	_, err = dbmodels.Resettokens.Insert(ctx, tx, &dbmodels.ResettokenSetter{
+	_, err = dbmodels.Resettokens.Insert(&dbmodels.ResettokenSetter{
 		Token:    omit.From(string(token)),
 		Authuuid: omit.From(authID),
 		Expiry:   omit.From(time.Now().Add(15 * time.Minute)),
-	})
+	}).Exec(ctx, tx)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (p *PostgresRepository) Create(ctx context.Context, authID uuid.UUID, token
 func (p *PostgresRepository) Get(ctx context.Context, token Token) (uuid.UUID, error) {
 	query := psql.Select(
 		sm.Columns(dbmodels.ResettokenColumns.Authuuid),
-		sm.From(dbmodels.Resettokens.Name(ctx)),
+		sm.From(dbmodels.Resettokens.Name()),
 		dbmodels.SelectWhere.Resettokens.Token.EQ(string(token)),
 	)
 
@@ -82,7 +82,7 @@ func (p *PostgresRepository) Get(ctx context.Context, token Token) (uuid.UUID, e
 
 func (p *PostgresRepository) Delete(ctx context.Context, token Token) error {
 	query := psql.Delete(
-		dm.From(dbmodels.Resettokens.Name(ctx)),
+		dm.From(dbmodels.Resettokens.Name()),
 		dbmodels.DeleteWhere.Resettokens.Token.EQ(string(token)),
 	)
 

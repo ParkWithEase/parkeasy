@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/aarondl/opt/omit"
@@ -15,7 +16,7 @@ import (
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
-	"github.com/stephenafamo/bob/dialect/psql/im"
+	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
 	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/expr"
@@ -46,9 +47,6 @@ var Users = psql.NewTablex[*User, UserSlice, *UserSetter]("", "users")
 // UsersQuery is a query on the users table
 type UsersQuery = *psql.ViewQuery[*User, UserSlice]
 
-// UsersStmt is a prepared statment on users
-type UsersStmt = bob.QueryStmt[*User, UserSlice]
-
 // userR is where relationships are stored.
 type userR struct {
 	UseridBookings        BookingSlice        // booking.booking_userid_fkey
@@ -56,182 +54,6 @@ type userR struct {
 	UseridParkingspots    ParkingspotSlice    // parkingspot.parkingspot_userid_fkey
 	UseridPreferencespots PreferencespotSlice // preferencespot.preferencespot_userid_fkey
 	AuthuuidAuth          *Auth               // users.users_authuuid_fkey
-}
-
-// UserSetter is used for insert/upsert/update operations
-// All values are optional, and do not have to be set
-// Generated columns are not included
-type UserSetter struct {
-	Userid     omit.Val[int64]     `db:"userid,pk" `
-	Useruuid   omit.Val[uuid.UUID] `db:"useruuid" `
-	Authuuid   omit.Val[uuid.UUID] `db:"authuuid" `
-	Fullname   omit.Val[string]    `db:"fullname" `
-	Email      omit.Val[string]    `db:"email" `
-	Isverified omit.Val[bool]      `db:"isverified" `
-	Addedat    omit.Val[time.Time] `db:"addedat" `
-}
-
-func (s UserSetter) SetColumns() []string {
-	vals := make([]string, 0, 7)
-	if !s.Userid.IsUnset() {
-		vals = append(vals, "userid")
-	}
-
-	if !s.Useruuid.IsUnset() {
-		vals = append(vals, "useruuid")
-	}
-
-	if !s.Authuuid.IsUnset() {
-		vals = append(vals, "authuuid")
-	}
-
-	if !s.Fullname.IsUnset() {
-		vals = append(vals, "fullname")
-	}
-
-	if !s.Email.IsUnset() {
-		vals = append(vals, "email")
-	}
-
-	if !s.Isverified.IsUnset() {
-		vals = append(vals, "isverified")
-	}
-
-	if !s.Addedat.IsUnset() {
-		vals = append(vals, "addedat")
-	}
-
-	return vals
-}
-
-func (s UserSetter) Overwrite(t *User) {
-	if !s.Userid.IsUnset() {
-		t.Userid, _ = s.Userid.Get()
-	}
-	if !s.Useruuid.IsUnset() {
-		t.Useruuid, _ = s.Useruuid.Get()
-	}
-	if !s.Authuuid.IsUnset() {
-		t.Authuuid, _ = s.Authuuid.Get()
-	}
-	if !s.Fullname.IsUnset() {
-		t.Fullname, _ = s.Fullname.Get()
-	}
-	if !s.Email.IsUnset() {
-		t.Email, _ = s.Email.Get()
-	}
-	if !s.Isverified.IsUnset() {
-		t.Isverified, _ = s.Isverified.Get()
-	}
-	if !s.Addedat.IsUnset() {
-		t.Addedat, _ = s.Addedat.Get()
-	}
-}
-
-func (s UserSetter) InsertMod() bob.Mod[*dialect.InsertQuery] {
-	vals := make([]bob.Expression, 7)
-	if s.Userid.IsUnset() {
-		vals[0] = psql.Raw("DEFAULT")
-	} else {
-		vals[0] = psql.Arg(s.Userid)
-	}
-
-	if s.Useruuid.IsUnset() {
-		vals[1] = psql.Raw("DEFAULT")
-	} else {
-		vals[1] = psql.Arg(s.Useruuid)
-	}
-
-	if s.Authuuid.IsUnset() {
-		vals[2] = psql.Raw("DEFAULT")
-	} else {
-		vals[2] = psql.Arg(s.Authuuid)
-	}
-
-	if s.Fullname.IsUnset() {
-		vals[3] = psql.Raw("DEFAULT")
-	} else {
-		vals[3] = psql.Arg(s.Fullname)
-	}
-
-	if s.Email.IsUnset() {
-		vals[4] = psql.Raw("DEFAULT")
-	} else {
-		vals[4] = psql.Arg(s.Email)
-	}
-
-	if s.Isverified.IsUnset() {
-		vals[5] = psql.Raw("DEFAULT")
-	} else {
-		vals[5] = psql.Arg(s.Isverified)
-	}
-
-	if s.Addedat.IsUnset() {
-		vals[6] = psql.Raw("DEFAULT")
-	} else {
-		vals[6] = psql.Arg(s.Addedat)
-	}
-
-	return im.Values(vals...)
-}
-
-func (s UserSetter) Apply(q *dialect.UpdateQuery) {
-	um.Set(s.Expressions()...).Apply(q)
-}
-
-func (s UserSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 7)
-
-	if !s.Userid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "userid")...),
-			psql.Arg(s.Userid),
-		}})
-	}
-
-	if !s.Useruuid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "useruuid")...),
-			psql.Arg(s.Useruuid),
-		}})
-	}
-
-	if !s.Authuuid.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "authuuid")...),
-			psql.Arg(s.Authuuid),
-		}})
-	}
-
-	if !s.Fullname.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "fullname")...),
-			psql.Arg(s.Fullname),
-		}})
-	}
-
-	if !s.Email.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "email")...),
-			psql.Arg(s.Email),
-		}})
-	}
-
-	if !s.Isverified.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "isverified")...),
-			psql.Arg(s.Isverified),
-		}})
-	}
-
-	if !s.Addedat.IsUnset() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			psql.Quote(append(prefix, "addedat")...),
-			psql.Arg(s.Addedat),
-		}})
-	}
-
-	return exprs
 }
 
 type userColumnNames struct {
@@ -304,6 +126,411 @@ func buildUserWhere[Q psql.Filterable](cols userColumns) userWhere[Q] {
 	}
 }
 
+var UserErrors = &userErrors{
+	ErrUniqueAuthuuid: &errUniqueConstraint{s: "users_authuuid_key"},
+
+	ErrUniqueEmail: &errUniqueConstraint{s: "users_email_key"},
+
+	ErrUniqueUseruuid: &errUniqueConstraint{s: "users_useruuid_key"},
+}
+
+type userErrors struct {
+	ErrUniqueAuthuuid error
+
+	ErrUniqueEmail error
+
+	ErrUniqueUseruuid error
+}
+
+// UserSetter is used for insert/upsert/update operations
+// All values are optional, and do not have to be set
+// Generated columns are not included
+type UserSetter struct {
+	Userid     omit.Val[int64]     `db:"userid,pk" `
+	Useruuid   omit.Val[uuid.UUID] `db:"useruuid" `
+	Authuuid   omit.Val[uuid.UUID] `db:"authuuid" `
+	Fullname   omit.Val[string]    `db:"fullname" `
+	Email      omit.Val[string]    `db:"email" `
+	Isverified omit.Val[bool]      `db:"isverified" `
+	Addedat    omit.Val[time.Time] `db:"addedat" `
+}
+
+func (s UserSetter) SetColumns() []string {
+	vals := make([]string, 0, 7)
+	if !s.Userid.IsUnset() {
+		vals = append(vals, "userid")
+	}
+
+	if !s.Useruuid.IsUnset() {
+		vals = append(vals, "useruuid")
+	}
+
+	if !s.Authuuid.IsUnset() {
+		vals = append(vals, "authuuid")
+	}
+
+	if !s.Fullname.IsUnset() {
+		vals = append(vals, "fullname")
+	}
+
+	if !s.Email.IsUnset() {
+		vals = append(vals, "email")
+	}
+
+	if !s.Isverified.IsUnset() {
+		vals = append(vals, "isverified")
+	}
+
+	if !s.Addedat.IsUnset() {
+		vals = append(vals, "addedat")
+	}
+
+	return vals
+}
+
+func (s UserSetter) Overwrite(t *User) {
+	if !s.Userid.IsUnset() {
+		t.Userid, _ = s.Userid.Get()
+	}
+	if !s.Useruuid.IsUnset() {
+		t.Useruuid, _ = s.Useruuid.Get()
+	}
+	if !s.Authuuid.IsUnset() {
+		t.Authuuid, _ = s.Authuuid.Get()
+	}
+	if !s.Fullname.IsUnset() {
+		t.Fullname, _ = s.Fullname.Get()
+	}
+	if !s.Email.IsUnset() {
+		t.Email, _ = s.Email.Get()
+	}
+	if !s.Isverified.IsUnset() {
+		t.Isverified, _ = s.Isverified.Get()
+	}
+	if !s.Addedat.IsUnset() {
+		t.Addedat, _ = s.Addedat.Get()
+	}
+}
+
+func (s *UserSetter) Apply(q *dialect.InsertQuery) {
+	q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+		return Users.BeforeInsertHooks.RunHooks(ctx, exec, s)
+	})
+
+	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		vals := make([]bob.Expression, 7)
+		if s.Userid.IsUnset() {
+			vals[0] = psql.Raw("DEFAULT")
+		} else {
+			vals[0] = psql.Arg(s.Userid)
+		}
+
+		if s.Useruuid.IsUnset() {
+			vals[1] = psql.Raw("DEFAULT")
+		} else {
+			vals[1] = psql.Arg(s.Useruuid)
+		}
+
+		if s.Authuuid.IsUnset() {
+			vals[2] = psql.Raw("DEFAULT")
+		} else {
+			vals[2] = psql.Arg(s.Authuuid)
+		}
+
+		if s.Fullname.IsUnset() {
+			vals[3] = psql.Raw("DEFAULT")
+		} else {
+			vals[3] = psql.Arg(s.Fullname)
+		}
+
+		if s.Email.IsUnset() {
+			vals[4] = psql.Raw("DEFAULT")
+		} else {
+			vals[4] = psql.Arg(s.Email)
+		}
+
+		if s.Isverified.IsUnset() {
+			vals[5] = psql.Raw("DEFAULT")
+		} else {
+			vals[5] = psql.Arg(s.Isverified)
+		}
+
+		if s.Addedat.IsUnset() {
+			vals[6] = psql.Raw("DEFAULT")
+		} else {
+			vals[6] = psql.Arg(s.Addedat)
+		}
+
+		return bob.ExpressSlice(ctx, w, d, start, vals, "", ", ", "")
+	}))
+}
+
+func (s UserSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return um.Set(s.Expressions()...)
+}
+
+func (s UserSetter) Expressions(prefix ...string) []bob.Expression {
+	exprs := make([]bob.Expression, 0, 7)
+
+	if !s.Userid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "userid")...),
+			psql.Arg(s.Userid),
+		}})
+	}
+
+	if !s.Useruuid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "useruuid")...),
+			psql.Arg(s.Useruuid),
+		}})
+	}
+
+	if !s.Authuuid.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "authuuid")...),
+			psql.Arg(s.Authuuid),
+		}})
+	}
+
+	if !s.Fullname.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "fullname")...),
+			psql.Arg(s.Fullname),
+		}})
+	}
+
+	if !s.Email.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "email")...),
+			psql.Arg(s.Email),
+		}})
+	}
+
+	if !s.Isverified.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "isverified")...),
+			psql.Arg(s.Isverified),
+		}})
+	}
+
+	if !s.Addedat.IsUnset() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			psql.Quote(append(prefix, "addedat")...),
+			psql.Arg(s.Addedat),
+		}})
+	}
+
+	return exprs
+}
+
+// FindUser retrieves a single record by primary key
+// If cols is empty Find will return all columns.
+func FindUser(ctx context.Context, exec bob.Executor, UseridPK int64, cols ...string) (*User, error) {
+	if len(cols) == 0 {
+		return Users.Query(
+			SelectWhere.Users.Userid.EQ(UseridPK),
+		).One(ctx, exec)
+	}
+
+	return Users.Query(
+		SelectWhere.Users.Userid.EQ(UseridPK),
+		sm.Columns(Users.Columns().Only(cols...)),
+	).One(ctx, exec)
+}
+
+// UserExists checks the presence of a single record by primary key
+func UserExists(ctx context.Context, exec bob.Executor, UseridPK int64) (bool, error) {
+	return Users.Query(
+		SelectWhere.Users.Userid.EQ(UseridPK),
+	).Exists(ctx, exec)
+}
+
+// AfterQueryHook is called after User is retrieved from the database
+func (o *User) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Users.AfterSelectHooks.RunHooks(ctx, exec, UserSlice{o})
+	case bob.QueryTypeInsert:
+		ctx, err = Users.AfterInsertHooks.RunHooks(ctx, exec, UserSlice{o})
+	case bob.QueryTypeUpdate:
+		ctx, err = Users.AfterUpdateHooks.RunHooks(ctx, exec, UserSlice{o})
+	case bob.QueryTypeDelete:
+		ctx, err = Users.AfterDeleteHooks.RunHooks(ctx, exec, UserSlice{o})
+	}
+
+	return err
+}
+
+// PrimaryKeyVals returns the primary key values of the User
+func (o *User) PrimaryKeyVals() bob.Expression {
+	return psql.Arg(o.Userid)
+}
+
+func (o *User) pkEQ() dialect.Expression {
+	return psql.Quote("users", "userid").EQ(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		return o.PrimaryKeyVals().WriteSQL(ctx, w, d, start)
+	}))
+}
+
+// Update uses an executor to update the User
+func (o *User) Update(ctx context.Context, exec bob.Executor, s *UserSetter) error {
+	v, err := Users.Update(s.UpdateMod(), um.Where(o.pkEQ())).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.R = v.R
+	*o = *v
+
+	return nil
+}
+
+// Delete deletes a single User record with an executor
+func (o *User) Delete(ctx context.Context, exec bob.Executor) error {
+	_, err := Users.Delete(dm.Where(o.pkEQ())).Exec(ctx, exec)
+	return err
+}
+
+// Reload refreshes the User using the executor
+func (o *User) Reload(ctx context.Context, exec bob.Executor) error {
+	o2, err := Users.Query(
+		SelectWhere.Users.Userid.EQ(o.Userid),
+	).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+	o2.R = o.R
+	*o = *o2
+
+	return nil
+}
+
+// AfterQueryHook is called after UserSlice is retrieved from the database
+func (o UserSlice) AfterQueryHook(ctx context.Context, exec bob.Executor, queryType bob.QueryType) error {
+	var err error
+
+	switch queryType {
+	case bob.QueryTypeSelect:
+		ctx, err = Users.AfterSelectHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeInsert:
+		ctx, err = Users.AfterInsertHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeUpdate:
+		ctx, err = Users.AfterUpdateHooks.RunHooks(ctx, exec, o)
+	case bob.QueryTypeDelete:
+		ctx, err = Users.AfterDeleteHooks.RunHooks(ctx, exec, o)
+	}
+
+	return err
+}
+
+func (o UserSlice) pkIN() dialect.Expression {
+	return psql.Quote("users", "userid").In(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
+		pkPairs := make([]bob.Expression, len(o))
+		for i, row := range o {
+			pkPairs[i] = row.PrimaryKeyVals()
+		}
+		return bob.ExpressSlice(ctx, w, d, start, pkPairs, "", ", ", "")
+	}))
+}
+
+// copyMatchingRows finds models in the given slice that have the same primary key
+// then it first copies the existing relationships from the old model to the new model
+// and then replaces the old model in the slice with the new model
+func (o UserSlice) copyMatchingRows(from ...*User) {
+	for i, old := range o {
+		for _, new := range from {
+			if new.Userid != old.Userid {
+				continue
+			}
+			new.R = old.R
+			o[i] = new
+			break
+		}
+	}
+}
+
+// UpdateMod modifies an update query with "WHERE primary_key IN (o...)"
+func (o UserSlice) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
+	return bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Users.BeforeUpdateHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *User:
+				o.copyMatchingRows(retrieved)
+			case []*User:
+				o.copyMatchingRows(retrieved...)
+			case UserSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a User or a slice of User
+				// then run the AfterUpdateHooks on the slice
+				_, err = Users.AfterUpdateHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+// DeleteMod modifies an delete query with "WHERE primary_key IN (o...)"
+func (o UserSlice) DeleteMod() bob.Mod[*dialect.DeleteQuery] {
+	return bob.ModFunc[*dialect.DeleteQuery](func(q *dialect.DeleteQuery) {
+		q.AppendHooks(func(ctx context.Context, exec bob.Executor) (context.Context, error) {
+			return Users.BeforeDeleteHooks.RunHooks(ctx, exec, o)
+		})
+
+		q.AppendLoader(bob.LoaderFunc(func(ctx context.Context, exec bob.Executor, retrieved any) error {
+			var err error
+			switch retrieved := retrieved.(type) {
+			case *User:
+				o.copyMatchingRows(retrieved)
+			case []*User:
+				o.copyMatchingRows(retrieved...)
+			case UserSlice:
+				o.copyMatchingRows(retrieved...)
+			default:
+				// If the retrieved value is not a User or a slice of User
+				// then run the AfterDeleteHooks on the slice
+				_, err = Users.AfterDeleteHooks.RunHooks(ctx, exec, o)
+			}
+
+			return err
+		}))
+
+		q.AppendWhere(o.pkIN())
+	})
+}
+
+func (o UserSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals UserSetter) error {
+	_, err := Users.Update(vals.UpdateMod(), o.UpdateMod()).All(ctx, exec)
+	return err
+}
+
+func (o UserSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
+	_, err := Users.Delete(o.DeleteMod()).Exec(ctx, exec)
+	return err
+}
+
+func (o UserSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
+	o2, err := Users.Query(sm.Where(o.pkIN())).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.copyMatchingRows(o2...)
+
+	return nil
+}
+
 type userJoins[Q dialect.Joinable] struct {
 	typ                   string
 	UseridBookings        func(context.Context) modAs[Q, bookingColumns]
@@ -328,101 +555,6 @@ func buildUserJoins[Q dialect.Joinable](cols userColumns, typ string) userJoins[
 	}
 }
 
-// FindUser retrieves a single record by primary key
-// If cols is empty Find will return all columns.
-func FindUser(ctx context.Context, exec bob.Executor, UseridPK int64, cols ...string) (*User, error) {
-	if len(cols) == 0 {
-		return Users.Query(
-			ctx, exec,
-			SelectWhere.Users.Userid.EQ(UseridPK),
-		).One()
-	}
-
-	return Users.Query(
-		ctx, exec,
-		SelectWhere.Users.Userid.EQ(UseridPK),
-		sm.Columns(Users.Columns().Only(cols...)),
-	).One()
-}
-
-// UserExists checks the presence of a single record by primary key
-func UserExists(ctx context.Context, exec bob.Executor, UseridPK int64) (bool, error) {
-	return Users.Query(
-		ctx, exec,
-		SelectWhere.Users.Userid.EQ(UseridPK),
-	).Exists()
-}
-
-// PrimaryKeyVals returns the primary key values of the User
-func (o *User) PrimaryKeyVals() bob.Expression {
-	return psql.Arg(o.Userid)
-}
-
-// Update uses an executor to update the User
-func (o *User) Update(ctx context.Context, exec bob.Executor, s *UserSetter) error {
-	return Users.Update(ctx, exec, s, o)
-}
-
-// Delete deletes a single User record with an executor
-func (o *User) Delete(ctx context.Context, exec bob.Executor) error {
-	return Users.Delete(ctx, exec, o)
-}
-
-// Reload refreshes the User using the executor
-func (o *User) Reload(ctx context.Context, exec bob.Executor) error {
-	o2, err := Users.Query(
-		ctx, exec,
-		SelectWhere.Users.Userid.EQ(o.Userid),
-	).One()
-	if err != nil {
-		return err
-	}
-	o2.R = o.R
-	*o = *o2
-
-	return nil
-}
-
-func (o UserSlice) UpdateAll(ctx context.Context, exec bob.Executor, vals UserSetter) error {
-	return Users.Update(ctx, exec, &vals, o...)
-}
-
-func (o UserSlice) DeleteAll(ctx context.Context, exec bob.Executor) error {
-	return Users.Delete(ctx, exec, o...)
-}
-
-func (o UserSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
-	var mods []bob.Mod[*dialect.SelectQuery]
-
-	UseridPK := make([]int64, len(o))
-
-	for i, o := range o {
-		UseridPK[i] = o.Userid
-	}
-
-	mods = append(mods,
-		SelectWhere.Users.Userid.In(UseridPK...),
-	)
-
-	o2, err := Users.Query(ctx, exec, mods...).All()
-	if err != nil {
-		return err
-	}
-
-	for _, old := range o {
-		for _, new := range o2 {
-			if new.Userid != old.Userid {
-				continue
-			}
-			new.R = old.R
-			*old = *new
-			break
-		}
-	}
-
-	return nil
-}
-
 func usersJoinUseridBookings[Q dialect.Joinable](from userColumns, typ string) func(context.Context) modAs[Q, bookingColumns] {
 	return func(ctx context.Context) modAs[Q, bookingColumns] {
 		return modAs[Q, bookingColumns]{
@@ -431,7 +563,7 @@ func usersJoinUseridBookings[Q dialect.Joinable](from userColumns, typ string) f
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Bookings.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Bookings.Name().As(to.Alias())).On(
 						to.Userid.EQ(from.Userid),
 					))
 				}
@@ -450,7 +582,7 @@ func usersJoinUseridCars[Q dialect.Joinable](from userColumns, typ string) func(
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Cars.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Cars.Name().As(to.Alias())).On(
 						to.Userid.EQ(from.Userid),
 					))
 				}
@@ -469,7 +601,7 @@ func usersJoinUseridParkingspots[Q dialect.Joinable](from userColumns, typ strin
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Parkingspots.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Parkingspots.Name().As(to.Alias())).On(
 						to.Userid.EQ(from.Userid),
 					))
 				}
@@ -488,7 +620,7 @@ func usersJoinUseridPreferencespots[Q dialect.Joinable](from userColumns, typ st
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Preferencespots.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Preferencespots.Name().As(to.Alias())).On(
 						to.Userid.EQ(from.Userid),
 					))
 				}
@@ -507,7 +639,7 @@ func usersJoinAuthuuidAuth[Q dialect.Joinable](from userColumns, typ string) fun
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, Auths.Name(ctx).As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, Auths.Name().As(to.Alias())).On(
 						to.Authuuid.EQ(from.Authuuid),
 					))
 				}
@@ -519,91 +651,91 @@ func usersJoinAuthuuidAuth[Q dialect.Joinable](from userColumns, typ string) fun
 }
 
 // UseridBookings starts a query for related objects on booking
-func (o *User) UseridBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
-	return Bookings.Query(ctx, exec, append(mods,
+func (o *User) UseridBookings(mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
+	return Bookings.Query(append(mods,
 		sm.Where(BookingColumns.Userid.EQ(psql.Arg(o.Userid))),
 	)...)
 }
 
-func (os UserSlice) UseridBookings(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
+func (os UserSlice) UseridBookings(mods ...bob.Mod[*dialect.SelectQuery]) BookingsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Userid)
 	}
 
-	return Bookings.Query(ctx, exec, append(mods,
+	return Bookings.Query(append(mods,
 		sm.Where(psql.Group(BookingColumns.Userid).In(PKArgs...)),
 	)...)
 }
 
 // UseridCars starts a query for related objects on car
-func (o *User) UseridCars(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
-	return Cars.Query(ctx, exec, append(mods,
+func (o *User) UseridCars(mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
+	return Cars.Query(append(mods,
 		sm.Where(CarColumns.Userid.EQ(psql.Arg(o.Userid))),
 	)...)
 }
 
-func (os UserSlice) UseridCars(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
+func (os UserSlice) UseridCars(mods ...bob.Mod[*dialect.SelectQuery]) CarsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Userid)
 	}
 
-	return Cars.Query(ctx, exec, append(mods,
+	return Cars.Query(append(mods,
 		sm.Where(psql.Group(CarColumns.Userid).In(PKArgs...)),
 	)...)
 }
 
 // UseridParkingspots starts a query for related objects on parkingspot
-func (o *User) UseridParkingspots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
-	return Parkingspots.Query(ctx, exec, append(mods,
+func (o *User) UseridParkingspots(mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
+	return Parkingspots.Query(append(mods,
 		sm.Where(ParkingspotColumns.Userid.EQ(psql.Arg(o.Userid))),
 	)...)
 }
 
-func (os UserSlice) UseridParkingspots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
+func (os UserSlice) UseridParkingspots(mods ...bob.Mod[*dialect.SelectQuery]) ParkingspotsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Userid)
 	}
 
-	return Parkingspots.Query(ctx, exec, append(mods,
+	return Parkingspots.Query(append(mods,
 		sm.Where(psql.Group(ParkingspotColumns.Userid).In(PKArgs...)),
 	)...)
 }
 
 // UseridPreferencespots starts a query for related objects on preferencespot
-func (o *User) UseridPreferencespots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) PreferencespotsQuery {
-	return Preferencespots.Query(ctx, exec, append(mods,
+func (o *User) UseridPreferencespots(mods ...bob.Mod[*dialect.SelectQuery]) PreferencespotsQuery {
+	return Preferencespots.Query(append(mods,
 		sm.Where(PreferencespotColumns.Userid.EQ(psql.Arg(o.Userid))),
 	)...)
 }
 
-func (os UserSlice) UseridPreferencespots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) PreferencespotsQuery {
+func (os UserSlice) UseridPreferencespots(mods ...bob.Mod[*dialect.SelectQuery]) PreferencespotsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Userid)
 	}
 
-	return Preferencespots.Query(ctx, exec, append(mods,
+	return Preferencespots.Query(append(mods,
 		sm.Where(psql.Group(PreferencespotColumns.Userid).In(PKArgs...)),
 	)...)
 }
 
 // AuthuuidAuth starts a query for related objects on auth
-func (o *User) AuthuuidAuth(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) AuthsQuery {
-	return Auths.Query(ctx, exec, append(mods,
+func (o *User) AuthuuidAuth(mods ...bob.Mod[*dialect.SelectQuery]) AuthsQuery {
+	return Auths.Query(append(mods,
 		sm.Where(AuthColumns.Authuuid.EQ(psql.Arg(o.Authuuid))),
 	)...)
 }
 
-func (os UserSlice) AuthuuidAuth(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) AuthsQuery {
+func (os UserSlice) AuthuuidAuth(mods ...bob.Mod[*dialect.SelectQuery]) AuthsQuery {
 	PKArgs := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgs[i] = psql.ArgGroup(o.Authuuid)
 	}
 
-	return Auths.Query(ctx, exec, append(mods,
+	return Auths.Query(append(mods,
 		sm.Where(psql.Group(AuthColumns.Authuuid).In(PKArgs...)),
 	)...)
 }
@@ -716,7 +848,7 @@ func (o *User) LoadUserUseridBookings(ctx context.Context, exec bob.Executor, mo
 	// Reset the relationship
 	o.R.UseridBookings = nil
 
-	related, err := o.UseridBookings(ctx, exec, mods...).All()
+	related, err := o.UseridBookings(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -735,7 +867,7 @@ func (os UserSlice) LoadUserUseridBookings(ctx context.Context, exec bob.Executo
 		return nil
 	}
 
-	bookings, err := os.UseridBookings(ctx, exec, mods...).All()
+	bookings, err := os.UseridBookings(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -788,7 +920,7 @@ func (o *User) LoadUserUseridCars(ctx context.Context, exec bob.Executor, mods .
 	// Reset the relationship
 	o.R.UseridCars = nil
 
-	related, err := o.UseridCars(ctx, exec, mods...).All()
+	related, err := o.UseridCars(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -807,7 +939,7 @@ func (os UserSlice) LoadUserUseridCars(ctx context.Context, exec bob.Executor, m
 		return nil
 	}
 
-	cars, err := os.UseridCars(ctx, exec, mods...).All()
+	cars, err := os.UseridCars(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -860,7 +992,7 @@ func (o *User) LoadUserUseridParkingspots(ctx context.Context, exec bob.Executor
 	// Reset the relationship
 	o.R.UseridParkingspots = nil
 
-	related, err := o.UseridParkingspots(ctx, exec, mods...).All()
+	related, err := o.UseridParkingspots(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -879,7 +1011,7 @@ func (os UserSlice) LoadUserUseridParkingspots(ctx context.Context, exec bob.Exe
 		return nil
 	}
 
-	parkingspots, err := os.UseridParkingspots(ctx, exec, mods...).All()
+	parkingspots, err := os.UseridParkingspots(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -932,7 +1064,7 @@ func (o *User) LoadUserUseridPreferencespots(ctx context.Context, exec bob.Execu
 	// Reset the relationship
 	o.R.UseridPreferencespots = nil
 
-	related, err := o.UseridPreferencespots(ctx, exec, mods...).All()
+	related, err := o.UseridPreferencespots(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -951,7 +1083,7 @@ func (os UserSlice) LoadUserUseridPreferencespots(ctx context.Context, exec bob.
 		return nil
 	}
 
-	preferencespots, err := os.UseridPreferencespots(ctx, exec, mods...).All()
+	preferencespots, err := os.UseridPreferencespots(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -980,11 +1112,8 @@ func PreloadUserAuthuuidAuth(opts ...psql.PreloadOption) psql.Preloader {
 		Name: "AuthuuidAuth",
 		Sides: []orm.RelSide{
 			{
-				From: "users",
+				From: TableNames.Users,
 				To:   TableNames.Auths,
-				ToExpr: func(ctx context.Context) bob.Expression {
-					return Auths.Name(ctx)
-				},
 				FromColumns: []string{
 					ColumnNames.Users.Authuuid,
 				},
@@ -1025,7 +1154,7 @@ func (o *User) LoadUserAuthuuidAuth(ctx context.Context, exec bob.Executor, mods
 	// Reset the relationship
 	o.R.AuthuuidAuth = nil
 
-	related, err := o.AuthuuidAuth(ctx, exec, mods...).One()
+	related, err := o.AuthuuidAuth(mods...).One(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -1042,7 +1171,7 @@ func (os UserSlice) LoadUserAuthuuidAuth(ctx context.Context, exec bob.Executor,
 		return nil
 	}
 
-	auths, err := os.AuthuuidAuth(ctx, exec, mods...).All()
+	auths, err := os.AuthuuidAuth(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -1068,7 +1197,7 @@ func insertUserUseridBookings0(ctx context.Context, exec bob.Executor, bookings1
 		bookings1[i].Userid = omit.From(user0.Userid)
 	}
 
-	ret, err := Bookings.InsertMany(ctx, exec, bookings1...)
+	ret, err := Bookings.Insert(bob.ToMods(bookings1...)).All(ctx, exec)
 	if err != nil {
 		return ret, fmt.Errorf("insertUserUseridBookings0: %w", err)
 	}
@@ -1081,7 +1210,7 @@ func attachUserUseridBookings0(ctx context.Context, exec bob.Executor, count int
 		Userid: omit.From(user0.Userid),
 	}
 
-	err := Bookings.Update(ctx, exec, setter, bookings1...)
+	err := bookings1.UpdateAll(ctx, exec, *setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachUserUseridBookings0: %w", err)
 	}
@@ -1093,6 +1222,8 @@ func (user0 *User) InsertUseridBookings(ctx context.Context, exec bob.Executor, 
 	if len(related) == 0 {
 		return nil
 	}
+
+	var err error
 
 	bookings1, err := insertUserUseridBookings0(ctx, exec, related, user0)
 	if err != nil {
@@ -1134,7 +1265,7 @@ func insertUserUseridCars0(ctx context.Context, exec bob.Executor, cars1 []*CarS
 		cars1[i].Userid = omit.From(user0.Userid)
 	}
 
-	ret, err := Cars.InsertMany(ctx, exec, cars1...)
+	ret, err := Cars.Insert(bob.ToMods(cars1...)).All(ctx, exec)
 	if err != nil {
 		return ret, fmt.Errorf("insertUserUseridCars0: %w", err)
 	}
@@ -1147,7 +1278,7 @@ func attachUserUseridCars0(ctx context.Context, exec bob.Executor, count int, ca
 		Userid: omit.From(user0.Userid),
 	}
 
-	err := Cars.Update(ctx, exec, setter, cars1...)
+	err := cars1.UpdateAll(ctx, exec, *setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachUserUseridCars0: %w", err)
 	}
@@ -1159,6 +1290,8 @@ func (user0 *User) InsertUseridCars(ctx context.Context, exec bob.Executor, rela
 	if len(related) == 0 {
 		return nil
 	}
+
+	var err error
 
 	cars1, err := insertUserUseridCars0(ctx, exec, related, user0)
 	if err != nil {
@@ -1200,7 +1333,7 @@ func insertUserUseridParkingspots0(ctx context.Context, exec bob.Executor, parki
 		parkingspots1[i].Userid = omit.From(user0.Userid)
 	}
 
-	ret, err := Parkingspots.InsertMany(ctx, exec, parkingspots1...)
+	ret, err := Parkingspots.Insert(bob.ToMods(parkingspots1...)).All(ctx, exec)
 	if err != nil {
 		return ret, fmt.Errorf("insertUserUseridParkingspots0: %w", err)
 	}
@@ -1213,7 +1346,7 @@ func attachUserUseridParkingspots0(ctx context.Context, exec bob.Executor, count
 		Userid: omit.From(user0.Userid),
 	}
 
-	err := Parkingspots.Update(ctx, exec, setter, parkingspots1...)
+	err := parkingspots1.UpdateAll(ctx, exec, *setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachUserUseridParkingspots0: %w", err)
 	}
@@ -1225,6 +1358,8 @@ func (user0 *User) InsertUseridParkingspots(ctx context.Context, exec bob.Execut
 	if len(related) == 0 {
 		return nil
 	}
+
+	var err error
 
 	parkingspots1, err := insertUserUseridParkingspots0(ctx, exec, related, user0)
 	if err != nil {
@@ -1266,7 +1401,7 @@ func insertUserUseridPreferencespots0(ctx context.Context, exec bob.Executor, pr
 		preferencespots1[i].Userid = omit.From(user0.Userid)
 	}
 
-	ret, err := Preferencespots.InsertMany(ctx, exec, preferencespots1...)
+	ret, err := Preferencespots.Insert(bob.ToMods(preferencespots1...)).All(ctx, exec)
 	if err != nil {
 		return ret, fmt.Errorf("insertUserUseridPreferencespots0: %w", err)
 	}
@@ -1279,7 +1414,7 @@ func attachUserUseridPreferencespots0(ctx context.Context, exec bob.Executor, co
 		Userid: omit.From(user0.Userid),
 	}
 
-	err := Preferencespots.Update(ctx, exec, setter, preferencespots1...)
+	err := preferencespots1.UpdateAll(ctx, exec, *setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachUserUseridPreferencespots0: %w", err)
 	}
@@ -1291,6 +1426,8 @@ func (user0 *User) InsertUseridPreferencespots(ctx context.Context, exec bob.Exe
 	if len(related) == 0 {
 		return nil
 	}
+
+	var err error
 
 	preferencespots1, err := insertUserUseridPreferencespots0(ctx, exec, related, user0)
 	if err != nil {
@@ -1332,7 +1469,7 @@ func attachUserAuthuuidAuth0(ctx context.Context, exec bob.Executor, count int, 
 		Authuuid: omit.From(auth1.Authuuid),
 	}
 
-	err := Users.Update(ctx, exec, setter, user0)
+	err := user0.Update(ctx, exec, setter)
 	if err != nil {
 		return nil, fmt.Errorf("attachUserAuthuuidAuth0: %w", err)
 	}
@@ -1341,7 +1478,7 @@ func attachUserAuthuuidAuth0(ctx context.Context, exec bob.Executor, count int, 
 }
 
 func (user0 *User) InsertAuthuuidAuth(ctx context.Context, exec bob.Executor, related *AuthSetter) error {
-	auth1, err := Auths.Insert(ctx, exec, related)
+	auth1, err := Auths.Insert(related).One(ctx, exec)
 	if err != nil {
 		return fmt.Errorf("inserting related objects: %w", err)
 	}
