@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onDestroy } from 'svelte';
-    import { MapLibre, DefaultMarker, Popup, GeolocateControl } from 'svelte-maplibre';
+    import { MapLibre, DefaultMarker, Popup, GeolocateControl, Marker } from 'svelte-maplibre';
     import SpotsListComponent from '$lib/components/spot-listings/spots-list-component.svelte';
     import { Button } from 'carbon-components-svelte';
     import { Search, Slider } from 'carbon-components-svelte';
@@ -31,7 +31,7 @@
     const selectedZoom: number = SELECTED_ZOOM;
     const offset: [number, number] = [0, -10];
 
-    let mapCenter: [number, number] = [96.81, 49.77];
+    let mapCenter: [number, number] = [-96.81, 49.77];
 
     let searchQuery = '';
     let results: AddressResult[];
@@ -84,7 +84,7 @@
             searchUsed = true;
         }
         fetchSpots(location.geometry.coordinates, distance);
-        
+
     };
 
     const handleClickOutside = (event: Event) => {
@@ -215,6 +215,7 @@
             style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
         >
             <GeolocateControl position="bottom-left" fitBoundsOptions={{ maxZoom: maxZoom }} />
+            <Marker lngLat={mapCenter} />
             {#each spotsData as { id, location }}
                 <DefaultMarker
                     lngLat={[location.longitude ?? mapCenter[0], location.latitude ?? mapCenter[1]]}
