@@ -45,4 +45,5 @@
     <string name="total_price">Total Price</string>
     <string name="select_car">Select Car</string>
     <string name="buying_history">Buying History</string>
+    <string name="leasing_history">Leasing History</string>
 </resources>

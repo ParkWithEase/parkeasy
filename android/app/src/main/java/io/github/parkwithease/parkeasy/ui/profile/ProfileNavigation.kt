@@ -14,6 +14,7 @@ fun NavGraphBuilder.profileScreen(
     onNavigateToCars: () -> Unit,
     onNavigateToSpots: () -> Unit,
     onNavigateToBookings: () -> Unit,
+    onNavigateToLeasings: () -> Unit,
     navBar: @Composable () -> Unit,
 ) {
     composable(
@@ -26,6 +27,7 @@ fun NavGraphBuilder.profileScreen(
             onNavigateToCars = onNavigateToCars,
             onNavigateToSpots = onNavigateToSpots,
             onNavigateToBookings = onNavigateToBookings,
+            onNavigateToLeasings = onNavigateToLeasings,
             navBar = navBar,
         )
     }

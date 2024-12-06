@@ -9,6 +9,8 @@ import io.github.parkwithease.parkeasy.ui.bookings.bookingsScreen
 import io.github.parkwithease.parkeasy.ui.bookings.navigateToBookings
 import io.github.parkwithease.parkeasy.ui.cars.carsScreen
 import io.github.parkwithease.parkeasy.ui.cars.navigateToCars
+import io.github.parkwithease.parkeasy.ui.leasings.leasingsScreen
+import io.github.parkwithease.parkeasy.ui.leasings.navigateToLeasings
 import io.github.parkwithease.parkeasy.ui.login.loginScreen
 import io.github.parkwithease.parkeasy.ui.login.navigateToLogin
 import io.github.parkwithease.parkeasy.ui.navbar.NavBar
@@ -35,10 +37,12 @@ fun MainNavGraph(
             onNavigateToCars = navController::navigateToCars,
             onNavigateToSpots = navController::navigateToSpots,
             onNavigateToBookings = navController::navigateToBookings,
+            onNavigateToLeasings = navController::navigateToLeasings,
             navBar = navBar,
         )
         carsScreen()
         spotsScreen()
         bookingsScreen()
+        leasingsScreen()
     }
 }
