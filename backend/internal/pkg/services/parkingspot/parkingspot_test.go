@@ -546,7 +546,6 @@ func TestUpdateSpotByUUID(t *testing.T) {
 			assert.ErrorIs(t, err, models.ErrInvalidPricePerHour)
 		}
 	})
-
 }
 
 func TestUpdateAvailByUUID(t *testing.T) {

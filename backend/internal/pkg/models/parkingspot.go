@@ -90,5 +90,5 @@ type ParkingSpotUpdateInput struct {
 
 type ParkingSpotAvailUpdateInput struct {
 	AddAvailability    []TimeUnit `json:"add_availability" doc:"new availability to add"`
-	RemoveAvailability []TimeUnit `json:"remove_availability" doc:"exisitng (unbooked) availability to remove"`
+	RemoveAvailability []TimeUnit `json:"remove_availability" doc:"existing (unbooked) availability to remove"`
 }

@@ -186,10 +186,10 @@ func (s *Service) UpdateAvailByUUID(ctx context.Context, userID int64, spotID uu
 	}
 
 	err = s.repo.UpdateAvailByUUID(ctx, spotID, input)
-	switch err {
-	case parkingspot.ErrDeleteBookedTimeUnit:
+	switch {
+	case errors.Is(err, parkingspot.ErrDeleteBookedTimeUnit):
 		return models.ErrBookedTimeUnitModified
-	case parkingspot.ErrDuplicatedTimeUnit:
+	case errors.Is(err, parkingspot.ErrDuplicatedTimeUnit):
 		return models.ErrTimeUnitDuplicate
 	}
 
