@@ -42,7 +42,7 @@ type getManyResult struct {
 	DistanceToOrigin float64 `db:"distance_to_origin"`
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error) {
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error) { // nolint(revive): cognitive complexity woes
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return Entry{}, nil, fmt.Errorf("could not start a transaction: %w", err)
@@ -130,32 +130,9 @@ func (p *PostgresRepository) UpdateAvailByUUID(ctx context.Context, spotID uuid.
 	}
 	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
 
-	if len(updateTimes.RemoveAvailability) > 0 {
-		timeslots := timeSlotsToSQLExpr(updateTimes.RemoveAvailability)
-
-		// Variable for AND clauses in where
-		var whereMods []mods.Where[*dialect.DeleteQuery]
-		whereMods = append(
-			whereMods,
-			dbmodels.DeleteWhere.Timeunits.Parkingspotid.EQ(entry.InternalID),
-			dbmodels.DeleteWhere.Timeunits.Bookingid.IsNull(),
-			dm.Where(timeslots),
-		)
-
-		// Delete unbooked times
-		deleted, err := dbmodels.Timeunits.DeleteQ(
-			ctx, tx,
-			psql.WhereAnd(whereMods...),
-			dm.Returning(dbmodels.Timeunits.Columns()),
-		).All()
-		if err != nil {
-			return err
-		}
-
-		if len(deleted) != len(updateTimes.RemoveAvailability) {
-			// Audit failure must mean update availability input is attempting to removed a booked time unit
-			return ErrDeleteBookedTimeUnit
-		}
+	err = removeAvailability(ctx, tx, entry.InternalID, updateTimes.RemoveAvailability)
+	if err != nil {
+		return err
 	}
 
 	if len(updateTimes.AddAvailability) > 0 {
@@ -179,6 +156,36 @@ func (p *PostgresRepository) UpdateAvailByUUID(ctx context.Context, spotID uuid.
 		return fmt.Errorf("could not commit transaction: %w", err)
 	}
 
+	return nil
+}
+
+func removeAvailability(ctx context.Context, tx bob.Tx, spotID int64, remove []models.TimeUnit) error {
+	if len(remove) == 0 {
+		return nil
+	}
+
+	timeslots := timeSlotsToSQLExpr(remove)
+
+	var whereMods []mods.Where[*dialect.DeleteQuery]
+	whereMods = append(
+		whereMods,
+		dbmodels.DeleteWhere.Timeunits.Parkingspotid.EQ(spotID),
+		dbmodels.DeleteWhere.Timeunits.Bookingid.IsNull(),
+		dm.Where(timeslots),
+	)
+
+	// Delete unbooked times
+	deleted, err := dbmodels.Timeunits.DeleteQ(
+		ctx, tx,
+		psql.WhereAnd(whereMods...),
+	).Exec()
+	if err != nil {
+		return err
+	}
+	// Audit failure must mean update availability input is attempting to removed a booked time unit
+	if deleted != int64(len(remove)) {
+		return ErrDeleteBookedTimeUnit
+	}
 	return nil
 }
 
