@@ -60,6 +60,12 @@
                         <div class="auctioned"></div>
                     {:else if status == TimeSlotStatus.PASTDUE}
                         <div class="pastdue"></div>
+                    {:else if status == TimeSlotStatus.BOOK_INTENT}
+                        <div class="book-intent"></div>
+                    {:else if status == TimeSlotStatus.EXPIRED_BOOK}
+                        <div class="expired-book"></div>
+                    {:else if status == TimeSlotStatus.ACTIVE_BOOK}
+                        <div class="active-book"></div>
                     {:else}
                         <div></div>
                     {/if}
@@ -82,6 +88,12 @@
                         <div class="auctioned"></div>
                     {:else if status == TimeSlotStatus.PASTDUE}
                         <div class="pastdue"></div>
+                    {:else if status == TimeSlotStatus.BOOK_INTENT}
+                        <div class="book-intent"></div>
+                    {:else if status == TimeSlotStatus.EXPIRED_BOOK}
+                        <div class="expired-book"></div>
+                    {:else if status == TimeSlotStatus.ACTIVE_BOOK}
+                        <div class="active-book"></div>
                     {:else}
                         <div></div>
                     {/if}
@@ -156,5 +168,17 @@
 
     div.pastdue {
         background-color: rgba(185, 185, 185, 0.5);
+    }
+
+    div.book-intent {
+        background-color: rgba(9, 129, 9, 0.75);
+    }
+
+    div.expired-book {
+        background-color: rgba(111, 111, 111, 0.5);
+    }
+
+    div.active-book {
+        background-color: rgba(116, 231, 146, 0.5);
     }
 </style>

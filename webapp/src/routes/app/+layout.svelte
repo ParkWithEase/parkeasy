@@ -4,10 +4,12 @@
     import { Content } from 'carbon-components-svelte';
     import { responsiveState } from '$lib/stores/responsive';
     import { navigating } from '$app/stores';
+    import Theme from '$lib/components/theme.svelte';
     let innerWidth: number = 0;
     $: responsiveState.set(innerWidth < RESPONSE_WIDTH);
 </script>
 
+<Theme />
 <svelte:window bind:innerWidth />
 
 <NavigationBar />

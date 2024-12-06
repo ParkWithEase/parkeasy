@@ -16,11 +16,11 @@
         loadLock = true;
         data.paging
             .next()
-            .then(({ value: { data: leasing_transaction }, done }) => {
-                if (leasing_transaction) {
-                    data.leasing_transaction = [
-                        ...data.leasing_transaction,
-                        ...leasing_transaction
+            .then(({ value: { data: booking_transactions }, done }) => {
+                if (booking_transactions) {
+                    data.booking_transactions = [
+                        ...data.booking_transactions,
+                        ...booking_transactions
                     ];
                 }
                 canLoadMore = !done;
@@ -33,13 +33,10 @@
 
 <Content>
     <div class="list-container">
-        {#key data.leasing_transaction}
-            {#each data.leasing_transaction as transaction}
+        {#key data.booking_transactions}
+            {#each data.booking_transactions as transaction}
                 <a href={`/app/transaction/${transaction.id}`} style="text-decoration: none;">
-                    <SpotTransactionDisplay
-                        {transaction}
-                        transaction_type={TransactionType.LEASE}
-                    />
+                    <SpotTransactionDisplay {transaction} transaction_type={TransactionType.BOOK} />
                 </a>
             {/each}
         {/key}

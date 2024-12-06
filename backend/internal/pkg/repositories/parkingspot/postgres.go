@@ -42,7 +42,7 @@ type getManyResult struct {
 	DistanceToOrigin float64 `db:"distance_to_origin"`
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error) {
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error) { //nolint:all // cognitive complexity woes
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return Entry{}, nil, fmt.Errorf("could not start a transaction: %w", err)
@@ -118,7 +118,7 @@ func (p *PostgresRepository) UpdateSpotByUUID(ctx context.Context, spotID uuid.U
 	return entry, nil
 }
 
-func (p *PostgresRepository) UpdateAvailByUUID(ctx context.Context, spotID uuid.UUID, updateTimes *models.ParkingSpotAvailUpdateInput) (error) {
+func (p *PostgresRepository) UpdateAvailByUUID(ctx context.Context, spotID uuid.UUID, updateTimes *models.ParkingSpotAvailUpdateInput) error {
 	entry, err := p.GetByUUID(ctx, spotID)
 	if err != nil {
 		return err
@@ -130,38 +130,24 @@ func (p *PostgresRepository) UpdateAvailByUUID(ctx context.Context, spotID uuid.
 	}
 	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
 
-	timeslots := timeSlotsToSQLExpr(updateTimes.RemoveAvailability)
-
-	// Delete unbooked times
-	deleted, err := dbmodels.Timeunits.DeleteQ(
-		ctx, p.db,
-		dbmodels.DeleteWhere.Timeunits.Parkingspotid.EQ(entry.InternalID),
-		dbmodels.DeleteWhere.Timeunits.Bookingid.IsNull(),
-		dm.Where(timeslots),
-		dm.Returning(dbmodels.Timeunits.Columns()),
-	).All()
+	err = removeAvailability(ctx, tx, entry.InternalID, updateTimes.RemoveAvailability)
 	if err != nil {
 		return err
 	}
 
-    // Perform audit
-	deleteMinusDeleted := timeUnitSetMinus(timeUnitsFromDB(deleted), updateTimes.RemoveAvailability)
-	if len(deleteMinusDeleted) != 0 {
-		// Audit failure must mean update availability input is attempting to removed a booked time unit
-		return ErrDeleteBookedTimeUnit
-	}
-
-	// Insert new availability times
-	newTimesSetter := timeSetterFromInput(updateTimes.RemoveAvailability, entry.InternalID)
-	_, err = dbmodels.Timeunits.InsertMany(ctx, p.db, newTimesSetter...)
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == pgerrcode.UniqueViolation {
-				return ErrDuplicatedTimeUnit
+	if len(updateTimes.AddAvailability) > 0 {
+		// Insert new availability times
+		newTimesSetter := timeSetterFromInput(updateTimes.AddAvailability, entry.InternalID)
+		_, err = dbmodels.Timeunits.InsertMany(ctx, tx, newTimesSetter...)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				if pgErr.Code == pgerrcode.UniqueViolation {
+					return ErrDuplicatedTimeUnit
+				}
 			}
+			return err
 		}
-		return err
 	}
 
 	// Commit since audit passed
@@ -170,6 +156,36 @@ func (p *PostgresRepository) UpdateAvailByUUID(ctx context.Context, spotID uuid.
 		return fmt.Errorf("could not commit transaction: %w", err)
 	}
 
+	return nil
+}
+
+func removeAvailability(ctx context.Context, tx bob.Tx, spotID int64, remove []models.TimeUnit) error {
+	if len(remove) == 0 {
+		return nil
+	}
+
+	timeslots := timeSlotsToSQLExpr(remove)
+
+	var whereMods []mods.Where[*dialect.DeleteQuery]
+	whereMods = append(
+		whereMods,
+		dbmodels.DeleteWhere.Timeunits.Parkingspotid.EQ(spotID),
+		dbmodels.DeleteWhere.Timeunits.Bookingid.IsNull(),
+		dm.Where(timeslots),
+	)
+
+	// Delete unbooked times
+	deleted, err := dbmodels.Timeunits.DeleteQ(
+		ctx, tx,
+		psql.WhereAnd(whereMods...),
+	).Exec()
+	if err != nil {
+		return err
+	}
+	// Audit failure must mean update availability input is attempting to removed a booked time unit
+	if deleted != int64(len(remove)) {
+		return ErrDeleteBookedTimeUnit
+	}
 	return nil
 }
 
@@ -190,38 +206,6 @@ func timeSlotsToSQLExpr(units []models.TimeUnit) dialect.Expression {
 		}
 	}
 	return expression
-}
-
-func timeUnitSetMinus(firstSet, secondSet []models.TimeUnit) []models.TimeUnit {
-	// Create a map to store booked TimeUnits for quick lookup
-	bookedSet := make(map[time.Time]map[time.Time]struct{})
-	for _, booked := range secondSet {
-		start := booked.StartTime.UTC().Truncate(time.Second)
-		end := booked.EndTime.UTC().Truncate(time.Second)
-
-		if _, exists := bookedSet[start]; !exists {
-			bookedSet[start] = make(map[time.Time]struct{})
-		}
-		bookedSet[start][end] = struct{}{}
-	}
-
-	var result []models.TimeUnit
-	for _, update := range firstSet {
-		start := update.StartTime.UTC().Truncate(time.Second)
-		end := update.EndTime.UTC().Truncate(time.Second)
-
-		if _, startFound := bookedSet[start]; startFound {
-			if _, endFound := bookedSet[start][end]; endFound {
-				continue
-			}
-		}
-		result = append(result, models.TimeUnit{
-			StartTime: start,
-			EndTime:   end,
-			Status:    update.Status,
-		})
-	}
-	return result
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error) {

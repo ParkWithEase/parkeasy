@@ -4,14 +4,17 @@ import type { components } from '$lib/sdk/schema';
 
 type TimeUnit = components['schemas']['TimeUnit'];
 
-export function toTimeUnits(map: Map<number, TimeSlotStatus[][]>): TimeUnit[] {
+export function toTimeUnits(
+    map: Map<number, TimeSlotStatus[][]>,
+    extract_status: TimeSlotStatus[] = []
+): TimeUnit[] {
     const result = new Array<TimeUnit>();
     for (const [week, value] of map.entries()) {
         const weekDate = new Date(week);
         result.push(
             ...value.flatMap((infoday, segment) =>
                 infoday.reduce((acc, status, day) => {
-                    if (status !== TimeSlotStatus.AVAILABLE) {
+                    if (!extract_status.includes(status)) {
                         return acc;
                     }
                     const startTime = new Date(weekDate);
@@ -37,9 +40,9 @@ export function toTimeUnits(map: Map<number, TimeSlotStatus[][]>): TimeUnit[] {
             )
         );
     }
-    console.log(result);
     return result;
 }
+
 function manualUTCConvert(date: Date, offset: number) {
     return (
         date.getUTCFullYear() +
