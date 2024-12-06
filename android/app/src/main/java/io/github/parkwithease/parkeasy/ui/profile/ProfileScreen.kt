@@ -4,10 +4,12 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -84,8 +86,10 @@ fun ProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                ProfileDetails(profile = profile, modifier = Modifier.width(280.dp))
+                ProfileDetails(profile = profile, modifier = Modifier.width(320.dp))
+                HorizontalDivider(Modifier.width(300.dp).padding(top = 4.dp))
                 profileRoutes.forEach { ProfileButton(it.name, it.onNavigateTo) }
+                HorizontalDivider(Modifier.width(300.dp))
                 LogoutButton(onLogoutClick)
             }
         }
@@ -98,6 +102,7 @@ fun ProfileDetails(profile: Profile, modifier: Modifier = Modifier) {
         ParkEasyTextField(
             state = FieldState(profile.name),
             onValueChange = {},
+            modifier = Modifier.fillMaxWidth(),
             enabled = false,
             visuallyEnabled = true,
             readOnly = true,
@@ -106,6 +111,7 @@ fun ProfileDetails(profile: Profile, modifier: Modifier = Modifier) {
         ParkEasyTextField(
             state = FieldState(profile.email),
             onValueChange = {},
+            modifier = Modifier.fillMaxWidth(),
             enabled = false,
             visuallyEnabled = true,
             readOnly = true,
@@ -116,14 +122,14 @@ fun ProfileDetails(profile: Profile, modifier: Modifier = Modifier) {
 
 @Composable
 fun ProfileButton(@StringRes id: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Button(onClick = onClick, modifier = modifier.width(280.dp)) { Text(stringResource(id)) }
+    Button(onClick = onClick, modifier = modifier.width(320.dp)) { Text(stringResource(id)) }
 }
 
 @Composable
 fun LogoutButton(onLogoutClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onLogoutClick,
-        modifier = modifier.width(280.dp),
+        modifier = modifier.width(320.dp),
         colors =
             ButtonColors(
                 containerColor = MaterialTheme.colorScheme.error,

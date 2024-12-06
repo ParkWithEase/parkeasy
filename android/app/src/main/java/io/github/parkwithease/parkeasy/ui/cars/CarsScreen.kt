@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -98,6 +97,7 @@ fun CarsScreen(modifier: Modifier = Modifier, viewModel: CarsViewModel = hiltVie
     if (showForm) {
         ModalBottomSheet(
             onDismissRequest = { viewModel.onHideForm() },
+            modifier = Modifier.fillMaxWidth(),
             sheetState = bottomSheetState,
         ) {
             AddCarScreen(
@@ -178,11 +178,9 @@ fun AddCarScreen(
     Column(
         modifier =
             modifier
-                .fillMaxWidth()
                 .imePadding()
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState(), reverseScrolling = true)
-                .widthIn(max = 320.dp),
+                .padding(horizontal = 32.dp)
+                .verticalScroll(rememberScrollState(), reverseScrolling = true),
         verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
