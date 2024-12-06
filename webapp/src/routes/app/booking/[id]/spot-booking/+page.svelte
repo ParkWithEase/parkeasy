@@ -379,6 +379,7 @@
                     helperText="Price in CAD"
                     required
                     bind:value={newPricePerHour}
+                    style="pointer-events:none"
                 />
             </div>
             <div class="price-field">
@@ -391,6 +392,7 @@
                     helperText="Price in CAD"
                     required
                     bind:value={total}
+                    style="pointer-events:none"
                 />
             </div>
             <FormGroup>

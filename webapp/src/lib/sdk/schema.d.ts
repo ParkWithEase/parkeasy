@@ -219,7 +219,8 @@ export interface paths {
         };
         /** Get information about a parking spot */
         get: operations['get-parking-spot'];
-        put?: never;
+        /** Updates the specified parking spot */
+        put: operations['update-parking-spot'];
         post?: never;
         delete?: never;
         options?: never;
@@ -236,7 +237,8 @@ export interface paths {
         };
         /** Get availability of the spot */
         get: operations['get-parking-spot-availability'];
-        put?: never;
+        /** Updates the specified parking spot's availability */
+        put: operations['update-parking-spot-availability'];
         post?: never;
         delete?: never;
         options?: never;
@@ -575,6 +577,17 @@ export interface components {
              */
             price_per_hour: number;
         };
+        ParkingSpotAvailUpdateInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             */
+            readonly $schema?: string;
+            /** @description new availability to add */
+            add_availability: components['schemas']['TimeUnit'][] | null;
+            /** @description existing (unbooked) availability to remove */
+            remove_availability: components['schemas']['TimeUnit'][] | null;
+        };
         ParkingSpotCreationInput: {
             /**
              * Format: uri
@@ -619,6 +632,19 @@ export interface components {
             state: string;
             /** @description The street address of the parking spot */
             street_address: string;
+        };
+        ParkingSpotUpdateInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             */
+            readonly $schema?: string;
+            features?: components['schemas']['ParkingSpotFeatures'];
+            /**
+             * Format: double
+             * @description price per hour
+             */
+            price_per_hour: number;
         };
         ParkingSpotWithAvailability: {
             /**
@@ -1692,6 +1718,68 @@ export interface operations {
             };
         };
     };
+    'update-parking-spot': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['ParkingSpotUpdateInput'];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['ParkingSpot'];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
     'get-parking-spot-availability': {
         parameters: {
             query?: {
@@ -1719,6 +1807,66 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'update-parking-spot-availability': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['ParkingSpotAvailUpdateInput'];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

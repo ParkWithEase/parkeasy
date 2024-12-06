@@ -6,7 +6,8 @@
         Button,
         Form,
         ToastNotification,
-        NumberInput
+        NumberInput,
+        Checkbox
     } from 'carbon-components-svelte';
     import { TimeSlotStatus, TimeSlotStatusConverter } from '$lib/enum/timeslot-status';
     import { DAY_IN_A_WEEK, ERROR_MESSAGE_TIME_OUT, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
@@ -17,7 +18,7 @@
     import { getErrorMessage } from '$lib/utils/error-handler';
     import { fade } from 'svelte/transition';
     import AvailabilitySection from '$lib/components/spot-component/availability-section.svelte';
-    import SpotInfo from '$lib/components/spot-component/spot-info.svelte';
+    import SpotInfoEditable from '$lib/components/spot-component/spot-info-editable.svelte';
 
     export let data: PageData;
     type TimeUnit = components['schemas']['TimeUnit'];
@@ -31,19 +32,27 @@
     //These are Variables for availability edit section
 
     let newPricePerHour: number = spot?.price_per_hour || 0;
+    let spotChargingStation: boolean = spot?.features?.charging_station ?? false;
+    let spotPlugIn: boolean = spot?.features?.plug_in ?? false;
+    let spotShelter: boolean = spot?.features?.shelter ?? false;
     //This array contain all edit history
 
     let client = newClient();
 
     //For ToastMessage
-    let toastTimeOut: number = 0;
+    let errorTimeOut: number = 0;
+    let successTimeOut: number = 0;
     let errorMessage: string = '';
-    $: showToast = toastTimeOut !== 0;
+    $: showToast = errorTimeOut !== 0;
+    $: showSuccess = successTimeOut !== 0;
 
     //reminder to change these to now()
     let today = new Date(Date.now());
     let currentMonday = getMonday(today);
     let nextMonday: Date;
+
+    //updates
+    let priceUtilitiesUpdated: boolean = false;
 
     let availabilityTablesInitial = new Map<number, TimeSlotStatus[][]>();
     availabilityTablesInitial.set(
@@ -131,7 +140,7 @@
                     }
                     if (error) {
                         errorMessage = getErrorMessage(error);
-                        toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+                        errorTimeOut = ERROR_MESSAGE_TIME_OUT;
                     }
                 })
                 .catch((err) => {
@@ -161,12 +170,118 @@
         return false;
     }
 
-    function handleSubmitAvailability(event: Event) {
+    async function updatePriceUtilities(event: Event) {
         event.preventDefault();
-        checkAvailabilityChange();
-        //TODO: change parking spot price + availability using the edit records.
-        // Clear the edit records on success
-        // Might need to check if anything actually change and
+        priceUtilitiesUpdated = true;
+    }
+
+    async function handleUpdateAvailability(event: Event) {
+        event.preventDefault();
+
+        if (!checkAvailabilityChange() && !priceUtilitiesUpdated) {
+            errorMessage = 'No changes detected.';
+            errorTimeOut = ERROR_MESSAGE_TIME_OUT;
+            return;
+        }
+
+        if (priceUtilitiesUpdated) {
+            client
+                .PUT('/spots/{id}', {
+                    params: {
+                        path: {
+                            id: spot?.id ?? '0'
+                        }
+                    },
+                    headers: { 'Content-Type': 'application/json' },
+                    body: {
+                        features: {
+                            charging_station: spotChargingStation,
+                            plug_in: spotPlugIn,
+                            shelter: spotShelter
+                        },
+                        price_per_hour: newPricePerHour
+                    }
+                })
+                .then(({ data, error }) => {
+                    if (data) {
+                        successTimeOut = ERROR_MESSAGE_TIME_OUT;
+                        priceUtilitiesUpdated = false;
+                    }
+                    if (error) {
+                        errorMessage = getErrorMessage(error);
+                        errorTimeOut = ERROR_MESSAGE_TIME_OUT;
+                    }
+                })
+                .catch((err) => {
+                    errorMessage = getErrorMessage(err);
+                    errorTimeOut = ERROR_MESSAGE_TIME_OUT;
+                });
+        }
+
+        let addAvailability: Array<{ end_time: string; start_time: string }> = [];
+        let removeAvailability: Array<{ end_time: string; start_time: string }> = [];
+
+        // Compare the initial and edited tables
+        for (let [key, initialTable] of availabilityTablesInitial) {
+            let editTable = availabilityTableEdit.get(key);
+            const startOfWeek = new Date(key);
+
+            for (let seg = 0; seg < TOTAL_SEGMENTS_NUMBER; seg++) {
+                for (let day = 0; day < DAY_IN_A_WEEK; day++) {
+                    const initialStatus = initialTable[seg][day];
+                    const editedStatus = editTable?.[seg]?.[day] ?? TimeSlotStatus.NONE;
+
+                    if (initialStatus !== editedStatus) {
+                        const startDateTime = new Date(startOfWeek);
+                        startDateTime.setDate(startOfWeek.getDate() + day);
+                        startDateTime.setHours(Math.floor(seg / 2), (seg % 2) * 30, 0, 0);
+
+                        const endDateTime = new Date(startDateTime);
+                        endDateTime.setMinutes(endDateTime.getMinutes() + 30);
+
+                        if (editedStatus === TimeSlotStatus.AVAILABLE) {
+                            addAvailability.push({
+                                start_time: startDateTime.toISOString(),
+                                end_time: endDateTime.toISOString()
+                            });
+                        } else if (initialStatus === TimeSlotStatus.AVAILABLE) {
+                            removeAvailability.push({
+                                start_time: startDateTime.toISOString(),
+                                end_time: endDateTime.toISOString()
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        client
+            .PUT('/spots/{id}/availability', {
+                params: {
+                    path: {
+                        id: spot?.id ?? '0'
+                    }
+                },
+                headers: { 'Content-Type': 'application/json' },
+                body: {
+                    add_availability: addAvailability,
+                    remove_availability: removeAvailability
+                }
+            })
+            .then(({ data, error }) => {
+                if (data) {
+                    availabilityTablesInitial = structuredClone(availabilityTableEdit);
+                    successTimeOut = ERROR_MESSAGE_TIME_OUT;
+                }
+                if (error) {
+                    errorMessage = getErrorMessage(error);
+                    errorTimeOut = ERROR_MESSAGE_TIME_OUT;
+                }
+            })
+            .catch((err) => {
+                errorMessage = getErrorMessage(err);
+                errorTimeOut = ERROR_MESSAGE_TIME_OUT;
+            });
     }
 
     function resetAvailabilityEdit() {
@@ -198,24 +313,31 @@
 </script>
 
 <Content>
-    {#if showToast}
-        <div transition:fade class="error-message">
-            <ToastNotification
-                bind:timeout={toastTimeOut}
-                kind="error"
-                fullWidth
-                title="Error"
-                subtitle={errorMessage}
-                on:close={() => {
-                    toastTimeOut = 0;
-                }}
-            />
-        </div>
-    {/if}
-
     <img src={Background} class="spot-info-image" alt="spot" />
     <p class="spot-info-header">Location</p>
-    <SpotInfo bind:spot />
+    <SpotInfoEditable bind:spot />
+
+    <div>
+        <p class="spot-info-label">Utilities</p>
+        <Checkbox
+            name="shelter"
+            labelText="Shelter"
+            bind:checked={spotShelter}
+            on:change={updatePriceUtilities}
+        />
+        <Checkbox
+            name="plug-in"
+            labelText="Plug-in"
+            bind:checked={spotPlugIn}
+            on:change={updatePriceUtilities}
+        />
+        <Checkbox
+            name="charging-station"
+            labelText="Charging Station"
+            bind:checked={spotChargingStation}
+            on:change={updatePriceUtilities}
+        />
+    </div>
 
     <p class="spot-info-header">Availability</p>
 
@@ -228,7 +350,7 @@
         {handleEdit}
     />
 
-    <Form on:submit={handleSubmitAvailability}>
+    <Form on:submit={handleUpdateAvailability}>
         <div class="price-field">
             <NumberInput
                 label="Price per hour"
@@ -239,9 +361,43 @@
                 helperText="Price in CAD"
                 required
                 bind:value={newPricePerHour}
+                on:change={updatePriceUtilities}
             />
         </div>
         <Button kind="secondary" on:click={resetAvailabilityEdit}>Reset</Button>
-        <Button type="submit">Submit</Button>
+        <Button type="submit">Update</Button>
+        {#if showToast}
+            <div transition:fade class="error-message">
+                <ToastNotification
+                    bind:timeout={errorTimeOut}
+                    kind="error"
+                    fullWidth
+                    title="Error"
+                    subtitle={errorMessage}
+                    on:close={() => {
+                        errorTimeOut = 0;
+                    }}
+                />
+            </div>
+        {/if}
+        {#if showSuccess}
+            <div transition:fade class="success-message">
+                <ToastNotification
+                    bind:timeout={successTimeOut}
+                    kind="success"
+                    fullWidth
+                    title="Update Successful!"
+                    on:close={() => {
+                        successTimeOut = 0;
+                    }}
+                />
+            </div>
+        {/if}
     </Form>
 </Content>
+
+<style>
+    .spot-info-label {
+        font-size: 0.8rem;
+    }
+</style>

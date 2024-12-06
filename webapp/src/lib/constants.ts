@@ -26,7 +26,7 @@ export const LONGITUDE = -97.13449;
 export const DISTANCE = 5000;
 
 //Constants for app/+page.svelte
-export const INIT_ZOOM = 0;
+export const INIT_ZOOM = 3;
 export const MAX_ZOOM = 12;
 export const SELECTED_ZOOM = 11;
 export const DEFAULT_DISTANCE = 2000;

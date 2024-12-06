@@ -2,6 +2,8 @@
     import { ChargingStation, PlugFilled, Home } from 'carbon-icons-svelte';
     import { TooltipIcon } from 'carbon-components-svelte';
     export let listing;
+
+    let distanceToLocation = listing.distance_to_location.toFixed(2);
 </script>
 
 <div class="listing-info" role="button" tabindex="0">
@@ -31,6 +33,9 @@
                 </TooltipIcon>
             {/if}
         </div>
+    </div>
+    <div>
+        Distance to Location: {distanceToLocation} m.
     </div>
 </div>
 
