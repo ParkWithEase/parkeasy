@@ -1,5 +1,5 @@
 <script>
-    import logo from '$lib/images/parkeasy-logo.png';
+    import logo from '$lib/images/logo_stacked_outlined.svg';
     export let headerText;
 </script>
 
