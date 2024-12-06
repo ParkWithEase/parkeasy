@@ -5,12 +5,12 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
-import io.github.parkwithease.parkeasy.ui.bookings.bookingsScreen
-import io.github.parkwithease.parkeasy.ui.bookings.navigateToBookings
 import io.github.parkwithease.parkeasy.ui.cars.carsScreen
 import io.github.parkwithease.parkeasy.ui.cars.navigateToCars
-import io.github.parkwithease.parkeasy.ui.leasings.leasingsScreen
-import io.github.parkwithease.parkeasy.ui.leasings.navigateToLeasings
+import io.github.parkwithease.parkeasy.ui.history.bookings.bookingsScreen
+import io.github.parkwithease.parkeasy.ui.history.bookings.navigateToBookings
+import io.github.parkwithease.parkeasy.ui.history.leasings.leasingsScreen
+import io.github.parkwithease.parkeasy.ui.history.leasings.navigateToLeasings
 import io.github.parkwithease.parkeasy.ui.login.loginScreen
 import io.github.parkwithease.parkeasy.ui.login.navigateToLogin
 import io.github.parkwithease.parkeasy.ui.navbar.NavBar

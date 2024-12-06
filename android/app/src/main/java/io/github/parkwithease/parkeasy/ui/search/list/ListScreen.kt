@@ -30,8 +30,8 @@ import io.github.parkwithease.parkeasy.ui.common.enterAnimation
 import io.github.parkwithease.parkeasy.ui.common.exitAnimation
 import io.github.parkwithease.parkeasy.ui.navbar.NavBar
 import io.github.parkwithease.parkeasy.ui.search.CreateBookingScreen
+import io.github.parkwithease.parkeasy.ui.search.SearchCard
 import io.github.parkwithease.parkeasy.ui.search.SearchViewModel
-import io.github.parkwithease.parkeasy.ui.search.SpotCard
 import io.github.parkwithease.parkeasy.ui.search.rememberCreateHandler
 import io.github.parkwithease.parkeasy.ui.search.rememberSearchHandler
 import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
@@ -114,7 +114,7 @@ fun ListScreen(
                     onRefresh = onRefresh,
                     modifier = Modifier.padding(4.dp),
                 ) { spot, onClick ->
-                    SpotCard(spot, onClick)
+                    SearchCard(spot, onClick)
                 }
             }
         }

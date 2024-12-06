@@ -19,7 +19,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
@@ -48,6 +47,7 @@ import io.github.parkwithease.parkeasy.model.Car
 import io.github.parkwithease.parkeasy.model.CarDetails
 import io.github.parkwithease.parkeasy.model.EditMode
 import io.github.parkwithease.parkeasy.model.FieldState
+import io.github.parkwithease.parkeasy.ui.common.CarDetailsText
 import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 import io.github.parkwithease.parkeasy.ui.common.PreviewAll
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
@@ -142,22 +142,20 @@ fun CarsScreen(
 
 @Composable
 fun CarCard(car: Car, onClick: (Car) -> Unit, modifier: Modifier = Modifier) {
-    Card(onClick = { onClick(car) }, modifier = modifier.fillMaxWidth().padding(4.dp, 0.dp)) {
+    Card(onClick = { onClick(car) }, modifier = modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(8.dp)) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                 Image(
                     painter = painterResource(R.drawable.wordmark),
                     contentDescription = null,
                     modifier = Modifier.heightIn(max = 64.dp),
                 )
             }
-            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text(
-                    text = car.details.licensePlate,
-                    style = MaterialTheme.typography.headlineLarge,
-                )
-                Text(car.details.color + ' ' + car.details.make + ' ' + car.details.model)
-            }
+            CarDetailsText(
+                carDetails = car.details,
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.End,
+            )
         }
     }
 }

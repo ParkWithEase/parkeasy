@@ -1,4 +1,4 @@
-package io.github.parkwithease.parkeasy.ui.bookings
+package io.github.parkwithease.parkeasy.ui.history.leasings
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
@@ -6,16 +6,16 @@ import androidx.navigation.compose.composable
 import io.github.parkwithease.parkeasy.ui.common.enterAnimation
 import io.github.parkwithease.parkeasy.ui.common.exitAnimation
 
-private const val BookingsRoute = "bookings"
+private const val LeasingsRoute = "leasings"
 
-fun NavGraphBuilder.bookingsScreen() {
+fun NavGraphBuilder.leasingsScreen() {
     composable(
-        route = BookingsRoute,
+        route = LeasingsRoute,
         enterTransition = { enterAnimation() },
         exitTransition = { exitAnimation() },
     ) {
-        BookingsScreen()
+        LeasingsScreen()
     }
 }
 
-fun NavController.navigateToBookings() = this.navigate(BookingsRoute)
+fun NavController.navigateToLeasings() = this.navigate(LeasingsRoute)

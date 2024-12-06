@@ -1,4 +1,4 @@
-package io.github.parkwithease.parkeasy.ui.leasings
+package io.github.parkwithease.parkeasy.ui.history.leasings
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.ViewModel

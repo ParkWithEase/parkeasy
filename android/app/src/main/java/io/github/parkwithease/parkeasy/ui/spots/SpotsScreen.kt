@@ -51,6 +51,7 @@ import io.github.parkwithease.parkeasy.model.SpotLocation
 import io.github.parkwithease.parkeasy.ui.common.ParkEasyTextField
 import io.github.parkwithease.parkeasy.ui.common.PreviewAll
 import io.github.parkwithease.parkeasy.ui.common.PullToRefreshBox
+import io.github.parkwithease.parkeasy.ui.common.SpotLocationText
 import io.github.parkwithease.parkeasy.ui.common.TimeGrid
 import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
 
@@ -128,20 +129,20 @@ fun SpotsScreen(
 
 @Composable
 fun SpotCard(spot: Spot, onClick: (Spot) -> Unit, modifier: Modifier = Modifier) {
-    Card(onClick = { onClick(spot) }, modifier = modifier.fillMaxWidth().padding(4.dp, 0.dp)) {
+    Card(onClick = { onClick(spot) }, modifier = modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(8.dp)) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                 Image(
                     painter = painterResource(R.drawable.wordmark),
                     contentDescription = null,
                     modifier = Modifier.heightIn(max = 64.dp),
                 )
             }
-            Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text(spot.location.streetAddress)
-                Text(spot.location.city + ' ' + spot.location.state)
-                Text(spot.location.countryCode + ' ' + spot.location.postalCode)
-            }
+            SpotLocationText(
+                spotLocation = spot.location,
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.End,
+            )
         }
     }
 }
