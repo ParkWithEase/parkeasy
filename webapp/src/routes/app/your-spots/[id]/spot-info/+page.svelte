@@ -6,7 +6,8 @@
         Button,
         Form,
         ToastNotification,
-        NumberInput
+        NumberInput,
+        Checkbox
     } from 'carbon-components-svelte';
     import { TimeSlotStatus, TimeSlotStatusConverter } from '$lib/enum/timeslot-status';
     import { DAY_IN_A_WEEK, ERROR_MESSAGE_TIME_OUT, TOTAL_SEGMENTS_NUMBER } from '$lib/constants';
@@ -31,6 +32,9 @@
     //These are Variables for availability edit section
 
     let newPricePerHour: number = spot?.price_per_hour || 0;
+    let spotChargingStation: boolean = spot?.features?.charging_station ?? false;
+    let spotPlugIn: boolean = spot?.features?.plug_in ?? false;
+    let spotShelter: boolean = spot?.features?.shelter ?? false;
     //This array contain all edit history
 
     let client = newClient();
@@ -40,8 +44,6 @@
     let successTimeOut: number = 0;
     let errorMessage: string = '';
     $: showToast = errorTimeOut !== 0;
-
-    let successMessage: string = '';
     $: showSuccess = successTimeOut !== 0;
 
     //reminder to change these to now()
@@ -50,9 +52,7 @@
     let nextMonday: Date;
 
     //updates
-    let availabilityUpdated: boolean;
-    let priceUpdated: boolean = false;
-    let utilitiesUpdated: boolean;
+    let priceUtilitiesUpdated: boolean = false;
 
     let availabilityTablesInitial = new Map<number, TimeSlotStatus[][]>();
     availabilityTablesInitial.set(
@@ -170,17 +170,21 @@
         return false;
     }
 
-    async function updatePrice(event:Event) {
+    async function updatePriceUtilities(event:Event) {
         event.preventDefault();
-        priceUpdated = true;
-        console.log("new price " + newPricePerHour);
+        priceUtilitiesUpdated = true;
     }
 
     async function handleUpdateAvailability(event: Event) {
         event.preventDefault();
 
-        if(priceUpdated){
-            
+        if (!checkAvailabilityChange() && !priceUtilitiesUpdated) {
+            errorMessage = "No changes detected.";
+            errorTimeOut = ERROR_MESSAGE_TIME_OUT;
+            return;
+        }
+
+        if(priceUtilitiesUpdated){
             client
                 .PUT('/spots/{id}', {
                     params: {
@@ -190,28 +194,26 @@
                     },
                     headers: { 'Content-Type': 'application/json' },
                     body: {
-                        features: {"charging_station": true,
-                                    "plug_in": true,
-                                    "shelter": true},
+                        features: {"charging_station": spotChargingStation,
+                                    "plug_in": spotPlugIn,
+                                    "shelter": spotShelter},
                         price_per_hour: newPricePerHour
                     },
                 })
                 .then(({ data, error }) => {
+                    if (data) {
+                        successTimeOut = ERROR_MESSAGE_TIME_OUT;
+                        priceUtilitiesUpdated = false;
+                    }
                     if (error) {
                         errorMessage = getErrorMessage(error);
                         errorTimeOut = ERROR_MESSAGE_TIME_OUT;
                     }
                 })
                 .catch((err) => {
-                    errorMessage = "An error occurred while updating the price.";
+                    errorMessage = "An error occurred while updating.";
                     errorTimeOut = ERROR_MESSAGE_TIME_OUT;
                 });
-        }
-
-        if (!checkAvailabilityChange() && !priceUpdated) {
-            errorMessage = "No changes detected.";
-            errorTimeOut = ERROR_MESSAGE_TIME_OUT;
-            return;
         }
 
         let addAvailability: Array<{ end_time: string, start_time: string }> = [];
@@ -265,13 +267,8 @@
                 },
             })
             .then(({ data, error }) => {
-                if (data && priceUpdated) {
+                if (data) {
                     availabilityTablesInitial = structuredClone(availabilityTableEdit);
-                    successMessage = "Price and Availability successfully updated!";
-                    successTimeOut = ERROR_MESSAGE_TIME_OUT;
-                }else if (data) {
-                    availabilityTablesInitial = structuredClone(availabilityTableEdit);
-                    successMessage = "Availability successfully updated!";
                     successTimeOut = ERROR_MESSAGE_TIME_OUT;
                 }
                 if (error) {
@@ -319,6 +316,28 @@
     <p class="spot-info-header">Location</p>
     <SpotInfoEditable bind:spot />
 
+    <div>
+        <p class="spot-info-label">Utilities</p>
+        <Checkbox
+            name="shelter"
+            labelText="Shelter"
+            bind:checked={spotShelter}
+            on:change={updatePriceUtilities}
+        />
+        <Checkbox
+            name="plug-in"
+            labelText="Plug-in"
+            bind:checked={spotPlugIn}
+            on:change={updatePriceUtilities}
+        />
+        <Checkbox
+            name="charging-station"
+            labelText="Charging Station"
+            bind:checked={spotChargingStation}
+            on:change={updatePriceUtilities}
+        />
+    </div>
+
     <p class="spot-info-header">Availability</p>
 
     <AvailabilitySection
@@ -341,7 +360,7 @@
                 helperText="Price in CAD"
                 required
                 bind:value={newPricePerHour}
-                on:change={updatePrice}
+                on:change={updatePriceUtilities}
             />
         </div>
         <Button kind="secondary" on:click={resetAvailabilityEdit}>Reset</Button>
@@ -366,8 +385,7 @@
                     bind:timeout={successTimeOut}
                     kind="success"
                     fullWidth
-                    title="Update Successful"
-                    subtitle={successMessage}
+                    title="Update Successful!"
                     on:close={() => {
                         successTimeOut = 0;
                     }}
@@ -376,3 +394,9 @@
         {/if}
     </Form>
 </Content>
+
+<style>
+    .spot-info-label {
+        font-size: 0.8rem;
+    }
+</style>

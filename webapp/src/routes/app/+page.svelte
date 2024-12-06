@@ -31,7 +31,7 @@
     const selectedZoom: number = SELECTED_ZOOM;
     const offset: [number, number] = [0, -10];
 
-    let mapCenter: [number, number] = [0, 0];
+    let mapCenter: [number, number] = [96.81, 49.77];
 
     let searchQuery = '';
     let results: AddressResult[];
@@ -84,6 +84,7 @@
             searchUsed = true;
         }
         fetchSpots(location.geometry.coordinates, distance);
+        
     };
 
     const handleClickOutside = (event: Event) => {
