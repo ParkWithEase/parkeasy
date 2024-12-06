@@ -14,11 +14,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import io.github.parkwithease.parkeasy.model.Spot
 import io.github.parkwithease.parkeasy.model.SpotLocation
 import io.github.parkwithease.parkeasy.ui.common.PreviewAll
@@ -30,10 +35,10 @@ import io.github.parkwithease.parkeasy.ui.search.CreateBookingScreen
 import io.github.parkwithease.parkeasy.ui.search.SearchCard
 import io.github.parkwithease.parkeasy.ui.search.SearchViewModel
 import io.github.parkwithease.parkeasy.ui.search.rememberCreateHandler
-import io.github.parkwithease.parkeasy.ui.search.rememberSearchHandler
 import io.github.parkwithease.parkeasy.ui.theme.ParkEasyTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
+@Suppress("detekt:LongMethod")
 @Composable
 fun ListScreen(
     onNavigateToLogin: () -> Unit,
@@ -43,11 +48,11 @@ fun ListScreen(
 ) {
     val loggedIn by viewModel.loggedIn.collectAsState(true)
     val latestOnNavigateToLogin by rememberUpdatedState(onNavigateToLogin)
+    var showRationale by remember { mutableStateOf(false) }
 
     if (!loggedIn) {
         LaunchedEffect(Unit) { latestOnNavigateToLogin() }
     } else {
-        @Suppress("unused") val searchHandler = rememberSearchHandler(viewModel)
         val createHandler = rememberCreateHandler(viewModel)
         val cars by viewModel.cars.collectAsState()
         val spots by viewModel.spots.collectAsState()
@@ -55,9 +60,26 @@ fun ListScreen(
         val isRefreshing by viewModel.isRefreshing.collectAsState()
         val showForm by viewModel.showForm.collectAsState()
 
+        val locationPermissions =
+            rememberMultiplePermissionsState(
+                listOf(
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                )
+            ) {
+                if (it.all { entry -> entry.value }) {
+                    showRationale = false
+                    viewModel.startLocationFlow()
+                    viewModel.onRefresh()
+                }
+            }
+
         BackHandler(enabled = showForm) { viewModel.onHideForm() }
 
-        LaunchedEffect(Unit) { viewModel.onRefresh() }
+        LaunchedEffect(Unit) {
+            viewModel.snackbarState.currentSnackbarData?.dismiss()
+            viewModel.onRefresh()
+        }
 
         AnimatedVisibility(visible = showForm, enter = enterAnimation(), exit = exitAnimation()) {
             CreateBookingScreen(
@@ -78,7 +100,16 @@ fun ListScreen(
                     viewModel.onShowForm()
                 },
                 isRefreshing = isRefreshing,
-                onRefresh = viewModel::onRefresh,
+                onRefresh = {
+                    if (locationPermissions.allPermissionsGranted) {
+                        viewModel.startLocationFlow()
+                    } else if (locationPermissions.shouldShowRationale) {
+                        showRationale = true
+                    } else {
+                        locationPermissions.launchMultiplePermissionRequest()
+                    }
+                    viewModel.onRefresh()
+                },
                 navBar = navBar,
                 snackbarHost = { SnackbarHost(hostState = viewModel.snackbarState) },
                 modifier = modifier,

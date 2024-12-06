@@ -17,6 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -229,18 +230,23 @@ fun AddSpotScreen(
                     onClick = { handler.onChargingStationChange(!state.chargingStation.value) },
                     label = { Text(stringResource(R.string.charging_station)) },
                     enabled = formEnabled,
+                    leadingIcon = {
+                        if (state.chargingStation.value) Image(Icons.Filled.Check, null)
+                    },
                 )
                 FilterChip(
                     selected = state.plugIn.value,
                     onClick = { handler.onPlugInChange(!state.plugIn.value) },
                     label = { Text(stringResource(R.string.plug_in)) },
                     enabled = formEnabled,
+                    leadingIcon = { if (state.plugIn.value) Image(Icons.Filled.Check, null) },
                 )
                 FilterChip(
                     selected = state.shelter.value,
                     onClick = { handler.onShelterChange(!state.shelter.value) },
                     label = { Text(stringResource(R.string.shelter)) },
                     enabled = formEnabled,
+                    leadingIcon = { if (state.shelter.value) Image(Icons.Filled.Check, null) },
                 )
             }
             TimeGrid(getSelectedIds, disabledIds, handler.onAddTime, handler.onRemoveTime)

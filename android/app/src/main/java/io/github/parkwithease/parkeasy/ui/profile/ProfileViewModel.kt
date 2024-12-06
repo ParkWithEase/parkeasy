@@ -34,6 +34,10 @@ constructor(authRepo: AuthRepository, private val userRepo: UserRepository) : Vi
             .map { userRepo.getUser().getOrDefault(Profile()) }
             .stateIn(viewModelScope, SharingStarted.Lazily, Profile("", ""))
 
+    fun refresh() {
+        refreshTrigger.tryEmit(Unit)
+    }
+
     fun onLogoutClick() =
         viewModelScope.launch {
             userRepo.logout().onSuccess { snackbarState.showSnackbar("Logged out successfully") }

@@ -59,6 +59,11 @@ fun ProfileScreen(
                 ProfileButtonRoute(R.string.leasing_history, onNavigateToLeasings),
             )
 
+        LaunchedEffect(Unit) {
+            viewModel.snackbarState.currentSnackbarData?.dismiss()
+            viewModel.refresh()
+        }
+
         ProfileScreen(
             profile = profile,
             profileRoutes = profileRoutes,

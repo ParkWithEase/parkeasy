@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 
-private const val MIN_UPDATE_DISTANCE = 100F
+private const val MinUpdateDistance = 100F
 
 class GetLocationUseCaseImpl
 @Inject
@@ -32,7 +32,7 @@ constructor(
     private val client by lazy { LocationServices.getFusedLocationProviderClient(context) }
     private val request =
         LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10.seconds.inWholeMilliseconds)
-            .setMinUpdateDistanceMeters(MIN_UPDATE_DISTANCE)
+            .setMinUpdateDistanceMeters(MinUpdateDistance)
             .build()
 
     override fun invoke(): Flow<Location> =

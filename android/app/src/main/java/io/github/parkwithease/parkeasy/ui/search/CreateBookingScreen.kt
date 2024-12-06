@@ -1,5 +1,6 @@
 package io.github.parkwithease.parkeasy.ui.search
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -150,16 +153,28 @@ fun CreateBookingScreen(
                     selected = state.selectedSpot.value.features.chargingStation,
                     onClick = {},
                     label = { Text(stringResource(R.string.charging_station)) },
+                    leadingIcon = {
+                        if (state.selectedSpot.value.features.chargingStation)
+                            Image(Icons.Filled.Check, null)
+                    },
                 )
                 FilterChip(
                     selected = state.selectedSpot.value.features.plugIn,
                     onClick = {},
                     label = { Text(stringResource(R.string.plug_in)) },
+                    leadingIcon = {
+                        if (state.selectedSpot.value.features.plugIn)
+                            Image(Icons.Filled.Check, null)
+                    },
                 )
                 FilterChip(
-                    selected = state.selectedSpot.value.features.plugIn,
+                    selected = state.selectedSpot.value.features.shelter,
                     onClick = {},
                     label = { Text(stringResource(R.string.shelter)) },
+                    leadingIcon = {
+                        if (state.selectedSpot.value.features.shelter)
+                            Image(Icons.Filled.Check, null)
+                    },
                 )
             }
             TimeGrid(getSelectedIds, disabledIds, handler.onAddTime, handler.onRemoveTime)
