@@ -14,10 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -54,11 +51,11 @@ fun ListScreen(
         val createHandler = rememberCreateHandler(viewModel)
         val cars by viewModel.cars.collectAsState()
         val spots by viewModel.spots.collectAsState()
+        val formEnabled by viewModel.formEnabled.collectAsState()
         val isRefreshing by viewModel.isRefreshing.collectAsState()
+        val showForm by viewModel.showForm.collectAsState()
 
-        var showForm by rememberSaveable { mutableStateOf(false) }
-
-        BackHandler(enabled = showForm) { showForm = false }
+        BackHandler(enabled = showForm) { viewModel.onHideForm() }
 
         LaunchedEffect(Unit) { viewModel.onRefresh() }
 
@@ -67,6 +64,7 @@ fun ListScreen(
                 cars = cars,
                 state = viewModel.createState,
                 handler = createHandler,
+                formEnabled = formEnabled,
                 getSelectedIds = { viewModel.createState.selectedIds.value },
                 disabledIds = viewModel.createState.disabledIds.value,
             )
@@ -77,7 +75,7 @@ fun ListScreen(
                 onSpotClick = {
                     createHandler.reset()
                     createHandler.onSpotChange(it)
-                    showForm = true
+                    viewModel.onShowForm()
                 },
                 isRefreshing = isRefreshing,
                 onRefresh = viewModel::onRefresh,

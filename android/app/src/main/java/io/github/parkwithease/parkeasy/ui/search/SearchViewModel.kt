@@ -62,11 +62,26 @@ constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing = _isRefreshing.asStateFlow()
 
+    private val _showForm = MutableStateFlow(false)
+    val showForm = _showForm.asStateFlow()
+
+    private val _formEnabled = MutableStateFlow(true)
+    val formEnabled = _formEnabled.asStateFlow()
+
     var searchState by mutableStateOf(SearchState())
         private set
 
     var createState by mutableStateOf(CreateState())
         private set
+
+    fun onShowForm() {
+        _formEnabled.value = true
+        viewModelScope.launch { _showForm.value = true }
+    }
+
+    fun onHideForm() {
+        viewModelScope.launch { _showForm.value = false }
+    }
 
     fun onRefresh() {
         viewModelScope.launch {
@@ -143,7 +158,11 @@ constructor(
                     booking =
                         Booking(carId = createState.selectedCar.value.id, bookedTimes = bookedTimes),
                 )
-                .onSuccess { onRefresh() }
+                .onSuccess {
+                    onRefresh()
+                    onHideForm()
+                }
+                .onFailure { onHideForm() }
                 .recoverRequestErrors(
                     "Error booking parking spot",
                     {},

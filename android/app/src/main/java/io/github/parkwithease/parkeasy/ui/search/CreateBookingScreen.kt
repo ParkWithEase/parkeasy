@@ -42,6 +42,7 @@ fun CreateBookingScreen(
     cars: List<Car>,
     state: CreateState,
     handler: CreateHandler,
+    formEnabled: Boolean,
     getSelectedIds: () -> Set<Int>,
     disabledIds: Set<Int>,
     modifier: Modifier = Modifier,
@@ -64,7 +65,7 @@ fun CreateBookingScreen(
                     modifier =
                         Modifier.fillMaxWidth()
                             .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                            .clickable { expanded = true },
+                            .clickable { if (formEnabled) expanded = true },
                     enabled = false,
                     visuallyEnabled = true,
                     readOnly = true,
@@ -76,7 +77,7 @@ fun CreateBookingScreen(
                         DropdownMenuItem(
                             text = { Text(it.details.licensePlate) },
                             onClick = {
-                                handler.onCarChange(it)
+                                if (formEnabled) handler.onCarChange(it)
                                 expanded = false
                             },
                         )
@@ -177,7 +178,11 @@ fun CreateBookingScreen(
                 readOnly = true,
                 labelId = R.string.total_price,
             )
-            Button(onClick = handler.onCreateBookingClick, modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = handler.onCreateBookingClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = formEnabled,
+            ) {
                 Text(stringResource(R.string.create_booking))
             }
         }
