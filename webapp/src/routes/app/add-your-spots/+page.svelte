@@ -95,6 +95,7 @@
     }
 
     function handleSubmitAll() {
+        console.log(availabilityTables);
         client
             .POST('/spots', {
                 body: {

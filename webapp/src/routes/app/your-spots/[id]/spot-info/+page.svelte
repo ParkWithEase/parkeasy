@@ -155,12 +155,83 @@
         return false;
     }
 
-    function handleSubmitAvailability(event: Event) {
+    async function handleSubmitAvailability(event: Event) {
         event.preventDefault();
-        //TODO: change parking spot price + availability using the edit records.
-        // Clear the edit records on success
-        // Might need to check if anything actually change and
-        console.log(checkAvailabilityChange());
+
+        if (!checkAvailabilityChange()) {
+            errorMessage = "No changes detected in availability.";
+            toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+            return;
+        }
+
+        let addAvailability: Array<{ end_time: string, start_time: string }> = [];
+        let removeAvailability: Array<{ end_time: string, start_time: string }> = [];
+
+        // Compare the initial and edited tables
+        for (let [key, initialTable] of availabilityTablesInitial) {
+            let editTable = availabilityTableEdit.get(key);
+            const startOfWeek = new Date(key);
+
+            for (let seg = 0; seg < TOTAL_SEGMENTS_NUMBER; seg++) {
+                for (let day = 0; day < DAY_IN_A_WEEK; day++) {
+                    const initialStatus = initialTable[seg][day];
+                    const editedStatus = editTable?.[seg]?.[day] ?? TimeSlotStatus.NONE;
+
+                    if (initialStatus !== editedStatus) {
+                        const startDateTime = new Date(startOfWeek);
+                        startDateTime.setDate(startOfWeek.getDate() + day);
+                        startDateTime.setHours(Math.floor(seg / 2), (seg % 2) * 30, 0, 0);
+
+                        const endDateTime = new Date(startDateTime);
+                        endDateTime.setMinutes(endDateTime.getMinutes() + 30);
+
+                        if (editedStatus === TimeSlotStatus.AVAILABLE) {
+                            addAvailability.push({
+                                start_time: startDateTime.toISOString(),
+                                end_time: endDateTime.toISOString(),
+                            });
+                        } else if (initialStatus === TimeSlotStatus.AVAILABLE) {
+                            removeAvailability.push({
+                                start_time: startDateTime.toISOString(),
+                                end_time: endDateTime.toISOString(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        console.log(addAvailability);
+        console.log(removeAvailability);
+
+        client
+            .PUT('/spots/{id}/availability', {
+                params: {
+                    path: {
+                        id: spot?.id ?? '0'
+                    }
+                },
+                headers: { 'Content-Type': 'application/json' },
+                body: {
+                    add_availability: addAvailability,
+                    remove_availability: removeAvailability
+                },
+            })
+            .then(({ data, error }) => {
+                if (data) {
+                    availabilityTablesInitial = structuredClone(availabilityTableEdit);
+                    errorMessage = "Availability successfully updated!";
+                    toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+                }
+                if (error) {
+                    errorMessage = getErrorMessage(error);
+                    toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+                }
+            })
+            .catch((err) => {
+                errorMessage = "An error occurred while updating availability.";
+                toastTimeOut = ERROR_MESSAGE_TIME_OUT;
+            });
     }
 
     function resetAvailabilityEdit() {
