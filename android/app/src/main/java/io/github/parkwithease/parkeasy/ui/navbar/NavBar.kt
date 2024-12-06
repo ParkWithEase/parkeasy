@@ -23,9 +23,9 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import io.github.parkwithease.parkeasy.R
-import io.github.parkwithease.parkeasy.ui.list.ListRoute
-import io.github.parkwithease.parkeasy.ui.map.MapRoute
 import io.github.parkwithease.parkeasy.ui.profile.ProfileRoute
+import io.github.parkwithease.parkeasy.ui.search.list.ListRoute
+import io.github.parkwithease.parkeasy.ui.search.map.MapRoute
 
 @SuppressLint("RestrictedApi")
 @Composable

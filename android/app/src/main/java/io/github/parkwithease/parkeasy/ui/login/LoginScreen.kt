@@ -19,8 +19,6 @@ import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -36,10 +34,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -113,7 +109,7 @@ private fun LoginScreen(
             ) {
                 Box(modifier = Modifier.widthIn(min = 80.dp, max = 240.dp)) {
                     Image(
-                        painter = painterResource(R.drawable.logo_stacked_outlined),
+                        painter = painterResource(R.drawable.logo_stacked),
                         contentDescription = null,
                         modifier = Modifier.aspectRatio(1f),
                     )
@@ -178,7 +174,7 @@ private fun LoginFields(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = enabled,
                 labelId = R.string.name,
-                leadingIconImage = Icons.Filled.Person,
+                leadingIconId = R.drawable.name,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
             )
         }
@@ -188,7 +184,7 @@ private fun LoginFields(
             modifier = Modifier.fillMaxWidth(),
             enabled = enabled,
             labelId = R.string.email,
-            leadingIconImage = ImageVector.vectorResource(R.drawable.email),
+            leadingIconId = R.drawable.email,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
         )
         AnimatedVisibility(mode != LoginMode.FORGOT) {
@@ -198,7 +194,7 @@ private fun LoginFields(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = enabled,
                 labelId = R.string.password,
-                leadingIconImage = ImageVector.vectorResource(R.drawable.password),
+                leadingIconId = R.drawable.password,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             )
@@ -210,7 +206,7 @@ private fun LoginFields(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = enabled,
                 labelId = R.string.confirm_password,
-                leadingIconImage = ImageVector.vectorResource(R.drawable.password),
+                leadingIconId = R.drawable.password,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             )

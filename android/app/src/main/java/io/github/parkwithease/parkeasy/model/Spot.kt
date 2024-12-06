@@ -1,23 +1,18 @@
 package io.github.parkwithease.parkeasy.model
 
-import java.time.format.DateTimeFormatter
+import io.github.parkwithease.parkeasy.ui.common.LocalDateTimeRFC3339Serializer
 import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.toJavaLocalDateTime
-import kotlinx.datetime.toKotlinLocalDateTime
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 
 @Serializable
 data class Spot(
-    val availability: List<TimeSlot> = emptyList(),
+    val availability: List<TimeUnit> = emptyList(),
     val features: SpotFeatures = SpotFeatures(),
     val id: String = "",
     val location: SpotLocation = SpotLocation(),
     @SerialName("price_per_hour") val pricePerHour: Double = 0.0,
+    @SerialName("distance_to_location") val distanceToLocation: Double = 0.0,
 )
 
 @Serializable
@@ -39,24 +34,16 @@ data class SpotLocation(
 )
 
 @Serializable
-data class TimeSlot(
-    @Serializable(with = LocalDateTimeToRFC3339::class)
+data class TimeUnit(
+    @Serializable(with = LocalDateTimeRFC3339Serializer::class)
     @SerialName("start_time")
     val startTime: LocalDateTime,
-    @Serializable(with = LocalDateTimeToRFC3339::class)
+    @Serializable(with = LocalDateTimeRFC3339Serializer::class)
     @SerialName("end_time")
     val endTime: LocalDateTime,
-)
-
-object LocalDateTimeToRFC3339 : KSerializer<LocalDateTime> {
-    private val format = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-
-    override val descriptor: SerialDescriptor
-        get() = TODO("Not yet implemented") // Seems like overkill to implement
-
-    override fun serialize(encoder: Encoder, value: LocalDateTime) =
-        encoder.encodeString(value.toJavaLocalDateTime().format(format))
-
-    override fun deserialize(decoder: Decoder): LocalDateTime =
-        java.time.LocalDateTime.parse(decoder.decodeString(), format).toKotlinLocalDateTime()
+    val status: String = "",
+) {
+    companion object {
+        const val BOOKED = "booked"
+    }
 }
