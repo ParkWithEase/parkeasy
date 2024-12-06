@@ -439,8 +439,20 @@ func TestPostgresIntegration(t *testing.T) {
 		createEntry, _, err := repo.Create(ctx, userID, &creationInput)
 		require.NoError(t, err)
 
+		pool.Reset()
+		snapshotName := testutils.PostgresSnapshotName + "update"
+		err = container.Snapshot(ctx, postgres.WithSnapshotName(snapshotName))
+		require.NoError(t, err, "could not snapshot db")
+
 		t.Run("okay update spot details", func(t *testing.T) {
-			t.Parallel()
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(snapshotName))
+				require.NoError(t, err, "could not restore db")
+
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
 
 			updateEntry, err := repo.UpdateSpotByUUID(ctx, createEntry.ID, &spotUpdateInput)
 			require.NoError(t, err)
@@ -463,7 +475,14 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		t.Run("okay update spot availability only add", func(t *testing.T) {
-			t.Parallel()
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(snapshotName))
+				require.NoError(t, err, "could not restore db")
+
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
 
 			availabilityUpdateInput := models.ParkingSpotAvailUpdateInput{
 				AddAvailability:    sampleAddAvailability,
@@ -475,7 +494,14 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		t.Run("okay update spot availability only remove", func(t *testing.T) {
-			t.Parallel()
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(snapshotName))
+				require.NoError(t, err, "could not restore db")
+
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
 
 			availabilityUpdateInput := models.ParkingSpotAvailUpdateInput{
 				AddAvailability:    []models.TimeUnit{},
@@ -487,7 +513,14 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		t.Run("okay update spot availability add and remove", func(t *testing.T) {
-			t.Parallel()
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(snapshotName))
+				require.NoError(t, err, "could not restore db")
+
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
 
 			availabilityUpdateInput := models.ParkingSpotAvailUpdateInput{
 				AddAvailability:    sampleAddAvailability,
@@ -499,7 +532,14 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		t.Run("check update spot add duplicate time slot error", func(t *testing.T) {
-			t.Parallel()
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(snapshotName))
+				require.NoError(t, err, "could not restore db")
+
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
 
 			availabilityUpdateInput := models.ParkingSpotAvailUpdateInput{
 				AddAvailability:    sampleAvailability,
@@ -513,9 +553,16 @@ func TestPostgresIntegration(t *testing.T) {
 		})
 
 		t.Run("check update spot remove booked time slot error", func(t *testing.T) {
-			t.Parallel()
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(snapshotName))
+				require.NoError(t, err, "could not restore db")
 
-			BookingCreationInput := booking.CreateInput{
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
+
+			bookingCreationInput := booking.CreateInput{
 				BookedTimes: sampleAvailability,
 				UserID:      userID,
 				SpotID:      createEntry.InternalID,
@@ -523,7 +570,7 @@ func TestPostgresIntegration(t *testing.T) {
 				PaidAmount:  createEntry.PricePerHour * float64(len(sampleAvailability)),
 			}
 
-			_, err = bookingRepo.Create(ctx, &BookingCreationInput)
+			_, err = bookingRepo.Create(ctx, &bookingCreationInput)
 
 			availabilityUpdateInput := models.ParkingSpotAvailUpdateInput{
 				AddAvailability:    sampleAddAvailability,

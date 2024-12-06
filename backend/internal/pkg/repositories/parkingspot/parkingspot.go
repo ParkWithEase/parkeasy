@@ -60,5 +60,5 @@ type Repository interface {
 	GetMany(ctx context.Context, limit int, filter *Filter) ([]GetManyEntry, error)
 	GetAvailByUUID(ctx context.Context, spotID uuid.UUID, startDate time.Time, endDate time.Time) ([]models.TimeUnit, error)
 	UpdateSpotByUUID(ctx context.Context, spotID uuid.UUID, updateSpot *models.ParkingSpotUpdateInput) (Entry, error)
-	UpdateAvailByUUID(ctx context.Context, spotID uuid.UUID, updateTimes *models.ParkingSpotAvailUpdateInput) (error)
+	UpdateAvailByUUID(ctx context.Context, spotID uuid.UUID, updateTimes *models.ParkingSpotAvailUpdateInput) error
 }
