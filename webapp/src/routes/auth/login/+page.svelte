@@ -1,5 +1,5 @@
 <script lang="ts">
-    import logo from '$lib/images/parkeasy-logo.png';
+    import logo from '$lib/images/logo_stacked_outlined.svg';
     import { TextInput, PasswordInput, Form } from 'carbon-components-svelte';
     import { goto } from '$app/navigation';
     import SubmitButton from '$lib/components/submit-button.svelte';
