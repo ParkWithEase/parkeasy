@@ -53,6 +53,18 @@ func (m *mockParkingSpotService) GetManyForUser(ctx context.Context, userID int6
 	return args.Get(0).([]models.ParkingSpot), args.Error(1)
 }
 
+// UpdateSpotByUUID implements ParkingSpotServicer.
+func (m *mockParkingSpotService) UpdateSpotByUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotUpdateInput) (models.ParkingSpot, error) {
+	args := m.Called(ctx, userID, spotID, input)
+	return args.Get(0).(models.ParkingSpot), args.Error(1)
+}
+
+// UpdateAvailUUID implements ParkingSpotServicer.
+func (m *mockParkingSpotService) UpdateAvailByUUID(ctx context.Context, userID int64, spotID uuid.UUID, input *models.ParkingSpotAvailUpdateInput) error {
+	args := m.Called(ctx, userID, spotID, input)
+	return args.Error(0)
+}
+
 // CreatePreference implements ParkingSpotServicer.
 func (m *mockParkingSpotService) CreatePreference(ctx context.Context, userID int64, spotID uuid.UUID) error {
 	args := m.Called(ctx, userID, spotID)
@@ -93,9 +105,9 @@ var sampleLocation = models.ParkingSpotLocation{
 }
 
 var sampleFeatures = models.ParkingSpotFeatures{
-	Shelter:         false,
+	Shelter:         true,
 	PlugIn:          false,
-	ChargingStation: false,
+	ChargingStation: true,
 }
 
 var samplePricePerHour = float64(10.0)
@@ -469,6 +481,273 @@ func TestCreateParkingSpot(t *testing.T) {
 	})
 }
 
+func TestUpdateSpotByUUID(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testOwnerID)
+
+	testInput := models.ParkingSpotUpdateInput{
+		Features:     sampleFeatures,
+		PricePerHour: samplePricePerHour,
+	}
+
+	t.Run("all good", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		spotUUID := uuid.New()
+		srv.On("UpdateSpotByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+			Return(models.ParkingSpot{
+				Location:     sampleLocation,
+				Features:     sampleFeatures,
+				PricePerHour: samplePricePerHour,
+				ID:           spotUUID,
+			}, nil).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String(), testInput)
+		assert.Equal(t, http.StatusOK, resp.Result().StatusCode)
+
+		var spot models.ParkingSpotWithAvailability
+		err := json.NewDecoder(resp.Result().Body).Decode(&spot)
+		require.NoError(t, err)
+
+		assert.InEpsilon(t, testInput.PricePerHour, spot.PricePerHour, 1e-5)
+		assert.Equal(t, testInput.Features, spot.Features)
+		assert.Equal(t, spotUUID, spot.ID)
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("invalid price", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateSpotByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+			Return(models.ParkingSpot{}, models.ErrInvalidPricePerHour).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String(), testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+
+		testDetail := huma.ErrorDetail{
+			Location: "body.price_per_hour",
+			Value:    jsonAnyify(testInput.PricePerHour),
+		}
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &testDetail)
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("not found handling", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateSpotByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+			Return(models.ParkingSpot{}, models.ErrParkingSpotNotFound).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String(), testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Location: "path.id",
+			Value:    jsonAnyify(testSpotUUID),
+		})
+
+		srv.AssertExpectations(t)
+	})
+}
+
+func TestUpdateAvailByUUID(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	ctx = context.WithValue(ctx, fakeSessionDataKey(SessionKeyUserID), testOwnerID)
+
+	testInput := models.ParkingSpotAvailUpdateInput{
+		AddAvailability:    sampleAvailability,
+		RemoveAvailability: sampleAvailability,
+	}
+
+	t.Run("all good", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateAvailByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+			Return(nil).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String()+"/availability", testInput)
+		assert.Equal(t, http.StatusNoContent, resp.Result().StatusCode)
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("not found handling", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateAvailByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+			Return(models.ErrParkingSpotNotFound).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String()+"/availability", testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Location: "path.id",
+			Value:    jsonAnyify(testSpotUUID),
+		})
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("remove booked time unit check", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateAvailByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+			Return(models.ErrBookedTimeUnitModified).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String()+"/availability", testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Location: "body.remove_availability",
+			Value:    jsonAnyify(testInput.RemoveAvailability),
+		})
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("add duplicate time slot check", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateAvailByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+			Return(models.ErrTimeUnitDuplicate).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String()+"/availability", testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+		assert.Equal(t, models.CodeDuplicate.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Location: "body.add_availability",
+			Value:    jsonAnyify(testInput.AddAvailability),
+		})
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("invalid add time slot check", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateAvailByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+			Return(models.ErrInvalidAddTimeUnit).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String()+"/availability", testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Location: "body.add_availability",
+			Value:    jsonAnyify(testInput.AddAvailability),
+		})
+
+		srv.AssertExpectations(t)
+	})
+
+	t.Run("invalid remove time slot check", func(t *testing.T) {
+		t.Parallel()
+
+		srv := new(mockParkingSpotService)
+		route := NewParkingSpotRoute(srv, fakeSessionDataGetter{})
+		_, api := humatest.New(t)
+		huma.AutoRegister(api, route)
+
+		srv.On("UpdateAvailByUUID", mock.Anything, testOwnerID, testSpotUUID, &testInput).
+			Return(models.ErrInvalidRemoveTimeUnit).
+			Once()
+
+		resp := api.PutCtx(ctx, "/spots/"+testSpotUUID.String()+"/availability", testInput)
+		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
+
+		var errModel huma.ErrorModel
+		err := json.NewDecoder(resp.Result().Body).Decode(&errModel)
+		require.NoError(t, err)
+		assert.Equal(t, models.CodeSpotInvalid.TypeURI(), errModel.Type)
+		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
+			Location: "body.remove_availability",
+			Value:    jsonAnyify(testInput.RemoveAvailability),
+		})
+
+		srv.AssertExpectations(t)
+	})
+}
+
 func TestGetParkingSpot(t *testing.T) {
 	t.Parallel()
 
@@ -508,12 +787,11 @@ func TestGetParkingSpot(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		testUUID := uuid.New()
-		srv.On("GetByUUID", mock.Anything, testOwnerID, testUUID).
+		srv.On("GetByUUID", mock.Anything, testOwnerID, testSpotUUID).
 			Return(models.ParkingSpot{}, models.ErrParkingSpotNotFound).
 			Once()
 
-		resp := api.GetCtx(ctx, "/spots/"+testUUID.String())
+		resp := api.GetCtx(ctx, "/spots/"+testSpotUUID.String())
 		assert.Equal(t, http.StatusUnprocessableEntity, resp.Result().StatusCode)
 
 		var errModel huma.ErrorModel
@@ -522,7 +800,7 @@ func TestGetParkingSpot(t *testing.T) {
 		assert.Equal(t, models.CodeNotFound.TypeURI(), errModel.Type)
 		assert.Contains(t, errModel.Errors, &huma.ErrorDetail{
 			Location: "path.id",
-			Value:    jsonAnyify(testUUID),
+			Value:    jsonAnyify(testSpotUUID),
 		})
 
 		srv.AssertExpectations(t)
@@ -849,9 +1127,8 @@ func TestGetManyPreference(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		testUUID := uuid.New()
 		srv.On("GetManyPreferences", mock.Anything, testUserID, 50, models.Cursor("")).
-			Return([]models.ParkingSpot{{ID: testUUID}}, models.Cursor(""), nil).
+			Return([]models.ParkingSpot{{ID: testSpotUUID}}, models.Cursor(""), nil).
 			Once()
 
 		resp := api.GetCtx(ctx, "/spots/preference")
@@ -861,7 +1138,7 @@ func TestGetManyPreference(t *testing.T) {
 		err := json.NewDecoder(resp.Result().Body).Decode(&spots)
 		require.NoError(t, err)
 		if assert.Len(t, spots, 1) {
-			assert.Equal(t, testUUID, spots[0].ID)
+			assert.Equal(t, testSpotUUID, spots[0].ID)
 		}
 		links := link.ParseResponse(resp.Result())
 		if len(links) > 0 {
@@ -927,9 +1204,8 @@ func TestGetManyPreference(t *testing.T) {
 		_, api := humatest.New(t)
 		huma.AutoRegister(api, route)
 
-		testUUID := uuid.New()
 		srv.On("GetManyPreferences", mock.Anything, testUserID, 1, models.Cursor("")).
-			Return([]models.ParkingSpot{{ID: testUUID}}, models.Cursor("cursor"), nil).
+			Return([]models.ParkingSpot{{ID: testSpotUUID}}, models.Cursor("cursor"), nil).
 			Once()
 
 		resp := api.GetCtx(ctx, "/spots/preference?count=1")
@@ -962,9 +1238,8 @@ func TestGetManyPreference(t *testing.T) {
 		})
 		huma.AutoRegister(api, route)
 
-		testUUID := uuid.New()
 		srv.On("GetManyPreferences", mock.Anything, testUserID, 1, models.Cursor("")).
-			Return([]models.ParkingSpot{{ID: testUUID}}, models.Cursor("cursor"), nil).
+			Return([]models.ParkingSpot{{ID: testSpotUUID}}, models.Cursor("cursor"), nil).
 			Once()
 
 		resp := api.GetCtx(ctx, "/spots/preference?count=1")

@@ -7,6 +7,8 @@ import (
 
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/models"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/auth"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/booking"
+	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/car"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/repositories/user"
 	"github.com/ParkWithEase/parkeasy/backend/internal/pkg/testutils"
 	"github.com/aarondl/opt/omit"
@@ -40,6 +42,8 @@ func TestPostgresIntegration(t *testing.T) {
 	repo := NewPostgres(db)
 	userRepo := user.NewPostgres(db)
 	authRepo := auth.NewPostgres(db)
+	bookingRepo := booking.NewPostgres(db)
+	carRepo := car.NewPostgres(db)
 
 	profile := models.UserProfile{
 		FullName: "John Wick",
@@ -49,9 +53,22 @@ func TestPostgresIntegration(t *testing.T) {
 	const testEmail = "j.wick@gmail.com"
 	const testPasswordHash = "some hash"
 
+	sampleDetails := models.CarDetails{
+		LicensePlate: "HTV 678",
+		Make:         "Honda",
+		Model:        "Civic",
+		Color:        "Blue",
+	}
+
+	carCreationInput := models.CarCreationInput{
+		CarDetails: sampleDetails,
+	}
+
 	authUUID, _ := authRepo.Create(ctx, testEmail, models.HashedPassword(testPasswordHash))
 
 	userID, _ := userRepo.Create(ctx, authUUID, profile)
+
+	carID, _, _ := carRepo.Create(ctx, userID, &carCreationInput)
 
 	pool.Reset()
 	snapshotErr := container.Snapshot(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
@@ -67,6 +84,19 @@ func TestPostgresIntegration(t *testing.T) {
 		{
 			StartTime: time.Date(2024, time.October, 21, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 21, 2024
 			EndTime:   time.Date(2024, time.October, 21, 15, 30, 0, 0, time.UTC), // 3:30 PM on October 21, 2024),
+			Status:    "available",
+		},
+	}
+
+	sampleAddUpdateTimeUnit := []models.TimeUnit{
+		{
+			StartTime: time.Date(2024, time.October, 22, 14, 30, 0, 0, time.UTC), // 2:30 PM on October 22, 2024
+			EndTime:   time.Date(2024, time.October, 22, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 22, 2024),
+			Status:    "available",
+		},
+		{
+			StartTime: time.Date(2024, time.October, 22, 15, 0, 0, 0, time.UTC),  // 3:00 PM on October 22, 2024
+			EndTime:   time.Date(2024, time.October, 22, 15, 30, 0, 0, time.UTC), // 3:30 PM on October 22, 2024),
 			Status:    "available",
 		},
 	}
@@ -100,6 +130,7 @@ func TestPostgresIntegration(t *testing.T) {
 	}
 
 	sampleAvailability := append([]models.TimeUnit(nil), sampleTimeUnit...)
+	sampleAddAvailability := append([]models.TimeUnit(nil), sampleAddUpdateTimeUnit...)
 
 	sampleLocation := models.ParkingSpotLocation{
 		PostalCode:    "L2E6T2",
@@ -117,13 +148,25 @@ func TestPostgresIntegration(t *testing.T) {
 		ChargingStation: true,
 	}
 
+	sampleUpdateFeatures := models.ParkingSpotFeatures{
+		Shelter:         false,
+		PlugIn:          true,
+		ChargingStation: false,
+	}
+
 	samplePricePerHour := 10.50
+	sampleUpdatePricePerHour := 5.50
 
 	creationInput := models.ParkingSpotCreationInput{
 		Location:     sampleLocation,
 		Features:     sampleFeatures,
 		PricePerHour: samplePricePerHour,
 		Availability: sampleAvailability,
+	}
+
+	spotUpdateInput := models.ParkingSpotUpdateInput{
+		Features:     sampleUpdateFeatures,
+		PricePerHour: sampleUpdatePricePerHour,
 	}
 
 	timeTestCreationInput := models.ParkingSpotCreationInput{
@@ -379,6 +422,165 @@ func TestPostgresIntegration(t *testing.T) {
 			require.Len(t, entries, 2)
 			assert.Empty(t, cmp.Diff(expectedWinnipegEntries[0], entries[0].Entry))
 			assert.Empty(t, cmp.Diff(expectedWinnipegEntries[1], entries[1].Entry))
+		})
+	})
+
+	t.Run("update parking spot", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := container.Restore(ctx, postgres.WithSnapshotName(testutils.PostgresSnapshotName))
+			require.NoError(t, err, "could not restore db")
+
+			// clear all idle connections
+			// required since Restore() deletes the current DB
+			pool.Reset()
+		})
+
+		// Create an entry
+		createEntry, _, err := repo.Create(ctx, userID, &creationInput)
+		require.NoError(t, err)
+
+		pool.Reset()
+		snapshotName := testutils.PostgresSnapshotName + "update"
+		err = container.Snapshot(ctx, postgres.WithSnapshotName(snapshotName))
+		require.NoError(t, err, "could not snapshot db")
+
+		t.Run("okay update spot details", func(t *testing.T) {
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(snapshotName))
+				require.NoError(t, err, "could not restore db")
+
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
+
+			updateEntry, err := repo.UpdateSpotByUUID(ctx, createEntry.ID, &spotUpdateInput)
+			require.NoError(t, err)
+			assert.NotEqual(t, 0, updateEntry.InternalID)
+			assert.NotEqual(t, uuid.Nil, updateEntry.ID)
+
+			expectedSpot := Entry{
+				ParkingSpot: models.ParkingSpot{
+					Location:     sampleLocation,
+					Features:     sampleUpdateFeatures,
+					PricePerHour: sampleUpdatePricePerHour,
+					ID:           updateEntry.ID,
+				},
+				InternalID: updateEntry.InternalID,
+				OwnerID:    userID,
+			}
+
+			require.NoError(t, err)
+			assert.Empty(t, cmp.Diff(expectedSpot, updateEntry))
+		})
+
+		t.Run("okay update spot availability only add", func(t *testing.T) {
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(snapshotName))
+				require.NoError(t, err, "could not restore db")
+
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
+
+			availabilityUpdateInput := models.ParkingSpotAvailUpdateInput{
+				AddAvailability:    sampleAddAvailability,
+				RemoveAvailability: []models.TimeUnit{},
+			}
+
+			err := repo.UpdateAvailByUUID(ctx, createEntry.ID, &availabilityUpdateInput)
+			require.NoError(t, err)
+		})
+
+		t.Run("okay update spot availability only remove", func(t *testing.T) {
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(snapshotName))
+				require.NoError(t, err, "could not restore db")
+
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
+
+			availabilityUpdateInput := models.ParkingSpotAvailUpdateInput{
+				AddAvailability:    []models.TimeUnit{},
+				RemoveAvailability: sampleAvailability,
+			}
+
+			err := repo.UpdateAvailByUUID(ctx, createEntry.ID, &availabilityUpdateInput)
+			require.NoError(t, err)
+		})
+
+		t.Run("okay update spot availability add and remove", func(t *testing.T) {
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(snapshotName))
+				require.NoError(t, err, "could not restore db")
+
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
+
+			availabilityUpdateInput := models.ParkingSpotAvailUpdateInput{
+				AddAvailability:    sampleAddAvailability,
+				RemoveAvailability: sampleAvailability,
+			}
+
+			err := repo.UpdateAvailByUUID(ctx, createEntry.ID, &availabilityUpdateInput)
+			require.NoError(t, err)
+		})
+
+		t.Run("check update spot add duplicate time slot error", func(t *testing.T) {
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(snapshotName))
+				require.NoError(t, err, "could not restore db")
+
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
+
+			availabilityUpdateInput := models.ParkingSpotAvailUpdateInput{
+				AddAvailability:    sampleAvailability,
+				RemoveAvailability: []models.TimeUnit{},
+			}
+
+			err := repo.UpdateAvailByUUID(ctx, createEntry.ID, &availabilityUpdateInput)
+			if assert.Error(t, err, "Trying to update availability by adding existing time units should fail") {
+				assert.ErrorIs(t, err, ErrDuplicatedTimeUnit)
+			}
+		})
+
+		t.Run("check update spot remove booked time slot error", func(t *testing.T) {
+			t.Cleanup(func() {
+				err := container.Restore(ctx, postgres.WithSnapshotName(snapshotName))
+				require.NoError(t, err, "could not restore db")
+
+				// clear all idle connections
+				// required since Restore() deletes the current DB
+				pool.Reset()
+			})
+
+			bookingCreationInput := booking.CreateInput{
+				BookedTimes: sampleAvailability,
+				UserID:      userID,
+				SpotID:      createEntry.InternalID,
+				CarID:       carID,
+				PaidAmount:  createEntry.PricePerHour * float64(len(sampleAvailability)),
+			}
+
+			_, err = bookingRepo.Create(ctx, &bookingCreationInput)
+
+			availabilityUpdateInput := models.ParkingSpotAvailUpdateInput{
+				AddAvailability:    sampleAddAvailability,
+				RemoveAvailability: sampleAvailability,
+			}
+
+			err := repo.UpdateAvailByUUID(ctx, createEntry.ID, &availabilityUpdateInput)
+			if assert.Error(t, err, "Trying to update availability by removing booked time units should fail") {
+				assert.ErrorIs(t, err, ErrDeleteBookedTimeUnit)
+			}
 		})
 	})
 

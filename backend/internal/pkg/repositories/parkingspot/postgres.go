@@ -19,8 +19,10 @@ import (
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/psql"
 	"github.com/stephenafamo/bob/dialect/psql/dialect"
+	"github.com/stephenafamo/bob/dialect/psql/dm"
 	"github.com/stephenafamo/bob/dialect/psql/fm"
 	"github.com/stephenafamo/bob/dialect/psql/sm"
+	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/mods"
 	"github.com/stephenafamo/scan"
 )
@@ -40,7 +42,7 @@ type getManyResult struct {
 	DistanceToOrigin float64 `db:"distance_to_origin"`
 }
 
-func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error) {
+func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *models.ParkingSpotCreationInput) (Entry, []models.TimeUnit, error) { //nolint:all // cognitive complexity woes
 	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return Entry{}, nil, fmt.Errorf("could not start a transaction: %w", err)
@@ -65,6 +67,12 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 
 	err = inserted.InsertParkingspotidTimeunits(ctx, tx, unitSetters...)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				return Entry{}, nil, ErrDuplicatedTimeUnit
+			}
+		}
 		return Entry{}, nil, err
 	}
 
@@ -80,6 +88,124 @@ func (p *PostgresRepository) Create(ctx context.Context, userID int64, spot *mod
 	availability := timeUnitsFromDB(inserted.R.ParkingspotidTimeunits)
 
 	return entry, availability, nil
+}
+
+func (p *PostgresRepository) UpdateSpotByUUID(ctx context.Context, spotID uuid.UUID, updateSpot *models.ParkingSpotUpdateInput) (Entry, error) {
+	spotSetter, err := spotSetterFromUpdateInput(updateSpot)
+	if err != nil {
+		return Entry{}, err
+	}
+
+	// Update the spot details
+	updated, err := dbmodels.Parkingspots.UpdateQ(
+		ctx, p.db,
+		dbmodels.UpdateWhere.Parkingspots.Parkingspotuuid.EQ(spotID),
+		spotSetter,
+		um.Returning(dbmodels.Parkingspots.Columns()),
+	).One()
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Entry{}, ErrNotFound
+		}
+		return Entry{}, fmt.Errorf("could not execute update: %w", err)
+	}
+
+	entry, err := entryFromDB(updated)
+	if err != nil {
+		return Entry{}, fmt.Errorf("could not adapt dbmodels.Parkingspot: %w", err)
+	}
+
+	return entry, nil
+}
+
+func (p *PostgresRepository) UpdateAvailByUUID(ctx context.Context, spotID uuid.UUID, updateTimes *models.ParkingSpotAvailUpdateInput) error {
+	entry, err := p.GetByUUID(ctx, spotID)
+	if err != nil {
+		return err
+	}
+
+	tx, err := p.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("could not start a transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }() // Default to rollback if commit is not done
+
+	err = removeAvailability(ctx, tx, entry.InternalID, updateTimes.RemoveAvailability)
+	if err != nil {
+		return err
+	}
+
+	if len(updateTimes.AddAvailability) > 0 {
+		// Insert new availability times
+		newTimesSetter := timeSetterFromInput(updateTimes.AddAvailability, entry.InternalID)
+		_, err = dbmodels.Timeunits.InsertMany(ctx, tx, newTimesSetter...)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				if pgErr.Code == pgerrcode.UniqueViolation {
+					return ErrDuplicatedTimeUnit
+				}
+			}
+			return err
+		}
+	}
+
+	// Commit since audit passed
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("could not commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+func removeAvailability(ctx context.Context, tx bob.Tx, spotID int64, remove []models.TimeUnit) error {
+	if len(remove) == 0 {
+		return nil
+	}
+
+	timeslots := timeSlotsToSQLExpr(remove)
+
+	var whereMods []mods.Where[*dialect.DeleteQuery]
+	whereMods = append(
+		whereMods,
+		dbmodels.DeleteWhere.Timeunits.Parkingspotid.EQ(spotID),
+		dbmodels.DeleteWhere.Timeunits.Bookingid.IsNull(),
+		dm.Where(timeslots),
+	)
+
+	// Delete unbooked times
+	deleted, err := dbmodels.Timeunits.DeleteQ(
+		ctx, tx,
+		psql.WhereAnd(whereMods...),
+	).Exec()
+	if err != nil {
+		return err
+	}
+	// Audit failure must mean update availability input is attempting to removed a booked time unit
+	if deleted != int64(len(remove)) {
+		return ErrDeleteBookedTimeUnit
+	}
+	return nil
+}
+
+func timeSlotsToSQLExpr(units []models.TimeUnit) dialect.Expression {
+	var expression dialect.Expression
+	for _, bookTime := range units {
+		test := dbmodels.TimeunitColumns.Timerange.OP(
+			"&&",
+			psql.Arg(dbtype.Tstzrange{
+				Start: bookTime.StartTime,
+				End:   bookTime.EndTime,
+			}),
+		)
+		if expression.Base == nil {
+			expression = test
+		} else {
+			expression = expression.Or(test)
+		}
+	}
+	return expression
 }
 
 func (p *PostgresRepository) GetByUUID(ctx context.Context, spotID uuid.UUID) (Entry, error) {
@@ -353,4 +479,33 @@ func settersFromCreateInput(userID int64, input *models.ParkingSpotCreationInput
 		Haschargingstation: omit.From(input.Features.ChargingStation),
 		Priceperhour:       omit.From(price),
 	}, timeunits, nil
+}
+
+func spotSetterFromUpdateInput(input *models.ParkingSpotUpdateInput) (dbmodels.ParkingspotSetter, error) {
+	price, err := decimal.NewFromFloat64(input.PricePerHour)
+	if err != nil {
+		return dbmodels.ParkingspotSetter{}, ErrInvalidPrice
+	}
+
+	return dbmodels.ParkingspotSetter{
+		Hasshelter:         omit.From(input.Features.Shelter),
+		Hasplugin:          omit.From(input.Features.PlugIn),
+		Haschargingstation: omit.From(input.Features.ChargingStation),
+		Priceperhour:       omit.From(price),
+	}, nil
+}
+
+func timeSetterFromInput(input []models.TimeUnit, spotID int64) []*dbmodels.TimeunitSetter {
+	timeunits := make([]*dbmodels.TimeunitSetter, 0, len(input))
+	for _, timeslot := range input {
+		timeunits = append(timeunits, &dbmodels.TimeunitSetter{
+			Timerange: omit.From(dbtype.Tstzrange{
+				Start: timeslot.StartTime,
+				End:   timeslot.EndTime,
+			}),
+			Parkingspotid: omit.From(spotID),
+		})
+	}
+
+	return timeunits
 }
