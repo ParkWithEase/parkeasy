@@ -11,6 +11,7 @@
     import { newClient } from '$lib/utils/client';
     import { CarModalState } from '$lib/enum/car-model';
     import type { components } from '$lib/sdk/schema';
+    import Theme from '$lib/components/theme.svelte';
 
     type Car = components['schemas']['CarDetails'];
 
@@ -150,6 +151,8 @@
             });
     }
 </script>
+
+<Theme></Theme>
 
 <div class="top-new-button-container" style="">
     <Button
