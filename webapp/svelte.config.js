@@ -8,6 +8,12 @@ const config = {
     preprocess: vitePreprocess(),
 
     kit: {
+        csp: {
+            directives: {
+                'script-src': ['self'],
+                'frame-ancestors': ['none']
+            }
+        },
         adapter: adapter({
             fallback: '/index.html'
         })
