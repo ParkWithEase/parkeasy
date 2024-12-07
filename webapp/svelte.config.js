@@ -11,7 +11,7 @@ const config = {
         csp: {
             directives: {
                 'script-src': ['self'],
-                'frame-ancestors': ['none']
+                'worker-src': ['self', 'blob:']
             }
         },
         adapter: adapter({
