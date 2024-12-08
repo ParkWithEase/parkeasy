@@ -1,6 +1,6 @@
 module github.com/ParkWithEase/parkeasy/backend
 
-go 1.23.3
+go 1.23.4
 
 require (
 	github.com/aarondl/opt v0.0.0-20230114172057-b91f370c41f0
