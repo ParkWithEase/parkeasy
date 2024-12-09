@@ -10,7 +10,7 @@
     "format": "biome format --write"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.3",
+    "@biomejs/biome": "^1.9.4",
     "@grafana/openapi-to-k6": "^0.3.0",
     "@rsbuild/core": "^1.1.4",
     "@rsbuild/plugin-type-check": "^1.1.0",
