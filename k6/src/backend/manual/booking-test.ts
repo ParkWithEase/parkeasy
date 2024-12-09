@@ -181,4 +181,22 @@ export default function (data: Data) {
             },
         );
     });
+
+    group('Get bookings', () => {
+        const { error, response: resp } = api.get('/user/bookings', {
+            params: {
+                path: {
+                    id: '',
+                },
+            },
+        });
+
+        check(
+            { error, resp },
+            {
+                'Succesffuly retreived bookings': ({ resp }) =>
+                    resp.status === 200,
+            },
+        );
+    });
 }

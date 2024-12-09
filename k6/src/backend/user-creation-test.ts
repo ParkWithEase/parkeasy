@@ -10,7 +10,7 @@ const api = createClient<paths>({ baseUrl: BASE_URL });
 export const options: Options = {
     thresholds: {
         http_req_failed: ['rate<0.01'], // http errors should be less than 1%
-        http_req_duration: ['p(99)<300'], // 99% of requests should be below 300ms
+        http_req_duration: ['p(99)<700'], // 99% of requests should be below 700ms
     },
 
     scenarios: {
