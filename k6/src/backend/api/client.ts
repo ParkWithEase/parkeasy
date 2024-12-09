@@ -1,5 +1,6 @@
 import type {
-    ErrorResponseJSON,
+    ErrorResponse,
+    ResponseObjectMap,
     HttpMethod,
     PathsWithMethod,
     RequestBodyJSON,
@@ -27,7 +28,7 @@ export type ClientMethod<
 
 export interface RequestResult<Operation extends Record<string | number, any>> {
     data?: SuccessResponseJSON<Operation>;
-    error?: ErrorResponseJSON<Operation>;
+    error?: ErrorResponse<ResponseObjectMap<Operation>>;
     response: Response;
 }
 
@@ -73,11 +74,9 @@ function buildURL(
     }
 
     if (params?.path !== undefined) {
-        const path = params.path;
-        result.pathname = result.pathname.replace(
-            /\{(.*)\}/,
-            (match, key): string =>
-                path[key] !== undefined ? String(path[key]) : match,
+        const ppath = params.path;
+        result.pathname = path.replace(/\{(.*)\}/, (match, key): string =>
+            ppath[key] !== undefined ? String(ppath[key]) : match,
         );
     }
 

@@ -4,14 +4,16 @@ import { pluginTypeCheck } from '@rsbuild/plugin-type-check';
 import { globSync } from 'glob';
 
 function entryFromGlob(pattern: string): Record<string, string> {
-    return globSync(pattern, { dotRelative: true }).reduce(
-        (acc, x) => {
-            const key = path.basename(x, path.extname(x));
-            acc[key] = x;
-            return acc;
-        },
-        {} as Record<string, string>,
-    );
+    return globSync(pattern, { dotRelative: true })
+        .filter((x) => process.env.CI === undefined || !x.match(/manual/))
+        .reduce(
+            (acc, x) => {
+                const key = path.basename(x, path.extname(x));
+                acc[key] = x;
+                return acc;
+            },
+            {} as Record<string, string>,
+        );
 }
 
 export default defineConfig({

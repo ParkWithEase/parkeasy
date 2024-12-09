@@ -87,6 +87,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    '/bookings/{id}': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get information about a booking */
+        get: operations['get-booking'];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    '/bookings/{id}/availability': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get booked time slots for the booking */
+        get: operations['get-booked-time-slots'];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     '/cars': {
         parameters: {
             query?: never;
@@ -185,7 +219,8 @@ export interface paths {
         };
         /** Get information about a parking spot */
         get: operations['get-parking-spot'];
-        put?: never;
+        /** Updates the specified parking spot */
+        put: operations['update-parking-spot'];
         post?: never;
         delete?: never;
         options?: never;
@@ -202,6 +237,48 @@ export interface paths {
         };
         /** Get availability of the spot */
         get: operations['get-parking-spot-availability'];
+        /** Updates the specified parking spot's availability */
+        put: operations['update-parking-spot-availability'];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    '/spots/{id}/bookings': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get bookings associated to the specified spot
+         * @description Owner can see all bookings, buyer can only see bookings associated to them
+         */
+        get: operations['list-bookings'];
+        put?: never;
+        /** Create a new booking */
+        post: operations['create-booking'];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    '/spots/{id}/leasings': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get leasings associated to the specified spot
+         * @description Only the owner can see leasings
+         */
+        get: operations['list-spot-leasings'];
         put?: never;
         post?: never;
         delete?: never;
@@ -250,6 +327,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    '/user/bookings': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get bookings associated to the current user (buyer) */
+        get: operations['list-bookings'];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    '/user/leasings': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get leasings associated to the current user (seller) */
+        get: operations['list-leasings'];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     '/user/spots': {
         parameters: {
             query?: never;
@@ -271,6 +382,93 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        BookingCreationInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             */
+            readonly $schema?: string;
+            /** @description The booked times of this booking */
+            booked_times: components['schemas']['TimeUnit'][];
+            /** @description ID of the car for which parking spot being booked */
+            car_id: string;
+        };
+        BookingWithDetails: {
+            /**
+             * Format: date-time
+             * @description time when the booking was made
+             */
+            booking_time: string;
+            /** @description the details of car associated with booking */
+            car_details: components['schemas']['CarDetails'];
+            /** @description the ID of car associated with booking */
+            car_id: string;
+            /** @description ID of this resource */
+            id: string;
+            /**
+             * Format: double
+             * @description the amount paid for the booking
+             */
+            paid_amount: number;
+            /** @description the ID of parking spot associated with booking */
+            parkingspot_id: string;
+            /** @description the location of parking spot */
+            parkingspot_location: components['schemas']['ParkingSpotLocation'];
+        };
+        BookingWithDetailsAndTimes: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             */
+            readonly $schema?: string;
+            /** @description The booked times of this booking */
+            booked_times: components['schemas']['TimeUnit'][];
+            /**
+             * Format: date-time
+             * @description time when the booking was made
+             */
+            booking_time: string;
+            /** @description the details of car associated with booking */
+            car_details: components['schemas']['CarDetails'];
+            /** @description the ID of car associated with booking */
+            car_id: string;
+            /** @description ID of this resource */
+            id: string;
+            /**
+             * Format: double
+             * @description the amount paid for the booking
+             */
+            paid_amount: number;
+            /** @description the ID of parking spot associated with booking */
+            parkingspot_id: string;
+            /** @description the location of parking spot */
+            parkingspot_location: components['schemas']['ParkingSpotLocation'];
+        };
+        BookingWithTimes: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             */
+            readonly $schema?: string;
+            /** @description The booked times of this booking */
+            booked_times: components['schemas']['TimeUnit'][];
+            /**
+             * Format: date-time
+             * @description time when the booking was made
+             */
+            booking_time: string;
+            /** @description the ID of car associated with booking */
+            car_id: string;
+            /** @description ID of this resource */
+            id: string;
+            /**
+             * Format: double
+             * @description the amount paid for the booking
+             */
+            paid_amount: number;
+            /** @description the ID of parking spot associated with booking */
+            parkingspot_id: string;
+        };
         Car: {
             /**
              * Format: uri
@@ -379,6 +577,17 @@ export interface components {
              */
             price_per_hour: number;
         };
+        ParkingSpotAvailUpdateInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             */
+            readonly $schema?: string;
+            /** @description new availability to add */
+            add_availability: components['schemas']['TimeUnit'][] | null;
+            /** @description existing (unbooked) availability to remove */
+            remove_availability: components['schemas']['TimeUnit'][] | null;
+        };
         ParkingSpotCreationInput: {
             /**
              * Format: uri
@@ -423,6 +632,19 @@ export interface components {
             state: string;
             /** @description The street address of the parking spot */
             street_address: string;
+        };
+        ParkingSpotUpdateInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             */
+            readonly $schema?: string;
+            features?: components['schemas']['ParkingSpotFeatures'];
+            /**
+             * Format: double
+             * @description price per hour
+             */
+            price_per_hour: number;
         };
         ParkingSpotWithAvailability: {
             /**
@@ -554,6 +776,12 @@ export interface components {
     headers: never;
     pathItems: never;
 }
+export type BookingCreationInput =
+    components['schemas']['BookingCreationInput'];
+export type BookingWithDetails = components['schemas']['BookingWithDetails'];
+export type BookingWithDetailsAndTimes =
+    components['schemas']['BookingWithDetailsAndTimes'];
+export type BookingWithTimes = components['schemas']['BookingWithTimes'];
 export type Car = components['schemas']['Car'];
 export type CarCreationInput = components['schemas']['CarCreationInput'];
 export type CarDetails = components['schemas']['CarDetails'];
@@ -562,10 +790,14 @@ export type EmailPasswordLoginInput =
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 export type ErrorModel = components['schemas']['ErrorModel'];
 export type ParkingSpot = components['schemas']['ParkingSpot'];
+export type ParkingSpotAvailUpdateInput =
+    components['schemas']['ParkingSpotAvailUpdateInput'];
 export type ParkingSpotCreationInput =
     components['schemas']['ParkingSpotCreationInput'];
 export type ParkingSpotFeatures = components['schemas']['ParkingSpotFeatures'];
 export type ParkingSpotLocation = components['schemas']['ParkingSpotLocation'];
+export type ParkingSpotUpdateInput =
+    components['schemas']['ParkingSpotUpdateInput'];
 export type ParkingSpotWithAvailability =
     components['schemas']['ParkingSpotWithAvailability'];
 export type ParkingSpotWithDistance =
@@ -847,6 +1079,142 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'get-booking': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['BookingWithDetailsAndTimes'];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'get-booked-time-slots': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json':
+                        | components['schemas']['TimeUnit'][]
+                        | null;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
             };
             /** @description Unprocessable Entity */
             422: {
@@ -1386,6 +1754,68 @@ export interface operations {
             };
         };
     };
+    'update-parking-spot': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['ParkingSpotUpdateInput'];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['ParkingSpot'];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
     'get-parking-spot-availability': {
         parameters: {
             query?: {
@@ -1413,6 +1843,239 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'update-parking-spot-availability': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['ParkingSpotAvailUpdateInput'];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'list-bookings': {
+        parameters: {
+            query?: {
+                /** @description Token used for requesting the next page of resources */
+                after?: string;
+                /** @description The maximum number of bookings that appear per page. */
+                count?: number;
+            };
+            header?: never;
+            path: {
+                /** @description id of the parking spot */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    Link?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['BookingWithDetails'][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'create-booking': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['BookingCreationInput'];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['BookingWithTimes'];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'list-spot-leasings': {
+        parameters: {
+            query?: {
+                /** @description Token used for requesting the next page of resources */
+                after?: string;
+                /** @description The maximum number of bookings that appear per page. */
+                count?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    Link?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['BookingWithDetails'][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1653,6 +2316,68 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+        };
+    };
+    'list-leasings': {
+        parameters: {
+            query?: {
+                /** @description Token used for requesting the next page of resources */
+                after?: string;
+                /** @description The maximum number of bookings that appear per page. */
+                count?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    Link?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['BookingWithDetails'][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/problem+json': components['schemas']['ErrorModel'];
+                };
             };
             /** @description Unprocessable Entity */
             422: {
